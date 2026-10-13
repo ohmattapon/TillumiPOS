@@ -75,9 +75,12 @@ export class ProductEntity {
 
   /** Throws when this product cannot be sold in the given quantity right now. */
   assertSellable(quantity: number): void {
-    if (!this.isActive) throw new DomainConflictError(`สินค้า "${this.name}" ปิดการขายแล้ว`, 'PRODUCT_INACTIVE')
+    if (!this.isActive) throw new DomainConflictError(`สินค้า "${this.name}" ปิดการขายแล้ว`, 'PRODUCT_INACTIVE', { name: this.name })
     if (this.trackStock && this.stockQty < quantity)
-      throw new DomainConflictError(`สินค้า "${this.name}" เหลือ ${this.stockQty} ชิ้น ไม่พอขาย`, 'INSUFFICIENT_STOCK')
+      throw new DomainConflictError(`สินค้า "${this.name}" เหลือ ${this.stockQty} ชิ้น ไม่พอขาย`, 'INSUFFICIENT_STOCK', {
+        name: this.name,
+        available: this.stockQty,
+      })
   }
 
   toSnapshot(): ProductEntityProps {

@@ -1,5 +1,6 @@
 import { DomainConflictError } from './errors/domain-conflict.error'
 import { DomainError } from './errors/domain-error'
+import { calculateTotals, type VatMode } from './pricing'
 import type { ProductEntity } from './product.domain'
 
 export const PAYMENT_METHODS = ['cash', 'promptpay', 'card'] as const
@@ -36,6 +37,10 @@ interface SaleTotals {
 
 /** A priced and settled sale that has not been stored yet: it has no id, receipt number or timestamp. */
 export interface NewSale extends SaleTotals {
+  /** How VAT was applied to this sale, kept so the receipt never changes when the shop settings do. */
+  vatMode: VatMode
+  /** The rate in basis points that was applied; 0 when no VAT was charged. */
+  vatRateBp: number
   cashierId: number
   cashierName: string
   items: SaleItem[]
@@ -56,6 +61,7 @@ export interface CompleteSaleInput {
   lines: { product: ProductEntity; quantity: number }[]
   discountSatang: number
   payments: SalePayment[]
+  vatMode: VatMode
   /** VAT rate in basis points (700 = 7%). */
   vatRateBp: number
   cashier: { id: number; displayName: string }
@@ -82,6 +88,8 @@ export class SaleEntity {
   public readonly vatSatang: number
   public readonly paidSatang: number
   public readonly changeSatang: number
+  public readonly vatMode: VatMode
+  public readonly vatRateBp: number
   public readonly cashierId: number
   public readonly cashierName: string
   public readonly voidedById: number | null
@@ -105,6 +113,8 @@ export class SaleEntity {
     this.vatSatang = props.vatSatang
     this.paidSatang = props.paidSatang
     this.changeSatang = props.changeSatang
+    this.vatMode = props.vatMode
+    this.vatRateBp = props.vatRateBp
     this.cashierId = props.cashierId
     this.cashierName = props.cashierName
     this.voidedById = props.voidedById
@@ -119,7 +129,7 @@ export class SaleEntity {
    * Prices and settles a sale. All amounts are integer satang. Prices include VAT,
    * so VAT is extracted from the discounted total rather than added on top.
    */
-  static complete({ lines, discountSatang, payments, vatRateBp, cashier }: CompleteSaleInput): NewSale {
+  static complete({ lines, discountSatang, payments, vatMode, vatRateBp, cashier }: CompleteSaleInput): NewSale {
     if (lines.length === 0) throw new DomainError('บิลต้องมีสินค้าอย่างน้อย 1 รายการ', 'EMPTY_SALE')
     if (lines.some((line) => !Number.isInteger(line.quantity) || line.quantity < 1))
       throw new DomainError('จำนวนสินค้าต้องเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป', 'INVALID_QUANTITY')
@@ -140,8 +150,9 @@ export class SaleEntity {
     const subtotalSatang = sum(items.map((item) => item.lineTotalSatang))
     if (subtotalSatang > MAX_AMOUNT_SATANG) throw tooLarge()
     if (discountSatang > subtotalSatang) throw new DomainError('ส่วนลดมากกว่ายอดรวมสินค้า', 'DISCOUNT_TOO_LARGE')
-    const totalSatang = subtotalSatang - discountSatang
-    const vatSatang = Math.round((totalSatang * vatRateBp) / (10_000 + vatRateBp))
+    const { vatSatang, totalSatang } = calculateTotals({ subtotalSatang, discountSatang, vatMode, vatRateBp })
+    // Exclusive VAT is added on top, so the total can pass the ceiling even when the subtotal did not.
+    if (totalSatang > MAX_AMOUNT_SATANG) throw tooLarge()
 
     const paidSatang = sum(payments.map((payment) => payment.amountSatang))
     if (paidSatang > MAX_AMOUNT_SATANG) throw tooLarge()
@@ -158,6 +169,8 @@ export class SaleEntity {
       vatSatang,
       paidSatang,
       changeSatang,
+      vatMode,
+      vatRateBp: vatMode === 'none' ? 0 : vatRateBp,
       cashierId: cashier.id,
       cashierName: cashier.displayName,
       items,
@@ -185,6 +198,8 @@ export class SaleEntity {
       vatSatang: this.vatSatang,
       paidSatang: this.paidSatang,
       changeSatang: this.changeSatang,
+      vatMode: this.vatMode,
+      vatRateBp: this.vatRateBp,
       cashierId: this.cashierId,
       cashierName: this.cashierName,
       voidedById: this.voidedById,

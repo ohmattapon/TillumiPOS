@@ -17,6 +17,7 @@ const complete = (overrides: Partial<Parameters<typeof SaleEntity.complete>[0]> 
     lines: [line(10000, 1)],
     discountSatang: 0,
     payments: cash(10000),
+    vatMode: 'inclusive',
     vatRateBp: 700,
     cashier,
     ...overrides,
@@ -60,6 +61,37 @@ describe('SaleEntity.complete: totals', () => {
     const sale = complete({ lines: [line(1000, 1)], discountSatang: 1000, payments: cash(100) })
 
     expect(sale).toMatchObject({ totalSatang: 0, vatSatang: 0, changeSatang: 100 })
+  })
+})
+
+describe('SaleEntity.complete: VAT modes', () => {
+  test('exclusive adds VAT on top, so the customer owes more than the shelf price', () => {
+    const sale = complete({ vatMode: 'exclusive', payments: cash(10700) })
+
+    expect(sale).toMatchObject({ subtotalSatang: 10000, vatSatang: 700, totalSatang: 10700, changeSatang: 0 })
+  })
+
+  test('exclusive refuses a payment that only covers the shelf price', () => {
+    expect(codeOf(() => complete({ vatMode: 'exclusive', payments: cash(10000) }))).toBe('UNDERPAID')
+  })
+
+  test('none charges no VAT and records a rate of zero', () => {
+    const sale = complete({ vatMode: 'none', vatRateBp: 700 })
+
+    expect(sale).toMatchObject({ vatSatang: 0, totalSatang: 10000, vatMode: 'none', vatRateBp: 0 })
+  })
+
+  test('the sale keeps the mode and rate it was priced with', () => {
+    const sale = complete({ vatMode: 'exclusive', vatRateBp: 1000, payments: cash(11000) })
+
+    expect(sale).toMatchObject({ vatMode: 'exclusive', vatRateBp: 1000, vatSatang: 1000 })
+  })
+
+  test('exclusive VAT that pushes the total past the ceiling is refused', () => {
+    const attempt = () =>
+      complete({ vatMode: 'exclusive', lines: [line(2_100_000_000, 1)], payments: cash(2_147_483_647) })
+
+    expect(codeOf(attempt)).toBe('AMOUNT_TOO_LARGE')
   })
 })
 

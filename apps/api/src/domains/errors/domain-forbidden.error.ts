@@ -1,7 +1,7 @@
-import { DomainError } from './domain-error'
+import { DomainError, type ErrorParams } from './domain-error'
 
 export class DomainForbiddenError extends DomainError {
-  constructor(message: string, code = 'FORBIDDEN') {
-    super(message, code)
+  constructor(message: string, code = 'FORBIDDEN', params?: ErrorParams) {
+    super(message, code, params)
   }
 }

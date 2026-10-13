@@ -1,6 +1,7 @@
 import { date, index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 import { createdAt, id } from '../columns'
 import { products } from './products'
+import { vatMode } from './shop-settings'
 import { users } from './users'
 
 export const saleStatus = pgEnum('sale_status', ['completed', 'voided'])
@@ -22,8 +23,12 @@ export const sales = pgTable(
     subtotalSatang: integer().notNull(),
     discountSatang: integer().notNull().default(0),
     totalSatang: integer().notNull(),
-    // VAT contained in totalSatang.
+    // VAT contained in (inclusive) or added to (exclusive) totalSatang.
     vatSatang: integer().notNull(),
+    // How this sale was priced, so a receipt never changes when the shop settings do.
+    // Existing rows were all sold with 7% VAT included in the price.
+    vatMode: vatMode().notNull().default('inclusive'),
+    vatRateBp: integer().notNull().default(700),
     paidSatang: integer().notNull(),
     changeSatang: integer().notNull(),
     cashierId: integer()

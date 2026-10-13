@@ -4,8 +4,8 @@ import type { Page } from '../../../../domains/page'
 import { SaleEntity, type NewSale } from '../../../../domains/sale.domain'
 import { payments, receiptCounters, saleItems, sales } from '../../../../infrastructure/database/schema/sales'
 import { currentExecutor } from '../../../../libs/transaction-context'
-import type { IShopSettings } from '../../../shared/ports/shop-settings.port'
-import { TOKENS } from '../../../tokens'
+import { shopSettingsRepositoryToken } from '../../../settings/applications/ports/shop-settings.repository'
+import type { IShopSettingsRepository } from '../../../settings/applications/ports/shop-settings.repository'
 import type { IFindSalesQuery, ISaleHeader, ISaleRepository, ISalesTotals } from '../../applications/ports/sale.repository'
 
 const headerColumns = {
@@ -16,6 +16,8 @@ const headerColumns = {
   discountSatang: sales.discountSatang,
   totalSatang: sales.totalSatang,
   vatSatang: sales.vatSatang,
+  vatMode: sales.vatMode,
+  vatRateBp: sales.vatRateBp,
   paidSatang: sales.paidSatang,
   changeSatang: sales.changeSatang,
   cashierId: sales.cashierId,
@@ -39,13 +41,14 @@ const total = (expression: SQL) => sql<number>`coalesce(sum(${expression}), 0)`.
 
 @injectable()
 export class DrizzleSaleRepository implements ISaleRepository {
-  constructor(@inject(TOKENS.ShopSettings) private readonly settings: IShopSettings) {}
+  constructor(@inject(shopSettingsRepositoryToken) private readonly settings: IShopSettingsRepository) {}
 
   async nextReceiptNo() {
+    const { timeZone } = await this.settings.get()
     // One row per business day, row-locked on increment, so numbers have no gaps.
     const [counter] = await currentExecutor()
       .insert(receiptCounters)
-      .values({ day: sql`(now() at time zone ${this.settings.timeZone})::date`, lastNumber: 1 })
+      .values({ day: sql`(now() at time zone ${timeZone})::date`, lastNumber: 1 })
       .onConflictDoUpdate({
         target: receiptCounters.day,
         set: { lastNumber: sql`${receiptCounters.lastNumber} + 1` },

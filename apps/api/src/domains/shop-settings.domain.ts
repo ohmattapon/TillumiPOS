@@ -1,0 +1,111 @@
+import { DomainError } from './errors/domain-error'
+import { VAT_MODES, type VatMode } from './pricing'
+
+export const LOCALES = ['th', 'en'] as const
+export type Locale = (typeof LOCALES)[number]
+
+export interface ShopSettingsProps {
+  shopName: string
+  /** Tax identification number printed on receipts. */
+  taxId: string | null
+  address: string | null
+  phone: string | null
+  /** ISO 4217 code. Amounts are stored in the currency's minor unit. */
+  currency: string
+  vatMode: VatMode
+  /** Basis points: 700 = 7%. Ignored when vatMode is "none". */
+  vatRateBp: number
+  /** IANA time zone; decides where a business day, and its receipt numbering, starts. */
+  timeZone: string
+  locale: Locale
+}
+
+/** What a shop that has never been configured runs with. */
+export const DEFAULT_SHOP_SETTINGS: ShopSettingsProps = {
+  shopName: 'EasyPOS',
+  taxId: null,
+  address: null,
+  phone: null,
+  currency: 'THB',
+  vatMode: 'inclusive',
+  vatRateBp: 700,
+  timeZone: 'Asia/Bangkok',
+  locale: 'th',
+}
+
+export type ShopSettingsChanges = Partial<ShopSettingsProps>
+
+const invalid = (message: string) => new DomainError(message, 'INVALID_SHOP_SETTINGS')
+const within = (value: string | null, max: number) => value === null || value.length <= max
+
+function isTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: value })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export class ShopSettingsEntity {
+  public readonly shopName: string
+  public readonly taxId: string | null
+  public readonly address: string | null
+  public readonly phone: string | null
+  public readonly currency: string
+  public readonly vatMode: VatMode
+  public readonly vatRateBp: number
+  public readonly timeZone: string
+  public readonly locale: Locale
+
+  constructor(props: ShopSettingsProps) {
+    if (props.shopName.length < 1 || props.shopName.length > 100) throw invalid('ชื่อร้านต้องยาว 1 ถึง 100 ตัวอักษร')
+    if (!within(props.taxId, 20)) throw invalid('เลขประจำตัวผู้เสียภาษีต้องไม่เกิน 20 ตัวอักษร')
+    if (!within(props.address, 300)) throw invalid('ที่อยู่ต้องไม่เกิน 300 ตัวอักษร')
+    if (!within(props.phone, 30)) throw invalid('เบอร์โทรต้องไม่เกิน 30 ตัวอักษร')
+    if (!/^[A-Z]{3}$/.test(props.currency)) throw invalid('รหัสสกุลเงินต้องเป็นตัวอักษรใหญ่ 3 ตัว เช่น THB')
+    if (!VAT_MODES.includes(props.vatMode)) throw invalid('วิธีคิดภาษีไม่ถูกต้อง')
+    if (!Number.isInteger(props.vatRateBp) || props.vatRateBp < 0 || props.vatRateBp > 10_000)
+      throw invalid('อัตราภาษีต้องเป็นจำนวนเต็ม 0 ถึง 10000 (700 = 7%)')
+    if (!isTimeZone(props.timeZone)) throw invalid('เขตเวลาไม่ถูกต้อง')
+    if (!LOCALES.includes(props.locale)) throw invalid('ภาษาไม่ถูกต้อง')
+
+    this.shopName = props.shopName
+    this.taxId = props.taxId
+    this.address = props.address
+    this.phone = props.phone
+    this.currency = props.currency
+    this.vatMode = props.vatMode
+    this.vatRateBp = props.vatRateBp
+    this.timeZone = props.timeZone
+    this.locale = props.locale
+  }
+
+  /**
+   * A copy with the given fields changed. `undefined` keeps the current value;
+   * `null` is a real value for the optional text fields (it clears them).
+   */
+  with(changes: ShopSettingsChanges): ShopSettingsEntity {
+    const defined = Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined))
+    return new ShopSettingsEntity({ ...this.toSnapshot(), ...defined })
+  }
+
+  /** The rate that actually applies: zero when the shop does not charge VAT. */
+  get effectiveVatRateBp(): number {
+    return this.vatMode === 'none' ? 0 : this.vatRateBp
+  }
+
+  toSnapshot(): ShopSettingsProps {
+    return {
+      shopName: this.shopName,
+      taxId: this.taxId,
+      address: this.address,
+      phone: this.phone,
+      currency: this.currency,
+      vatMode: this.vatMode,
+      vatRateBp: this.vatRateBp,
+      timeZone: this.timeZone,
+      locale: this.locale,
+    }
+  }
+}
