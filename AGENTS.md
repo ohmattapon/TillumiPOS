@@ -105,7 +105,15 @@ apps/api/src/
 - use case และ entity โยน domain error จาก `domains/errors/` เท่านั้น พร้อมข้อความภาษาไทยและค่า `code` ที่คงที่
 - สถานะ HTTP กำหนดจากชนิดของ error: `DomainError` 400, `DomainUnauthorizedError` 401, `DomainForbiddenError` 403, `DomainNotFoundError` 404, `DomainConflictError` 409, `DomainExternalServiceError` 502
 - `libs/http-error.factory.ts` เป็นจุดเดียวที่แปลง domain error เป็นคำตอบ HTTP
+- คำตอบที่เป็นข้อผิดพลาดทุกตัวเป็น RFC 9457 Problem Details (`application/problem+json`): `type`, `title`, `status`, `detail`, `code` และ `errors` เฉพาะข้อผิดพลาดการตรวจข้อมูล ข้อความสำหรับผู้ใช้อยู่ใน `detail` ห้ามเพิ่มช่อง `message`
 - repository แปลงข้อผิดพลาดของฐานข้อมูล (ค่าซ้ำ, foreign key) เป็น domain error ก่อนออกจาก adapter
+
+### สัญญาของ API
+
+- ทุกเส้นทางอยู่ใต้ `/api/v1` การเปลี่ยนที่ทำให้ผู้ใช้ API เดิมพังต้องขึ้นรุ่นใหม่ ไม่แก้ใน `v1`
+- เส้นทางที่คืนรายการทุกตัวคืน `{ items, total }` ผ่าน `page()` ใน `libs/http-schemas.ts` ห้ามคืนอาร์เรย์เปล่า โดย `total` คือจำนวนทั้งหมดที่ตรงตัวกรอง
+- รายการที่โตได้ไม่จำกัดต้องรับ `limit` และ `offset` และ port ของ repository คืน `Page<T>` จาก `domains/page.ts`
+- จำนวนเงินเป็นจำนวนเต็มสตางค์ ไม่เกิน `MAX_AMOUNT_SATANG` ใน `domains/sale.domain.ts`
 
 ### การทดสอบ
 
@@ -130,7 +138,7 @@ apps/api/src/
 |---|---|
 | `bun run db:up` | เปิด PostgreSQL ใน Docker (พอร์ต 5433) |
 | `bun run db:migrate` | รัน migration |
-| `bun run dev` | เปิด API (3000), เว็บ (5173) และ Worker ในเครื่อง (8787) |
+| `bun run dev` | เปิด API (3000, เส้นทางอยู่ใต้ `/api/v1`), เว็บ (5173) และ Worker ในเครื่อง (8787) |
 | `bun run typecheck` | ตรวจ type ทุกแพ็กเกจ |
 | `bun run test` | รันการทดสอบทั้งหมดของ API (ต้องเปิดฐานข้อมูล) |
 | `bun run test:unit` | รันเฉพาะการทดสอบ unit ไม่ต้องมีฐานข้อมูล |
