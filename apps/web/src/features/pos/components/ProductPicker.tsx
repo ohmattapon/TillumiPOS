@@ -12,7 +12,7 @@ import { isLowStock, isOutOfStock, ProductImage, productsQuery } from '@/feature
 import { useFormat } from '@/features/settings'
 import { cn } from '@/lib/utils'
 import { hasKeyboard } from '../lib/focus'
-import { useCartStore } from '../store/cart.store'
+import { useCartActions } from '../hooks/use-cart-actions'
 
 interface Props {
   /** Owned by the page so it can also return focus here after a sale. */
@@ -26,7 +26,7 @@ export function ProductPicker({ searchRef }: Props) {
   const { money } = useFormat()
   const products = useQuery(productsQuery())
   const categories = useQuery(categoriesQuery)
-  const addToCart = useCartStore((state) => state.add)
+  const { add: addToCart } = useCartActions()
 
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('all')

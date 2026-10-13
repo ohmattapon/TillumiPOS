@@ -4,6 +4,7 @@ export type { BranchResponse as Branch } from './modules/branches/adapters/contr
 export type { SettingsResponse as ShopSettings } from './modules/settings/adapters/controllers/schemas/settings.schema'
 export type { CategoryResponse as Category } from './modules/categories/adapters/controllers/schemas/category.schema'
 export type { ProductResponse as Product } from './modules/products/adapters/controllers/schemas/product.schema'
+export type { OrderResponse as Order } from './modules/orders/adapters/controllers/schemas/order.schema'
 export type { StockMovementResponse as StockMovement } from './modules/inventory/adapters/controllers/schemas/inventory.schema'
 export type {
   SaleHeaderResponse as SaleHeader,
