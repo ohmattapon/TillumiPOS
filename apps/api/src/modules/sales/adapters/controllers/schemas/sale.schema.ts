@@ -1,5 +1,5 @@
 import { t } from 'elysia'
-import { satang } from '../../../../../shared/models'
+import { satang } from '../../../../../libs/http-schemas'
 
 const method = t.Union([t.Literal('cash'), t.Literal('promptpay'), t.Literal('card')])
 

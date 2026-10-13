@@ -1,22 +1,8 @@
 import 'reflect-metadata'
 import { openapi } from '@elysiajs/openapi'
 import { Elysia } from 'elysia'
-import { container } from 'tsyringe'
-import { AuthElysiaController } from './modules/auth/adapters/controllers/auth.controller'
-import { catalog } from './modules/catalog'
-import { InventoryElysiaController } from './modules/inventory/adapters/controllers/inventory.controller'
-import './modules/di-registrations'
-import { SaleElysiaController } from './modules/sales/adapters/controllers/sale.controller'
-import { UserElysiaController } from './modules/users/adapters/controllers/user.controller'
-import { errorHandler } from './shared/plugins/error-handler'
-
-const api = new Elysia({ name: 'api', prefix: '/api' })
-  .get('/health', () => ({ status: 'ok' }), { detail: { tags: ['System'], summary: 'ตรวจสอบสถานะระบบ' } })
-  .use(container.resolve(AuthElysiaController).getRoutes())
-  .use(container.resolve(UserElysiaController).getRoutes())
-  .use(catalog)
-  .use(container.resolve(InventoryElysiaController).getRoutes())
-  .use(container.resolve(SaleElysiaController).getRoutes())
+import { appModule } from './modules/app.module'
+import { errorHandler } from './modules/error-handler.plugin'
 
 export const app = new Elysia()
   .use(errorHandler)
@@ -27,6 +13,6 @@ export const app = new Elysia()
       },
     }),
   )
-  .use(api)
+  .use(appModule)
 
 export type App = typeof app

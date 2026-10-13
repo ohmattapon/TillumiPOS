@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia'
 import { inject, injectable } from 'tsyringe'
 import type { ProductEntity } from '../../../../domains/product.domain'
-import { idParams } from '../../../../shared/models'
+import { idParams } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import type { IMediaStorage } from '../../../shared/ports/media-storage.port'
 import { TOKENS } from '../../../tokens'

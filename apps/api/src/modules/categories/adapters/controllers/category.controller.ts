@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia'
 import { inject, injectable } from 'tsyringe'
 import type { CategoryEntity } from '../../../../domains/category.domain'
-import { idParams } from '../../../../shared/models'
+import { idParams } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import { CreateCategoryUseCase } from '../../applications/usecases/create-category.usecase'
 import { ListCategoriesUseCase } from '../../applications/usecases/list-categories.usecase'
