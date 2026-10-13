@@ -1,7 +1,7 @@
-import type { Product } from '@pos/api/types'
+import type { Order, Product } from '@pos/api/types'
 import { describe, expect, test } from 'bun:test'
 import { createMoney } from '@/lib/money'
-import { priceCart, type PricingOptions } from './cart'
+import { priceCart, priceOrder, type PricingOptions } from './cart'
 
 const baht = createMoney('THB', 'th')
 const inclusive: PricingOptions = { vatMode: 'inclusive', vatRateBp: 700, parseAmount: baht.parse }
@@ -167,5 +167,51 @@ describe('priceCart: VAT', () => {
     const cart = priceCart(one, catalogue(tea), '500', { ...inclusive, vatMode: 'none', parseAmount: yen.parse })
 
     expect(cart).toMatchObject({ discountSatang: 500, totalSatang: 9_500 })
+  })
+})
+
+describe('priceOrder', () => {
+  const item = (overrides: Partial<Order['items'][number]> = {}): Order['items'][number] => ({
+    productId: 1,
+    productName: 'ชา',
+    sku: 'SKU-1',
+    unitPriceSatang: 2500,
+    quantity: 2,
+    lineTotalSatang: 5000,
+    ...overrides,
+  })
+  const catalogue = (...items: Product[]) => new Map(items.map((entry) => [entry.id, entry]))
+
+  test('charges the price the order quoted, even when the menu price has changed since', () => {
+    const repriced = product({ id: 1, priceSatang: 9900 })
+
+    const cart = priceOrder([item()], catalogue(repriced), '', inclusive)
+
+    expect(cart.lines[0]).toMatchObject({ unitPriceSatang: 2500, lineTotalSatang: 5000 })
+    expect(cart).toMatchObject({ subtotalSatang: 5000, totalSatang: 5000, canPay: true })
+  })
+
+  test('keeps a line whose product is no longer in the catalogue (it was ordered, and is still owed)', () => {
+    const cart = priceOrder([item({ productId: 99, productName: 'เมนูเก่า' })], catalogue(), '', inclusive)
+
+    expect(cart.lines.map((line) => line.name)).toEqual(['เมนูเก่า'])
+    expect(cart.canPay).toBe(true)
+  })
+
+  test('warns when the shelf has less than the order asks for, and blocks payment', () => {
+    const cart = priceOrder([item({ quantity: 5 })], catalogue(product({ id: 1, stockQty: 3 })), '', inclusive)
+
+    expect(cart.lines[0]).toMatchObject({ exceedsStock: true, stockQty: 3 })
+    expect(cart.canPay).toBe(false)
+  })
+
+  test('applies a discount and VAT like the one-step cart', () => {
+    const cart = priceOrder([item()], catalogue(product({ id: 1 })), '10', { ...inclusive, vatMode: 'exclusive' })
+
+    expect(cart).toMatchObject({ discountSatang: 1000, vatSatang: 280, totalSatang: 4280 })
+  })
+
+  test('an order with nothing on it cannot be paid', () => {
+    expect(priceOrder([], catalogue(), '', inclusive)).toMatchObject({ totalSatang: 0, canPay: false })
   })
 })

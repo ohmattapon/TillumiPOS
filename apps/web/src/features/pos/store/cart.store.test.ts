@@ -69,6 +69,30 @@ describe('cart store', () => {
     expect(cart().discount).toBe('')
   })
 
+  describe('working on an open order', () => {
+    test('starts with no order, so the cart is the one-step cart', () => {
+      expect(cart().orderId).toBeNull()
+    })
+
+    test('choosing an order empties the local cart, so the two are never mixed', () => {
+      cart().add(7)
+      cart().setDiscount('5')
+
+      cart().workOnOrder(42)
+
+      expect(cart()).toMatchObject({ orderId: 42, lines: [], discount: '' })
+    })
+
+    test('clearing leaves the order (it stays open on the server) and empties the cart', () => {
+      cart().workOnOrder(42)
+      cart().setDiscount('5')
+
+      clearCart()
+
+      expect(cart()).toMatchObject({ orderId: null, lines: [], discount: '' })
+    })
+  })
+
   test('updates produce new arrays, so subscribers re-render', () => {
     cart().add(7)
     const before = cart().lines

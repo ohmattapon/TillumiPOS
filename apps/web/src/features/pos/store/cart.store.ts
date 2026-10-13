@@ -13,10 +13,18 @@ interface CartState {
   lines: CartLine[]
   /** What the cashier typed in the discount field, in baht. Parsed when the cart is priced. */
   discount: string
+  /**
+   * The open order the till is working on, or null for the one-step cart. Its lines live on the
+   * server (they are read through TanStack Query); only which order is chosen is kept here.
+   */
+  orderId: number | null
   add: (productId: number) => void
   /** A quantity of 0 or less removes the line. */
   setQuantity: (productId: number, quantity: number) => void
   setDiscount: (discount: string) => void
+  /** Works on an open order instead of the local cart. */
+  workOnOrder: (orderId: number) => void
+  /** Empties the cart and stops working on any order (the order itself stays open). */
   clear: () => void
 }
 
@@ -24,6 +32,7 @@ interface CartState {
 export const useCartStore = create<CartState>()((set) => ({
   lines: [],
   discount: '',
+  orderId: null,
   add: (productId) =>
     set((state) => ({
       lines: state.lines.some((line) => line.productId === productId)
@@ -37,7 +46,8 @@ export const useCartStore = create<CartState>()((set) => ({
         .filter((line) => line.quantity > 0),
     })),
   setDiscount: (discount) => set({ discount }),
-  clear: () => set({ lines: [], discount: '' }),
+  workOnOrder: (orderId) => set({ orderId, lines: [], discount: '' }),
+  clear: () => set({ lines: [], discount: '', orderId: null }),
 }))
 
 /** For code outside React, such as the logout handler. */
