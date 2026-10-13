@@ -4,7 +4,7 @@ import { container } from 'tsyringe'
 import { CreateCategoryUseCase } from '../../modules/categories/applications/usecases/create-category.usecase'
 import '../../modules/di-registrations'
 import { CreateProductUseCase } from '../../modules/products/applications/usecases/create-product.usecase'
-import { InventoryService } from '../../modules/inventory/service'
+import { ReceiveStockUseCase } from '../../modules/inventory/applications/usecases/receive-stock.usecase'
 import { CreateUserUseCase } from '../../modules/users/applications/usecases/create-user.usecase'
 import { users } from './schema/users'
 import { client, db } from '../../libs/db'
@@ -28,7 +28,7 @@ if (existing!.total > 0) {
   ]
   for (const sample of samples) {
     const product = await container.resolve(CreateProductUseCase).execute(sample)
-    await InventoryService.receive({ productId: product.id, quantity: 50, note: 'ยอดยกมา' }, owner.id)
+    await container.resolve(ReceiveStockUseCase).execute({ productId: product.id, quantity: 50, note: 'ยอดยกมา' }, owner.id)
   }
 
   console.log(`Seeded owner "admin" (password: ${password}) and ${samples.length} sample products`)

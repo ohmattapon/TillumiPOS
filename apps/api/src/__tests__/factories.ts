@@ -1,5 +1,6 @@
 import { CategoryEntity, type CategoryEntityProps } from '../domains/category.domain'
 import { ProductEntity, type ProductEntityProps } from '../domains/product.domain'
+import { StockMovementEntity, type StockMovementEntityProps } from '../domains/stock-movement.domain'
 import { UserEntity, type UserEntityProps } from '../domains/user.domain'
 
 export const makeCategory = (overrides: Partial<CategoryEntityProps> = {}) =>
@@ -21,5 +22,19 @@ export const makeProduct = (overrides: Partial<ProductEntityProps> = {}) =>
     stockQty: 10,
     isActive: true,
     imageKey: null,
+    ...overrides,
+  })
+
+export const makeStockMovement = (overrides: Partial<StockMovementEntityProps> = {}) =>
+  new StockMovementEntity({
+    id: 1,
+    productId: 1,
+    type: 'receive',
+    quantity: 10,
+    balanceAfter: 10,
+    reference: null,
+    note: null,
+    userId: 1,
+    createdAt: new Date('2026-10-13T06:00:00Z'),
     ...overrides,
   })

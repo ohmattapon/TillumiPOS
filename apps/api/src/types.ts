@@ -2,5 +2,5 @@
 export type { UserResponse as User } from './modules/users/adapters/controllers/schemas/user.schema'
 export type { CategoryResponse as Category } from './modules/categories/adapters/controllers/schemas/category.schema'
 export type { ProductResponse as Product } from './modules/products/adapters/controllers/schemas/product.schema'
-export type { StockMovement } from './modules/inventory/model'
+export type { StockMovementResponse as StockMovement } from './modules/inventory/adapters/controllers/schemas/inventory.schema'
 export type { Sale, SaleHeader, SaleSummary } from './modules/sales/model'
