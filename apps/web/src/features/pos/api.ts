@@ -50,21 +50,46 @@ export const qrConfigQuery = queryOptions({
 /** How often the till asks whether the customer has paid. The server will not ask the bank more often itself. */
 export const QR_POLL_MS = 3000
 
-export const qrPaymentQuery = (id: number) =>
+/**
+ * The state of a QR while the till waits. In a shift this is the v2 "refresh" command, which asks the bank
+ * and records the answer; the legacy read does the same behind a GET.
+ */
+export const qrPaymentQuery = (id: number, inShift = false) =>
   queryOptions({
     queryKey: qrKeys.detail(id),
-    queryFn: () => unwrap(api.payments.qr({ id }).get()),
+    queryFn: async (): Promise<{ id: number; status: 'pending' | 'paid' | 'cancelled'; payerName: string | null }> =>
+      inShift ? unwrap(apiV2.payments.qr({ id }).refresh.post()) : unwrap(api.payments.qr({ id }).get()),
   })
+
+export interface CreateQrInput {
+  amountSatang: number
+  /** The open shift the QR is asked for. Leave out in legacy mode. */
+  shiftId?: number
+  idempotencyKey?: string
+}
 
 /** Asks the bank for a QR for exactly this amount. */
 export function useCreateQrPayment() {
+  const queryClient = useQueryClient()
+
   return useMutation({
-    mutationFn: (amountSatang: number) => unwrap(api.payments.qr.post({ amountSatang })),
+    mutationFn: async ({ amountSatang, shiftId, idempotencyKey }: CreateQrInput): Promise<{ id: number; qrImage: string; expiresAt: Date }> => {
+      if (shiftId === undefined) return unwrap(api.payments.qr.post({ amountSatang }))
+      return unwrap(
+        apiV2.payments.qr.post(
+          { amountSatang, shiftId },
+          { headers: { 'idempotency-key': idempotencyKey ?? crypto.randomUUID() } },
+        ),
+      )
+    },
+    // A lost answer leaves a request to resolve on the shift page: make it show up there at once.
+    onError: () => queryClient.invalidateQueries({ queryKey: ['shifts'] }),
   })
 }
 
 export function useCancelQrPayment() {
   return useMutation({
-    mutationFn: (id: number) => unwrap(api.payments.qr({ id }).cancel.post()),
+    mutationFn: async ({ id, inShift }: { id: number; inShift: boolean }): Promise<unknown> =>
+      inShift ? unwrap(apiV2.payments.qr({ id }).cancel.post()) : unwrap(api.payments.qr({ id }).cancel.post()),
   })
 }

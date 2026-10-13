@@ -42,6 +42,26 @@ const th = {
   entry_cash_out: 'เงินออก',
   entry_cash_refund: 'คืนเงินสด',
   saveName: 'บันทึกชื่อ',
+  qr: {
+    title: 'QR ธนาคารที่ต้องจัดการ',
+    description: 'ต้องจัดการรายการเหล่านี้ก่อนจึงจะเริ่มนับปิดกะได้',
+    attemptsTitle: 'ขอ QR แล้วไม่ทราบผล',
+    resolve: 'ตรวจกับธนาคาร',
+    resolvedPaid: 'ธนาคารได้รับเงินแล้ว รายการรอบันทึกบิล',
+    resolvedNone: 'ธนาคารไม่มีรายการนี้ ปิดรายการแล้ว',
+    unclaimedTitle: 'จ่ายแล้วแต่ยังไม่มีบิล',
+    unclaimedHint: 'ใช้เงินก้อนนี้ได้ที่หน้าขาย: เลือกพร้อมเพย์เมื่อยอดบิลเท่ากัน ลูกค้าไม่ต้องจ่ายซ้ำ',
+    unknownPayer: 'ไม่ทราบชื่อผู้จ่าย',
+    dismiss: 'ปิดรายการ',
+    dismissReason: 'เหตุผลที่ปิดรายการ',
+    dismissPlaceholder: 'เช่น คืนเงินให้ลูกค้าที่ธนาคารแล้ว',
+    confirmDismiss: 'ยืนยันปิดรายการ',
+    keep: 'ไม่ปิด',
+    dismissed: 'ปิดรายการแล้ว',
+    pendingWarning: 'ยังมี QR ที่รอลูกค้าจ่ายอยู่ การเริ่มนับไม่ได้ทำให้ QR ใช้ไม่ได้ที่ธนาคาร ถ้าลูกค้าจ่ายภายหลัง เงินจะมาอยู่ในรายการ "จ่ายแล้วแต่ยังไม่มีบิล"',
+    acknowledgeAndCount: 'รับทราบและเริ่มนับ',
+    keepSelling: 'ยังไม่นับ',
+  },
 }
 
 const en = {
@@ -88,6 +108,26 @@ const en = {
   entry_cash_out: 'Cash out',
   entry_cash_refund: 'Cash refund',
   saveName: 'Save name',
+  qr: {
+    title: 'Bank QR that needs attention',
+    description: 'These must be dealt with before the shift can be counted',
+    attemptsTitle: 'QR requested, outcome unknown',
+    resolve: 'Check with the bank',
+    resolvedPaid: 'The bank has the money. It is now waiting for a sale.',
+    resolvedNone: 'The bank has no such payment. The request is closed.',
+    unclaimedTitle: 'Paid, but no sale yet',
+    unclaimedHint: 'Use this money at the till: choose PromptPay when the total matches. The customer does not pay again.',
+    unknownPayer: 'Payer unknown',
+    dismiss: 'Dismiss',
+    dismissReason: 'Reason for dismissing',
+    dismissPlaceholder: 'e.g. refunded to the customer at the bank',
+    confirmDismiss: 'Dismiss payment',
+    keep: 'Keep',
+    dismissed: 'Payment dismissed',
+    pendingWarning: 'Some QRs are still waiting to be paid. Counting does not cancel them at the bank. If a customer pays later, the money will appear under "Paid, but no sale yet".',
+    acknowledgeAndCount: 'I understand, start counting',
+    keepSelling: 'Not yet',
+  },
 } satisfies typeof th
 
 export const locales = { th, en }

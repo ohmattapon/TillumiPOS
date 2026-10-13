@@ -12,9 +12,10 @@ interface IssuedQr {
 /**
  * One bank QR for an exact amount, from creating it to the bank confirming it. It starts when
  * `active` turns true, is polled every few seconds, and can be cancelled or replaced. `paid`
- * appears only when the bank itself has reported the money.
+ * appears only when the bank itself has reported the money. With a `shiftId` the QR is asked for
+ * on behalf of that open shift (the v2 contract); without one the legacy contract is used.
  */
-export function useQrPayment({ amountSatang, active }: { amountSatang: number; active: boolean }) {
+export function useQrPayment({ amountSatang, active, shiftId }: { amountSatang: number; active: boolean; shiftId?: number }) {
   const create = useCreateQrPayment()
   const cancelQr = useCancelQrPayment()
   const [issued, setIssued] = useState<IssuedQr | null>(null)
@@ -23,12 +24,14 @@ export function useQrPayment({ amountSatang, active }: { amountSatang: number; a
   const issue = useCallback(() => {
     requested.current = true
     setIssued(null)
-    create.mutate(amountSatang, {
-      onSuccess: (qr) => setIssued({ id: qr.id, image: qr.qrImage, expiresAt: new Date(qr.expiresAt) }),
-    })
-    // `create` is a stable mutation object per render; only the amount decides a new QR.
+    // A new key per QR: a lost answer is then resolved from the shift page, never by asking twice.
+    create.mutate(
+      { amountSatang, shiftId, idempotencyKey: crypto.randomUUID() },
+      { onSuccess: (qr) => setIssued({ id: qr.id, image: qr.qrImage, expiresAt: new Date(qr.expiresAt) }) },
+    )
+    // `create` is a stable mutation object per render; only the amount and shift decide a new QR.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [amountSatang])
+  }, [amountSatang, shiftId])
 
   // Once per dialog: a re-render, or React's double effect in development, must not make a second QR.
   useEffect(() => {
@@ -36,7 +39,7 @@ export function useQrPayment({ amountSatang, active }: { amountSatang: number; a
   }, [active, issue])
 
   const status = useQuery({
-    ...qrPaymentQuery(issued?.id ?? 0),
+    ...qrPaymentQuery(issued?.id ?? 0, shiftId !== undefined),
     enabled: issued !== null,
     refetchInterval: (query) => (query.state.data?.status === 'pending' || !query.state.data ? QR_POLL_MS : false),
     // A transient failure of the poll must not look like a failed payment: keep waiting.
@@ -45,6 +48,7 @@ export function useQrPayment({ amountSatang, active }: { amountSatang: number; a
 
   const state = status.data?.status
   const payment = status.data
+  const inShift = shiftId !== undefined
 
   return {
     /** The QR is being asked for from the bank. */
@@ -56,12 +60,12 @@ export function useQrPayment({ amountSatang, active }: { amountSatang: number; a
     isWaiting: issued !== null && (state === undefined || state === 'pending'),
     /** Gives up on the current QR and makes a fresh one, e.g. after it expired. */
     regenerate: () => {
-      if (issued) cancelQr.mutate(issued.id)
+      if (issued) cancelQr.mutate({ id: issued.id, inShift })
       issue()
     },
     /** Stops waiting. A payment that has already arrived is left alone (the server refuses to cancel it). */
     cancel: () => {
-      if (issued && state !== 'paid') cancelQr.mutate(issued.id)
+      if (issued && state !== 'paid') cancelQr.mutate({ id: issued.id, inShift })
     },
   }
 }

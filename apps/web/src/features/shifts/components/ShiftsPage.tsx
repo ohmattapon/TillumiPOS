@@ -9,6 +9,7 @@ import { useActiveBranch } from '@/features/branches'
 import { useFormat } from '@/features/settings'
 import { ApiError } from '@/lib/api'
 import { selectedRegisterId, useRegisterSelectionStore } from '../store/register-selection'
+import { QrRecoveryPanel } from './QrRecoveryPanel'
 import { checkoutModeQuery, currentShiftQuery, registersQuery, shiftEntriesQuery, shiftHistoryQuery, useCancelClosing, useCloseShift, useCreateRegister, useOpenShift, useRecordCashMovement, useStartClosing, useUpdateRegister } from '../api'
 
 export function ShiftsPage() {
@@ -30,6 +31,7 @@ export function ShiftsPage() {
   const [newRegisterCode, setNewRegisterCode] = useState('')
   const [newRegisterName, setNewRegisterName] = useState('')
   const [registerNames, setRegisterNames] = useState<Record<number, string>>({})
+  const [needsQrAcknowledgement, setNeedsQrAcknowledgement] = useState(false)
   const openCommandKey = useRef<string | null>(null)
   const movementCommandKey = useRef<string | null>(null)
   const rememberedRegisterId = selectedRegisterId(selections, me?.id, branch?.id)
@@ -104,7 +106,52 @@ export function ShiftsPage() {
                   <div className="flex gap-2"><Button variant="outline" className="h-11 flex-1" disabled={cancelClosing.isPending} onClick={() => cancelClosing.mutate({ id: current.data!.id, closingRevision: activeShift.data!.closingRevision })}>{t('cancelCounting')}</Button><Button className="h-11 flex-1" disabled={close.isPending || money.parse(countedAmount) === null || (money.parse(countedAmount) !== activeShift.data.closingExpectedCashSatang && !differenceReason.trim())} onClick={() => { const countedCashSatang = money.parse(countedAmount); if (countedCashSatang !== null) close.mutate({ id: current.data!.id, closingRevision: activeShift.data!.closingRevision, countedCashSatang, ...(differenceReason.trim() ? { reason: differenceReason.trim() } : {}) }) }}>{t('closeAction')}</Button></div>
                 </div>
               )}
-              {current.data.status === 'open' && <Button variant="outline" className="h-11" disabled={startClosing.isPending} onClick={() => { setCountedAmount(''); startClosing.mutate(current.data!.id) }}>{t('startCounting')}</Button>}
+              {current.data.status === 'open' && !needsQrAcknowledgement && (
+                <Button
+                  variant="outline"
+                  className="h-11"
+                  disabled={startClosing.isPending}
+                  onClick={() => {
+                    setCountedAmount('')
+                    startClosing.mutate(
+                      { id: current.data!.id },
+                      {
+                        // QRs are still waiting to be paid: counting may start, but only knowingly.
+                        onError: (failure) => {
+                          if (failure instanceof ApiError && failure.code === 'QR_PENDING_ACKNOWLEDGEMENT_REQUIRED') {
+                            startClosing.reset()
+                            setNeedsQrAcknowledgement(true)
+                          }
+                        },
+                      },
+                    )
+                  }}
+                >
+                  {t('startCounting')}
+                </Button>
+              )}
+              {current.data.status === 'open' && needsQrAcknowledgement && (
+                <div role="alert" className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                  <p>{t('qr.pendingWarning')}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" className="h-10" onClick={() => setNeedsQrAcknowledgement(false)}>
+                      {t('qr.keepSelling')}
+                    </Button>
+                    <Button
+                      className="h-10"
+                      disabled={startClosing.isPending}
+                      onClick={() =>
+                        startClosing.mutate(
+                          { id: current.data!.id, acknowledgePendingQr: true },
+                          { onSuccess: () => setNeedsQrAcknowledgement(false) },
+                        )
+                      }
+                    >
+                      {t('qr.acknowledgeAndCount')}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4 border-t pt-5">
@@ -121,6 +168,8 @@ export function ShiftsPage() {
             </div>
           )}
         </section>
+
+        {mode.data?.checkoutMode === 'shifts' && <QrRecoveryPanel isOwner={me?.role === 'owner'} />}
 
         {me?.role === 'owner' && (
           <section className="mx-auto w-full max-w-3xl space-y-4 rounded-xl border bg-card p-5">

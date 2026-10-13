@@ -8,6 +8,8 @@ export const shiftKeys = {
   history: () => [...shiftKeys.all, 'history'] as const,
   detail: (id: number) => [...shiftKeys.all, 'detail', id] as const,
   entries: (id: number) => [...shiftKeys.all, 'entries', id] as const,
+  qrAttempts: () => [...shiftKeys.all, 'qr', 'attempts'] as const,
+  qrUnclaimed: () => [...shiftKeys.all, 'qr', 'unclaimed'] as const,
 }
 
 export const registersQuery = queryOptions({
@@ -72,7 +74,8 @@ export function useOpenShift() {
 export function useStartClosing() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => unwrap(apiV2.shifts({ id })['start-closing'].post({}, { headers: { 'idempotency-key': crypto.randomUUID() } })),
+    mutationFn: ({ id, acknowledgePendingQr }: { id: number; acknowledgePendingQr?: boolean }) =>
+      unwrap(apiV2.shifts({ id })['start-closing'].post(acknowledgePendingQr ? { acknowledgePendingQr } : {}, { headers: { 'idempotency-key': crypto.randomUUID() } })),
     onSuccess: () => invalidateShifts(client),
   })
 }
@@ -100,6 +103,36 @@ export function useRecordCashMovement() {
   return useMutation({
     mutationFn: ({ idempotencyKey, ...input }: { id: number; kind: 'cash_in' | 'cash_out'; amountSatang: number; reason: string; idempotencyKey: string }) =>
       unwrap(apiV2.shifts({ id: input.id })['cash-entries'].post({ kind: input.kind, amountSatang: input.amountSatang, reason: input.reason }, { headers: { 'idempotency-key': idempotencyKey } })),
+    onSuccess: () => invalidateShifts(client),
+  })
+}
+
+/** QR requests whose outcome at the bank was never learned. They block counting until resolved. */
+export const unresolvedQrAttemptsQuery = queryOptions({
+  queryKey: shiftKeys.qrAttempts(),
+  queryFn: () => unwrap(apiV2.payments.qr.attempts.get({ query: { limit: 50, offset: 0 } })),
+  refetchInterval: 15_000,
+})
+
+/** Money the bank confirmed that has no sale yet, for the whole branch. */
+export const unclaimedQrQuery = queryOptions({
+  queryKey: shiftKeys.qrUnclaimed(),
+  queryFn: () => unwrap(apiV2.payments.qr.unclaimed.get({ query: { limit: 50, offset: 0 } })),
+  refetchInterval: 15_000,
+})
+
+export function useResolveQrAttempt() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => unwrap(apiV2.payments.qr.attempts({ id }).resolve.post()),
+    onSettled: () => invalidateShifts(client),
+  })
+}
+
+export function useDismissQrPayment() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) => unwrap(apiV2.payments.qr({ id }).dismiss.post({ reason })),
     onSuccess: () => invalidateShifts(client),
   })
 }
