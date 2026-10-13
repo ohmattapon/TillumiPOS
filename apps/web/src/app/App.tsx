@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Navigate, Route, Routes } from 'react-router'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { LoginPage, meQuery, useLogout } from '@/features/auth'
+import { BranchesPage, useActiveBranch } from '@/features/branches'
 import { clearCart, PosPage } from '@/features/pos'
 import { ProductsPage } from '@/features/products'
 import { TodayPage } from '@/features/sales'
@@ -16,6 +17,8 @@ function Shell({ user }: { user: User }) {
   const logout = useLogout()
   const { locale } = useSettings()
   const isOwner = user.role === 'owner'
+  // Keeps the remembered branch honest (closed or forbidden ones are dropped) even on pages without a switcher.
+  useActiveBranch()
 
   // The shop chooses the language; follow it as soon as the settings arrive or change.
   useEffect(() => {
@@ -31,6 +34,7 @@ function Shell({ user }: { user: User }) {
           <Route index element={<PosPage />} />
           <Route path="today" element={<TodayPage isOwner={isOwner} />} />
           {isOwner && <Route path="products" element={<ProductsPage />} />}
+          {isOwner && <Route path="branches" element={<BranchesPage />} />}
           {isOwner && <Route path="settings" element={<SettingsPage />} />}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

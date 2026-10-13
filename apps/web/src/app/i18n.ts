@@ -1,6 +1,7 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import { authLocales } from '@/features/auth'
+import { branchesLocales } from '@/features/branches'
 import { posLocales } from '@/features/pos'
 import { productsLocales } from '@/features/products'
 import { salesLocales } from '@/features/sales'
@@ -19,6 +20,7 @@ export const resources = {
     common: common.th,
     app: appLocales.th,
     auth: authLocales.th,
+    branches: branchesLocales.th,
     pos: posLocales.th,
     products: productsLocales.th,
     sales: salesLocales.th,
@@ -28,6 +30,7 @@ export const resources = {
     common: common.en,
     app: appLocales.en,
     auth: authLocales.en,
+    branches: branchesLocales.en,
     pos: posLocales.en,
     products: productsLocales.en,
     sales: salesLocales.en,

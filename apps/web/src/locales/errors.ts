@@ -27,5 +27,12 @@ export const errors = {
     ALREADY_VOIDED: 'This sale has already been voided.',
     MEDIA_UNAVAILABLE: 'Image storage is not reachable. Please try again.',
     INVALID_SHOP_SETTINGS: 'These settings are not valid.',
+    INVALID_BRANCH: 'These branch details are not valid.',
+    INVALID_BRANCH_ID: 'The branch id is not valid.',
+    BRANCH_NOT_FOUND: 'Branch not found.',
+    BRANCH_FORBIDDEN: 'You may only work in your own branch.',
+    BRANCH_INACTIVE: 'This branch is closed.',
+    BRANCH_CODE_TAKEN: 'This branch code is already used.',
+    BRANCH_IN_USE: 'The last open branch, or one that still has active staff, cannot be closed.',
   },
 }
