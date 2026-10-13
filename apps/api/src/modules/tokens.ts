@@ -3,6 +3,5 @@ export const TOKENS = {
   UnitOfWork: Symbol('IUnitOfWork').toString(),
   PasswordHasher: Symbol('IPasswordHasher').toString(),
   MediaStorage: Symbol('IMediaStorage').toString(),
-  ShopSettings: Symbol('IShopSettings').toString(),
   Clock: Symbol('IClock').toString(),
 } as const

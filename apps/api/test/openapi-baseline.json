@@ -3154,6 +3154,26 @@
                               }
                             ]
                           },
+                          "vatMode": {
+                            "enum": [
+                              "inclusive",
+                              "exclusive",
+                              "none"
+                            ],
+                            "type": "string"
+                          },
+                          "vatRateBp": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "vatSatang": {
                             "anyOf": [
                               {
@@ -3205,6 +3225,8 @@
                           "discountSatang",
                           "totalSatang",
                           "vatSatang",
+                          "vatMode",
+                          "vatRateBp",
                           "paidSatang",
                           "changeSatang",
                           "cashierId",
@@ -3772,6 +3794,26 @@
                         }
                       ]
                     },
+                    "vatMode": {
+                      "enum": [
+                        "inclusive",
+                        "exclusive",
+                        "none"
+                      ],
+                      "type": "string"
+                    },
+                    "vatRateBp": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "vatSatang": {
                       "anyOf": [
                         {
@@ -3823,6 +3865,8 @@
                     "discountSatang",
                     "totalSatang",
                     "vatSatang",
+                    "vatMode",
+                    "vatRateBp",
                     "paidSatang",
                     "changeSatang",
                     "cashierId",
@@ -4092,6 +4136,26 @@
                         }
                       ]
                     },
+                    "vatMode": {
+                      "enum": [
+                        "inclusive",
+                        "exclusive",
+                        "none"
+                      ],
+                      "type": "string"
+                    },
+                    "vatRateBp": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "vatSatang": {
                       "anyOf": [
                         {
@@ -4143,6 +4207,8 @@
                     "discountSatang",
                     "totalSatang",
                     "vatSatang",
+                    "vatMode",
+                    "vatRateBp",
                     "paidSatang",
                     "changeSatang",
                     "cashierId",
@@ -4462,6 +4528,26 @@
                         }
                       ]
                     },
+                    "vatMode": {
+                      "enum": [
+                        "inclusive",
+                        "exclusive",
+                        "none"
+                      ],
+                      "type": "string"
+                    },
+                    "vatRateBp": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "vatSatang": {
                       "anyOf": [
                         {
@@ -4513,6 +4599,8 @@
                     "discountSatang",
                     "totalSatang",
                     "vatSatang",
+                    "vatMode",
+                    "vatRateBp",
                     "paidSatang",
                     "changeSatang",
                     "cashierId",
@@ -4698,6 +4786,448 @@
         "summary": "สรุปยอดขายในช่วงเวลา [from, to)",
         "tags": [
           "Sales"
+        ]
+      }
+    },
+    "/api/v1/settings/": {
+      "get": {
+        "operationId": "getApiV1Settings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "address": {
+                      "maxLength": 300,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "currency": {
+                      "maxLength": 3,
+                      "minLength": 3,
+                      "type": "string"
+                    },
+                    "locale": {
+                      "enum": [
+                        "th",
+                        "en"
+                      ],
+                      "type": "string"
+                    },
+                    "phone": {
+                      "maxLength": 30,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopName": {
+                      "maxLength": 100,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "taxId": {
+                      "maxLength": 20,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "timeZone": {
+                      "maxLength": 64,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "vatMode": {
+                      "enum": [
+                        "inclusive",
+                        "exclusive",
+                        "none"
+                      ],
+                      "type": "string"
+                    },
+                    "vatRateBp": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "maximum": 10000,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      ],
+                      "maximum": 10000,
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "shopName",
+                    "taxId",
+                    "address",
+                    "phone",
+                    "currency",
+                    "vatMode",
+                    "vatRateBp",
+                    "timeZone",
+                    "locale"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "การตั้งค่าร้าน",
+        "tags": [
+          "Settings"
+        ]
+      },
+      "patch": {
+        "operationId": "patchApiV1Settings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "address": {
+                    "maxLength": 300,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "currency": {
+                    "maxLength": 3,
+                    "minLength": 3,
+                    "type": "string"
+                  },
+                  "locale": {
+                    "enum": [
+                      "th",
+                      "en"
+                    ],
+                    "type": "string"
+                  },
+                  "phone": {
+                    "maxLength": 30,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "shopName": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "taxId": {
+                    "maxLength": 20,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "timeZone": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "vatMode": {
+                    "enum": [
+                      "inclusive",
+                      "exclusive",
+                      "none"
+                    ],
+                    "type": "string"
+                  },
+                  "vatRateBp": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 10000,
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 10000,
+                    "minimum": 0
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "address": {
+                    "maxLength": 300,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "currency": {
+                    "maxLength": 3,
+                    "minLength": 3,
+                    "type": "string"
+                  },
+                  "locale": {
+                    "enum": [
+                      "th",
+                      "en"
+                    ],
+                    "type": "string"
+                  },
+                  "phone": {
+                    "maxLength": 30,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "shopName": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "taxId": {
+                    "maxLength": 20,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "timeZone": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "vatMode": {
+                    "enum": [
+                      "inclusive",
+                      "exclusive",
+                      "none"
+                    ],
+                    "type": "string"
+                  },
+                  "vatRateBp": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 10000,
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 10000,
+                    "minimum": 0
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "address": {
+                    "maxLength": 300,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "currency": {
+                    "maxLength": 3,
+                    "minLength": 3,
+                    "type": "string"
+                  },
+                  "locale": {
+                    "enum": [
+                      "th",
+                      "en"
+                    ],
+                    "type": "string"
+                  },
+                  "phone": {
+                    "maxLength": 30,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "shopName": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "taxId": {
+                    "maxLength": 20,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "timeZone": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "vatMode": {
+                    "enum": [
+                      "inclusive",
+                      "exclusive",
+                      "none"
+                    ],
+                    "type": "string"
+                  },
+                  "vatRateBp": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 10000,
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 10000,
+                    "minimum": 0
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "address": {
+                      "maxLength": 300,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "currency": {
+                      "maxLength": 3,
+                      "minLength": 3,
+                      "type": "string"
+                    },
+                    "locale": {
+                      "enum": [
+                        "th",
+                        "en"
+                      ],
+                      "type": "string"
+                    },
+                    "phone": {
+                      "maxLength": 30,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopName": {
+                      "maxLength": 100,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "taxId": {
+                      "maxLength": 20,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "timeZone": {
+                      "maxLength": 64,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "vatMode": {
+                      "enum": [
+                        "inclusive",
+                        "exclusive",
+                        "none"
+                      ],
+                      "type": "string"
+                    },
+                    "vatRateBp": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "maximum": 10000,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      ],
+                      "maximum": 10000,
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "shopName",
+                    "taxId",
+                    "address",
+                    "phone",
+                    "currency",
+                    "vatMode",
+                    "vatRateBp",
+                    "timeZone",
+                    "locale"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "แก้ไขการตั้งค่าร้าน (มีผลกับบิลใหม่เท่านั้น)",
+        "tags": [
+          "Settings"
         ]
       }
     },

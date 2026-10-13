@@ -100,6 +100,19 @@ describe('ProductEntity', () => {
       expect(codeOf(() => product({ stockQty: 0 }).assertSellable(1))).toBe('INSUFFICIENT_STOCK')
     })
 
+    test('carries the values interpolated into the message, so a client can translate it', () => {
+      const paramsOf = (run: () => void) => {
+        try {
+          run()
+        } catch (error) {
+          return (error as DomainConflictError).params
+        }
+      }
+
+      expect(paramsOf(() => product({ isActive: false }).assertSellable(1))).toEqual({ name: 'น้ำดื่ม' })
+      expect(paramsOf(() => product({ stockQty: 2 }).assertSellable(3))).toEqual({ name: 'น้ำดื่ม', available: 2 })
+    })
+
     test('an inactive product is reported as inactive even when it is also out of stock', () => {
       expect(() => product({ isActive: false, stockQty: 0 }).assertSellable(1)).toThrow('ปิดการขายแล้ว')
     })

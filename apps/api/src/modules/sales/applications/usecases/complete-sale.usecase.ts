@@ -5,7 +5,8 @@ import { stockLedgerToken } from '../../../inventory/applications/ports/stock-le
 import type { IStockLedger } from '../../../inventory/applications/ports/stock-ledger.port'
 import { productRepositoryToken } from '../../../products/applications/ports/product.repository'
 import type { IProductRepository } from '../../../products/applications/ports/product.repository'
-import type { IShopSettings } from '../../../shared/ports/shop-settings.port'
+import { shopSettingsRepositoryToken } from '../../../settings/applications/ports/shop-settings.repository'
+import type { IShopSettingsRepository } from '../../../settings/applications/ports/shop-settings.repository'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import { TOKENS } from '../../../tokens'
 import { saleRepositoryToken } from '../ports/sale.repository'
@@ -20,7 +21,7 @@ export class CompleteSaleUseCase {
     @inject(productRepositoryToken) private readonly products: IProductRepository,
     @inject(stockLedgerToken) private readonly ledger: IStockLedger,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
-    @inject(TOKENS.ShopSettings) private readonly settings: IShopSettings,
+    @inject(shopSettingsRepositoryToken) private readonly settings: IShopSettingsRepository,
   ) {}
 
   async execute(input: unknown, cashier: { id: number; displayName: string }) {
@@ -31,13 +32,16 @@ export class CompleteSaleUseCase {
     for (const item of dto.items) quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity)
 
     return this.unitOfWork.run(async () => {
+      // Read inside the unit of work, so the sale is priced with the settings in force when it is recorded.
+      const shop = await this.settings.get()
+
       // Locked until the sale commits, so two tills cannot sell the same last unit.
       const locked = await this.products.findManyForUpdate([...quantities.keys()])
       const productsById = new Map(locked.map((product) => [product.id, product]))
 
       const lines = [...quantities].map(([productId, quantity]) => {
         const product = productsById.get(productId)
-        if (!product) throw new DomainError('ไม่พบสินค้ารหัส ' + productId, 'PRODUCT_NOT_FOUND')
+        if (!product) throw new DomainError('ไม่พบสินค้ารหัส ' + productId, 'PRODUCT_NOT_FOUND', { productId })
         product.assertSellable(quantity)
         return { product, quantity }
       })
@@ -46,7 +50,8 @@ export class CompleteSaleUseCase {
         lines,
         discountSatang: dto.discountSatang ?? 0,
         payments: dto.payments,
-        vatRateBp: this.settings.vatRateBp,
+        vatMode: shop.vatMode,
+        vatRateBp: shop.vatRateBp,
         cashier,
       })
       // Taken only after every rule has passed; it still rolls back with the sale if a later step fails.

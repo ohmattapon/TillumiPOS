@@ -53,6 +53,7 @@ describe('error responses are RFC 9457 problem details', () => {
       status: 409,
       detail: 'สินค้า "Tea" เหลือ 1 ชิ้น ไม่พอขาย',
       code: 'INSUFFICIENT_STOCK',
+      params: { name: 'Tea', available: 1 },
     })
   })
 

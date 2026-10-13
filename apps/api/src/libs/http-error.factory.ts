@@ -1,6 +1,6 @@
 import { ZodError } from 'zod'
 import { DomainConflictError } from '../domains/errors/domain-conflict.error'
-import { DomainError } from '../domains/errors/domain-error'
+import { DomainError, type ErrorParams } from '../domains/errors/domain-error'
 import { DomainExternalServiceError } from '../domains/errors/domain-external-service.error'
 import { DomainForbiddenError } from '../domains/errors/domain-forbidden.error'
 import { DomainNotFoundError } from '../domains/errors/domain-not-found.error'
@@ -19,6 +19,8 @@ export interface ProblemDetails {
   code: string
   /** Per-field issues, present on validation failures only. */
   errors?: unknown
+  /** Data interpolated into `detail`, so a client can rebuild the message in its own language. */
+  params?: ErrorParams
 }
 
 export const PROBLEM_CONTENT_TYPE = 'application/problem+json; charset=utf-8'
@@ -34,7 +36,13 @@ const TITLES: Record<number, string> = {
   502: 'Bad Gateway',
 }
 
-export function problem(status: number, code: string, detail: string, errors?: unknown): ProblemDetails {
+export function problem(
+  status: number,
+  code: string,
+  detail: string,
+  errors?: unknown,
+  params?: ErrorParams,
+): ProblemDetails {
   return {
     type: 'about:blank',
     title: TITLES[status] ?? 'Error',
@@ -42,6 +50,7 @@ export function problem(status: number, code: string, detail: string, errors?: u
     detail,
     code,
     ...(errors !== undefined && { errors }),
+    ...(params !== undefined && { params }),
   }
 }
 
@@ -71,5 +80,5 @@ export function toProblem(error: unknown): ProblemDetails | null {
   if (!(error instanceof DomainError)) return null
 
   const status = STATUS_BY_CLASS.find(([errorClass]) => error instanceof errorClass)?.[1] ?? 400
-  return problem(status, error.code, error.message)
+  return problem(status, error.code, error.message, undefined, error.params)
 }

@@ -3,6 +3,7 @@ import type { ICategoryRepository } from '../modules/categories/applications/por
 import type { IStockLedger } from '../modules/inventory/applications/ports/stock-ledger.port'
 import type { IStockMovementRepository } from '../modules/inventory/applications/ports/stock-movement.repository'
 import type { IProductRepository } from '../modules/products/applications/ports/product.repository'
+import type { IShopSettingsRepository } from '../modules/settings/applications/ports/shop-settings.repository'
 import type { ISaleRepository } from '../modules/sales/applications/ports/sale.repository'
 import type { IMediaStorage } from '../modules/shared/ports/media-storage.port'
 import type { IPasswordHasher } from '../modules/shared/ports/password-hasher.port'
@@ -77,4 +78,9 @@ export const mockSaleRepository = (): Mocked<ISaleRepository> => ({
   saveVoid: mock<ISaleRepository['saveVoid']>(async () => {}),
   findHeaders: mock<ISaleRepository['findHeaders']>(),
   sumCompleted: mock<ISaleRepository['sumCompleted']>(),
+})
+
+export const mockShopSettingsRepository = (): Mocked<IShopSettingsRepository> => ({
+  get: mock<IShopSettingsRepository['get']>(),
+  save: mock<IShopSettingsRepository['save']>(),
 })

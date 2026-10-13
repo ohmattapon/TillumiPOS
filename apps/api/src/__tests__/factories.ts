@@ -52,6 +52,8 @@ export const makeSale = (overrides: Partial<SaleEntityProps> = {}) =>
     vatSatang: 196,
     paidSatang: 5000,
     changeSatang: 2000,
+    vatMode: 'inclusive',
+    vatRateBp: 700,
     cashierId: 1,
     cashierName: 'สมชาย',
     voidedById: null,

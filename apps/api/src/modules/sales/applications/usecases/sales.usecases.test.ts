@@ -4,20 +4,20 @@ import { makeProduct, makeSale, makeStockMovement } from '../../../../__tests__/
 import {
   mockProductRepository,
   mockSaleRepository,
+  mockShopSettingsRepository,
   mockStockLedger,
   mockUnitOfWork,
 } from '../../../../__tests__/mocks'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import type { IClock } from '../../../shared/ports/clock.port'
-import type { IShopSettings } from '../../../shared/ports/shop-settings.port'
+import { DEFAULT_SHOP_SETTINGS, ShopSettingsEntity } from '../../../../domains/shop-settings.domain'
 import { CompleteSaleUseCase } from './complete-sale.usecase'
 import { GetSaleUseCase } from './get-sale.usecase'
 import { GetSalesSummaryUseCase } from './get-sales-summary.usecase'
 import { ListSalesUseCase } from './list-sales.usecase'
 import { VoidSaleUseCase } from './void-sale.usecase'
 
-const settings: IShopSettings = { vatRateBp: 700, timeZone: 'Asia/Bangkok' }
 const cashier = { id: 7, displayName: 'สมชาย' }
 const cash = (amountSatang: number) => [{ method: 'cash' as const, amountSatang }]
 
@@ -25,12 +25,15 @@ let sales: ReturnType<typeof mockSaleRepository>
 let products: ReturnType<typeof mockProductRepository>
 let ledger: ReturnType<typeof mockStockLedger>
 let unitOfWork: ReturnType<typeof mockUnitOfWork>
+let settings: ReturnType<typeof mockShopSettingsRepository>
 
 beforeEach(() => {
   sales = mockSaleRepository()
   products = mockProductRepository()
   ledger = mockStockLedger()
   unitOfWork = mockUnitOfWork()
+  settings = mockShopSettingsRepository()
+  settings.get.mockResolvedValue(new ShopSettingsEntity(DEFAULT_SHOP_SETTINGS))
   ledger.record.mockResolvedValue(makeStockMovement())
 })
 
@@ -78,6 +81,45 @@ describe('CompleteSaleUseCase', () => {
       cashierName: 'สมชาย',
     })
     expect(unitOfWork.run).toHaveBeenCalledTimes(1)
+  })
+
+  test('prices with the settings in force: exclusive VAT is added on top and recorded on the sale', async () => {
+    settings.get.mockResolvedValue(new ShopSettingsEntity({ ...DEFAULT_SHOP_SETTINGS, vatMode: 'exclusive', vatRateBp: 1000 }))
+
+    // 107.00 - 7.00 discount = 100.00 net, plus 10% = 110.00
+    const sale = await sell({ payments: cash(20000) })
+
+    expect(sale.toSnapshot()).toMatchObject({
+      subtotalSatang: 10700,
+      discountSatang: 700,
+      vatSatang: 1000,
+      totalSatang: 11000,
+      changeSatang: 9000,
+      vatMode: 'exclusive',
+      vatRateBp: 1000,
+    })
+  })
+
+  test('a shop that does not charge VAT records none', async () => {
+    settings.get.mockResolvedValue(new ShopSettingsEntity({ ...DEFAULT_SHOP_SETTINGS, vatMode: 'none' }))
+
+    const sale = await sell()
+
+    expect(sale.toSnapshot()).toMatchObject({ vatSatang: 0, totalSatang: 10000, vatMode: 'none', vatRateBp: 0 })
+  })
+
+  test('reads the settings inside the unit of work, so the sale and its pricing see the same state', async () => {
+    await sell()
+
+    expect(unitOfWork.run.mock.invocationCallOrder[0]).toBeLessThan(settings.get.mock.invocationCallOrder[0]!)
+  })
+
+  test('a failure reading the settings propagates and stores nothing', async () => {
+    const failure = new Error('database went away')
+    settings.get.mockRejectedValue(failure)
+
+    await expect(sell()).rejects.toBe(failure)
+    expect(sales.create).not.toHaveBeenCalled()
   })
 
   test('locks every product in the cart before checking stock', async () => {

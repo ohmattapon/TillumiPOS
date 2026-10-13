@@ -52,6 +52,18 @@ describe('toProblem', () => {
   )
 })
 
+describe('params', () => {
+  test('are carried onto the problem so a client can rebuild the message', () => {
+    const error = new DomainConflictError('เหลือ 1 ชิ้น', 'INSUFFICIENT_STOCK', { name: 'ชา', available: 1 })
+
+    expect(toProblem(error)).toMatchObject({ code: 'INSUFFICIENT_STOCK', params: { name: 'ชา', available: 1 } })
+  })
+
+  test('are absent when the error has none', () => {
+    expect(toProblem(new DomainNotFoundError('ไม่พบ'))).not.toHaveProperty('params')
+  })
+})
+
 describe('problem', () => {
   test('omits `errors` unless there are any', () => {
     expect(problem(404, 'NOT_FOUND', 'ไม่พบ')).not.toHaveProperty('errors')

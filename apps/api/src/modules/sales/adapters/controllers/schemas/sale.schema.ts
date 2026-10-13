@@ -11,6 +11,9 @@ const header = {
   discountSatang: t.Integer(),
   totalSatang: t.Integer(),
   vatSatang: t.Integer(),
+  // How VAT was applied to this sale: whether it is contained in the total or added on top.
+  vatMode: t.Union([t.Literal('inclusive'), t.Literal('exclusive'), t.Literal('none')]),
+  vatRateBp: t.Integer(),
   paidSatang: t.Integer(),
   changeSatang: t.Integer(),
   cashierId: t.Integer(),
