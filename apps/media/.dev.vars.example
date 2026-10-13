@@ -1,0 +1,2 @@
+# Copy to .dev.vars for local development. Must match MEDIA_TOKEN in apps/api/.env.
+MEDIA_TOKEN=change-me

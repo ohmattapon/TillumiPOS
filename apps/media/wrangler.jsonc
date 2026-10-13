@@ -1,0 +1,9 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "pos-media",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "pos-media" }],
+  "observability": { "enabled": true }
+  // Secret MEDIA_TOKEN: `.dev.vars` locally, `wrangler secret put MEDIA_TOKEN` in production.
+}

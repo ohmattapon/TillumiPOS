@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pos
+      POSTGRES_PASSWORD: pos
+      POSTGRES_DB: pos
+    ports:
+      # 5433 on the host: 5432 is often taken by a locally installed PostgreSQL.
+      - "5433:5432"
+    volumes:
+      - pos-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pos -d pos"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pos-db:

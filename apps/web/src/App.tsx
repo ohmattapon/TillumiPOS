@@ -1,122 +1,39 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Navigate, Route, Routes } from 'react-router'
+import { AppSidebar } from './components/AppSidebar'
+import { SidebarInset, SidebarProvider } from './components/ui/sidebar'
+import { api, unwrap } from './lib/api'
+import { meQuery } from './lib/queries'
+import { LoginPage } from './pages/LoginPage'
+import { PosPage } from './pages/PosPage'
+import { ProductsPage } from './pages/ProductsPage'
+import { TodayPage } from './pages/TodayPage'
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const queryClient = useQueryClient()
+  const me = useQuery(meQuery)
+  const logout = useMutation({
+    mutationFn: () => unwrap(api.auth.logout.post()),
+    // Drop every cached query so the next user never sees the previous user's data.
+    onSuccess: () => queryClient.clear(),
+  })
+
+  if (me.isPending) return <p className="p-8 text-muted-foreground">กำลังโหลด…</p>
+  if (!me.data) return <LoginPage />
+
+  const isOwner = me.data.role === 'owner'
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    <SidebarProvider>
+      <AppSidebar user={me.data} onLogout={() => logout.mutate()} />
+      <SidebarInset className="h-svh min-w-0 overflow-hidden">
+        <Routes>
+          <Route index element={<PosPage />} />
+          <Route path="today" element={<TodayPage isOwner={isOwner} />} />
+          {isOwner && <Route path="products" element={<ProductsPage />} />}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
-
-export default App
