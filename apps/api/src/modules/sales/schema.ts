@@ -1,6 +1,6 @@
 import { date, index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 import { createdAt, id } from '../../infrastructure/database/columns'
-import { products } from '../catalog/products/schema'
+import { products } from '../../infrastructure/database/schema/products'
 import { users } from '../../infrastructure/database/schema/users'
 
 export const saleStatus = pgEnum('sale_status', ['completed', 'voided'])

@@ -1,5 +1,7 @@
 import { mock, type Mock } from 'bun:test'
 import type { ICategoryRepository } from '../modules/categories/applications/ports/category.repository'
+import type { IProductRepository } from '../modules/products/applications/ports/product.repository'
+import type { IMediaStorage } from '../modules/shared/ports/media-storage.port'
 import type { IPasswordHasher } from '../modules/shared/ports/password-hasher.port'
 import type { IUnitOfWork } from '../modules/shared/ports/unit-of-work.port'
 import type { IUserRepository } from '../modules/users/applications/ports/user.repository'
@@ -38,3 +40,19 @@ export const mockUnitOfWork = () => {
   // `run` is generic in the port, which a mock cannot be; the cast keeps both the port type and the mock API.
   return { run } as unknown as IUnitOfWork & { run: typeof run }
 }
+
+export const mockProductRepository = (): Mocked<IProductRepository> => ({
+  findAll: mock<IProductRepository['findAll']>(),
+  findById: mock<IProductRepository['findById']>(),
+  findManyForUpdate: mock<IProductRepository['findManyForUpdate']>(),
+  create: mock<IProductRepository['create']>(),
+  update: mock<IProductRepository['update']>(),
+  adjustStock: mock<IProductRepository['adjustStock']>(),
+  setImageKey: mock<IProductRepository['setImageKey']>(),
+})
+
+export const mockMediaStorage = (): Mocked<IMediaStorage> => ({
+  urlFor: mock<IMediaStorage['urlFor']>((key) => 'https://media.test/' + key),
+  put: mock<IMediaStorage['put']>(async () => {}),
+  delete: mock<IMediaStorage['delete']>(async () => {}),
+})

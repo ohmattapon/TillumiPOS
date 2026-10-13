@@ -124,4 +124,12 @@ describe('products', () => {
       imageUrl: null,
     })
   })
+
+  test('an update with no fields returns the product unchanged', async () => {
+    const product = await seedProduct(owner, { stock: 5 })
+
+    const unchanged = ok(await owner.api.catalog.products({ id: product.id }).patch({}))
+
+    expect(unchanged).toEqual(product)
+  })
 })

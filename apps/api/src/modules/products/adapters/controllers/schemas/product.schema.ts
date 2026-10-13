@@ -1,5 +1,5 @@
 import { t } from 'elysia'
-import { satang } from '../../../shared/models'
+import { satang } from '../../../../../shared/models'
 
 const fields = {
   sku: t.String({ minLength: 1, maxLength: 64 }),
@@ -12,7 +12,7 @@ const fields = {
   isActive: t.Boolean(),
 }
 
-export const ProductModel = {
+export const productSchemas = {
   product: t.Object({ id: t.Integer(), ...fields, stockQty: t.Integer(), imageUrl: t.Nullable(t.String()) }),
   create: t.Object({
     sku: fields.sku,
@@ -35,7 +35,5 @@ export const ProductModel = {
   }),
 }
 
-export type Product = typeof ProductModel.product.static
-export type CreateProduct = typeof ProductModel.create.static
-export type UpdateProduct = typeof ProductModel.update.static
-export type ProductListQuery = typeof ProductModel.listQuery.static
+export type ProductResponse = typeof productSchemas.product.static
+export type CreateProductBody = typeof productSchemas.create.static
