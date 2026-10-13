@@ -4,6 +4,8 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
   "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "pos-media" }],
+  // Only these names are read from the repo-root .env in local dev, so the Worker never sees
+  // the API's other secrets. In production: `wrangler secret put MEDIA_TOKEN`.
+  "secrets": { "required": ["MEDIA_TOKEN"] },
   "observability": { "enabled": true }
-  // Secret MEDIA_TOKEN: `.dev.vars` locally, `wrangler secret put MEDIA_TOKEN` in production.
 }

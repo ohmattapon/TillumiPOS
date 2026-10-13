@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --port 8787",
+    "dev": "wrangler dev --port 8787 --env-file ../../.env",
     "deploy": "wrangler deploy",
     "types": "wrangler types",
     "typecheck": "wrangler types && tsc --noEmit"
