@@ -220,6 +220,7 @@ apps/web/src/
 |---|---|
 | `bun run db:up` | เปิด PostgreSQL ใน Docker (พอร์ต 5433) |
 | `bun run db:migrate` | รัน migration |
+| `bun run scb:inquiry <ref1>` | ถาม SCB ว่ารู้จักรายการ QR นี้หรือไม่ และพิมพ์คำตอบดิบ (อ่านอย่างเดียว ใช้ `.env` ของคุณ) |
 | `bun run dev` | เปิด API (3000, เส้นทางอยู่ใต้ `/api/v1`), เว็บ (5173) และ Worker ในเครื่อง (8787) |
 | `bun run typecheck` | ตรวจ type ทุกแพ็กเกจ |
 | `bun run test` | รันการทดสอบทั้งหมดของ API และเว็บ (ต้องเปิดฐานข้อมูล) |
