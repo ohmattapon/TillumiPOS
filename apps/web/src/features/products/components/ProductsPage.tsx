@@ -1,15 +1,15 @@
 import type { Product } from '@pos/api/types'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { MoreHorizontal, PackagePlus, Plus, Search } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel, tableCell, tableHead } from '@/components/Panel'
-import { ProductFormDialog } from '@/components/ProductFormDialog'
-import { ProductImage } from '@/components/ProductImage'
+import { ProductFormDialog } from './ProductFormDialog'
+import { ProductImage } from './ProductImage'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
 import { StatusBadge } from '@/components/StatusBadge'
-import { StockDialog, type StockMode } from '@/components/StockDialog'
+import { StockDialog, type StockMode } from './StockDialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -20,18 +20,16 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { api, unwrap } from '@/lib/api'
 import { formatBaht } from '@/lib/money'
-import { categoriesQuery, LOW_STOCK_THRESHOLD, productsQuery } from '@/lib/queries'
+import { categoriesQuery } from '@/features/categories'
+import { productsQuery, useSetProductActive } from '../api'
+import { isLowStock } from '../lib/stock'
 
 type Filter = 'all' | 'low' | 'inactive'
 
 type OpenDialog = { kind: 'form'; product?: Product } | { kind: 'stock'; product: Product; mode: StockMode } | null
 
-const isLowStock = (product: Product) => product.trackStock && product.stockQty <= LOW_STOCK_THRESHOLD
-
 export function ProductsPage() {
-  const queryClient = useQueryClient()
   const products = useQuery(productsQuery(true))
   const categories = useQuery(categoriesQuery)
 
@@ -39,15 +37,16 @@ export function ProductsPage() {
   const [search, setSearch] = useState('')
   const [dialog, setDialog] = useState<OpenDialog>(null)
 
-  const setActive = useMutation({
-    mutationFn: (product: Product) =>
-      unwrap(api.catalog.products({ id: product.id }).patch({ isActive: !product.isActive })),
-    onSuccess: (product) => {
-      toast.success(product.isActive ? `เปิดขาย "${product.name}" แล้ว` : `ปิดการขาย "${product.name}" แล้ว`)
-      queryClient.invalidateQueries({ queryKey: ['products'] })
-    },
-    onError: (error) => toast.error(error.message),
-  })
+  const setActive = useSetProductActive()
+  const toggleActive = (product: Product) =>
+    setActive.mutate(
+      { id: product.id, isActive: !product.isActive },
+      {
+        onSuccess: (updated) =>
+          toast.success(updated.isActive ? `เปิดขาย "${updated.name}" แล้ว` : `ปิดการขาย "${updated.name}" แล้ว`),
+        onError: (error) => toast.error(error.message),
+      },
+    )
 
   const all = products.data ?? []
   const categoryName = new Map(categories.data?.map((category) => [category.id, category.name]))
@@ -169,7 +168,7 @@ export function ProductsPage() {
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => setActive.mutate(product)}>
+                        <DropdownMenuItem onSelect={() => toggleActive(product)}>
                           {product.isActive ? 'ปิดการขาย' : 'เปิดการขาย'}
                         </DropdownMenuItem>
                       </DropdownMenuContent>

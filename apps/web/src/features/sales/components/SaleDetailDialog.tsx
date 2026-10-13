@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Printer } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { api, unwrap } from '@/lib/api'
+import { saleQuery, useVoidSale } from '../api'
 import { Receipt } from './Receipt'
 
 interface Props {
@@ -16,25 +16,12 @@ interface Props {
 }
 
 export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
-  const queryClient = useQueryClient()
   const [isVoiding, setIsVoiding] = useState(false)
   const [reason, setReason] = useState('')
 
-  const sale = useQuery({
-    queryKey: ['sales', 'detail', saleId],
-    queryFn: () => unwrap(api.sales({ id: saleId }).get()),
-  })
+  const sale = useQuery(saleQuery(saleId))
 
-  const voidSale = useMutation({
-    mutationFn: () => unwrap(api.sales({ id: saleId }).void.post({ reason: reason.trim() })),
-    onSuccess: (voided) => {
-      toast.success(`ยกเลิกบิล ${voided.receiptNo} และคืนสต็อกแล้ว`)
-      setIsVoiding(false)
-      queryClient.invalidateQueries({ queryKey: ['sales'] })
-      queryClient.invalidateQueries({ queryKey: ['products'] })
-    },
-    onError: (error) => toast.error(error.message),
-  })
+  const voidSale = useVoidSale(saleId)
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -52,7 +39,13 @@ export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
             className="space-y-3 print:hidden"
             onSubmit={(event) => {
               event.preventDefault()
-              voidSale.mutate()
+              voidSale.mutate(reason.trim(), {
+                onSuccess: (voided) => {
+                  toast.success(`ยกเลิกบิล ${voided.receiptNo} และคืนสต็อกแล้ว`)
+                  setIsVoiding(false)
+                },
+                onError: (error) => toast.error(error.message),
+              })
             }}
           >
             <div className="space-y-2">

@@ -22,7 +22,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { LOW_STOCK_THRESHOLD, productsQuery } from '@/lib/queries'
+import { isLowStock, productsQuery } from '@/features/products'
 
 interface NavItem {
   to: string
@@ -42,7 +42,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
   const isOwner = user.role === 'owner'
   const products = useQuery(productsQuery())
   const lowStockCount =
-    products.data?.filter((product) => product.trackStock && product.stockQty <= LOW_STOCK_THRESHOLD).length ?? 0
+    products.data?.filter(isLowStock).length ?? 0
 
   const groups: { label: string; items: NavItem[] }[] = [
     {

@@ -19,3 +19,5 @@ export const formatTime = (value: Date | string) => time.format(new Date(value))
 export const formatLongDate = (value: Date | string) => longDate.format(new Date(value))
 
 export const paymentMethodLabel = { cash: 'เงินสด', promptpay: 'พร้อมเพย์', card: 'บัตร' } as const
+
+export type PaymentMethod = keyof typeof paymentMethodLabel

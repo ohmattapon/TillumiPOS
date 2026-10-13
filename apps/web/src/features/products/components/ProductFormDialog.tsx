@@ -1,5 +1,4 @@
 import type { Category, Product } from '@pos/api/types'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
@@ -10,8 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { ProductImage } from './ProductImage'
-import { api, unwrap } from '@/lib/api'
-import { prepareImage } from '@/lib/image'
+import { useSaveProduct } from '../api'
 import { parseBaht } from '@/lib/money'
 
 // Radix Select cannot use an empty string as an item value.
@@ -25,7 +23,6 @@ interface Props {
 }
 
 export function ProductFormDialog({ product, categories, onClose }: Props) {
-  const queryClient = useQueryClient()
   const [form, setForm] = useState({
     sku: product?.sku ?? '',
     barcode: product?.barcode ?? '',
@@ -55,36 +52,32 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
   const priceSatang = parseBaht(form.price)
   const costSatang = form.cost.trim() === '' ? 0 : parseBaht(form.cost)
 
-  const save = useMutation({
-    mutationFn: async () => {
-      const body = {
-        sku: form.sku.trim(),
-        name: form.name.trim(),
-        barcode: form.barcode.trim() || null,
-        categoryId: form.categoryId === NO_CATEGORY ? null : Number(form.categoryId),
-        priceSatang: priceSatang!,
-        costSatang: costSatang!,
-        trackStock: form.trackStock,
-      }
-      const saved = await unwrap(
-        product ? api.catalog.products({ id: product.id }).patch(body) : api.catalog.products.post(body),
-      )
-      // The image endpoints need the product id, so they run after the product itself is saved.
-      if (image) return unwrap(api.catalog.products({ id: saved.id }).image.put({ file: await prepareImage(image) }))
-      if (image === null && saved.imageUrl) return unwrap(api.catalog.products({ id: saved.id }).image.delete())
-      return saved
-    },
-    // Even when the image step fails the product was saved, so the list must refresh either way.
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
-    onSuccess: (saved) => {
-      toast.success(product ? `บันทึก "${saved.name}" แล้ว` : `เพิ่ม "${saved.name}" แล้ว`)
-      onClose()
-    },
-  })
+  const save = useSaveProduct()
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    if (priceSatang !== null && costSatang !== null) save.mutate()
+    if (priceSatang === null || costSatang === null) return
+    save.mutate(
+      {
+        id: product?.id,
+        image,
+        input: {
+          sku: form.sku.trim(),
+          name: form.name.trim(),
+          barcode: form.barcode.trim() || null,
+          categoryId: form.categoryId === NO_CATEGORY ? null : Number(form.categoryId),
+          priceSatang,
+          costSatang,
+          trackStock: form.trackStock,
+        },
+      },
+      {
+        onSuccess: (saved) => {
+          toast.success(product ? `บันทึก "${saved.name}" แล้ว` : `เพิ่ม "${saved.name}" แล้ว`)
+          onClose()
+        },
+      },
+    )
   }
 
   return (
