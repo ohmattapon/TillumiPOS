@@ -1,5 +1,7 @@
 import { mock, type Mock } from 'bun:test'
 import type { ICategoryRepository } from '../modules/categories/applications/ports/category.repository'
+import type { IStockLedger } from '../modules/inventory/applications/ports/stock-ledger.port'
+import type { IStockMovementRepository } from '../modules/inventory/applications/ports/stock-movement.repository'
 import type { IProductRepository } from '../modules/products/applications/ports/product.repository'
 import type { IMediaStorage } from '../modules/shared/ports/media-storage.port'
 import type { IPasswordHasher } from '../modules/shared/ports/password-hasher.port'
@@ -55,4 +57,13 @@ export const mockMediaStorage = (): Mocked<IMediaStorage> => ({
   urlFor: mock<IMediaStorage['urlFor']>((key) => 'https://media.test/' + key),
   put: mock<IMediaStorage['put']>(async () => {}),
   delete: mock<IMediaStorage['delete']>(async () => {}),
+})
+
+export const mockStockMovementRepository = (): Mocked<IStockMovementRepository> => ({
+  create: mock<IStockMovementRepository['create']>(),
+  findAll: mock<IStockMovementRepository['findAll']>(),
+})
+
+export const mockStockLedger = (): Mocked<IStockLedger> => ({
+  record: mock<IStockLedger['record']>(),
 })

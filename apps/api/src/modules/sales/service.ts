@@ -6,7 +6,8 @@ import { container } from 'tsyringe'
 import { currentExecutor, runInTransaction } from '../../libs/transaction-context'
 import { productRepositoryToken } from '../products/applications/ports/product.repository'
 import type { IProductRepository } from '../products/applications/ports/product.repository'
-import { InventoryService } from '../inventory/service'
+import { stockLedgerToken } from '../inventory/applications/ports/stock-ledger.port'
+import type { IStockLedger } from '../inventory/applications/ports/stock-ledger.port'
 import type { UserResponse as User } from '../users/adapters/controllers/schemas/user.schema'
 import type { CreateSale, Sale, SaleHeader, SaleListQuery, SaleSummary, SaleSummaryQuery } from './model'
 import { calculateTotals, settlePayments } from './pricing'
@@ -31,6 +32,7 @@ const headerColumns = {
 
 // Bridge until this module is migrated: the products repository reads the ambient transaction.
 const productRepository = () => container.resolve<IProductRepository>(productRepositoryToken)
+const stockLedger = () => container.resolve<IStockLedger>(stockLedgerToken)
 
 const total = (expression: SQL) => sql<number>`coalesce(sum(${expression}), 0)`.mapWith(Number)
 
@@ -78,7 +80,7 @@ export abstract class SalesService {
       await tx.insert(payments).values(input.payments.map((payment) => ({ ...payment, saleId })))
 
       for (const line of lines)
-        await InventoryService.record(tx, {
+        await stockLedger().record({
           productId: line.productId,
           type: 'sale',
           quantity: -line.quantity,
@@ -112,7 +114,7 @@ export abstract class SalesService {
         .where(eq(saleItems.saleId, id))
         .orderBy(saleItems.productId)
       for (const item of items)
-        await InventoryService.record(tx, {
+        await stockLedger().record({
           productId: item.productId,
           type: 'void',
           quantity: item.quantity,

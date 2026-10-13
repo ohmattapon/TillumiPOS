@@ -2,7 +2,7 @@ import { t } from 'elysia'
 
 const note = t.Optional(t.String({ maxLength: 500 }))
 
-export const InventoryModel = {
+export const inventorySchemas = {
   movement: t.Object({
     id: t.Integer(),
     productId: t.Integer(),
@@ -31,7 +31,4 @@ export const InventoryModel = {
   }),
 }
 
-export type StockMovement = typeof InventoryModel.movement.static
-export type ReceiveStock = typeof InventoryModel.receive.static
-export type AdjustStock = typeof InventoryModel.adjust.static
-export type MovementsQuery = typeof InventoryModel.movementsQuery.static
+export type StockMovementResponse = typeof inventorySchemas.movement.static

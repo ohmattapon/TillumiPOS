@@ -4,7 +4,7 @@ import { Elysia } from 'elysia'
 import { container } from 'tsyringe'
 import { AuthElysiaController } from './modules/auth/adapters/controllers/auth.controller'
 import { catalog } from './modules/catalog'
-import { inventory } from './modules/inventory'
+import { InventoryElysiaController } from './modules/inventory/adapters/controllers/inventory.controller'
 import './modules/di-registrations'
 import { sales } from './modules/sales'
 import { UserElysiaController } from './modules/users/adapters/controllers/user.controller'
@@ -15,7 +15,7 @@ const api = new Elysia({ name: 'api', prefix: '/api' })
   .use(container.resolve(AuthElysiaController).getRoutes())
   .use(container.resolve(UserElysiaController).getRoutes())
   .use(catalog)
-  .use(inventory)
+  .use(container.resolve(InventoryElysiaController).getRoutes())
   .use(sales)
 
 export const app = new Elysia()

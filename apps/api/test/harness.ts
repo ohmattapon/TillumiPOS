@@ -12,7 +12,7 @@ import { CreateProductUseCase } from '../src/modules/products/applications/useca
 import { GetProductUseCase } from '../src/modules/products/applications/usecases/get-product.usecase'
 import type { IMediaStorage } from '../src/modules/shared/ports/media-storage.port'
 import { TOKENS } from '../src/modules/tokens'
-import { InventoryService } from '../src/modules/inventory/service'
+import { ReceiveStockUseCase } from '../src/modules/inventory/applications/usecases/receive-stock.usecase'
 import type { UserResponse as User } from '../src/modules/users/adapters/controllers/schemas/user.schema'
 import { CreateUserUseCase } from '../src/modules/users/applications/usecases/create-user.usecase'
 import { assertConnectedTestDatabase, ensureTestDatabase } from './database'
@@ -80,7 +80,7 @@ export async function seedProduct(
     costSatang: 600,
     ...input,
   })
-  if (stock > 0) await InventoryService.receive({ productId: product.id, quantity: stock }, by.user.id)
+  if (stock > 0) await container.resolve(ReceiveStockUseCase).execute({ productId: product.id, quantity: stock }, by.user.id)
   return toProductResponse(
     await container.resolve(GetProductUseCase).execute(product.id),
     container.resolve<IMediaStorage>(TOKENS.MediaStorage),
