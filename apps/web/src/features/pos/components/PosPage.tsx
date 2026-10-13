@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { openOrdersQuery, usePayOrder } from '@/features/orders'
 import { useFormat } from '@/features/settings'
-import type { PaymentMethod } from '@/lib/money'
+import type { PaymentInput } from '@/lib/money'
 import { useCheckout } from '../api'
 import { useCart } from '../hooks/use-cart'
 import { hasKeyboard } from '../lib/focus'
@@ -56,7 +56,7 @@ export function PosPage() {
     },
   }
 
-  const pay = (payment: { method: PaymentMethod; amountSatang: number }) => {
+  const pay = (payment: PaymentInput) => {
     // An open order is paid through the order, which sells it at the prices it quoted.
     if (cart.orderId !== null)
       payOrder.mutate({ orderId: cart.orderId, discountSatang: cart.discountSatang, payment }, paid)

@@ -1,13 +1,13 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productKeys } from '@/features/products'
 import { saleKeys } from '@/features/sales'
 import { api, unwrap } from '@/lib/api'
-import type { PaymentMethod } from '@/lib/money'
+import type { PaymentInput } from '@/lib/money'
 
 export interface CheckoutInput {
   items: { productId: number; quantity: number }[]
   discountSatang: number
-  payment: { method: PaymentMethod; amountSatang: number }
+  payment: PaymentInput
 }
 
 /** Records the sale. The receipt number, VAT and stock deduction are decided by the server. */
@@ -23,5 +23,40 @@ export function useCheckout() {
         queryClient.invalidateQueries({ queryKey: productKeys.all }),
         queryClient.invalidateQueries({ queryKey: saleKeys.all }),
       ]),
+  })
+}
+
+export const qrKeys = {
+  all: ['payments', 'qr'] as const,
+  config: () => [...qrKeys.all, 'config'] as const,
+  detail: (id: number) => [...qrKeys.all, 'detail', id] as const,
+}
+
+/** Whether the shop takes PromptPay through a bank QR that confirms itself. */
+export const qrConfigQuery = queryOptions({
+  queryKey: qrKeys.config(),
+  queryFn: () => unwrap(api.payments.qr.config.get()),
+  staleTime: 5 * 60_000,
+})
+
+/** How often the till asks whether the customer has paid. The server will not ask the bank more often itself. */
+export const QR_POLL_MS = 3000
+
+export const qrPaymentQuery = (id: number) =>
+  queryOptions({
+    queryKey: qrKeys.detail(id),
+    queryFn: () => unwrap(api.payments.qr({ id }).get()),
+  })
+
+/** Asks the bank for a QR for exactly this amount. */
+export function useCreateQrPayment() {
+  return useMutation({
+    mutationFn: (amountSatang: number) => unwrap(api.payments.qr.post({ amountSatang })),
+  })
+}
+
+export function useCancelQrPayment() {
+  return useMutation({
+    mutationFn: (id: number) => unwrap(api.payments.qr({ id }).cancel.post()),
   })
 }

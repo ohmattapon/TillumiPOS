@@ -3,7 +3,7 @@ import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query
 import { productKeys } from '@/features/products'
 import { saleKeys } from '@/features/sales'
 import { api, unwrap } from '@/lib/api'
-import type { PaymentMethod } from '@/lib/money'
+import type { PaymentInput } from '@/lib/money'
 
 export const orderKeys = {
   /** Prefix of every order query. */
@@ -92,7 +92,7 @@ export function useCancelOrder() {
 export interface PayOrderInput {
   orderId: number
   discountSatang: number
-  payment: { method: PaymentMethod; amountSatang: number }
+  payment: PaymentInput
 }
 
 /** Pays the order. It becomes a sale, so stock, sales and the order list all change. */
