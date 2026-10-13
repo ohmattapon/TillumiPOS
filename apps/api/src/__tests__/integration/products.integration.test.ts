@@ -1,5 +1,5 @@
-﻿import { beforeEach, describe, expect, test } from 'bun:test'
-import { ok, resetDatabase, seedProduct, signIn, type Session } from '../../../../test/harness'
+import { beforeEach, describe, expect, test } from 'bun:test'
+import { ok, resetDatabase, seedProduct, signIn, type Session } from '../../../test/harness'
 
 let owner: Session
 
