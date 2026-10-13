@@ -1,0 +1,152 @@
+import { useQuery } from '@tanstack/react-query'
+import { useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { PageHeader } from '@/components/PageHeader'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { meQuery } from '@/features/auth'
+import { useActiveBranch } from '@/features/branches'
+import { useFormat } from '@/features/settings'
+import { ApiError } from '@/lib/api'
+import { selectedRegisterId, useRegisterSelectionStore } from '../store/register-selection'
+import { checkoutModeQuery, currentShiftQuery, registersQuery, shiftEntriesQuery, shiftHistoryQuery, useCancelClosing, useCloseShift, useCreateRegister, useOpenShift, useRecordCashMovement, useStartClosing, useUpdateRegister } from '../api'
+
+export function ShiftsPage() {
+  const { t } = useTranslation('shifts')
+  const { money, date } = useFormat()
+  const me = useQuery(meQuery).data
+  const { branch } = useActiveBranch()
+  const mode = useQuery(checkoutModeQuery)
+  const registers = useQuery(registersQuery)
+  const history = useQuery(shiftHistoryQuery)
+  const selections = useRegisterSelectionStore((state) => state.selections)
+  const selectRegister = useRegisterSelectionStore((state) => state.select)
+  const [openingAmount, setOpeningAmount] = useState('0')
+  const [countedAmount, setCountedAmount] = useState('')
+  const [differenceReason, setDifferenceReason] = useState('')
+  const [movementAmount, setMovementAmount] = useState('')
+  const [movementReason, setMovementReason] = useState('')
+  const [movementKind, setMovementKind] = useState<'cash_in' | 'cash_out'>('cash_in')
+  const [newRegisterCode, setNewRegisterCode] = useState('')
+  const [newRegisterName, setNewRegisterName] = useState('')
+  const [registerNames, setRegisterNames] = useState<Record<number, string>>({})
+  const openCommandKey = useRef<string | null>(null)
+  const movementCommandKey = useRef<string | null>(null)
+  const rememberedRegisterId = selectedRegisterId(selections, me?.id, branch?.id)
+  const currentId = (rememberedRegisterId && registers.data?.items.some((register) => register.id === rememberedRegisterId && register.isActive)
+    ? rememberedRegisterId : registers.data?.items.find((register) => register.isActive)?.id) ?? null
+  const current = useQuery({ ...currentShiftQuery(currentId ?? 0), enabled: currentId !== null })
+  const detailsId = current.data?.id
+  const activeShift = useQuery({
+    queryKey: ['shifts', 'detail', detailsId],
+    queryFn: () => import('@/lib/api').then(({ apiV2, unwrap }) => unwrap(apiV2.shifts({ id: detailsId! }).get())),
+    enabled: detailsId !== undefined,
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
+  })
+  const open = useOpenShift()
+  const startClosing = useStartClosing()
+  const cancelClosing = useCancelClosing()
+  const close = useCloseShift()
+  const movement = useRecordCashMovement()
+  const createRegister = useCreateRegister()
+  const updateRegister = useUpdateRegister()
+  const entries = useQuery({ ...shiftEntriesQuery(detailsId ?? 0), enabled: detailsId !== undefined })
+  const registerName = useMemo(() => registers.data?.items.find((item) => item.id === currentId)?.name ?? '', [registers.data, currentId])
+  const error = [mode.error, registers.error, current.error, history.error, entries.error, open.error, startClosing.error, cancelClosing.error, close.error, movement.error, createRegister.error, updateRegister.error].find(Boolean)
+  const errorCode = error instanceof ApiError ? error.code : null
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <PageHeader title={t('title')} />
+      <main className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 md:p-6">
+        {mode.data?.checkoutMode === 'legacy' && <p role="status" className="mx-auto w-full max-w-3xl rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">{t('legacyMode')}</p>}
+        <section className="mx-auto w-full max-w-3xl space-y-5 rounded-xl border bg-card p-5 shadow-sm">
+          <label className="grid gap-2 text-sm font-medium">
+            {t('register')}
+            <select className="h-11 rounded-md border bg-background px-3" value={currentId ?? ''} onChange={(event) => { if (me && branch) selectRegister(me.id, branch.id, Number(event.target.value)) }}>
+              <option value="" disabled>{t('chooseRegister')}</option>
+              {registers.data?.items.filter((item) => item.isActive).map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}
+            </select>
+          </label>
+
+          {current.data ? (
+            <div className="space-y-4 border-t pt-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold">{current.data.status === 'open' ? t('shiftOpen') : t('shiftClosing')}</p>
+                  <p className="text-sm text-muted-foreground">{registerName} · {t('openedBy', { name: current.data.openedByName })}</p>
+                </div>
+                <p className="text-sm text-muted-foreground">{date.dateTime(current.data.openedAt)}</p>
+              </div>
+              {current.data.status === 'open' && (
+                <form className="grid gap-3 rounded-lg bg-muted/60 p-4 md:grid-cols-[1fr_1fr_auto]" onSubmit={(event) => {
+                  event.preventDefault()
+                  const amountSatang = money.parse(movementAmount)
+                  if (amountSatang && current.data) {
+                    movementCommandKey.current ??= crypto.randomUUID()
+                    movement.mutate({ id: current.data.id, kind: movementKind, amountSatang, reason: movementReason, idempotencyKey: movementCommandKey.current }, {
+                      onSuccess: () => { movementCommandKey.current = null; setMovementAmount(''); setMovementReason('') },
+                    })
+                  }
+                }}>
+                  <label className="grid gap-2 text-sm font-medium">{t('cashMovement')}<select className="h-10 rounded-md border bg-background px-3" value={movementKind} onChange={(e) => { movementCommandKey.current = null; setMovementKind(e.target.value as 'cash_in' | 'cash_out') }}><option value="cash_in">{t('cashIn')}</option><option value="cash_out">{t('cashOut')}</option></select></label>
+                  <label className="grid gap-2 text-sm font-medium">{t('amount')}<Input inputMode="decimal" value={movementAmount} onChange={(e) => { movementCommandKey.current = null; setMovementAmount(e.target.value) }} /></label>
+                  <label className="grid gap-2 text-sm font-medium">{t('reason')}<Input value={movementReason} onChange={(e) => { movementCommandKey.current = null; setMovementReason(e.target.value) }} /></label>
+                  <Button type="submit" variant="outline" className="h-10 md:col-span-3" disabled={movement.isPending || !movementReason.trim() || money.parse(movementAmount) === null}>{t('saveMovement')}</Button>
+                </form>
+              )}
+              {activeShift.data?.status === 'closing' && (
+                <div className="space-y-3 rounded-lg bg-muted/60 p-4">
+                  <p className="text-sm">{t('expected')}: <strong className="tabular-nums">{money.format(activeShift.data.closingExpectedCashSatang ?? 0)}</strong></p>
+                  <label className="grid gap-2 text-sm font-medium">{t('countedCash')}<Input inputMode="decimal" value={countedAmount} onChange={(e) => setCountedAmount(e.target.value)} /></label>
+                  {money.parse(countedAmount) !== null && money.parse(countedAmount) !== activeShift.data.closingExpectedCashSatang && <label className="grid gap-2 text-sm font-medium">{t('differenceReason')}<Input value={differenceReason} onChange={(e) => setDifferenceReason(e.target.value)} /></label>}
+                  <div className="flex gap-2"><Button variant="outline" className="h-11 flex-1" disabled={cancelClosing.isPending} onClick={() => cancelClosing.mutate({ id: current.data!.id, closingRevision: activeShift.data!.closingRevision })}>{t('cancelCounting')}</Button><Button className="h-11 flex-1" disabled={close.isPending || money.parse(countedAmount) === null || (money.parse(countedAmount) !== activeShift.data.closingExpectedCashSatang && !differenceReason.trim())} onClick={() => { const countedCashSatang = money.parse(countedAmount); if (countedCashSatang !== null) close.mutate({ id: current.data!.id, closingRevision: activeShift.data!.closingRevision, countedCashSatang, ...(differenceReason.trim() ? { reason: differenceReason.trim() } : {}) }) }}>{t('closeAction')}</Button></div>
+                </div>
+              )}
+              {current.data.status === 'open' && <Button variant="outline" className="h-11" disabled={startClosing.isPending} onClick={() => { setCountedAmount(''); startClosing.mutate(current.data!.id) }}>{t('startCounting')}</Button>}
+            </div>
+          ) : (
+            <div className="space-y-4 border-t pt-5">
+              <p className="text-sm text-muted-foreground">{t('noShift')}</p>
+              <label className="grid gap-2 text-sm font-medium">{t('openingCash')}<Input inputMode="decimal" value={openingAmount} onChange={(e) => { openCommandKey.current = null; setOpeningAmount(e.target.value) }} /></label>
+              <Button className="h-11" disabled={mode.data?.checkoutMode !== 'shifts' || currentId === null || open.isPending || money.parse(openingAmount) === null} onClick={() => { const openingCashSatang = money.parse(openingAmount); if (currentId !== null && openingCashSatang !== null) { openCommandKey.current ??= crypto.randomUUID(); open.mutate({ registerId: currentId, openingCashSatang, idempotencyKey: openCommandKey.current }, { onSuccess: () => { openCommandKey.current = null } }) } }}>{t('openAction')}</Button>
+            </div>
+          )}
+          {error && <p role="alert" className="text-sm text-destructive">{errorCode ? t(`errors.${errorCode}`, { defaultValue: error.message }) : error.message || t('error')}</p>}
+          {current.data && (
+            <div className="border-t pt-4">
+              <h3 className="mb-3 text-sm font-semibold">{t('entries')}</h3>
+              {entries.data?.items.length ? <ul className="divide-y">{entries.data.items.map((entry) => <li key={entry.id} className="flex flex-wrap items-center gap-2 py-2 text-sm"><span>{t(`entry_${entry.kind}`)}</span><span className="font-medium tabular-nums">{money.format(entry.amountSatang)}</span><span className="text-muted-foreground">{entry.actorName} · {date.dateTime(entry.createdAt)}{entry.reason ? ` · ${entry.reason}` : ''}</span></li>)}</ul> : <p className="text-sm text-muted-foreground">{t('noEntries')}</p>}
+            </div>
+          )}
+        </section>
+
+        {me?.role === 'owner' && (
+          <section className="mx-auto w-full max-w-3xl space-y-4 rounded-xl border bg-card p-5">
+            <h2 className="font-semibold">{t('manageRegisters')}</h2>
+            <form className="grid gap-3 md:grid-cols-[1fr_1fr_auto]" onSubmit={(event) => { event.preventDefault(); createRegister.mutate({ code: newRegisterCode.trim().toUpperCase(), name: newRegisterName.trim() }, { onSuccess: () => { setNewRegisterCode(''); setNewRegisterName('') } }) }}>
+              <label className="grid gap-2 text-sm">{t('registerCode')}<Input value={newRegisterCode} onChange={(event) => setNewRegisterCode(event.target.value.toUpperCase())} maxLength={20} pattern="[A-Z0-9-]+" required /></label>
+              <label className="grid gap-2 text-sm">{t('registerName')}<Input value={newRegisterName} onChange={(event) => setNewRegisterName(event.target.value)} maxLength={100} required /></label>
+              <Button className="h-10 self-end" disabled={createRegister.isPending}>{t('createRegister')}</Button>
+            </form>
+            <ul className="divide-y">{registers.data?.items.map((register) => <li key={register.id} className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm"><span className="font-medium">{register.code}</span><Input className="h-9 max-w-64" aria-label={t('registerName')} value={registerNames[register.id] ?? register.name} onChange={(event) => setRegisterNames((names) => ({ ...names, [register.id]: event.target.value }))} maxLength={100} /><div className="flex gap-2"><Button variant="outline" className="h-9" disabled={updateRegister.isPending || !(registerNames[register.id]?.trim()) || (registerNames[register.id]?.trim() ?? register.name) === register.name} onClick={() => updateRegister.mutate({ id: register.id, name: registerNames[register.id]!.trim() })}>{t('saveName')}</Button><Button variant="outline" className="h-9" disabled={updateRegister.isPending || (!!current.data && current.data.registerId === register.id)} onClick={() => updateRegister.mutate({ id: register.id, isActive: !register.isActive })}>{register.isActive ? t('deactivate') : t('activate')}</Button></div></li>)}</ul>
+          </section>
+        )}
+
+        <section className="mx-auto w-full max-w-3xl rounded-xl border bg-card p-5">
+          <h2 className="mb-4 font-semibold">{t('history')}</h2>
+          <div className="divide-y">
+            {history.data?.items.slice(0, 10).map((shift) => (
+              <div key={shift.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+                <span className="font-medium">{registers.data?.items.find((item) => item.id === shift.registerId)?.name ?? t('register')} · {shift.openedByName}</span>
+                <span className="text-muted-foreground">{date.dateTime(shift.openedAt)}</span>
+                <span className="rounded-full bg-muted px-2 py-1">{t(`status_${shift.status}`)}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+    </div>
+  )
+}

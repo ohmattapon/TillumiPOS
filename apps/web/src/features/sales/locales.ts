@@ -58,6 +58,10 @@ const th = {
     voidSale: 'ยกเลิกบิล',
     print: 'พิมพ์',
     voidedToast: 'ยกเลิกบิล {{receiptNo}} และคืนสต็อกแล้ว',
+    cashRefund: 'คืนเงินสด',
+    refundReason: 'เหตุผลที่คืนเงิน',
+    confirmRefund: 'บันทึกคืนเงินสด',
+    refundRecorded: 'บันทึกรายการคืนเงินแล้ว',
   },
   receipt: {
     title: 'ใบเสร็จรับเงิน',
@@ -137,6 +141,10 @@ const en = {
     voidSale: 'Void sale',
     print: 'Print',
     voidedToast: 'Voided {{receiptNo}} and returned its stock',
+    cashRefund: 'Refund cash',
+    refundReason: 'Reason for refund',
+    confirmRefund: 'Record cash refund',
+    refundRecorded: 'Cash refund recorded',
   },
   receipt: {
     title: 'Receipt',

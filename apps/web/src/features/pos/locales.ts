@@ -1,6 +1,8 @@
 const th = {
   title: 'ขายสินค้า',
   description: 'สแกนบาร์โค้ด หรือแตะสินค้าเพื่อเพิ่มลงตะกร้า',
+  shiftReady: 'กะเปิดอยู่',
+  shiftRequired: 'เปิดกะก่อนขาย',
   picker: {
     searchPlaceholder: 'สแกนบาร์โค้ด หรือพิมพ์ชื่อ / รหัสสินค้า แล้วกด Enter',
     searchLabel: 'ค้นหาสินค้า',
@@ -75,6 +77,7 @@ const th = {
       retry: 'บันทึกการขายอีกครั้ง',
       retryNote: 'ลูกค้าชำระแล้ว ไม่ต้องจ่ายซ้ำ แก้ปัญหาแล้วกดบันทึกอีกครั้ง',
       failed: 'สร้าง QR ไม่สำเร็จ',
+      qrUnavailableInShifts: 'การรับ QR จากธนาคารในโหมดกะยังไม่พร้อม โปรดเลือกรับเงินสดหรือบัตร',
     },
   },
   receipt: {
@@ -86,6 +89,8 @@ const th = {
 
 const en = {
   title: 'Sell',
+  shiftReady: 'Shift open',
+  shiftRequired: 'Open a shift to sell',
   description: 'Scan a barcode, or tap a product to add it to the cart',
   picker: {
     searchPlaceholder: 'Scan a barcode, or type a name or SKU and press Enter',
@@ -161,6 +166,7 @@ const en = {
       retry: 'Record the sale again',
       retryNote: 'The customer has paid and must not pay again. Fix the problem, then record the sale again.',
       failed: 'Could not create the QR',
+      qrUnavailableInShifts: 'Bank QR checkout is not available in shift mode yet. Choose cash or card.',
     },
   },
   receipt: {

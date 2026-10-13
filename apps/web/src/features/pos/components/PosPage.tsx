@@ -7,6 +7,9 @@ import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { openOrdersQuery, usePayOrder } from '@/features/orders'
 import { useFormat } from '@/features/settings'
+import { checkoutModeQuery, currentShiftQuery, registersQuery, useRegisterSelectionStore } from '@/features/shifts'
+import { meQuery } from '@/features/auth'
+import { useActiveBranch } from '@/features/branches'
 import type { PaymentInput } from '@/lib/money'
 import { useCheckout } from '../api'
 import { useCart } from '../hooks/use-cart'
@@ -28,6 +31,15 @@ export function PosPage() {
   const checkout = useCheckout()
   const payOrder = usePayOrder()
   const openOrders = useQuery(openOrdersQuery)
+  const checkoutMode = useQuery(checkoutModeQuery)
+  const registers = useQuery(registersQuery)
+  const me = useQuery(meQuery).data
+  const { branch } = useActiveBranch()
+  const selections = useRegisterSelectionStore((state) => state.selections)
+  const selectedRegisterId = (me && branch && selections[`${me.id}:${branch.id}`]) || registers.data?.items.find((item) => item.isActive)?.id
+  const currentShift = useQuery({ ...currentShiftQuery(selectedRegisterId ?? 0), enabled: selectedRegisterId !== undefined })
+  const needsShift = checkoutMode.data?.checkoutMode === 'shifts'
+  const shiftReady = checkoutMode.data?.checkoutMode === 'legacy' || (needsShift && currentShift.data?.status === 'open')
   const [isListingOrders, setIsListingOrders] = useState(false)
   const [isSavingOrder, setIsSavingOrder] = useState(false)
 
@@ -35,9 +47,10 @@ export function PosPage() {
   const [receipt, setReceipt] = useState<Sale | null>(null)
   const [today] = useState(() => new Date())
   const searchRef = useRef<HTMLInputElement>(null)
+  const paymentCommandKey = useRef<string | null>(null)
 
   // F9 opens payment from anywhere on the page, when the cart can be paid.
-  const { canPay } = cart
+  const canPay = cart.canPay && shiftReady
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'F9') return
@@ -52,29 +65,37 @@ export function PosPage() {
     onSuccess: (sale: Sale) => {
       setReceipt(sale)
       setIsPaying(false)
+      paymentCommandKey.current = null
       clearCart()
     },
   }
 
   const pay = (payment: PaymentInput) => {
     // An open order is paid through the order, which sells it at the prices it quoted.
-    if (cart.orderId !== null)
-      payOrder.mutate({ orderId: cart.orderId, discountSatang: cart.discountSatang, payment }, paid)
-    else
+    if (cart.orderId !== null) {
+      paymentCommandKey.current ??= crypto.randomUUID()
+      payOrder.mutate({ orderId: cart.orderId, discountSatang: cart.discountSatang, payment, ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id, idempotencyKey: paymentCommandKey.current } : {}) }, paid)
+    }
+    else {
+      paymentCommandKey.current ??= crypto.randomUUID()
       checkout.mutate(
         {
           items: cart.lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
           discountSatang: cart.discountSatang,
           payment,
+          ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id } : {}),
+          ...(needsShift ? { idempotencyKey: paymentCommandKey.current } : {}),
         },
         paid,
       )
+    }
   }
 
   const payment = cart.orderId !== null ? payOrder : checkout
 
   const cancelPayment = () => {
     setIsPaying(false)
+    paymentCommandKey.current = null
     payment.reset()
   }
 
@@ -86,6 +107,7 @@ export function PosPage() {
   return (
     <>
       <PageHeader title={t('title')} highlight={date.longDate(today)} description={t('description')}>
+        {needsShift && <Button variant="outline" className="h-9 px-3" onClick={() => { window.location.href = '/shifts' }}>{shiftReady ? t('shiftReady') : t('shiftRequired')}</Button>}
         <Button variant="outline" className="h-9 px-3" onClick={() => setIsListingOrders(true)}>
           <ClipboardList />
           {t('orders.button')}
@@ -105,6 +127,7 @@ export function PosPage() {
       {isPaying && (
         <PaymentDialog
           totalSatang={cart.totalSatang}
+          qrAvailable={!needsShift}
           isSubmitting={payment.isPending}
           error={payment.error?.message}
           onConfirm={pay}

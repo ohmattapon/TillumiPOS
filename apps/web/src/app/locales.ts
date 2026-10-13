@@ -6,6 +6,7 @@ const th = {
   nav: {
     sell: 'ขายสินค้า',
     today: 'วันนี้',
+    shifts: 'กะและลิ้นชัก',
     products: 'สินค้าและสต็อก',
     branches: 'สาขา',
     settings: 'ตั้งค่าร้าน',
@@ -25,6 +26,7 @@ const en = {
   nav: {
     sell: 'Sell',
     today: 'Today',
+    shifts: 'Shifts and drawer',
     products: 'Products & stock',
     branches: 'Branches',
     settings: 'Shop settings',

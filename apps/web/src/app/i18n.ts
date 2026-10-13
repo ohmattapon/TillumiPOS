@@ -6,6 +6,7 @@ import { posLocales } from '@/features/pos'
 import { productsLocales } from '@/features/products'
 import { salesLocales } from '@/features/sales'
 import { settingsLocales } from '@/features/settings'
+import { shiftsLocales } from '@/features/shifts'
 import { common } from '@/locales/common'
 import { errors } from '@/locales/errors'
 import type { Locale } from '@/lib/money'
@@ -25,6 +26,7 @@ export const resources = {
     products: productsLocales.th,
     sales: salesLocales.th,
     settings: settingsLocales.th,
+    shifts: shiftsLocales.th,
   },
   en: {
     common: common.en,
@@ -35,6 +37,7 @@ export const resources = {
     products: productsLocales.en,
     sales: salesLocales.en,
     settings: settingsLocales.en,
+    shifts: shiftsLocales.en,
     errors: errors.en,
   },
 }
