@@ -1,0 +1,4 @@
+env = false
+
+[test]
+preload = ["./test/setup.ts"]

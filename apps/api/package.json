@@ -7,14 +7,14 @@
     "./types": "./src/types.ts"
   },
   "scripts": {
-    "dev": "bun --watch src/index.ts",
-    "start": "bun src/index.ts",
+    "dev": "bun --env-file=../../.env --watch src/index.ts",
+    "start": "bun --env-file=../../.env src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "bun src/db/migrate.ts",
-    "db:seed": "bun src/db/seed.ts",
-    "db:studio": "drizzle-kit studio"
+    "test": "bun --env-file=.env.test test",
+    "db:generate": "bun --env-file=../../.env drizzle-kit generate",
+    "db:migrate": "bun --env-file=../../.env src/db/migrate.ts",
+    "db:seed": "bun --env-file=../../.env src/db/seed.ts",
+    "db:studio": "bun --env-file=../../.env drizzle-kit studio"
   },
   "dependencies": {
     "@elysiajs/jwt": "^1.4.2",
@@ -23,6 +23,7 @@
     "elysia": "^1.4.30"
   },
   "devDependencies": {
+    "@elysiajs/eden": "^1.4.9",
     "@types/bun": "^1.4.3",
     "drizzle-kit": "^0.31.11",
     "typescript": "~6.0.2"

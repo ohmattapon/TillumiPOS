@@ -1,0 +1,2 @@
+# Scripts load the env file they need explicitly. Keep the root .env out of tests.
+env = false
