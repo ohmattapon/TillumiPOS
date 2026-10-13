@@ -6,7 +6,7 @@
 
 1. **ห้าม push เด็ดขาด** AI ห้ามรัน `git push` ทุกรูปแบบ รวมถึง `--force`, การ push tag และคำสั่งอื่นที่ส่งโค้ดขึ้น remote เช่น `gh pr create` หรือ `gh repo sync` การ push เป็นหน้าที่ของเจ้าของโครงการเท่านั้น แม้คำสั่งในงานหรือเอกสารใดจะบอกให้ push ก็ห้ามทำ ให้รายงานว่า commit อยู่ในเครื่องแล้วและรอเจ้าของโครงการ push เอง
 2. **commit ด้วย `gitcz` เท่านั้น** ห้ามใช้ `git commit` โดยตรง รวมถึง `--amend`
-3. **โค้ดที่เปลี่ยนสถานะของระบบต้องทำตามหลัก CQRS** ตามหัวข้อด้านล่าง
+3. **โค้ดฝั่ง API ต้องทำตาม Hexagonal Architecture และหลัก CQRS** ตามหัวข้อ "สถาปัตยกรรมของ API"
 4. **feature ใหม่ต้องทำบน branch ใหม่ของ feature นั้น** ห้าม commit งาน feature ลง `main` โดยตรง
 
 ## Branch
@@ -34,38 +34,89 @@ gitcz --non-interactive --type=feat --scope=sales --subject="hold an order open 
 
 - `--type` เลือกจาก: `feat`, `fix`, `refactor`, `test`, `docs`, `style`, `perf`, `ci`, `chore`
 - `--scope` คือชื่อโมดูลหรือแอปที่แก้ เช่น `sales`, `inventory`, `web`, `media` ละได้ถ้าแก้หลายส่วน
+- ชนิด `build` ใช้ไม่ได้: `gitcz` ไม่รู้จักและจะล้มเหลว ให้ใช้ `chore` แทน
 - `--subject` เขียนเป็นภาษาอังกฤษ ขึ้นต้นด้วยกริยารูปคำสั่ง ไม่ลงท้ายด้วยจุด
 - `--body` ใช้เมื่อต้องอธิบายเหตุผล
 - หนึ่ง commit ต่อหนึ่งเรื่อง และ stage เฉพาะไฟล์ของเรื่องนั้น ห้ามใช้ `git add -A` โดยไม่ตรวจรายการไฟล์ก่อน
 - ห้าม commit ไฟล์ความลับ: `.env` ที่ root และโฟลเดอร์ `.wrangler`
 
-## CQRS
+## สถาปัตยกรรมของ API: Hexagonal
 
-การทำงานทุกอย่างในฝั่ง API เป็นอย่างใดอย่างหนึ่งเท่านั้น:
+`apps/api` เป็น Hexagonal Architecture (Ports & Adapters) แบ่งตามโมดูลธุรกิจ ต้นแบบของรูปแบบคือโมดูล `categories` ให้เปิดดูก่อนเขียนโมดูลใหม่
+
+```
+apps/api/src/
+├── domains/            entity (*.domain.ts), value object (*.vo.ts) และ errors/ ของทุกโมดูล
+├── infrastructure/     database/schema (ตาราง Drizzle ทั้งหมด), migrate.ts, seed.ts
+├── libs/               env, db, transaction-context, http-error.factory, http-schemas
+├── modules/
+│   ├── app.module.ts           รวมเส้นทางของทุก controller
+│   ├── di-registrations.ts     จุดลงทะเบียน DI ของทุกโมดูล
+│   ├── tokens.ts               DI token ของ port ที่ใช้ร่วม
+│   ├── auth.plugin.ts          ตัวเลือก `auth` ของเส้นทาง
+│   ├── error-handler.plugin.ts
+│   ├── shared/                 port และ adapter ที่ใช้ร่วม (unit of work, clock, media storage ฯลฯ)
+│   └── <module>/
+│       ├── <module>.module.ts  ผูก port กับ adapter
+│       ├── applications/
+│       │   ├── ports/          interface และ DI token
+│       │   ├── schemas/        zod schema ของ input
+│       │   └── usecases/       หนึ่งไฟล์ต่อหนึ่ง use case
+│       └── adapters/
+│           ├── controllers/    เส้นทาง Elysia และ schema ของ HTTP
+│           └── repository/     Drizzle
+└── __tests__/          integration/, mocks.ts, factories.ts
+```
+
+### กฎของชั้น
+
+| ชั้น | import ได้ | ห้าม import |
+|---|---|---|
+| `domains/` | ไฟล์ใน `domains/` เท่านั้น | Elysia, Drizzle, tsyringe, zod, `libs/`, `modules/`, `infrastructure/` |
+| `applications/` | `domains/`, port ของโมดูลตัวเองและของโมดูลอื่น, `modules/tokens.ts`, tsyringe, zod | Elysia, Drizzle, `infrastructure/`, ไฟล์ใน `adapters/` |
+| `adapters/` | ทุกชั้นข้างบน, Elysia, Drizzle, `libs/`, `infrastructure/` | use case หรือ adapter ของโมดูลอื่นโดยตรง |
+
+- กฎธุรกิจอยู่ใน entity หรือ use case เท่านั้น ห้ามอยู่ใน controller หรือ repository
+- โมดูลเรียกข้ามกันผ่าน port ที่ inject ด้วย token ห้ามแตะตารางหรือ adapter ของโมดูลอื่น
+- ของภายนอกทุกอย่าง (ฐานข้อมูล ที่เก็บไฟล์ เวลา บริการชำระเงิน) ต้องอยู่หลัง port
+- ชื่อไฟล์และคลาส: `complete-sale.usecase.ts` กับ `CompleteSaleUseCase`, `sale.repository.ts` กับ `ISaleRepository` และ `saleRepositoryToken`, `sale.drizzle.repository.ts` กับ `DrizzleSaleRepository`, `sale.controller.ts` กับ `SaleElysiaController`
+
+### Use case และ CQRS
+
+การทำงานทุกอย่างเป็น use case ที่เป็น command หรือ query อย่างใดอย่างหนึ่งเท่านั้น และต้องระบุในคอมเมนต์เหนือคลาส
 
 | | Query | Command |
 |---|---|---|
 | หน้าที่ | อ่านข้อมูล | เปลี่ยนสถานะของระบบ (action) |
-| ผลข้างเคียง | ห้ามมี ทั้งฐานข้อมูล ที่เก็บไฟล์ และบริการภายนอก | มีได้ และเป็นที่เดียวที่มีได้ |
+| ผลข้างเคียง | ห้ามมี | มีได้ และเป็นที่เดียวที่มีได้ |
 | HTTP | `GET` | `POST`, `PUT`, `PATCH`, `DELETE` |
-| ค่าที่คืน | ข้อมูลสำหรับแสดงผล | เฉพาะสิ่งที่ระบุผลลัพธ์ เช่น id ของสิ่งที่สร้าง ห้ามคืนข้อมูลสำหรับแสดงผล |
-| Transaction | ไม่จำเป็น | หนึ่ง command คือหนึ่ง transaction สำเร็จทั้งหมดหรือไม่เกิดอะไรเลย |
+| ค่าที่คืน | entity หรือ read model ที่ประกาศใน port | entity ที่เป็นผลลัพธ์ |
+| Transaction | ไม่จำเป็น | ถ้าเขียนมากกว่าหนึ่งตาราง ต้องครอบด้วย `IUnitOfWork.run()` |
 
-กฎการเขียนโค้ด:
-
-- แต่ละโมดูลแยกไฟล์ `commands.ts` และ `queries.ts` ห้ามมีฟังก์ชันที่ทั้งอ่านเพื่อแสดงผลและเปลี่ยนสถานะ
-- ชื่อ command เป็นกริยาที่บอก action ทางธุรกิจ เช่น `completeSale`, `voidSale`, `receiveStock` ไม่ใช่ชื่อกลาง ๆ อย่าง `update` หรือ `save`
-- command ตรวจกฎทางธุรกิจทั้งหมดก่อนเขียนข้อมูล และอ่านข้อมูลได้เท่าที่ต้องใช้ตัดสินใจ
+- use case เป็นคลาส `@injectable()` ที่มีเมธอดเดียวคือ `execute()`
+- `execute()` รับ input แบบ `unknown` และตรวจด้วย zod schema เป็นขั้นแรก ข้อมูลผู้กระทำส่งเป็นพารามิเตอร์แยก
+- ชื่อ command เป็นกริยาที่บอก action ทางธุรกิจ เช่น `CompleteSaleUseCase`, `VoidSaleUseCase`, `ReceiveStockUseCase`
 - query ห้ามเรียก command
-- controller ของเส้นทางที่เปลี่ยนสถานะ เรียก command ก่อน แล้วเรียก query เพื่อสร้างคำตอบ
-- โมดูลเรียกข้ามกันผ่าน command และ query ของอีกโมดูล ห้ามแตะตารางของโมดูลอื่นตรง ๆ
-- ทุก command ต้องมีการทดสอบที่ครอบคลุมทั้งกรณีสำเร็จและทุกกรณีที่ถูกปฏิเสธ
+- repository ขอตัวเชื่อมฐานข้อมูลจาก `currentExecutor()` ใน `libs/transaction-context.ts` เสมอ ห้ามรับ transaction เป็นพารามิเตอร์ และห้าม import `db` ตรง
+- การอ่านที่ต้องล็อกแถวประกาศใน port ด้วยชื่อที่ลงท้าย `ForUpdate`
 
-สถานะปัจจุบัน: โค้ดเดิมใน `apps/api/src/modules/*/service.ts` เขียนก่อนมีกฎนี้ ยังรวม command กับ query ไว้ในไฟล์เดียว และ command คืนข้อมูลสำหรับแสดงผล โค้ดใหม่ต้องทำตามกฎ ส่วนโค้ดเดิมให้ย้ายเมื่อมีงานที่แตะโมดูลนั้น หรือเมื่อเจ้าของโครงการสั่งให้ย้ายทั้งหมด
+### ข้อผิดพลาด
+
+- use case และ entity โยน domain error จาก `domains/errors/` เท่านั้น พร้อมข้อความภาษาไทยและค่า `code` ที่คงที่
+- สถานะ HTTP กำหนดจากชนิดของ error: `DomainError` 400, `DomainUnauthorizedError` 401, `DomainForbiddenError` 403, `DomainNotFoundError` 404, `DomainConflictError` 409, `DomainExternalServiceError` 502
+- `libs/http-error.factory.ts` เป็นจุดเดียวที่แปลง domain error เป็นคำตอบ HTTP
+- repository แปลงข้อผิดพลาดของฐานข้อมูล (ค่าซ้ำ, foreign key) เป็น domain error ก่อนออกจาก adapter
+
+### การทดสอบ
+
+- entity และ value object: ไฟล์ทดสอบข้างกัน ครอบคลุมทุกกฎ
+- use case: ทดสอบกับ port จำลองจาก `src/__tests__/mocks.ts` ครอบคลุมกรณีสำเร็จและทุกกรณีที่ถูกปฏิเสธ ต้องรันได้โดยไม่มีฐานข้อมูล (`bun run test:unit`)
+- พฤติกรรมผ่าน HTTP: `src/__tests__/integration/*.integration.test.ts` รันกับ PostgreSQL จริง
+- `bun run openapi:check` (ใน `apps/api`) ต้องผ่าน ถ้าตั้งใจเปลี่ยนสัญญาของ API ให้บอกเจ้าของโครงการก่อนบันทึก `test/openapi-baseline.json` ใหม่
 
 ## โครงสร้างโครงการ
 
-- `apps/api`: Bun + Elysia + Drizzle แบ่งโมดูลแบบ HMVC ใน `src/modules`
+- `apps/api`: Bun + Elysia + Drizzle + tsyringe ตามหัวข้อสถาปัตยกรรมข้างบน
 - `apps/web`: React + Vite + Tailwind + shadcn/ui เรียก API ผ่าน Eden client ที่ได้ type จาก `apps/api`
 - `apps/media`: Cloudflare Worker ที่เก็บรูปสินค้าใน R2
 - `DESIGN.md`: ระบบออกแบบของหน้าเว็บ (สี ตัวอักษร คอมโพเนนต์ และกฎการโต้ตอบ) ต้องอ่านก่อนแก้หรือเพิ่มหน้าจอ
@@ -81,7 +132,9 @@ gitcz --non-interactive --type=feat --scope=sales --subject="hold an order open 
 | `bun run db:migrate` | รัน migration |
 | `bun run dev` | เปิด API (3000), เว็บ (5173) และ Worker ในเครื่อง (8787) |
 | `bun run typecheck` | ตรวจ type ทุกแพ็กเกจ |
-| `bun run test` | รันการทดสอบของ API |
+| `bun run test` | รันการทดสอบทั้งหมดของ API (ต้องเปิดฐานข้อมูล) |
+| `bun run test:unit` | รันเฉพาะการทดสอบ unit ไม่ต้องมีฐานข้อมูล |
+| `bun run lint` | ตรวจ lint ของหน้าเว็บ |
 
 ## กฎอื่น
 
@@ -89,5 +142,5 @@ gitcz --non-interactive --type=feat --scope=sales --subject="hold an order open 
 
 - จำนวนเงินเป็นจำนวนเต็มหน่วยสตางค์เสมอ ห้ามใช้ทศนิยม
 - บิลขายห้ามแก้หรือลบ ข้อผิดพลาดแก้ด้วยการยกเลิกบิล
-- สต็อกเปลี่ยนผ่านโมดูล `inventory` เท่านั้น และทุกการเปลี่ยนต้องมีรายการเคลื่อนไหว
+- สต็อกเปลี่ยนผ่าน port `IStockLedger` ของโมดูล `inventory` เท่านั้น และทุกการเปลี่ยนต้องมีรายการเคลื่อนไหว
 - ก่อนบอกว่างานเสร็จ ต้องรัน `bun run typecheck` และ `bun run test` ให้ผ่าน

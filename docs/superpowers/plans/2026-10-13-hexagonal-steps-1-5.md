@@ -84,12 +84,12 @@
 
 ### Tasks
 
-- [ ] **1.1** เพิ่ม `users.integration.test.ts` ปักพฤติกรรมเดิม: สร้างแล้วได้เฉพาะช่องสาธารณะ, ชื่อผู้ใช้ถูกแปลงเป็นตัวพิมพ์เล็กและล็อกอินด้วยตัวพิมพ์ใหญ่ได้, ชื่อซ้ำ 409, รายการเรียงตาม id, แก้ชื่อแสดง, เปลี่ยนรหัสผ่านแล้วรหัสเก่าใช้ไม่ได้, แก้ผู้ใช้ที่ไม่มี 404, รหัสผ่านสั้นกว่า 8 ตัว 422 รันกับโค้ดเดิมต้องผ่าน แล้วเพิ่มกรณี body `{}` ที่ต้องล้มเหลวกับโค้ดเดิม
-- [ ] **1.2** Domain: `user-role.vo.ts`, `user.domain.ts` พร้อมการทดสอบ
-- [ ] **1.3** Port ร่วม `IPasswordHasher` กับ adapter และ port `IUserRepository`
-- [ ] **1.4** Use case ทั้งห้าตัวพร้อมการทดสอบด้วย port จำลอง (เพิ่ม `mockUserRepository`, `mockPasswordHasher`, `mockUnitOfWork`, `makeUser` ใน `__tests__/`)
-- [ ] **1.5** Adapter: repository, schema ของ HTTP, controller สองตัว, `auth.plugin.ts`, `users.module.ts`, `auth.module.ts` ย้ายตาราง แก้ import ในโมดูลเดิม, `seed.ts`, `types.ts` และโครงทดสอบ แล้วลบ `modules/users/{index,model,schema,service}.ts`, `modules/auth/{index,model}.ts`, `shared/plugins/auth.ts`
-- [ ] **1.6** ตรวจครบทุกข้อใน Global Constraints แล้ว commit
+- [x] **1.1** เพิ่ม `users.integration.test.ts` ปักพฤติกรรมเดิม: สร้างแล้วได้เฉพาะช่องสาธารณะ, ชื่อผู้ใช้ถูกแปลงเป็นตัวพิมพ์เล็กและล็อกอินด้วยตัวพิมพ์ใหญ่ได้, ชื่อซ้ำ 409, รายการเรียงตาม id, แก้ชื่อแสดง, เปลี่ยนรหัสผ่านแล้วรหัสเก่าใช้ไม่ได้, แก้ผู้ใช้ที่ไม่มี 404, รหัสผ่านสั้นกว่า 8 ตัว 422 รันกับโค้ดเดิมต้องผ่าน แล้วเพิ่มกรณี body `{}` ที่ต้องล้มเหลวกับโค้ดเดิม
+- [x] **1.2** Domain: `user-role.vo.ts`, `user.domain.ts` พร้อมการทดสอบ
+- [x] **1.3** Port ร่วม `IPasswordHasher` กับ adapter และ port `IUserRepository`
+- [x] **1.4** Use case ทั้งห้าตัวพร้อมการทดสอบด้วย port จำลอง (เพิ่ม `mockUserRepository`, `mockPasswordHasher`, `mockUnitOfWork`, `makeUser` ใน `__tests__/`)
+- [x] **1.5** Adapter: repository, schema ของ HTTP, controller สองตัว, `auth.plugin.ts`, `users.module.ts`, `auth.module.ts` ย้ายตาราง แก้ import ในโมดูลเดิม, `seed.ts`, `types.ts` และโครงทดสอบ แล้วลบ `modules/users/{index,model,schema,service}.ts`, `modules/auth/{index,model}.ts`, `shared/plugins/auth.ts`
+- [x] **1.6** ตรวจครบทุกข้อใน Global Constraints แล้ว commit
 
 ---
 
@@ -127,12 +127,12 @@ controller แปลง entity เป็นคำตอบโดยเติม 
 
 ### Tasks
 
-- [ ] **2.1** เพิ่มกรณี body `{}` ใน `products.integration.test.ts` ที่ต้องล้มเหลวกับโค้ดเดิม และกรณีหมวดหมู่ที่ไม่มีอยู่ → 409 `IN_USE` ที่ต้องผ่านกับโค้ดเดิม
-- [ ] **2.2** Domain `product.domain.ts` พร้อมการทดสอบ
-- [ ] **2.3** Port `IMediaStorage` กับ adapter และ port `IProductRepository`
-- [ ] **2.4** Use case หกตัวพร้อมการทดสอบ
-- [ ] **2.5** Adapter และการผูก ย้ายตาราง `products` แก้ผู้เรียกในโมดูลเดิม (`inventory`, `sales` เรียกผ่าน `IProductRepository` จาก container) แล้วลบ `modules/catalog/products/*`, `shared/media.ts`
-- [ ] **2.6** ตรวจครบแล้ว commit
+- [x] **2.1** เพิ่มกรณี body `{}` ใน `products.integration.test.ts` ที่ต้องล้มเหลวกับโค้ดเดิม และกรณีหมวดหมู่ที่ไม่มีอยู่ → 409 `IN_USE` ที่ต้องผ่านกับโค้ดเดิม
+- [x] **2.2** Domain `product.domain.ts` พร้อมการทดสอบ
+- [x] **2.3** Port `IMediaStorage` กับ adapter และ port `IProductRepository`
+- [x] **2.4** Use case หกตัวพร้อมการทดสอบ
+- [x] **2.5** Adapter และการผูก ย้ายตาราง `products` แก้ผู้เรียกในโมดูลเดิม (`inventory`, `sales` เรียกผ่าน `IProductRepository` จาก container) แล้วลบ `modules/catalog/products/*`, `shared/media.ts`
+- [x] **2.6** ตรวจครบแล้ว commit
 
 ---
 
@@ -157,11 +157,11 @@ controller แปลง entity เป็นคำตอบโดยเติม 
 
 ### Tasks
 
-- [ ] **3.1** Domain พร้อมการทดสอบ
-- [ ] **3.2** Port และ `StockLedger` (ใน `applications/services/`) พร้อมการทดสอบ
-- [ ] **3.3** Use case สามตัวพร้อมการทดสอบ
-- [ ] **3.4** Adapter และการผูก ย้ายตาราง ให้ `sales` เดิมเรียก `IStockLedger` จาก container แล้วลบ `modules/inventory/{index,model,schema,service}.ts`
-- [ ] **3.5** ตรวจครบแล้ว commit
+- [x] **3.1** Domain พร้อมการทดสอบ
+- [x] **3.2** Port และ `StockLedger` (ใน `applications/services/`) พร้อมการทดสอบ
+- [x] **3.3** Use case สามตัวพร้อมการทดสอบ
+- [x] **3.4** Adapter และการผูก ย้ายตาราง ให้ `sales` เดิมเรียก `IStockLedger` จาก container แล้วลบ `modules/inventory/{index,model,schema,service}.ts`
+- [x] **3.5** ตรวจครบแล้ว commit
 
 ---
 
@@ -196,19 +196,19 @@ controller แปลง entity เป็นคำตอบโดยเติม 
 
 ### Tasks
 
-- [ ] **4.1** Domain `sale.domain.ts` พร้อมการทดสอบ (รวม 8 กรณีเดิม)
-- [ ] **4.2** Port ร่วม `IShopSettings`, `IClock` กับ adapter และ port `ISaleRepository`
-- [ ] **4.3** Use case ห้าตัวพร้อมการทดสอบ
-- [ ] **4.4** Adapter และการผูก ย้ายตาราง แล้วลบ `modules/sales/{index,model,schema,service,pricing,pricing.test}.ts`
-- [ ] **4.5** ตรวจครบ รันการทดสอบสามรอบเพื่อดูว่าการขายพร้อมกันคงที่ แล้วทดลองตัดการล็อกแถวออกจาก `findManyForUpdate` ซึ่งการทดสอบขายพร้อมกันต้องล้มเหลว จากนั้นคืนโค้ดและ commit
+- [x] **4.1** Domain `sale.domain.ts` พร้อมการทดสอบ (รวม 8 กรณีเดิม)
+- [x] **4.2** Port ร่วม `IShopSettings`, `IClock` กับ adapter และ port `ISaleRepository`
+- [x] **4.3** Use case ห้าตัวพร้อมการทดสอบ
+- [x] **4.4** Adapter และการผูก ย้ายตาราง แล้วลบ `modules/sales/{index,model,schema,service,pricing,pricing.test}.ts`
+- [x] **4.5** ตรวจครบ รันการทดสอบสามรอบเพื่อดูว่าการขายพร้อมกันคงที่ แล้วทดลองตัดการล็อกแถวออกจาก `findManyForUpdate` ซึ่งการทดสอบขายพร้อมกันต้องล้มเหลว จากนั้นคืนโค้ดและ commit
 
 ---
 
 ## ขั้น 5: ลบโค้ดเดิมและปิดงาน
 
-- [ ] **5.1** ย้าย `shared/models.ts` ไป `libs/http-schemas.ts`, ย้ายตัวจัดการข้อผิดพลาดไป `modules/error-handler.plugin.ts` โดยตัดการรู้จัก `AppError` และรหัสของ PostgreSQL ออก, ลบ `shared/errors.ts` และโฟลเดอร์ `shared/` เดิม
-- [ ] **5.2** สร้าง `modules/app.module.ts` ที่ resolve controller ทุกตัวและรวมเส้นทาง (หมวดหมู่และสินค้าอยู่ใต้ `/catalog`) แล้วลบโฟลเดอร์ `modules/catalog`
-- [ ] **5.3** เขียนหัวข้อ CQRS และโครงสร้างโครงการใน `AGENTS.md` ใหม่ตามหัวข้อ "การแก้ `AGENTS.md`" ของ spec
-- [ ] **5.4** ตรวจเกณฑ์ว่าเสร็จของ spec ครบทุกข้อ: ไม่เหลือ `service.ts`, กฎของชั้นผ่านทุกโมดูล, diff ของไฟล์ทดสอบ integration เทียบกับก่อนเริ่มมีแต่บรรทัด import และกรณีที่เพิ่ม, เอกสาร OpenAPI ตรงกับเส้นฐาน
-- [ ] **5.5** เปิดหน้าเว็บในเบราว์เซอร์: ล็อกอิน ดูรายการสินค้าและบิล เปิดฟอร์มสินค้า (การขายและการยกเลิกบิลจริงให้เจ้าของโครงการลองเอง เพราะฐานข้อมูลพัฒนามีข้อมูลที่กำลังใช้งาน)
-- [ ] **5.6** Commit และรายงาน
+- [x] **5.1** ย้าย `shared/models.ts` ไป `libs/http-schemas.ts`, ย้ายตัวจัดการข้อผิดพลาดไป `modules/error-handler.plugin.ts` โดยตัดการรู้จัก `AppError` และรหัสของ PostgreSQL ออก, ลบ `shared/errors.ts` และโฟลเดอร์ `shared/` เดิม
+- [x] **5.2** สร้าง `modules/app.module.ts` ที่ resolve controller ทุกตัวและรวมเส้นทาง (หมวดหมู่และสินค้าอยู่ใต้ `/catalog`) แล้วลบโฟลเดอร์ `modules/catalog`
+- [x] **5.3** เขียนหัวข้อ CQRS และโครงสร้างโครงการใน `AGENTS.md` ใหม่ตามหัวข้อ "การแก้ `AGENTS.md`" ของ spec
+- [x] **5.4** ตรวจเกณฑ์ว่าเสร็จของ spec ครบทุกข้อ: ไม่เหลือ `service.ts`, กฎของชั้นผ่านทุกโมดูล, diff ของไฟล์ทดสอบ integration เทียบกับก่อนเริ่มมีแต่บรรทัด import และกรณีที่เพิ่ม, เอกสาร OpenAPI ตรงกับเส้นฐาน
+- [x] **5.5** เปิดหน้าเว็บในเบราว์เซอร์: ล็อกอิน ดูรายการสินค้าและบิล เปิดฟอร์มสินค้า (การขายและการยกเลิกบิลจริงให้เจ้าของโครงการลองเอง เพราะฐานข้อมูลพัฒนามีข้อมูลที่กำลังใช้งาน)
+- [x] **5.6** Commit และรายงาน
