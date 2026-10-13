@@ -20,6 +20,8 @@ export interface IUserRepository {
   /** Overwrites the stored user; the password changes only when a new hash is given. */
   update(entity: UserEntity, passwordHash?: string): Promise<UserEntity>
   countActiveOwners(): Promise<number>
+  /** How many users who can sign in work in this branch. */
+  countActiveInBranch(branchId: number): Promise<number>
 }
 
 const userRepositoryTokenSymbol: unique symbol = Symbol('IUserRepository')

@@ -44,7 +44,7 @@ describe('CompleteSaleUseCase', () => {
 
   beforeEach(() => {
     products.findManyForUpdate.mockResolvedValue([tea, cake])
-    sales.nextReceiptNo.mockResolvedValue('20261013-00042')
+    sales.nextReceiptNo.mockResolvedValue('MAIN-20261013-00042')
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
@@ -63,6 +63,7 @@ describe('CompleteSaleUseCase', () => {
         ...overrides,
       },
       cashier,
+      { id: 1, code: 'MAIN' },
     )
 
   test('prices the sale with the shop VAT rate, stores it and returns it with its receipt number', async () => {
@@ -70,7 +71,7 @@ describe('CompleteSaleUseCase', () => {
 
     expect(sale.toSnapshot()).toMatchObject({
       id: 15,
-      receiptNo: '20261013-00042',
+      receiptNo: 'MAIN-20261013-00042',
       subtotalSatang: 10700,
       discountSatang: 700,
       totalSatang: 10000,
@@ -125,15 +126,15 @@ describe('CompleteSaleUseCase', () => {
   test('locks every product in the cart before checking stock', async () => {
     await sell()
 
-    expect(products.findManyForUpdate).toHaveBeenCalledWith([1, 2])
+    expect(products.findManyForUpdate).toHaveBeenCalledWith([1, 2], 1)
   })
 
   test('deducts each line from stock, referencing the receipt and the cashier', async () => {
     await sell()
 
     expect(ledger.record.mock.calls.map(([movement]) => movement)).toEqual([
-      { productId: 1, type: 'sale', quantity: -2, reference: '20261013-00042', userId: 7 },
-      { productId: 2, type: 'sale', quantity: -1, reference: '20261013-00042', userId: 7 },
+      { branchId: 1, productId: 1, type: 'sale', quantity: -2, reference: 'MAIN-20261013-00042', userId: 7 },
+      { branchId: 1, productId: 2, type: 'sale', quantity: -1, reference: 'MAIN-20261013-00042', userId: 7 },
     ])
   })
 
@@ -151,7 +152,7 @@ describe('CompleteSaleUseCase', () => {
       [2, 3],
       [1, 1],
     ])
-    expect(products.findManyForUpdate).toHaveBeenCalledWith([2, 1])
+    expect(products.findManyForUpdate).toHaveBeenCalledWith([2, 1], 1)
   })
 
   test('merged quantities are what is checked against stock', async () => {
@@ -255,7 +256,7 @@ describe('VoidSaleUseCase', () => {
   })
 
   test('voids the sale with the reason, user and current time, inside one unit of work', async () => {
-    const voided = await useCase.execute(15, { reason: 'คิดเงินผิด' }, { id: 9 })
+    const voided = await useCase.execute(15, { reason: 'คิดเงินผิด' }, { id: 9 }, 1)
 
     expect(voided.toSnapshot()).toMatchObject({ status: 'voided', voidReason: 'คิดเงินผิด', voidedById: 9, voidedAt: now })
     expect(sales.findByIdForUpdate).toHaveBeenCalledWith(15)
@@ -264,16 +265,32 @@ describe('VoidSaleUseCase', () => {
   })
 
   test('returns every line to stock in product-id order, referencing the receipt and the reason', async () => {
-    await useCase.execute(15, { reason: 'คิดเงินผิด' }, { id: 9 })
+    await useCase.execute(15, { reason: 'คิดเงินผิด' }, { id: 9 }, 1)
 
     expect(ledger.record.mock.calls.map(([movement]) => movement)).toEqual([
-      { productId: 2, type: 'void', quantity: 2, reference: '20261013-00001', note: 'คิดเงินผิด', userId: 9 },
-      { productId: 5, type: 'void', quantity: 1, reference: '20261013-00001', note: 'คิดเงินผิด', userId: 9 },
+      { branchId: 1, productId: 2, type: 'void', quantity: 2, reference: 'MAIN-20261013-00001', note: 'คิดเงินผิด', userId: 9 },
+      { branchId: 1, productId: 5, type: 'void', quantity: 1, reference: 'MAIN-20261013-00001', note: 'คิดเงินผิด', userId: 9 },
     ])
   })
 
+  test("another branch's sale cannot be voided, and nothing is returned to stock", async () => {
+    sales.findByIdForUpdate.mockResolvedValue(makeSale({ id: 15, branchId: 2 }))
+
+    await expect(useCase.execute(15, { reason: 'คิดเงินผิด' }, { id: 9 }, 1)).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    expect(sales.saveVoid).not.toHaveBeenCalled()
+    expect(ledger.record).not.toHaveBeenCalled()
+  })
+
+  test("stock goes back to the sale's own branch", async () => {
+    sales.findByIdForUpdate.mockResolvedValue(makeSale({ id: 15, branchId: 2 }))
+
+    await useCase.execute(15, { reason: 'คิดเงินผิด' }, { id: 9 }, 2)
+
+    expect(ledger.record.mock.calls.every(([movement]) => movement.branchId === 2)).toBe(true)
+  })
+
   test('the returned sale keeps its lines in receipt order', async () => {
-    const voided = await useCase.execute(15, { reason: 'คิดเงินผิด' }, { id: 9 })
+    const voided = await useCase.execute(15, { reason: 'คิดเงินผิด' }, { id: 9 }, 1)
 
     expect(voided.items.map((item) => item.productId)).toEqual([5, 2])
   })
@@ -281,7 +298,7 @@ describe('VoidSaleUseCase', () => {
   test('an unknown sale is not found', async () => {
     sales.findByIdForUpdate.mockResolvedValue(null)
 
-    const attempt = useCase.execute(9999, { reason: 'ไม่มี' }, { id: 9 })
+    const attempt = useCase.execute(9999, { reason: 'ไม่มี' }, { id: 9 }, 1)
 
     await expect(attempt).rejects.toBeInstanceOf(DomainNotFoundError)
     await expect(attempt).rejects.toMatchObject({ code: 'NOT_FOUND', message: 'ไม่พบบิลขาย' })
@@ -290,13 +307,13 @@ describe('VoidSaleUseCase', () => {
   test('an already voided sale is refused, and no stock is returned a second time', async () => {
     sales.findByIdForUpdate.mockResolvedValue(twoLines().void('ครั้งแรก', 9, now))
 
-    await expect(useCase.execute(15, { reason: 'อีกครั้ง' }, { id: 9 })).rejects.toMatchObject({ code: 'ALREADY_VOIDED' })
+    await expect(useCase.execute(15, { reason: 'อีกครั้ง' }, { id: 9 }, 1)).rejects.toMatchObject({ code: 'ALREADY_VOIDED' })
     expect(sales.saveVoid).not.toHaveBeenCalled()
     expect(ledger.record).not.toHaveBeenCalled()
   })
 
   test.each([[{ reason: '' }], [{ reason: 'x'.repeat(501) }], [{}]])('rejects the input %p', async (input) => {
-    await expect(useCase.execute(15, input, { id: 9 })).rejects.toBeInstanceOf(ZodError)
+    await expect(useCase.execute(15, input, { id: 9 }, 1)).rejects.toBeInstanceOf(ZodError)
     expect(unitOfWork.run).not.toHaveBeenCalled()
   })
 })
@@ -307,8 +324,14 @@ describe('GetSaleUseCase', () => {
     sales.findById.mockResolvedValueOnce(stored).mockResolvedValueOnce(null)
     const useCase = new GetSaleUseCase(sales)
 
-    expect(await useCase.execute(1)).toBe(stored)
-    await expect(useCase.execute(9999)).rejects.toMatchObject({ code: 'NOT_FOUND', message: 'ไม่พบบิลขาย' })
+    expect(await useCase.execute(1, 1)).toBe(stored)
+    await expect(useCase.execute(9999, 1)).rejects.toMatchObject({ code: 'NOT_FOUND', message: 'ไม่พบบิลขาย' })
+  })
+
+  test("another branch's sale is reported as not found", async () => {
+    sales.findById.mockResolvedValue(makeSale({ branchId: 2 }))
+
+    await expect(new GetSaleUseCase(sales).execute(1, 1)).rejects.toMatchObject({ code: 'NOT_FOUND' })
   })
 })
 
@@ -317,16 +340,16 @@ describe('ListSalesUseCase', () => {
     sales.findHeaders.mockResolvedValue({ items: [], total: 0 })
     const from = new Date('2026-10-13T00:00:00Z')
 
-    await new ListSalesUseCase(sales).execute({ from, limit: 20, extra: true })
+    await new ListSalesUseCase(sales).execute({ from, limit: 20, extra: true }, 1)
 
-    expect(sales.findHeaders).toHaveBeenCalledWith({ from, limit: 20 })
+    expect(sales.findHeaders).toHaveBeenCalledWith({ from, limit: 20, branchId: 1 })
   })
 
   test('rejects a limit over 500 and a date that is not a Date', async () => {
     const useCase = new ListSalesUseCase(sales)
 
-    await expect(useCase.execute({ limit: 501 })).rejects.toBeInstanceOf(ZodError)
-    await expect(useCase.execute({ from: '2026-10-13' })).rejects.toBeInstanceOf(ZodError)
+    await expect(useCase.execute({ limit: 501 }, 1)).rejects.toBeInstanceOf(ZodError)
+    await expect(useCase.execute({ from: '2026-10-13' }, 1)).rejects.toBeInstanceOf(ZodError)
   })
 })
 
@@ -347,7 +370,7 @@ describe('GetSalesSummaryUseCase', () => {
       ],
     })
 
-    const summary = await new GetSalesSummaryUseCase(sales).execute(period)
+    const summary = await new GetSalesSummaryUseCase(sales).execute(period, 1)
 
     expect(summary).toEqual({
       saleCount: 2,
@@ -360,7 +383,7 @@ describe('GetSalesSummaryUseCase', () => {
         { method: 'promptpay', amountSatang: 2500 },
       ],
     })
-    expect(sales.sumCompleted).toHaveBeenCalledWith(period)
+    expect(sales.sumCompleted).toHaveBeenCalledWith({ ...period, branchId: 1 })
   })
 
   test('a period without sales is all zeros', async () => {
@@ -374,7 +397,7 @@ describe('GetSalesSummaryUseCase', () => {
       tendered: [],
     })
 
-    expect(await new GetSalesSummaryUseCase(sales).execute(period)).toEqual({
+    expect(await new GetSalesSummaryUseCase(sales).execute(period, 1)).toEqual({
       saleCount: 0,
       totalSatang: 0,
       vatSatang: 0,
@@ -385,6 +408,6 @@ describe('GetSalesSummaryUseCase', () => {
   })
 
   test('requires both ends of the period', async () => {
-    await expect(new GetSalesSummaryUseCase(sales).execute({ from: period.from })).rejects.toBeInstanceOf(ZodError)
+    await expect(new GetSalesSummaryUseCase(sales).execute({ from: period.from }, 1)).rejects.toBeInstanceOf(ZodError)
   })
 })

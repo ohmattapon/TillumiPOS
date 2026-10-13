@@ -35,10 +35,18 @@ describe('StockLedger', () => {
   test('applies the change to the product and writes the row with the resulting balance', async () => {
     products.adjustStock.mockResolvedValue(7)
 
-    const recorded = await ledger.record({ productId: 2, type: 'sale', quantity: -3, userId: 4, reference: 'R-1' })
+    const recorded = await ledger.record({
+      branchId: 1,
+      productId: 2,
+      type: 'sale',
+      quantity: -3,
+      userId: 4,
+      reference: 'R-1',
+    })
 
-    expect(products.adjustStock).toHaveBeenCalledWith(2, -3)
+    expect(products.adjustStock).toHaveBeenCalledWith(2, 1, -3)
     expect(movements.create).toHaveBeenCalledWith({
+      branchId: 1,
       productId: 2,
       type: 'sale',
       quantity: -3,
@@ -52,12 +60,12 @@ describe('StockLedger', () => {
   test('a product that does not track stock gets no ledger row', async () => {
     products.adjustStock.mockResolvedValue(null)
 
-    expect(await ledger.record({ productId: 2, type: 'sale', quantity: -3, userId: 4 })).toBeNull()
+    expect(await ledger.record({ branchId: 1, productId: 2, type: 'sale', quantity: -3, userId: 4 })).toBeNull()
     expect(movements.create).not.toHaveBeenCalled()
   })
 
   test.each([0, 1.5])('refuses a quantity of %p before touching the product', async (quantity) => {
-    await expect(ledger.record({ productId: 2, type: 'adjust', quantity, userId: 4 })).rejects.toBeInstanceOf(DomainError)
+    await expect(ledger.record({ branchId: 1, productId: 2, type: 'adjust', quantity, userId: 4 })).rejects.toBeInstanceOf(DomainError)
     expect(products.adjustStock).not.toHaveBeenCalled()
   })
 })
@@ -79,16 +87,23 @@ describe('stock commands', () => {
     const receive = () => new ReceiveStockUseCase(products, ledger, unitOfWork)
 
     test('records a positive receive movement for the acting user, inside one unit of work', async () => {
-      const movement = await receive().execute({ productId: 2, quantity: 5, note: 'PO-1' }, 4)
+      const movement = await receive().execute({ productId: 2, quantity: 5, note: 'PO-1' }, 4, 1)
 
       expect(unitOfWork.run).toHaveBeenCalledTimes(1)
-      expect(products.findManyForUpdate).toHaveBeenCalledWith([2])
-      expect(ledger.record).toHaveBeenCalledWith({ productId: 2, type: 'receive', quantity: 5, note: 'PO-1', userId: 4 })
+      expect(products.findManyForUpdate).toHaveBeenCalledWith([2], 1)
+      expect(ledger.record).toHaveBeenCalledWith({
+        branchId: 1,
+        productId: 2,
+        type: 'receive',
+        quantity: 5,
+        note: 'PO-1',
+        userId: 4,
+      })
       expect(movement.type).toBe('receive')
     })
 
     test('an omitted note is stored as null', async () => {
-      await receive().execute({ productId: 2, quantity: 5 }, 4)
+      await receive().execute({ productId: 2, quantity: 5 }, 4, 1)
 
       expect(ledger.record.mock.calls[0]![0].note).toBeNull()
     })
@@ -96,7 +111,7 @@ describe('stock commands', () => {
     test('an unknown product is not found, and nothing is recorded', async () => {
       products.findManyForUpdate.mockResolvedValue([])
 
-      const attempt = receive().execute({ productId: 9999, quantity: 1 }, 4)
+      const attempt = receive().execute({ productId: 9999, quantity: 1 }, 4, 1)
 
       await expect(attempt).rejects.toBeInstanceOf(DomainNotFoundError)
       await expect(attempt).rejects.toMatchObject({ code: 'NOT_FOUND', message: 'ไม่พบสินค้า' })
@@ -106,7 +121,7 @@ describe('stock commands', () => {
     test('a product that does not track stock cannot be received', async () => {
       products.findManyForUpdate.mockResolvedValue([makeProduct({ id: 2, trackStock: false })])
 
-      await expect(receive().execute({ productId: 2, quantity: 1 }, 4)).rejects.toMatchObject({
+      await expect(receive().execute({ productId: 2, quantity: 1 }, 4, 1)).rejects.toMatchObject({
         code: 'STOCK_NOT_TRACKED',
         message: 'สินค้านี้ไม่ได้ตั้งให้นับสต็อก',
       })
@@ -120,7 +135,7 @@ describe('stock commands', () => {
       ['a note over 500 characters', { productId: 2, quantity: 1, note: 'x'.repeat(501) }],
       ['a missing product id', { quantity: 1 }],
     ])('rejects %s before opening a unit of work', async (_label, input) => {
-      await expect(receive().execute(input, 4)).rejects.toBeInstanceOf(ZodError)
+      await expect(receive().execute(input, 4, 1)).rejects.toBeInstanceOf(ZodError)
       expect(unitOfWork.run).not.toHaveBeenCalled()
     })
   })
@@ -133,9 +148,10 @@ describe('stock commands', () => {
       [12, 2],
       [0, -10],
     ])('counting %p against a balance of 10 records a difference of %p', async (countedQty, difference) => {
-      await adjust().execute({ productId: 2, countedQty, note: 'นับสต็อก' }, 4)
+      await adjust().execute({ productId: 2, countedQty, note: 'นับสต็อก' }, 4, 1)
 
       expect(ledger.record).toHaveBeenCalledWith({
+        branchId: 1,
         productId: 2,
         type: 'adjust',
         quantity: difference,
@@ -145,7 +161,7 @@ describe('stock commands', () => {
     })
 
     test('a count equal to the balance changes nothing and says so', async () => {
-      await expect(adjust().execute({ productId: 2, countedQty: 10 }, 4)).rejects.toMatchObject({
+      await expect(adjust().execute({ productId: 2, countedQty: 10 }, 4, 1)).rejects.toMatchObject({
         code: 'NO_CHANGE',
         message: 'ยอดที่นับได้ตรงกับยอดในระบบอยู่แล้ว',
       })
@@ -154,14 +170,14 @@ describe('stock commands', () => {
 
     test('an unknown product and an untracked product are refused like a receive', async () => {
       products.findManyForUpdate.mockResolvedValue([])
-      await expect(adjust().execute({ productId: 9999, countedQty: 1 }, 4)).rejects.toBeInstanceOf(DomainNotFoundError)
+      await expect(adjust().execute({ productId: 9999, countedQty: 1 }, 4, 1)).rejects.toBeInstanceOf(DomainNotFoundError)
 
       products.findManyForUpdate.mockResolvedValue([makeProduct({ id: 2, trackStock: false })])
-      await expect(adjust().execute({ productId: 2, countedQty: 1 }, 4)).rejects.toMatchObject({ code: 'STOCK_NOT_TRACKED' })
+      await expect(adjust().execute({ productId: 2, countedQty: 1 }, 4, 1)).rejects.toMatchObject({ code: 'STOCK_NOT_TRACKED' })
     })
 
     test('rejects a negative count', async () => {
-      await expect(adjust().execute({ productId: 2, countedQty: -1 }, 4)).rejects.toBeInstanceOf(ZodError)
+      await expect(adjust().execute({ productId: 2, countedQty: -1 }, 4, 1)).rejects.toBeInstanceOf(ZodError)
     })
   })
 })
@@ -172,15 +188,15 @@ describe('ListStockMovementsUseCase', () => {
     const stored = { items: [makeStockMovement()], total: 1 }
     movements.findAll.mockResolvedValue(stored)
 
-    const result = await new ListStockMovementsUseCase(movements).execute({ productId: 2, limit: 50, extra: 1 })
+    const result = await new ListStockMovementsUseCase(movements).execute({ productId: 2, limit: 50, extra: 1 }, 1)
 
     expect(result).toBe(stored)
-    expect(movements.findAll).toHaveBeenCalledWith({ productId: 2, limit: 50 })
+    expect(movements.findAll).toHaveBeenCalledWith({ productId: 2, limit: 50, branchId: 1 })
   })
 
   test('rejects a limit over 500', async () => {
     const movements = mockStockMovementRepository()
 
-    await expect(new ListStockMovementsUseCase(movements).execute({ limit: 501 })).rejects.toBeInstanceOf(ZodError)
+    await expect(new ListStockMovementsUseCase(movements).execute({ limit: 501 }, 1)).rejects.toBeInstanceOf(ZodError)
   })
 })

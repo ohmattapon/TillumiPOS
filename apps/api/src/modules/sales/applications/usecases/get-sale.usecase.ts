@@ -8,9 +8,10 @@ import type { ISaleRepository } from '../ports/sale.repository'
 export class GetSaleUseCase {
   constructor(@inject(saleRepositoryToken) private readonly sales: ISaleRepository) {}
 
-  async execute(id: number) {
+  /** A sale of another branch is reported as not found, so branches cannot read each other's bills. */
+  async execute(id: number, branchId: number) {
     const sale = await this.sales.findById(id)
-    if (!sale) throw new DomainNotFoundError('ไม่พบบิลขาย')
+    if (!sale || sale.branchId !== branchId) throw new DomainNotFoundError('ไม่พบบิลขาย')
     return sale
   }
 }

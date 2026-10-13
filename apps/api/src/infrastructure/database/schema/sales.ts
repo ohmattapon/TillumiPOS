@@ -1,5 +1,6 @@
-import { date, index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { date, index, integer, pgEnum, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core'
 import { createdAt, id } from '../columns'
+import { branches } from './branches'
 import { products } from './products'
 import { vatMode } from './shop-settings'
 import { users } from './users'
@@ -7,11 +8,18 @@ import { users } from './users'
 export const saleStatus = pgEnum('sale_status', ['completed', 'voided'])
 export const paymentMethod = pgEnum('payment_method', ['cash', 'promptpay', 'card'])
 
-// One row per business day; row-locked on increment so receipt numbers have no gaps.
-export const receiptCounters = pgTable('receipt_counters', {
-  day: date().primaryKey(),
-  lastNumber: integer().notNull(),
-})
+// One row per branch and business day; row-locked on increment so receipt numbers have no gaps.
+export const receiptCounters = pgTable(
+  'receipt_counters',
+  {
+    branchId: integer()
+      .notNull()
+      .references(() => branches.id),
+    day: date().notNull(),
+    lastNumber: integer().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.branchId, table.day] })],
+)
 
 // A sale is never edited or deleted. Mistakes are corrected by voiding it.
 export const sales = pgTable(
@@ -19,6 +27,9 @@ export const sales = pgTable(
   {
     id: id(),
     receiptNo: text().notNull().unique(),
+    branchId: integer()
+      .notNull()
+      .references(() => branches.id),
     status: saleStatus().notNull().default('completed'),
     subtotalSatang: integer().notNull(),
     discountSatang: integer().notNull().default(0),
@@ -40,7 +51,7 @@ export const sales = pgTable(
     voidReason: text(),
     createdAt: createdAt(),
   },
-  (table) => [index().on(table.createdAt)],
+  (table) => [index().on(table.createdAt), index().on(table.branchId, table.createdAt)],
 )
 
 export const saleItems = pgTable(

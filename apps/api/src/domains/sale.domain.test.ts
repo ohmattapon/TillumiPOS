@@ -19,6 +19,7 @@ const complete = (overrides: Partial<Parameters<typeof SaleEntity.complete>[0]> 
     payments: cash(10000),
     vatMode: 'inclusive',
     vatRateBp: 700,
+    branchId: 1,
     cashier,
     ...overrides,
   })

@@ -1,6 +1,7 @@
 import { Elysia } from 'elysia'
 import { container } from 'tsyringe'
 import { AuthElysiaController } from './auth/adapters/controllers/auth.controller'
+import { BranchElysiaController } from './branches/adapters/controllers/branch.controller'
 import { CategoryElysiaController } from './categories/adapters/controllers/category.controller'
 import './di-registrations'
 import { InventoryElysiaController } from './inventory/adapters/controllers/inventory.controller'
@@ -11,6 +12,7 @@ import { UserElysiaController } from './users/adapters/controllers/user.controll
 
 const authController = container.resolve(AuthElysiaController)
 const userController = container.resolve(UserElysiaController)
+const branchController = container.resolve(BranchElysiaController)
 const categoryController = container.resolve(CategoryElysiaController)
 const productController = container.resolve(ProductElysiaController)
 const inventoryController = container.resolve(InventoryElysiaController)
@@ -27,6 +29,7 @@ export const appModule = new Elysia({ name: 'api', prefix: '/api/v1' })
   .get('/health', () => ({ status: 'ok' }), { detail: { tags: ['System'], summary: 'ตรวจสอบสถานะระบบ' } })
   .use(authController.getRoutes())
   .use(userController.getRoutes())
+  .use(branchController.getRoutes())
   .use(catalog)
   .use(inventoryController.getRoutes())
   .use(saleController.getRoutes())

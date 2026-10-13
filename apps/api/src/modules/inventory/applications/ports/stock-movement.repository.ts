@@ -2,6 +2,8 @@ import type { Page } from '../../../../domains/page'
 import type { NewStockMovement, StockMovementEntity } from '../../../../domains/stock-movement.domain'
 
 export interface IFindStockMovementsQuery {
+  /** Only this branch's ledger is listed. */
+  branchId: number
   productId?: number
   limit?: number
   offset?: number

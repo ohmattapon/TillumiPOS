@@ -8,7 +8,8 @@ import type { IProductRepository } from '../ports/product.repository'
 export class ListProductsUseCase {
   constructor(@inject(productRepositoryToken) private readonly products: IProductRepository) {}
 
-  async execute(input: unknown = {}) {
-    return this.products.findAll(listProductsSchema.parse(input))
+  /** Stock levels in the result are those of `branchId`. */
+  async execute(input: unknown, branchId: number) {
+    return this.products.findAll({ ...listProductsSchema.parse(input), branchId })
   }
 }

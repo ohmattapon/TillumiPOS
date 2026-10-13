@@ -30,7 +30,7 @@ export class UserElysiaController {
         },
         { response: page(userSchemas.user), detail: { summary: 'รายชื่อผู้ใช้ทั้งหมด' } },
       )
-      .post('/', async ({ body }) => toResponse(await this.createUser.execute(body)), {
+      .post('/', async ({ body, branch }) => toResponse(await this.createUser.execute(body, (await branch()).id)), {
         body: userSchemas.create,
         response: userSchemas.user,
         detail: { summary: 'เพิ่มผู้ใช้' },

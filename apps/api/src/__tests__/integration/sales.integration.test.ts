@@ -41,7 +41,7 @@ describe('completing a sale', () => {
       cashierId: cashier.user.id,
       cashierName: 'cashier',
     })
-    expect(sale.receiptNo).toMatch(/^\d{8}-00001$/)
+    expect(sale.receiptNo).toMatch(/^MAIN-\d{8}-00001$/)
     expect(sale.items).toEqual([
       { productId: tea.id, productName: 'Tea', sku: tea.sku, unitPriceSatang: 2500, quantity: 2, lineTotalSatang: 5000 },
       { productId: cake.id, productName: 'Cake', sku: cake.sku, unitPriceSatang: 5700, quantity: 1, lineTotalSatang: 5700 },
@@ -98,8 +98,8 @@ describe('completing a sale', () => {
     expect((await sell(50)).status).toBe(409)
     const second = ok(await sell(1))
 
-    const [firstDay, firstNumber] = first.receiptNo.split('-')
-    const [secondDay, secondNumber] = second.receiptNo.split('-')
+    const [, firstDay, firstNumber] = first.receiptNo.split('-')
+    const [, secondDay, secondNumber] = second.receiptNo.split('-')
     // The counter restarts each business day; only compare within one day.
     if (firstDay === secondDay) expect(Number(secondNumber)).toBe(Number(firstNumber) + 1)
     else expect(secondNumber).toBe('00001')

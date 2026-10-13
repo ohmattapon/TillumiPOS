@@ -23,8 +23,8 @@ export class InventoryElysiaController {
       .use(auth)
       .get(
         '/movements',
-        async ({ query }) => {
-          const { items, total } = await this.listStockMovements.execute(query)
+        async ({ query, branch }) => {
+          const { items, total } = await this.listStockMovements.execute(query, (await branch()).id)
           return { items: items.map(toResponse), total }
         },
         {
@@ -34,17 +34,27 @@ export class InventoryElysiaController {
           detail: { summary: 'ประวัติการเคลื่อนไหวสต็อก ล่าสุดก่อน' },
         },
       )
-      .post('/receive', async ({ body, user }) => toResponse(await this.receiveStock.execute(body, user.id)), {
-        auth: ['owner'],
-        body: inventorySchemas.receive,
-        response: inventorySchemas.movement,
-        detail: { summary: 'รับสินค้าเข้าสต็อก' },
-      })
-      .post('/adjust', async ({ body, user }) => toResponse(await this.adjustStock.execute(body, user.id)), {
-        auth: ['owner'],
-        body: inventorySchemas.adjust,
-        response: inventorySchemas.movement,
-        detail: { summary: 'ปรับยอดสต็อกให้ตรงกับที่นับได้จริง' },
-      })
+      .post(
+        '/receive',
+        async ({ body, user, branch }) =>
+          toResponse(await this.receiveStock.execute(body, user.id, (await branch()).id)),
+        {
+          auth: ['owner'],
+          body: inventorySchemas.receive,
+          response: inventorySchemas.movement,
+          detail: { summary: 'รับสินค้าเข้าสต็อก' },
+        },
+      )
+      .post(
+        '/adjust',
+        async ({ body, user, branch }) =>
+          toResponse(await this.adjustStock.execute(body, user.id, (await branch()).id)),
+        {
+          auth: ['owner'],
+          body: inventorySchemas.adjust,
+          response: inventorySchemas.movement,
+          detail: { summary: 'ปรับยอดสต็อกให้ตรงกับที่นับได้จริง' },
+        },
+      )
   }
 }

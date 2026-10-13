@@ -158,6 +158,6 @@ describe('sales follow the settings', () => {
     const sale = ok(await cashier.api.sales.post({ items: [{ productId: tea.id, quantity: 1 }], payments: cash(1000) }))
 
     const expectedDay = new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(new Date()).replaceAll('-', '')
-    expect(sale.receiptNo).toStartWith(`${expectedDay}-`)
+    expect(sale.receiptNo).toStartWith(`MAIN-${expectedDay}-`)
   })
 })

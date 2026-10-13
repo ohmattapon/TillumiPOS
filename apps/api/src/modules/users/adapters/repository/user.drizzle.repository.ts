@@ -14,6 +14,7 @@ const columns = {
   username: users.username,
   displayName: users.displayName,
   role: users.role,
+  branchId: users.branchId,
   isActive: users.isActive,
 }
 
@@ -86,6 +87,14 @@ export class DrizzleUserRepository implements IUserRepository {
       .select({ total: count() })
       .from(users)
       .where(and(eq(users.role, 'owner'), eq(users.isActive, true)))
+    return row!.total
+  }
+
+  async countActiveInBranch(branchId: number) {
+    const [row] = await currentExecutor()
+      .select({ total: count() })
+      .from(users)
+      .where(and(eq(users.branchId, branchId), eq(users.isActive, true)))
     return row!.total
   }
 }

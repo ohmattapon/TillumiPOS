@@ -20,6 +20,7 @@ describe('users', () => {
       username: 'somchai',
       displayName: 'สมชาย',
       role: 'cashier',
+      branchId: 1,
       isActive: true,
     })
   })

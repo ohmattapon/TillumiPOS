@@ -13,6 +13,7 @@ describe('login', () => {
       username: 'boss',
       displayName: 'boss',
       role: 'owner',
+      branchId: 1,
       isActive: true,
     })
   })

@@ -20,10 +20,11 @@ export interface SalesSummary {
 export class GetSalesSummaryUseCase {
   constructor(@inject(saleRepositoryToken) private readonly sales: ISaleRepository) {}
 
-  async execute(input: unknown): Promise<SalesSummary> {
-    const { changeSatang, costSatang, tendered, ...totals } = await this.sales.sumCompleted(
-      salesSummarySchema.parse(input),
-    )
+  async execute(input: unknown, branchId: number): Promise<SalesSummary> {
+    const { changeSatang, costSatang, tendered, ...totals } = await this.sales.sumCompleted({
+      ...salesSummarySchema.parse(input),
+      branchId,
+    })
 
     return {
       ...totals,

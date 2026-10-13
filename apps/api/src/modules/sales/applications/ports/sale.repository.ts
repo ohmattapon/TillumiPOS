@@ -5,6 +5,8 @@ import type { NewSale, PaymentMethod, SaleEntity, SaleEntityProps } from '../../
 export type ISaleHeader = Omit<SaleEntityProps, 'items' | 'payments' | 'voidedById'>
 
 export interface IFindSalesQuery {
+  /** Only this branch's sales are listed. */
+  branchId: number
   /** Inclusive. */
   from?: Date
   /** Exclusive. */
@@ -28,10 +30,11 @@ export interface ISalesTotals {
 
 export interface ISaleRepository {
   /**
-   * The next receipt number of the current business day, e.g. 20261013-00042.
-   * Gapless: must be called inside the unit of work that stores the sale, so it rolls back with it.
+   * The next receipt number of the branch's current business day, e.g. MAIN-20261013-00042.
+   * Gapless per branch and day: must be called inside the unit of work that stores the sale,
+   * so it rolls back with it.
    */
-  nextReceiptNo(): Promise<string>
+  nextReceiptNo(branch: { id: number; code: string }): Promise<string>
   create(sale: NewSale, receiptNo: string): Promise<SaleEntity>
   findById(id: number): Promise<SaleEntity | null>
   /** Like findById, but row-locks the sale until the surrounding unit of work ends. */
@@ -40,8 +43,8 @@ export interface ISaleRepository {
   saveVoid(sale: SaleEntity): Promise<void>
   /** One page, newest first, with the total that match. */
   findHeaders(query: IFindSalesQuery): Promise<Page<ISaleHeader>>
-  /** Sums over completed sales created in [from, to). Voided sales are excluded. */
-  sumCompleted(period: { from: Date; to: Date }): Promise<ISalesTotals>
+  /** Sums over the branch's completed sales created in [from, to). Voided sales are excluded. */
+  sumCompleted(period: { from: Date; to: Date; branchId: number }): Promise<ISalesTotals>
 }
 
 const saleRepositoryTokenSymbol: unique symbol = Symbol('ISaleRepository')

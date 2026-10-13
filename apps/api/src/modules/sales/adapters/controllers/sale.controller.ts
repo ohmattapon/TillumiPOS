@@ -33,36 +33,41 @@ export class SaleElysiaController {
   getRoutes() {
     return new Elysia({ name: 'sales', prefix: '/sales', detail: { tags: ['Sales'] } })
       .use(auth)
-      .get('/', ({ query }) => this.listSales.execute(query), {
+      .get('/', async ({ query, branch }) => this.listSales.execute(query, (await branch()).id), {
         auth: true,
         query: saleSchemas.listQuery,
         response: page(saleSchemas.saleHeader),
         detail: { summary: 'รายการบิลขาย ล่าสุดก่อน' },
       })
-      .get('/summary', ({ query }) => this.getSalesSummary.execute(query), {
+      .get('/summary', async ({ query, branch }) => this.getSalesSummary.execute(query, (await branch()).id), {
         auth: ['owner'],
         query: saleSchemas.summaryQuery,
         response: saleSchemas.summary,
         detail: { summary: 'สรุปยอดขายในช่วงเวลา [from, to)' },
       })
-      .get('/:id', async ({ params }) => toResponse(await this.getSale.execute(params.id)), {
+      .get('/:id', async ({ params, branch }) => toResponse(await this.getSale.execute(params.id, (await branch()).id)), {
         auth: true,
         params: idParams,
         response: saleSchemas.sale,
         detail: { summary: 'รายละเอียดบิลขาย' },
       })
-      .post('/', async ({ body, user }) => toResponse(await this.completeSale.execute(body, user)), {
+      .post('/', async ({ body, user, branch }) => toResponse(await this.completeSale.execute(body, user, await branch())), {
         auth: true,
         body: saleSchemas.create,
         response: saleSchemas.sale,
         detail: { summary: 'บันทึกการขาย ตัดสต็อก และออกเลขที่ใบเสร็จ' },
       })
-      .post('/:id/void', async ({ params, body, user }) => toResponse(await this.voidSale.execute(params.id, body, user)), {
-        auth: ['owner'],
-        params: idParams,
-        body: saleSchemas.void,
-        response: saleSchemas.sale,
-        detail: { summary: 'ยกเลิกบิลและคืนสต็อก' },
-      })
+      .post(
+        '/:id/void',
+        async ({ params, body, user, branch }) =>
+          toResponse(await this.voidSale.execute(params.id, body, user, (await branch()).id)),
+        {
+          auth: ['owner'],
+          params: idParams,
+          body: saleSchemas.void,
+          response: saleSchemas.sale,
+          detail: { summary: 'ยกเลิกบิลและคืนสต็อก' },
+        },
+      )
   }
 }

@@ -8,7 +8,7 @@ import { listSalesSchema } from '../schemas/sale-schemas'
 export class ListSalesUseCase {
   constructor(@inject(saleRepositoryToken) private readonly sales: ISaleRepository) {}
 
-  async execute(input: unknown = {}) {
-    return this.sales.findHeaders(listSalesSchema.parse(input))
+  async execute(input: unknown, branchId: number) {
+    return this.sales.findHeaders({ ...listSalesSchema.parse(input), branchId })
   }
 }

@@ -1,4 +1,5 @@
 import { mock, type Mock } from 'bun:test'
+import type { IBranchRepository } from '../modules/branches/applications/ports/branch.repository'
 import type { ICategoryRepository } from '../modules/categories/applications/ports/category.repository'
 import type { IStockLedger } from '../modules/inventory/applications/ports/stock-ledger.port'
 import type { IStockMovementRepository } from '../modules/inventory/applications/ports/stock-movement.repository'
@@ -30,6 +31,7 @@ export const mockUserRepository = (): Mocked<IUserRepository> => ({
   create: mock<IUserRepository['create']>(),
   update: mock<IUserRepository['update']>(),
   countActiveOwners: mock<IUserRepository['countActiveOwners']>(),
+  countActiveInBranch: mock<IUserRepository['countActiveInBranch']>(),
 })
 
 /** Hashes are the plain text with a prefix, so tests can read what was stored. */
@@ -78,6 +80,15 @@ export const mockSaleRepository = (): Mocked<ISaleRepository> => ({
   saveVoid: mock<ISaleRepository['saveVoid']>(async () => {}),
   findHeaders: mock<ISaleRepository['findHeaders']>(),
   sumCompleted: mock<ISaleRepository['sumCompleted']>(),
+})
+
+export const mockBranchRepository = (): Mocked<IBranchRepository> => ({
+  findAll: mock<IBranchRepository['findAll']>(),
+  findById: mock<IBranchRepository['findById']>(),
+  findByIdForUpdate: mock<IBranchRepository['findByIdForUpdate']>(),
+  create: mock<IBranchRepository['create']>(),
+  update: mock<IBranchRepository['update']>(),
+  countActive: mock<IBranchRepository['countActive']>(),
 })
 
 export const mockShopSettingsRepository = (): Mocked<IShopSettingsRepository> => ({

@@ -3,6 +3,7 @@ import { injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import { ProductEntity } from '../../../../domains/product.domain'
+import { branchStock } from '../../../../infrastructure/database/schema/branches'
 import { products } from '../../../../infrastructure/database/schema/products'
 import { isForeignKeyViolation, isUniqueViolation } from '../../../../libs/pg-error'
 import { currentExecutor } from '../../../../libs/transaction-context'
@@ -17,7 +18,8 @@ const columns = {
   priceSatang: products.priceSatang,
   costSatang: products.costSatang,
   trackStock: products.trackStock,
-  stockQty: products.stockQty,
+  // A product that has never moved in the branch has no stock row, which means none on the shelf.
+  stockQty: sql<number>`coalesce(${branchStock.qty}, 0)`.mapWith(Number),
   isActive: products.isActive,
   imageKey: products.imageKey,
 }
@@ -31,6 +33,10 @@ const translate = (error: unknown): unknown => {
     return new DomainConflictError('ข้อมูลนี้ถูกอ้างอิงอยู่ หรืออ้างถึงข้อมูลที่ไม่มีอยู่', 'IN_USE')
   return error
 }
+
+/** The catalogue joined with the stock of one branch. */
+const inBranch = (branchId: number) =>
+  and(eq(branchStock.productId, products.id), eq(branchStock.branchId, branchId))
 
 @injectable()
 export class DrizzleProductRepository implements IProductRepository {
@@ -49,6 +55,7 @@ export class DrizzleProductRepository implements IProductRepository {
     const rows = await currentExecutor()
       .select(columns)
       .from(products)
+      .leftJoin(branchStock, inBranch(query.branchId))
       .where(matching)
       .orderBy(products.name)
       .limit(query.limit ?? 500)
@@ -58,56 +65,84 @@ export class DrizzleProductRepository implements IProductRepository {
     return { items: rows.map((row) => new ProductEntity(row)), total: counted!.total }
   }
 
-  async findById(id: number) {
-    const [row] = await currentExecutor().select(columns).from(products).where(eq(products.id, id))
+  async findById(id: number, branchId: number) {
+    const [row] = await currentExecutor()
+      .select(columns)
+      .from(products)
+      .leftJoin(branchStock, inBranch(branchId))
+      .where(eq(products.id, id))
     return row ? new ProductEntity(row) : null
   }
 
-  async findManyForUpdate(ids: number[]) {
+  async findManyForUpdate(ids: number[], branchId: number) {
     // Ordered by id so concurrent units of work take their locks in the same order and cannot deadlock.
-    const rows = await currentExecutor()
-      .select(columns)
+    // The product rows are the lock: the stock row may not exist yet, and holding the product also
+    // serializes every branch's change to its stock.
+    await currentExecutor()
+      .select({ id: products.id })
       .from(products)
       .where(inArray(products.id, ids))
       .orderBy(products.id)
       .for('update')
+
+    // Read in a second statement, once the locks are held. A single locked join would re-check only the
+    // locked rows after waiting and would hand back a stale stock row, letting two sales oversell.
+    const rows = await currentExecutor()
+      .select(columns)
+      .from(products)
+      .leftJoin(branchStock, inBranch(branchId))
+      .where(inArray(products.id, ids))
+      .orderBy(products.id)
     return rows.map((row) => new ProductEntity(row))
   }
 
-  async create(entity: ProductEntity) {
-    const { id: _unassigned, ...values } = entity.toSnapshot()
+  async create(entity: ProductEntity, branchId: number) {
+    const { id: _unassigned, stockQty: _none, ...values } = entity.toSnapshot()
     try {
-      const [row] = await currentExecutor().insert(products).values(values).returning(columns)
-      return new ProductEntity(row!)
+      const [row] = await currentExecutor().insert(products).values(values).returning({ id: products.id })
+      return (await this.findById(row!.id, branchId))!
     } catch (error) {
       throw translate(error)
     }
   }
 
-  async update(entity: ProductEntity) {
+  async update(entity: ProductEntity, branchId: number) {
     // Stock and image have their own write paths and must not be overwritten from a stale read.
     const { id, stockQty: _stock, imageKey: _image, ...values } = entity.toSnapshot()
     try {
-      const [row] = await currentExecutor().update(products).set(values).where(eq(products.id, id)).returning(columns)
+      const [row] = await currentExecutor().update(products).set(values).where(eq(products.id, id)).returning({ id: products.id })
       if (!row) throw new DomainNotFoundError('ไม่พบสินค้า')
-      return new ProductEntity(row)
+      return (await this.findById(id, branchId))!
     } catch (error) {
       throw translate(error)
     }
   }
 
-  async adjustStock(id: number, delta: number) {
+  async adjustStock(id: number, branchId: number, delta: number) {
+    const [product] = await currentExecutor()
+      .select({ trackStock: products.trackStock })
+      .from(products)
+      .where(eq(products.id, id))
+    if (!product?.trackStock) return null
+
     const [row] = await currentExecutor()
-      .update(products)
-      .set({ stockQty: sql`${products.stockQty} + ${delta}` })
-      .where(and(eq(products.id, id), eq(products.trackStock, true)))
-      .returning({ stockQty: products.stockQty })
-    return row?.stockQty ?? null
+      .insert(branchStock)
+      .values({ branchId, productId: id, qty: delta })
+      .onConflictDoUpdate({
+        target: [branchStock.branchId, branchStock.productId],
+        set: { qty: sql`${branchStock.qty} + ${delta}` },
+      })
+      .returning({ qty: branchStock.qty })
+    return row!.qty
   }
 
-  async setImageKey(id: number, imageKey: string | null) {
-    const [row] = await currentExecutor().update(products).set({ imageKey }).where(eq(products.id, id)).returning(columns)
+  async setImageKey(id: number, imageKey: string | null, branchId: number) {
+    const [row] = await currentExecutor()
+      .update(products)
+      .set({ imageKey })
+      .where(eq(products.id, id))
+      .returning({ id: products.id })
     if (!row) throw new DomainNotFoundError('ไม่พบสินค้า')
-    return new ProductEntity(row)
+    return (await this.findById(id, branchId))!
   }
 }

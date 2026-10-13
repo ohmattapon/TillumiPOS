@@ -1,4 +1,4 @@
-import { count, desc, eq } from 'drizzle-orm'
+import { and, count, desc, eq } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 import { StockMovementEntity, type NewStockMovement } from '../../../../domains/stock-movement.domain'
 import { stockMovements } from '../../../../infrastructure/database/schema/stock-movements'
@@ -13,7 +13,10 @@ export class DrizzleStockMovementRepository implements IStockMovementRepository 
   }
 
   async findAll(query: IFindStockMovementsQuery) {
-    const matching = query.productId ? eq(stockMovements.productId, query.productId) : undefined
+    const matching = and(
+      eq(stockMovements.branchId, query.branchId),
+      query.productId ? eq(stockMovements.productId, query.productId) : undefined,
+    )
 
     const rows = await currentExecutor()
       .select()

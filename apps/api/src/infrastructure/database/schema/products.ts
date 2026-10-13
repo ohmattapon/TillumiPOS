@@ -17,8 +17,6 @@ export const products = pgTable(
     priceSatang: integer().notNull(),
     costSatang: integer().notNull().default(0),
     trackStock: boolean().notNull().default(true),
-    // Cached balance; the stock_movements ledger is the source of truth.
-    stockQty: integer().notNull().default(0),
     isActive: boolean().notNull().default(true),
     ...timestamps,
   },

@@ -1,6 +1,8 @@
 import { inject, injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
+import { branchRepositoryToken } from '../../../branches/applications/ports/branch.repository'
+import type { IBranchRepository } from '../../../branches/applications/ports/branch.repository'
 import type { IPasswordHasher } from '../../../shared/ports/password-hasher.port'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import { TOKENS } from '../../../tokens'
@@ -13,6 +15,7 @@ import { updateUserSchema } from '../schemas/user-schemas'
 export class UpdateUserUseCase {
   constructor(
     @inject(userRepositoryToken) private readonly users: IUserRepository,
+    @inject(branchRepositoryToken) private readonly branches: IBranchRepository,
     @inject(TOKENS.PasswordHasher) private readonly hasher: IPasswordHasher,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
   ) {}
@@ -24,6 +27,12 @@ export class UpdateUserUseCase {
     return this.unitOfWork.run(async () => {
       const existing = await this.users.findByIdForUpdate(id)
       if (!existing) throw new DomainNotFoundError('ไม่พบผู้ใช้')
+
+      if (changes.branchId !== undefined && changes.branchId !== existing.branchId) {
+        const branch = await this.branches.findById(changes.branchId)
+        if (!branch) throw new DomainNotFoundError('ไม่พบสาขา', 'BRANCH_NOT_FOUND')
+        if (!branch.isActive) throw new DomainConflictError('สาขานี้ปิดใช้งานแล้ว', 'BRANCH_INACTIVE')
+      }
 
       if (existing.wouldStopBeingActiveOwner(changes) && (await this.users.countActiveOwners()) <= 1)
         throw new DomainConflictError('ต้องมีเจ้าของร้านที่ใช้งานได้อย่างน้อย 1 คน', 'LAST_OWNER')
