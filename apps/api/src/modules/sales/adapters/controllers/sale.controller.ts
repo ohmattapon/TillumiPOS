@@ -1,7 +1,7 @@
-import { Elysia, t } from 'elysia'
+import { Elysia } from 'elysia'
 import { inject, injectable } from 'tsyringe'
 import type { SaleEntity } from '../../../../domains/sale.domain'
-import { idParams } from '../../../../libs/http-schemas'
+import { idParams, page } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import { CompleteSaleUseCase } from '../../applications/usecases/complete-sale.usecase'
 import { GetSaleUseCase } from '../../applications/usecases/get-sale.usecase'
@@ -36,7 +36,7 @@ export class SaleElysiaController {
       .get('/', ({ query }) => this.listSales.execute(query), {
         auth: true,
         query: saleSchemas.listQuery,
-        response: t.Array(saleSchemas.saleHeader),
+        response: page(saleSchemas.saleHeader),
         detail: { summary: 'รายการบิลขาย ล่าสุดก่อน' },
       })
       .get('/summary', ({ query }) => this.getSalesSummary.execute(query), {

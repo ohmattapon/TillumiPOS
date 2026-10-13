@@ -8,7 +8,7 @@ beforeEach(async () => {
   owner = await signIn('owner')
 })
 
-const search = async (q: string) => ok(await owner.api.catalog.products.get({ query: { q } })).map((item) => item.name)
+const search = async (q: string) => ok(await owner.api.catalog.products.get({ query: { q } })).items.map((item) => item.name)
 
 describe('products', () => {
   test('a created product is found by name, SKU and barcode', async () => {
@@ -49,8 +49,8 @@ describe('products', () => {
     const retired = await seedProduct(owner, { name: 'Retired' })
     ok(await owner.api.catalog.products({ id: retired.id }).patch({ isActive: false }))
 
-    const visible = ok(await owner.api.catalog.products.get({ query: {} }))
-    const all = ok(await owner.api.catalog.products.get({ query: { includeInactive: true } }))
+    const visible = ok(await owner.api.catalog.products.get({ query: {} })).items
+    const all = ok(await owner.api.catalog.products.get({ query: { includeInactive: true } })).items
 
     expect(visible.map((item) => item.id)).toEqual([active.id])
     expect(all.map((item) => item.name)).toEqual(['Active', 'Retired'])
@@ -85,7 +85,7 @@ describe('products', () => {
     expect(result.status).toBe(409)
     expect(result.error?.value).toMatchObject({
       code: 'IN_USE',
-      message: 'ข้อมูลนี้ถูกอ้างอิงอยู่ หรืออ้างถึงข้อมูลที่ไม่มีอยู่',
+      detail: 'ข้อมูลนี้ถูกอ้างอิงอยู่ หรืออ้างถึงข้อมูลที่ไม่มีอยู่',
     })
   })
 
@@ -103,7 +103,7 @@ describe('products', () => {
     const updated = await owner.api.catalog.products({ id: 9999 }).patch({ name: 'Ghost' })
 
     expect(read.status).toBe(404)
-    expect(read.error?.value).toMatchObject({ code: 'NOT_FOUND', message: 'ไม่พบสินค้า' })
+    expect(read.error?.value).toMatchObject({ code: 'NOT_FOUND', detail: 'ไม่พบสินค้า' })
     expect(updated.status).toBe(404)
   })
 

@@ -1,4 +1,4 @@
-import { and, eq, ilike, inArray, or, sql } from 'drizzle-orm'
+import { and, count, eq, ilike, inArray, or, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
@@ -38,22 +38,24 @@ export class DrizzleProductRepository implements IProductRepository {
     const term = query.q?.trim()
     const pattern = term && `%${escapeLike(term)}%`
 
+    const matching = and(
+      query.includeInactive ? undefined : eq(products.isActive, true),
+      query.categoryId ? eq(products.categoryId, query.categoryId) : undefined,
+      pattern
+        ? or(ilike(products.name, pattern), ilike(products.sku, pattern), eq(products.barcode, term!))
+        : undefined,
+    )
+
     const rows = await currentExecutor()
       .select(columns)
       .from(products)
-      .where(
-        and(
-          query.includeInactive ? undefined : eq(products.isActive, true),
-          query.categoryId ? eq(products.categoryId, query.categoryId) : undefined,
-          pattern
-            ? or(ilike(products.name, pattern), ilike(products.sku, pattern), eq(products.barcode, term!))
-            : undefined,
-        ),
-      )
+      .where(matching)
       .orderBy(products.name)
       .limit(query.limit ?? 500)
       .offset(query.offset ?? 0)
-    return rows.map((row) => new ProductEntity(row))
+    const [counted] = await currentExecutor().select({ total: count() }).from(products).where(matching)
+
+    return { items: rows.map((row) => new ProductEntity(row)), total: counted!.total }
   }
 
   async findById(id: number) {

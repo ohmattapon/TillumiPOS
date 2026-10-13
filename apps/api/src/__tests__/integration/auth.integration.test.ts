@@ -43,7 +43,7 @@ describe('login', () => {
 
   test('a tampered session cookie is refused, not an internal error', async () => {
     await signIn('owner', 'boss')
-    const response = await fetch(`http://localhost:${app.server!.port}/api/auth/login`, {
+    const response = await fetch(`http://localhost:${app.server!.port}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ username: 'boss', password: PASSWORD }),

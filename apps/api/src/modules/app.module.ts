@@ -21,7 +21,7 @@ const catalog = new Elysia({ name: 'catalog', prefix: '/catalog', detail: { tags
   .use(productController.getRoutes())
 
 // Chained in one expression on purpose: the Eden client's types come from the type of this value.
-export const appModule = new Elysia({ name: 'api', prefix: '/api' })
+export const appModule = new Elysia({ name: 'api', prefix: '/api/v1' })
   .get('/health', () => ({ status: 'ok' }), { detail: { tags: ['System'], summary: 'ตรวจสอบสถานะระบบ' } })
   .use(authController.getRoutes())
   .use(userController.getRoutes())

@@ -1,5 +1,6 @@
 import { and, count, desc, eq, gte, lt, sql, type SQL } from 'drizzle-orm'
 import { inject, injectable } from 'tsyringe'
+import type { Page } from '../../../../domains/page'
 import { SaleEntity, type NewSale } from '../../../../domains/sale.domain'
 import { payments, receiptCounters, saleItems, sales } from '../../../../infrastructure/database/schema/sales'
 import { currentExecutor } from '../../../../libs/transaction-context'
@@ -85,18 +86,22 @@ export class DrizzleSaleRepository implements ISaleRepository {
       .where(eq(sales.id, sale.id))
   }
 
-  findHeaders(query: IFindSalesQuery): Promise<ISaleHeader[]> {
-    return currentExecutor()
+  async findHeaders(query: IFindSalesQuery): Promise<Page<ISaleHeader>> {
+    const matching = and(
+      query.from ? gte(sales.createdAt, query.from) : undefined,
+      query.to ? lt(sales.createdAt, query.to) : undefined,
+    )
+
+    const items = await currentExecutor()
       .select(headerColumns)
       .from(sales)
-      .where(
-        and(
-          query.from ? gte(sales.createdAt, query.from) : undefined,
-          query.to ? lt(sales.createdAt, query.to) : undefined,
-        ),
-      )
+      .where(matching)
       .orderBy(desc(sales.id))
       .limit(query.limit ?? 100)
+      .offset(query.offset ?? 0)
+    const [counted] = await currentExecutor().select({ total: count() }).from(sales).where(matching)
+
+    return { items, total: counted!.total }
   }
 
   async sumCompleted({ from, to }: { from: Date; to: Date }): Promise<ISalesTotals> {

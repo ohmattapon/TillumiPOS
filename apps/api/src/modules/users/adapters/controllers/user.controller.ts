@@ -1,7 +1,7 @@
-import { Elysia, t } from 'elysia'
+import { Elysia } from 'elysia'
 import { inject, injectable } from 'tsyringe'
 import type { UserEntity } from '../../../../domains/user.domain'
-import { idParams } from '../../../../libs/http-schemas'
+import { idParams, page } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import { CreateUserUseCase } from '../../applications/usecases/create-user.usecase'
 import { ListUsersUseCase } from '../../applications/usecases/list-users.usecase'
@@ -22,10 +22,14 @@ export class UserElysiaController {
     return new Elysia({ name: 'users', prefix: '/users', detail: { tags: ['Users'] } })
       .use(auth)
       .guard({ auth: ['owner'] })
-      .get('/', async () => (await this.listUsers.execute()).map(toResponse), {
-        response: t.Array(userSchemas.user),
-        detail: { summary: 'รายชื่อผู้ใช้ทั้งหมด' },
-      })
+      .get(
+        '/',
+        async () => {
+          const items = (await this.listUsers.execute()).map(toResponse)
+          return { items, total: items.length }
+        },
+        { response: page(userSchemas.user), detail: { summary: 'รายชื่อผู้ใช้ทั้งหมด' } },
+      )
       .post('/', async ({ body }) => toResponse(await this.createUser.execute(body)), {
         body: userSchemas.create,
         response: userSchemas.user,

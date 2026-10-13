@@ -1,3 +1,4 @@
+import type { Page } from '../../../../domains/page'
 import type { ProductEntity } from '../../../../domains/product.domain'
 
 export interface IFindProductsQuery {
@@ -10,8 +11,8 @@ export interface IFindProductsQuery {
 }
 
 export interface IProductRepository {
-  /** Ordered by name. Inactive products are left out unless asked for. */
-  findAll(query: IFindProductsQuery): Promise<ProductEntity[]>
+  /** One page ordered by name, with the total that match. Inactive products are left out unless asked for. */
+  findAll(query: IFindProductsQuery): Promise<Page<ProductEntity>>
   findById(id: number): Promise<ProductEntity | null>
   /**
    * The products with these ids, ordered by id and row-locked until the surrounding

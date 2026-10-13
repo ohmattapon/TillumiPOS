@@ -1,7 +1,7 @@
-import { Elysia, t } from 'elysia'
+import { Elysia } from 'elysia'
 import { inject, injectable } from 'tsyringe'
 import type { CategoryEntity } from '../../../../domains/category.domain'
-import { idParams } from '../../../../libs/http-schemas'
+import { idParams, page } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import { CreateCategoryUseCase } from '../../applications/usecases/create-category.usecase'
 import { ListCategoriesUseCase } from '../../applications/usecases/list-categories.usecase'
@@ -22,11 +22,14 @@ export class CategoryElysiaController {
   getRoutes() {
     return new Elysia({ name: 'catalog.categories', prefix: '/categories' })
       .use(auth)
-      .get('/', async () => (await this.listCategories.execute()).map(toResponse), {
-        auth: true,
-        response: t.Array(categorySchemas.category),
-        detail: { summary: 'รายการหมวดหมู่' },
-      })
+      .get(
+        '/',
+        async () => {
+          const items = (await this.listCategories.execute()).map(toResponse)
+          return { items, total: items.length }
+        },
+        { auth: true, response: page(categorySchemas.category), detail: { summary: 'รายการหมวดหมู่' } },
+      )
       .post('/', async ({ body }) => toResponse(await this.createCategory.execute(body)), {
         auth: ['owner'],
         body: categorySchemas.create,

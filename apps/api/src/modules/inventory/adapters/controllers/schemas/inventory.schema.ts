@@ -28,6 +28,7 @@ export const inventorySchemas = {
   movementsQuery: t.Object({
     productId: t.Optional(t.Numeric()),
     limit: t.Optional(t.Numeric({ minimum: 1, maximum: 500 })),
+    offset: t.Optional(t.Numeric({ minimum: 0 })),
   }),
 }
 
