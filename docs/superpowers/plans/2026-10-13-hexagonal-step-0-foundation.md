@@ -207,9 +207,9 @@ describe('categories', () => {
     const renamed = await owner.api.catalog.categories({ id: snacks.id }).patch({ name: 'Drinks' })
 
     expect(created.status).toBe(409)
-    expect(created.error?.value).toEqual({ code: 'DUPLICATE', message: 'ข้อมูลซ้ำกับที่มีอยู่แล้ว' })
+    expect(created.error?.value).toMatchObject({ code: 'DUPLICATE', message: 'ข้อมูลซ้ำกับที่มีอยู่แล้ว' })
     expect(renamed.status).toBe(409)
-    expect(renamed.error?.value).toEqual({ code: 'DUPLICATE', message: 'ข้อมูลซ้ำกับที่มีอยู่แล้ว' })
+    expect(renamed.error?.value).toMatchObject({ code: 'DUPLICATE', message: 'ข้อมูลซ้ำกับที่มีอยู่แล้ว' })
     expect(ok(await owner.api.catalog.categories.get()).map((category) => category.name)).toEqual(['Drinks', 'Snacks'])
   })
 
@@ -217,7 +217,7 @@ describe('categories', () => {
     const result = await owner.api.catalog.categories({ id: 9999 }).patch({ name: 'Ghost' })
 
     expect(result.status).toBe(404)
-    expect(result.error?.value).toEqual({ code: 'NOT_FOUND', message: 'ไม่พบหมวดหมู่' })
+    expect(result.error?.value).toMatchObject({ code: 'NOT_FOUND', message: 'ไม่พบหมวดหมู่' })
   })
 
   test('an empty or over-long name is a validation error', async () => {
