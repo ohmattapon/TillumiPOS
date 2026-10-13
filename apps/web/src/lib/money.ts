@@ -3,6 +3,13 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
 
 export type Locale = 'th' | 'en'
 
+/** One payment of a sale. A QR payment carries the id of the QR the bank confirmed. */
+export interface PaymentInput {
+  method: PaymentMethod
+  amountSatang: number
+  qrPaymentId?: number
+}
+
 // Numbers and dates follow the language of the shop. Thai uses the Buddhist calendar year.
 const INTL_LOCALE: Record<Locale, string> = { th: 'th-TH', en: 'en-US' }
 
