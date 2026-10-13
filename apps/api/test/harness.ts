@@ -1,15 +1,22 @@
 import { treaty } from '@elysiajs/eden'
 import { app, type App } from '../src/app'
-import { client as sqlClient } from '../src/libs/db'
+import { migrate } from 'drizzle-orm/bun-sql/migrator'
+import { client as sqlClient, db } from '../src/libs/db'
 import type { CreateProduct, Product } from '../src/modules/catalog/products/model'
 import { ProductsService } from '../src/modules/catalog/products/service'
 import { InventoryService } from '../src/modules/inventory/service'
 import type { User } from '../src/modules/users/model'
 import { UsersService } from '../src/modules/users/service'
-import { assertConnectedTestDatabase } from './database'
+import { assertConnectedTestDatabase, ensureTestDatabase } from './database'
 import { fakeMedia } from './media-server'
 
 export { fakeMedia }
+
+// Integration tests reach the database through this module, so it is prepared here
+// rather than in the preload script, which unit tests also load.
+await ensureTestDatabase()
+await assertConnectedTestDatabase(sqlClient)
+await migrate(db, { migrationsFolder: './drizzle' })
 
 app.listen(0)
 const origin = `http://localhost:${app.server!.port}`

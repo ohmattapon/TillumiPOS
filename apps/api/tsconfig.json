@@ -8,6 +8,9 @@
     "jsx": "react-jsx",
     "allowJs": true,
     "types": ["bun"],
+    // Required by tsyringe's constructor injection.
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
 
     // Bundler mode
     "moduleResolution": "bundler",
