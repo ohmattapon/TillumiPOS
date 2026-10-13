@@ -5,7 +5,8 @@ export const shiftKeys = {
   all: ['shifts'] as const,
   registers: () => [...shiftKeys.all, 'registers'] as const,
   current: (registerId: number) => [...shiftKeys.all, 'current', registerId] as const,
-  history: () => [...shiftKeys.all, 'history'] as const,
+  history: (filters: object = {}) => [...shiftKeys.all, 'history', filters] as const,
+  summary: (id: number) => [...shiftKeys.all, 'summary', id] as const,
   detail: (id: number) => [...shiftKeys.all, 'detail', id] as const,
   entries: (id: number) => [...shiftKeys.all, 'entries', id] as const,
   qrAttempts: () => [...shiftKeys.all, 'qr', 'attempts'] as const,
@@ -31,9 +32,33 @@ export const currentShiftQuery = (registerId: number) => queryOptions({
   refetchOnWindowFocus: true,
 })
 
-export const shiftHistoryQuery = queryOptions({
-  queryKey: shiftKeys.history(),
-  queryFn: () => unwrap(apiV2.shifts.get({ query: { limit: 50, offset: 0 } })),
+export type ShiftStatusFilter = 'all' | 'open' | 'closing' | 'closed'
+
+export interface ShiftHistoryFilters {
+  registerId: number | null
+  status: ShiftStatusFilter
+  limit: number
+  offset: number
+}
+
+/** One page of the branch's shifts, newest first. */
+export const shiftHistoryQuery = (filters: ShiftHistoryFilters) => queryOptions({
+  queryKey: shiftKeys.history(filters),
+  queryFn: () => unwrap(apiV2.shifts.get({
+    query: {
+      limit: filters.limit,
+      offset: filters.offset,
+      ...(filters.registerId !== null && { registerId: filters.registerId }),
+      ...(filters.status !== 'all' && { status: filters.status }),
+    },
+  })),
+  placeholderData: (previous) => previous,
+})
+
+/** The report of a shift: live while it is open, frozen from when counting started. */
+export const shiftSummaryQuery = (id: number) => queryOptions({
+  queryKey: shiftKeys.summary(id),
+  queryFn: () => unwrap(apiV2.shifts({ id }).summary.get()),
 })
 
 export function useCreateRegister() {
