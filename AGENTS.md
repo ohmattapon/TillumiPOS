@@ -122,10 +122,57 @@ apps/api/src/
 - พฤติกรรมผ่าน HTTP: `src/__tests__/integration/*.integration.test.ts` รันกับ PostgreSQL จริง
 - `bun run openapi:check` (ใน `apps/api`) ต้องผ่าน ถ้าตั้งใจเปลี่ยนสัญญาของ API ให้บอกเจ้าของโครงการก่อนบันทึก `test/openapi-baseline.json` ใหม่
 
+## สถาปัตยกรรมของเว็บ: แบ่งตาม feature
+
+`apps/web` จัดโฟลเดอร์ตาม feature (ตามธุรกิจ) ไม่ใช่ตามชนิดไฟล์ ถ้าจะเพิ่มความสามารถใหม่ ให้เพิ่มเป็น feature ใหม่หรือเข้า feature ที่เกี่ยวข้อง
+
+```
+apps/web/src/
+├── app/                  ประกอบแอป: App.tsx (เส้นทาง), AppSidebar.tsx
+├── features/
+│   └── <feature>/        auth, categories, products, sales, pos
+│       ├── index.ts      ทางเข้าสาธารณะของ feature: ส่งออกเฉพาะที่ feature อื่นใช้
+│       ├── api.ts        query key, queryOptions และ mutation hook ของ feature (TanStack Query)
+│       ├── components/   หน้าและคอมโพเนนต์ของ feature
+│       ├── store/        zustand store (เฉพาะ feature ที่มีสถานะฝั่งไคลเอนต์ที่ใช้ร่วมกัน)
+│       ├── hooks/        hook ที่ประกอบข้อมูลจากหลายแหล่ง
+│       └── lib/          ฟังก์ชันล้วนของ feature (คำนวณ ตรวจ แปลง) พร้อมไฟล์ทดสอบข้างกัน
+├── components/           คอมโพเนนต์ที่ใช้ร่วมหลาย feature และ ui/ (shadcn)
+├── lib/                  api client, query-client, money, utils
+└── main.tsx
+```
+
+### กฎของ feature
+
+- feature อื่นเรียกใช้ feature นี้ผ่าน `@/features/<name>` (ไฟล์ `index.ts`) เท่านั้น ห้าม import ลึกเข้าไปในโฟลเดอร์ของ feature อื่น
+- feature ห้าม import จาก `app/` และห้ามวนกลับหากัน (`pos` ใช้ `products` และ `sales` ได้ แต่สองตัวนั้นห้ามใช้ `pos`)
+- ภายใน feature เดียวกัน import แบบ relative
+- คอมโพเนนต์ที่ใช้ร่วมและไม่ผูกกับธุรกิจ (`PageHeader`, `Panel`, `StatusBadge`...) อยู่ `src/components` ส่วนที่ผูกกับธุรกิจของ feature ใด ให้อยู่ใน feature นั้น
+
+### สถานะ
+
+| ชนิด | ที่เก็บ | ตัวอย่าง |
+|---|---|---|
+| ข้อมูลจากเซิร์ฟเวอร์ (cache, refetch, invalidate) | TanStack Query เท่านั้น | รายการสินค้า บิลวันนี้ ผู้ใช้ที่ล็อกอิน |
+| สถานะฝั่งไคลเอนต์ที่ใช้ร่วมหลายคอมโพเนนต์ หรือต้องอยู่รอดข้ามการเปลี่ยนหน้า | zustand | ตะกร้า (`features/pos/store`) |
+| สถานะของคอมโพเนนต์เดียว | `useState` | ข้อความค้นหา หมวดที่เลือก กล่อง dialog ที่เปิดอยู่ |
+
+- ห้ามคัดลอกข้อมูลจากเซิร์ฟเวอร์เข้า zustand store: store เก็บแค่ id และสิ่งที่ผู้ใช้กรอก แล้วอ่านรายละเอียดจาก query ตอนแสดงผล (ตะกร้าเก็บ `productId` กับจำนวน ราคาจึงไม่ค้าง)
+- คอมโพเนนต์ห้ามเรียก `api` หรือ `unwrap` ตรง ๆ ให้ผ่าน query หรือ mutation hook ใน `api.ts` ของ feature
+- query key สร้างจาก key factory ของ feature (เช่น `productKeys.all`) และ invalidate ผ่าน factory เสมอ ห้ามเขียน key เป็นสตริงกระจาย
+- mutation ที่เปลี่ยนข้อมูลของ feature อื่น ต้อง invalidate ผ่าน key factory ที่ feature นั้นส่งออก (การขายทำให้สต็อกเปลี่ยน จึง invalidate `productKeys.all`)
+- ค่าเริ่มต้นของ cache อยู่ที่ `lib/query-client.ts`
+- store ที่เกี่ยวกับผู้ใช้ต้องถูกล้างตอนออกจากระบบ (ดู `clearCart` ใน `app/App.tsx`)
+
+### การทดสอบฝั่งเว็บ
+
+- ตรรกะที่ไม่ผูกกับ React (คำนวณตะกร้า store) เขียนเป็นฟังก์ชันล้วนใน `lib/` หรือ `store/` และทดสอบด้วย `bun test` ข้างไฟล์ (`bun run test` ที่ root รันทั้ง API และเว็บ)
+- สิ่งที่คำนวณเงินต้องอยู่ในฟังก์ชันล้วนที่มีการทดสอบ ไม่ฝังในคอมโพเนนต์
+
 ## โครงสร้างโครงการ
 
 - `apps/api`: Bun + Elysia + Drizzle + tsyringe ตามหัวข้อสถาปัตยกรรมข้างบน
-- `apps/web`: React + Vite + Tailwind + shadcn/ui เรียก API ผ่าน Eden client ที่ได้ type จาก `apps/api`
+- `apps/web`: React + Vite + Tailwind + shadcn/ui + TanStack Query + zustand แบ่งตาม feature ตามหัวข้อสถาปัตยกรรมของเว็บ เรียก API ผ่าน Eden client ที่ได้ type จาก `apps/api`
 - `apps/media`: Cloudflare Worker ที่เก็บรูปสินค้าใน R2
 - `DESIGN.md`: ระบบออกแบบของหน้าเว็บ (สี ตัวอักษร คอมโพเนนต์ และกฎการโต้ตอบ) ต้องอ่านก่อนแก้หรือเพิ่มหน้าจอ
 - `docs/superpowers`: `roadmap.md`, เอกสารออกแบบใน `specs/` และแผนลงมือทำใน `plans/`
@@ -140,7 +187,7 @@ apps/api/src/
 | `bun run db:migrate` | รัน migration |
 | `bun run dev` | เปิด API (3000, เส้นทางอยู่ใต้ `/api/v1`), เว็บ (5173) และ Worker ในเครื่อง (8787) |
 | `bun run typecheck` | ตรวจ type ทุกแพ็กเกจ |
-| `bun run test` | รันการทดสอบทั้งหมดของ API (ต้องเปิดฐานข้อมูล) |
+| `bun run test` | รันการทดสอบทั้งหมดของ API และเว็บ (ต้องเปิดฐานข้อมูล) |
 | `bun run test:unit` | รันเฉพาะการทดสอบ unit ไม่ต้องมีฐานข้อมูล |
 | `bun run lint` | ตรวจ lint ของหน้าเว็บ |
 

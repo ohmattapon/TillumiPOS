@@ -174,8 +174,8 @@ EasyPOS เป็นเครื่องมือทำงาน ไม่ใ�
 | `tableHead`, `tableCell` | `components/Panel.tsx` | คลาสของหัวตารางและเซลล์ ใช้กับทุกตารางข้อมูล |
 | `StatusBadge` | `components/StatusBadge.tsx` | ป้ายสถานะที่มีจุดสีนำหน้า มีสี่โทน: `success`, `warning`, `danger`, `neutral` |
 | `SegmentedTabs` | `components/SegmentedTabs.tsx` | ตัวกรองแบบเลือกหนึ่งจากไม่กี่ตัวเลือก ใช้ `size="touch"` บนหน้าขาย |
-| `ProductImage` | `components/ProductImage.tsx` | รูปสินค้าทุกจุด แสดงไอคอนแทนเมื่อไม่มีรูปหรือโหลดไม่ได้ |
-| `Receipt` | `components/Receipt.tsx` | เนื้อใบเสร็จ ทั้งบนจอและตอนพิมพ์ |
+| `ProductImage` | `features/products/components/ProductImage.tsx` | รูปสินค้าทุกจุด แสดงไอคอนแทนเมื่อไม่มีรูปหรือโหลดไม่ได้ |
+| `Receipt` | `features/sales/components/Receipt.tsx` | เนื้อใบเสร็จ ทั้งบนจอและตอนพิมพ์ |
 
 ขนาดของส่วนที่กดได้:
 
