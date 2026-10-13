@@ -10,7 +10,9 @@ import { useFormat } from '@/features/settings'
 import { ApiError } from '@/lib/api'
 import { selectedRegisterId, useRegisterSelectionStore } from '../store/register-selection'
 import { QrRecoveryPanel } from './QrRecoveryPanel'
-import { checkoutModeQuery, currentShiftQuery, registersQuery, shiftEntriesQuery, shiftHistoryQuery, useCancelClosing, useCloseShift, useCreateRegister, useOpenShift, useRecordCashMovement, useStartClosing, useUpdateRegister } from '../api'
+import { ShiftHistoryPanel } from './ShiftHistoryPanel'
+import { ShiftSummaryView } from './ShiftSummaryView'
+import { checkoutModeQuery, currentShiftQuery, registersQuery, shiftEntriesQuery, useCancelClosing, useCloseShift, useCreateRegister, useOpenShift, useRecordCashMovement, useStartClosing, useUpdateRegister } from '../api'
 
 export function ShiftsPage() {
   const { t } = useTranslation('shifts')
@@ -19,7 +21,6 @@ export function ShiftsPage() {
   const { branch } = useActiveBranch()
   const mode = useQuery(checkoutModeQuery)
   const registers = useQuery(registersQuery)
-  const history = useQuery(shiftHistoryQuery)
   const selections = useRegisterSelectionStore((state) => state.selections)
   const selectRegister = useRegisterSelectionStore((state) => state.select)
   const [openingAmount, setOpeningAmount] = useState('0')
@@ -55,7 +56,7 @@ export function ShiftsPage() {
   const updateRegister = useUpdateRegister()
   const entries = useQuery({ ...shiftEntriesQuery(detailsId ?? 0), enabled: detailsId !== undefined })
   const registerName = useMemo(() => registers.data?.items.find((item) => item.id === currentId)?.name ?? '', [registers.data, currentId])
-  const error = [mode.error, registers.error, current.error, history.error, entries.error, open.error, startClosing.error, cancelClosing.error, close.error, movement.error, createRegister.error, updateRegister.error].find(Boolean)
+  const error = [mode.error, registers.error, current.error, entries.error, open.error, startClosing.error, cancelClosing.error, close.error, movement.error, createRegister.error, updateRegister.error].find(Boolean)
   const errorCode = error instanceof ApiError ? error.code : null
 
   return (
@@ -100,6 +101,7 @@ export function ShiftsPage() {
               )}
               {activeShift.data?.status === 'closing' && (
                 <div className="space-y-3 rounded-lg bg-muted/60 p-4">
+                  <ShiftSummaryView shiftId={activeShift.data.id} currency={activeShift.data.currency} />
                   <p className="text-sm">{t('expected')}: <strong className="tabular-nums">{money.format(activeShift.data.closingExpectedCashSatang ?? 0)}</strong></p>
                   <label className="grid gap-2 text-sm font-medium">{t('countedCash')}<Input inputMode="decimal" value={countedAmount} onChange={(e) => setCountedAmount(e.target.value)} /></label>
                   {money.parse(countedAmount) !== null && money.parse(countedAmount) !== activeShift.data.closingExpectedCashSatang && <label className="grid gap-2 text-sm font-medium">{t('differenceReason')}<Input value={differenceReason} onChange={(e) => setDifferenceReason(e.target.value)} /></label>}
@@ -183,18 +185,7 @@ export function ShiftsPage() {
           </section>
         )}
 
-        <section className="mx-auto w-full max-w-3xl rounded-xl border bg-card p-5">
-          <h2 className="mb-4 font-semibold">{t('history')}</h2>
-          <div className="divide-y">
-            {history.data?.items.slice(0, 10).map((shift) => (
-              <div key={shift.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
-                <span className="font-medium">{registers.data?.items.find((item) => item.id === shift.registerId)?.name ?? t('register')} · {shift.openedByName}</span>
-                <span className="text-muted-foreground">{date.dateTime(shift.openedAt)}</span>
-                <span className="rounded-full bg-muted px-2 py-1">{t(`status_${shift.status}`)}</span>
-              </div>
-            ))}
-          </div>
-        </section>
+        <ShiftHistoryPanel registers={registers.data?.items ?? []} />
       </main>
     </div>
   )
