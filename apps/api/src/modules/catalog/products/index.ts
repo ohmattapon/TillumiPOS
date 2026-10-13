@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
 import { idParams } from '../../../shared/models'
-import { auth } from '../../../shared/plugins/auth'
+import { auth } from '../../auth.plugin'
 import { ProductModel } from './model'
 import { ProductsService } from './service'
 

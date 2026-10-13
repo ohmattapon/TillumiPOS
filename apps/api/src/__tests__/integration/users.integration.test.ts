@@ -94,4 +94,12 @@ describe('users', () => {
     expect(badUsername.status).toBe(422)
     expect(ok(await owner.api.users.get())).toHaveLength(1)
   })
+
+  test('an update with no fields returns the user unchanged', async () => {
+    const created = ok(await createCashier())
+
+    const unchanged = ok(await owner.api.users({ id: created.id }).patch({}))
+
+    expect(unchanged).toEqual(created)
+  })
 })

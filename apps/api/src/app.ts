@@ -1,17 +1,19 @@
 import 'reflect-metadata'
 import { openapi } from '@elysiajs/openapi'
 import { Elysia } from 'elysia'
-import { auth } from './modules/auth'
+import { container } from 'tsyringe'
+import { AuthElysiaController } from './modules/auth/adapters/controllers/auth.controller'
 import { catalog } from './modules/catalog'
 import { inventory } from './modules/inventory'
+import './modules/di-registrations'
 import { sales } from './modules/sales'
-import { users } from './modules/users'
+import { UserElysiaController } from './modules/users/adapters/controllers/user.controller'
 import { errorHandler } from './shared/plugins/error-handler'
 
 const api = new Elysia({ name: 'api', prefix: '/api' })
   .get('/health', () => ({ status: 'ok' }), { detail: { tags: ['System'], summary: 'ตรวจสอบสถานะระบบ' } })
-  .use(auth)
-  .use(users)
+  .use(container.resolve(AuthElysiaController).getRoutes())
+  .use(container.resolve(UserElysiaController).getRoutes())
   .use(catalog)
   .use(inventory)
   .use(sales)

@@ -1,3 +1,5 @@
 // Composition root: importing this file wires every migrated module into the container.
 import './shared/shared.module'
+import './users/users.module'
+import './auth/auth.module'
 import './categories/categories.module'

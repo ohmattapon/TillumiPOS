@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia'
-import { auth } from '../../shared/plugins/auth'
+import { auth } from '../auth.plugin'
 import { InventoryModel } from './model'
 import { InventoryService } from './service'
 

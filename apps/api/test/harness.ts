@@ -1,12 +1,13 @@
 import { treaty } from '@elysiajs/eden'
+import { container } from 'tsyringe'
 import { app, type App } from '../src/app'
 import { migrate } from 'drizzle-orm/bun-sql/migrator'
 import { client as sqlClient, db } from '../src/libs/db'
 import type { CreateProduct, Product } from '../src/modules/catalog/products/model'
 import { ProductsService } from '../src/modules/catalog/products/service'
 import { InventoryService } from '../src/modules/inventory/service'
-import type { User } from '../src/modules/users/model'
-import { UsersService } from '../src/modules/users/service'
+import type { UserResponse as User } from '../src/modules/users/adapters/controllers/schemas/user.schema'
+import { CreateUserUseCase } from '../src/modules/users/applications/usecases/create-user.usecase'
 import { assertConnectedTestDatabase, ensureTestDatabase } from './database'
 import { fakeMedia } from './media-server'
 
@@ -51,8 +52,10 @@ export async function login(username: string, password = PASSWORD): Promise<Api>
 
 /** Creates a user with the given role and logs them in. */
 export async function signIn(role: User['role'] = 'owner', username: string = role): Promise<Session> {
-  const user = await UsersService.create({ username, password: PASSWORD, displayName: username, role })
-  return { api: await login(username), user }
+  const created = await container
+    .resolve(CreateUserUseCase)
+    .execute({ username, password: PASSWORD, displayName: username, role })
+  return { api: await login(username), user: created.toSnapshot() }
 }
 
 let productCounter = 0

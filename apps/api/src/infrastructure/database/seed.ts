@@ -5,8 +5,8 @@ import { CreateCategoryUseCase } from '../../modules/categories/applications/use
 import '../../modules/di-registrations'
 import { ProductsService } from '../../modules/catalog/products/service'
 import { InventoryService } from '../../modules/inventory/service'
-import { users } from '../../modules/users/schema'
-import { UsersService } from '../../modules/users/service'
+import { CreateUserUseCase } from '../../modules/users/applications/usecases/create-user.usecase'
+import { users } from './schema/users'
 import { client, db } from '../../libs/db'
 
 const [existing] = await db.select({ total: count() }).from(users)
@@ -14,7 +14,7 @@ if (existing!.total > 0) {
   console.log('Database already has users, skipping seed')
 } else {
   const password = Bun.env.SEED_OWNER_PASSWORD ?? 'admin1234'
-  const owner = await UsersService.create({ username: 'admin', password, displayName: 'เจ้าของร้าน', role: 'owner' })
+  const owner = await container.resolve(CreateUserUseCase).execute({ username: 'admin', password, displayName: 'เจ้าของร้าน', role: 'owner' })
 
   const createCategory = container.resolve(CreateCategoryUseCase)
   const drinks = await createCategory.execute({ name: 'เครื่องดื่ม', sortOrder: 1 })

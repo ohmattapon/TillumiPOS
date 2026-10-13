@@ -3,7 +3,7 @@ import { t } from 'elysia'
 const role = t.Union([t.Literal('owner'), t.Literal('cashier')])
 const password = t.String({ minLength: 8, maxLength: 72 })
 
-export const UserModel = {
+export const userSchemas = {
   user: t.Object({
     id: t.Integer(),
     username: t.String(),
@@ -27,6 +27,4 @@ export const UserModel = {
   ),
 }
 
-export type User = typeof UserModel.user.static
-export type CreateUser = typeof UserModel.create.static
-export type UpdateUser = typeof UserModel.update.static
+export type UserResponse = typeof userSchemas.user.static
