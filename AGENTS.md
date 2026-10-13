@@ -128,17 +128,19 @@ apps/api/src/
 
 ```
 apps/web/src/
-├── app/                  ประกอบแอป: App.tsx (เส้นทาง), AppSidebar.tsx
+├── app/                  ประกอบแอป: App.tsx (เส้นทาง), AppSidebar.tsx, i18n.ts (รวมไฟล์ภาษาของทุก feature)
 ├── features/
-│   └── <feature>/        auth, categories, products, sales, pos
+│   └── <feature>/        auth, categories, products, sales, pos, settings
 │       ├── index.ts      ทางเข้าสาธารณะของ feature: ส่งออกเฉพาะที่ feature อื่นใช้
 │       ├── api.ts        query key, queryOptions และ mutation hook ของ feature (TanStack Query)
 │       ├── components/   หน้าและคอมโพเนนต์ของ feature
 │       ├── store/        zustand store (เฉพาะ feature ที่มีสถานะฝั่งไคลเอนต์ที่ใช้ร่วมกัน)
 │       ├── hooks/        hook ที่ประกอบข้อมูลจากหลายแหล่ง
+│       ├── locales.ts    ข้อความของ feature ทั้งภาษาไทยและอังกฤษ (namespace ของ i18next)
 │       └── lib/          ฟังก์ชันล้วนของ feature (คำนวณ ตรวจ แปลง) พร้อมไฟล์ทดสอบข้างกัน
 ├── components/           คอมโพเนนต์ที่ใช้ร่วมหลาย feature และ ui/ (shadcn)
-├── lib/                  api client, query-client, money, utils
+├── lib/                  api client, query-client, money (จัดรูปแบบเงินและวันที่), utils
+├── locales/              ข้อความที่ใช้ร่วมกัน (common.ts) และคำแปลรหัสข้อผิดพลาดของ API (errors.ts)
 └── main.tsx
 ```
 
@@ -163,6 +165,16 @@ apps/web/src/
 - mutation ที่เปลี่ยนข้อมูลของ feature อื่น ต้อง invalidate ผ่าน key factory ที่ feature นั้นส่งออก (การขายทำให้สต็อกเปลี่ยน จึง invalidate `productKeys.all`)
 - ค่าเริ่มต้นของ cache อยู่ที่ `lib/query-client.ts`
 - store ที่เกี่ยวกับผู้ใช้ต้องถูกล้างตอนออกจากระบบ (ดู `clearCart` ใน `app/App.tsx`)
+
+### ภาษาและการจัดรูปแบบ
+
+- ข้อความทุกตัวที่ผู้ใช้อ่านต้องมาจาก `t()` ของ `react-i18next` ห้ามเขียนข้อความไทยหรืออังกฤษตรง ๆ ในไฟล์ `.tsx`/`.ts` นอกจาก `locales.ts` (ชื่อภาษาแบบ native ในหน้าตั้งค่าเป็นข้อยกเว้น)
+- แต่ละ feature เป็นเจ้าของ namespace ของตัวเองใน `features/<name>/locales.ts` ส่งออก `{ th, en }` โดยภาษาไทยเป็นต้นแบบของ type และ `en` ใช้ `satisfies typeof th` เพื่อให้คีย์ขาดแล้ว type ไม่ผ่าน ข้อความที่ใช้ร่วมหลาย feature อยู่ `src/locales/common.ts`
+- คำพหูพจน์ใช้คีย์ `_one`/`_other` (ภาษาไทยเขียนทั้งสองคีย์ให้เหมือนกัน)
+- ภาษาตั้งเป็นระดับร้านใน `/settings` (ไม่ใช่ต่อผู้ใช้) และ `Shell` ใน `app/App.tsx` เป็นผู้สลับ
+- ข้อผิดพลาดจาก API: `detail` เป็นภาษาไทย เมื่อ UI เป็นภาษาอื่นเว็บแปลจาก `code` กับ `params` ผ่าน `locales/errors.ts` ถ้า API เพิ่มรหัสข้อผิดพลาดใหม่ ให้เพิ่มคำแปลที่นี่ด้วย
+- เงินและวันที่จัดรูปแบบผ่าน `useFormat()` (สกุลเงินและภาษาจากการตั้งค่าร้าน) ห้ามใส่ `฿` หรือ `/ 100` เอง และห้ามใช้ `Intl` ตรง ๆ ในคอมโพเนนต์
+- ยอดภาษีและยอดสุทธิคำนวณจาก `calculateTotals` ของ `@pos/api/pricing` ตัวเดียวกับที่เซิร์ฟเวอร์ใช้ เพื่อให้หน้าจอไม่เคยต่างจากใบเสร็จ
 
 ### การทดสอบฝั่งเว็บ
 
