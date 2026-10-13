@@ -2,7 +2,7 @@ import type { Order } from '@pos/api/types'
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productKeys } from '@/features/products'
 import { saleKeys } from '@/features/sales'
-import { api, unwrap } from '@/lib/api'
+import { api, apiV2, unwrap } from '@/lib/api'
 import type { PaymentInput } from '@/lib/money'
 
 export const orderKeys = {
@@ -93,6 +93,8 @@ export interface PayOrderInput {
   orderId: number
   discountSatang: number
   payment: PaymentInput
+  shiftId?: number
+  idempotencyKey?: string
 }
 
 /** Pays the order. It becomes a sale, so stock, sales and the order list all change. */
@@ -100,8 +102,11 @@ export function usePayOrder() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ orderId, discountSatang, payment }: PayOrderInput) =>
-      unwrap(api.orders({ id: orderId }).pay.post({ discountSatang, payments: [payment] })),
+    mutationFn: async ({ orderId, discountSatang, payment, shiftId, idempotencyKey }: PayOrderInput) => {
+      if (shiftId !== undefined)
+        return unwrap(apiV2.orders({ id: orderId }).pay.post({ discountSatang, payments: [payment], shiftId }, { headers: { 'idempotency-key': idempotencyKey ?? crypto.randomUUID() } }))
+      return unwrap(api.orders({ id: orderId }).pay.post({ discountSatang, payments: [payment] }))
+    },
     onSettled: () =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: orderKeys.all }),

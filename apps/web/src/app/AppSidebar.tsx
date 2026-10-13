@@ -8,6 +8,7 @@ import {
   Package,
   Settings,
   ShoppingCart,
+  WalletCards,
   Store,
   UserRound,
   type LucideIcon,
@@ -36,6 +37,7 @@ import {
 } from '@/components/ui/sidebar'
 import { BranchSwitcher, useActiveBranch } from '@/features/branches'
 import { clearCart } from '@/features/pos'
+import { useRegisterSelectionStore } from '@/features/shifts'
 import { isLowStock, productsQuery } from '@/features/products'
 import { useSettings } from '@/features/settings'
 
@@ -58,6 +60,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
   const isOwner = user.role === 'owner'
   const products = useQuery(productsQuery())
   const lowStockCount = products.data?.filter(isLowStock).length ?? 0
+  const clearRegisterSelection = useRegisterSelectionStore((state) => state.clear)
 
   const groups: { label: string; items: NavItem[] }[] = [
     {
@@ -65,6 +68,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
       items: [
         { to: '/', label: t('nav.sell'), icon: ShoppingCart },
         { to: '/today', label: t('nav.today'), icon: CalendarCheck },
+        { to: '/shifts', label: t('nav.shifts'), icon: WalletCards },
       ],
     },
     ...(isOwner
@@ -99,7 +103,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
         {canSwitch ? (
           <div className="px-2 group-data-[collapsible=icon]:hidden">
             {/* The cart is for the branch it was rung up in, so a switch starts a fresh one. */}
-            <BranchSwitcher onSwitched={clearCart} />
+            <BranchSwitcher onSwitched={() => { clearCart(); clearRegisterSelection() }} />
           </div>
         ) : (
           branch &&

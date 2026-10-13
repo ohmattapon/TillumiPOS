@@ -1,6 +1,7 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productKeys } from '@/features/products'
-import { api, unwrap } from '@/lib/api'
+import { api, apiV2, unwrap } from '@/lib/api'
+import { checkoutModeQuery, shiftKeys } from '@/features/shifts'
 
 export const saleKeys = {
   /** Prefix of every sales query: invalidate this after a sale is made or voided. */
@@ -40,11 +41,25 @@ export function useVoidSale(id: number) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (reason: string) => unwrap(api.sales({ id }).void.post({ reason })),
+    mutationFn: async (reason: string) => {
+      const mode = await queryClient.fetchQuery(checkoutModeQuery)
+      if (mode.checkoutMode === 'shifts')
+        return unwrap(apiV2.sales({ id }).void.post({ reason }, { headers: { 'idempotency-key': crypto.randomUUID() } }))
+      return unwrap(api.sales({ id }).void.post({ reason }))
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: saleKeys.all })
       // Voiding returns the stock.
       queryClient.invalidateQueries({ queryKey: productKeys.all })
     },
+  })
+}
+
+export function useCashRefund(saleId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ shiftId, reason }: { shiftId: number; reason: string }) =>
+      unwrap(apiV2.sales({ id: saleId })['cash-refund'].post({ shiftId, reason }, { headers: { 'idempotency-key': crypto.randomUUID() } })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: shiftKeys.all }),
   })
 }

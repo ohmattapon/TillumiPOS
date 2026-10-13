@@ -28,9 +28,10 @@ interface Props {
   error?: string
   onConfirm: (payment: PaymentInput) => void
   onCancel: () => void
+  qrAvailable?: boolean
 }
 
-export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onCancel }: Props) {
+export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onCancel, qrAvailable = true }: Props) {
   const { t } = useTranslation('pos')
   const { t: tc } = useTranslation()
   const { money, currency } = useFormat()
@@ -40,7 +41,8 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
   // With a bank QR set up, PromptPay is paid by scanning and confirmed by the bank, not by the cashier.
   const qrEnabled = useQuery(qrConfigQuery).data?.enabled === true
   const usesQr = method === 'promptpay' && qrEnabled
-  const qr = useQrPayment({ amountSatang: totalSatang, active: usesQr })
+  const qr = useQrPayment({ amountSatang: totalSatang, active: usesQr && qrAvailable })
+  const qrUnavailable = usesQr && !qrAvailable
 
   // The sale is recorded the moment the bank confirms, so a customer who has paid is never left waiting.
   const recorded = useRef<number | null>(null)
@@ -92,7 +94,7 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
                 key={value}
                 type="button"
                 aria-pressed={method === value}
-                disabled={isSubmitting || (qr.paid !== null && value !== 'promptpay')}
+                disabled={isSubmitting || (qr.paid !== null && value !== 'promptpay') || (value === 'promptpay' && qrEnabled && !qrAvailable)}
                 onClick={() => chooseMethod(value)}
                 className={cn(
                   'flex h-20 flex-col items-center justify-center gap-1.5 rounded-lg border text-sm font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50',
@@ -106,6 +108,7 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
           </div>
 
           {usesQr && <QrPaymentPanel qr={qr} isSaving={isSubmitting} />}
+          {qrUnavailable && <p role="status" className="rounded-md border bg-muted p-3 text-sm text-muted-foreground">{t('payment.qr.qrUnavailableInShifts')}</p>}
 
           {method === 'cash' && (
             <>

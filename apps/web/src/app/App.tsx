@@ -10,6 +10,7 @@ import { clearCart, PosPage } from '@/features/pos'
 import { ProductsPage } from '@/features/products'
 import { TodayPage } from '@/features/sales'
 import { SettingsPage, useSettings } from '@/features/settings'
+import { ShiftsPage, useRegisterSelectionStore } from '@/features/shifts'
 import { AppSidebar } from './AppSidebar'
 import { applyLocale } from './i18n'
 
@@ -17,6 +18,7 @@ function Shell({ user }: { user: User }) {
   const logout = useLogout()
   const { locale } = useSettings()
   const isOwner = user.role === 'owner'
+  const clearRegisterSelection = useRegisterSelectionStore((state) => state.clear)
   // Keeps the remembered branch honest (closed or forbidden ones are dropped) even on pages without a switcher.
   useActiveBranch()
 
@@ -28,7 +30,7 @@ function Shell({ user }: { user: User }) {
   return (
     <SidebarProvider>
       {/* The cart belongs to the till, not the account: a new user must not inherit the last one's. */}
-      <AppSidebar user={user} onLogout={() => logout.mutate(undefined, { onSuccess: clearCart })} />
+      <AppSidebar user={user} onLogout={() => logout.mutate(undefined, { onSuccess: () => { clearCart(); clearRegisterSelection() } })} />
       <SidebarInset className="h-svh min-w-0 overflow-hidden">
         <Routes>
           <Route index element={<PosPage />} />
@@ -36,6 +38,7 @@ function Shell({ user }: { user: User }) {
           {isOwner && <Route path="products" element={<ProductsPage />} />}
           {isOwner && <Route path="branches" element={<BranchesPage />} />}
           {isOwner && <Route path="settings" element={<SettingsPage />} />}
+          <Route path="shifts" element={<ShiftsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </SidebarInset>
