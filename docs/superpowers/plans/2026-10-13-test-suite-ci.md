@@ -17,7 +17,7 @@
 - ชื่อฐานข้อมูลทดสอบคือ `pos_test` บน `localhost:5433` ฐานข้อมูล `pos` ต้องไม่ถูกแตะ
 - จำนวนเงินเป็นสตางค์ อัตรา VAT ในการทดสอบคือ `VAT_RATE_BP=700` แบบรวมในราคา
 - รันคำสั่งทั้งหมดจาก root ของ repo (`D:\POS`) เว้นแต่ระบุไว้ และต้องเปิดฐานข้อมูลด้วย `bun run db:up` ก่อน
-- ห้าม commit ไฟล์ `apps/api/.env`, `apps/media/.dev.vars` และโฟลเดอร์ `.wrangler`
+- ค่าตั้งค่าจริงอยู่ใน `.env` ไฟล์เดียวที่ root (ดู `AGENTS.md`) ห้าม commit ไฟล์นั้นและโฟลเดอร์ `.wrangler` ส่วน `apps/api/.env.test` เป็นค่าทดสอบที่ไม่ใช่ความลับและ commit ได้
 - ทำตาม `AGENTS.md`: commit ด้วย `gitcz --non-interactive` เท่านั้น ห้ามใช้ `git commit` โดยตรง และห้าม `git push` ทุกรูปแบบ เจ้าของโครงการเป็นผู้ push เอง
 - ทุก commit ใส่ `--body="Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"`
 - ไฟล์ทดสอบในแผนนี้ไม่ใช่ command หรือ query จึงไม่อยู่ใต้กฎ CQRS และแผนนี้ไม่ย้ายโค้ดเดิมใน `service.ts`
@@ -1500,9 +1500,6 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      # `wrangler types` derives the Worker's secret types from .dev.vars, which is not committed.
-      - run: cp apps/media/.dev.vars.example apps/media/.dev.vars
-
       - run: bun run typecheck
       - run: bun run lint
       - run: bun run test
@@ -1532,7 +1529,6 @@ try {
   }
   bun install --frozen-lockfile
   if ($LASTEXITCODE -ne 0) { throw 'Frozen install failed' }
-  Copy-Item apps/media/.dev.vars.example apps/media/.dev.vars
   foreach ($check in @('typecheck', 'lint', 'test', 'test')) {
     bun run $check
     if ($LASTEXITCODE -ne 0) { throw "CI simulation failed: $check" }
