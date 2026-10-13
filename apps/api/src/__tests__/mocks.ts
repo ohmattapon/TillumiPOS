@@ -10,6 +10,10 @@ import type { IQrPaymentClaims } from '../modules/qr-payments/applications/ports
 import type { ISaleCheckout } from '../modules/sales/applications/ports/sale-checkout.port'
 import type { IProductRepository } from '../modules/products/applications/ports/product.repository'
 import type { IShopSettingsRepository } from '../modules/settings/applications/ports/shop-settings.repository'
+import type { ICheckoutPolicy } from '../modules/shared/ports/checkout-policy.port'
+import type { IShiftLedger } from '../modules/shared/ports/shift-ledger.port'
+import type { IShiftSettingsGuard } from '../modules/shifts/applications/ports/shift-settings-guard.port'
+import type { IRegisterRepository } from '../modules/shifts/applications/ports/register.repository'
 import type { ISaleRepository } from '../modules/sales/applications/ports/sale.repository'
 import type { IMediaStorage } from '../modules/shared/ports/media-storage.port'
 import type { IPasswordHasher } from '../modules/shared/ports/password-hasher.port'
@@ -132,5 +136,31 @@ export const mockSaleCheckout = (): Mocked<ISaleCheckout> => ({
 
 export const mockShopSettingsRepository = (): Mocked<IShopSettingsRepository> => ({
   get: mock<IShopSettingsRepository['get']>(),
+  getForUpdate: mock<IShopSettingsRepository['getForUpdate']>(),
   save: mock<IShopSettingsRepository['save']>(),
+})
+
+export const mockRegisterRepository = (): Mocked<IRegisterRepository> => ({
+  findAll: mock<IRegisterRepository['findAll']>(),
+  findById: mock<IRegisterRepository['findById']>(),
+  findByIdForUpdate: mock<IRegisterRepository['findByIdForUpdate']>(),
+  create: mock<IRegisterRepository['create']>(),
+  update: mock<IRegisterRepository['update']>(),
+  hasOpenShift: mock<IRegisterRepository['hasOpenShift']>(),
+  createMainForBranch: mock<IRegisterRepository['createMainForBranch']>(async () => {}),
+})
+
+export const mockCheckoutPolicy = (): Mocked<ICheckoutPolicy> => ({
+  isShiftsEnabled: mock<ICheckoutPolicy['isShiftsEnabled']>(async () => false),
+  activateShifts: mock<ICheckoutPolicy['activateShifts']>(async () => {}),
+})
+
+export const mockShiftLedger = (): Mocked<IShiftLedger> => ({
+  assertOpenForCheckout: mock<IShiftLedger['assertOpenForCheckout']>(async () => {}),
+  recordSaleCash: mock<IShiftLedger['recordSaleCash']>(async () => {}),
+  recordSaleRefund: mock<IShiftLedger['recordSaleRefund']>(async () => {}),
+})
+
+export const mockShiftSettingsGuard = (): Mocked<IShiftSettingsGuard> => ({
+  assertCurrencyChangeAllowed: mock<IShiftSettingsGuard['assertCurrencyChangeAllowed']>(async () => {}),
 })

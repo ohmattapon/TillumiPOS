@@ -2,6 +2,7 @@
 import './shared/shared.module'
 import './users/users.module'
 import './branches/branches.module'
+import './shifts/shifts.module'
 import './auth/auth.module'
 import './categories/categories.module'
 import './products/products.module'

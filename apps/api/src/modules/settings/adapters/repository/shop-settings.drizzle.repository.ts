@@ -31,6 +31,15 @@ export class DrizzleShopSettingsRepository implements IShopSettingsRepository {
     return new ShopSettingsEntity(row ? (row as ShopSettingsProps) : DEFAULT_SHOP_SETTINGS)
   }
 
+  async getForUpdate() {
+    await currentExecutor()
+      .insert(shopSettings)
+      .values({ id: SINGLE_ROW, ...DEFAULT_SHOP_SETTINGS })
+      .onConflictDoNothing({ target: shopSettings.id })
+    const [row] = await currentExecutor().select(columns).from(shopSettings).where(eq(shopSettings.id, SINGLE_ROW)).for('update')
+    return new ShopSettingsEntity(row as ShopSettingsProps)
+  }
+
   async save(settings: ShopSettingsEntity) {
     const values = settings.toSnapshot()
     const [row] = await currentExecutor()

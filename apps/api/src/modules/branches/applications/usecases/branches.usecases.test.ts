@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
 import { makeBranch, makeUser } from '../../../../__tests__/factories'
-import { mockBranchRepository, mockUnitOfWork, mockUserRepository } from '../../../../__tests__/mocks'
+import { mockBranchRepository, mockRegisterRepository, mockUnitOfWork, mockUserRepository } from '../../../../__tests__/mocks'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { CreateBranchUseCase } from './create-branch.usecase'
 import { ListBranchesUseCase } from './list-branches.usecase'
@@ -31,10 +31,12 @@ describe('ListBranchesUseCase', () => {
 
 describe('CreateBranchUseCase', () => {
   let useCase: CreateBranchUseCase
+  let registers: ReturnType<typeof mockRegisterRepository>
 
   beforeEach(() => {
     repo.create.mockImplementation(async (entity) => makeBranch({ ...entity.toSnapshot(), id: 7 }))
-    useCase = new CreateBranchUseCase(repo)
+    registers = mockRegisterRepository()
+    useCase = new CreateBranchUseCase(repo, registers, mockUnitOfWork())
   })
 
   test('stores an active branch with an upper-case code', async () => {
@@ -48,6 +50,7 @@ describe('CreateBranchUseCase', () => {
       phone: '02-000-0000',
       isActive: true,
     })
+    expect(registers.createMainForBranch).toHaveBeenCalledWith(7)
   })
 
   test('blank address and phone are stored as none', async () => {

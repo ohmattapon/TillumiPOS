@@ -8,6 +8,8 @@ import { GetOrderUseCase } from './applications/usecases/get-order.usecase'
 import { ListOrdersUseCase } from './applications/usecases/list-orders.usecase'
 import { OpenOrderUseCase } from './applications/usecases/open-order.usecase'
 import { PayOrderUseCase } from './applications/usecases/pay-order.usecase'
+import { PayOrderV2UseCase } from './applications/usecases/pay-order-v2.usecase'
+import { PayOrderV2ElysiaController } from './adapters/controllers/pay-order-v2.controller'
 import { RemoveOrderItemUseCase } from './applications/usecases/remove-order-item.usecase'
 import { RenameOrderUseCase } from './applications/usecases/rename-order.usecase'
 import { SetOrderItemQuantityUseCase } from './applications/usecases/set-order-item-quantity.usecase'
@@ -22,4 +24,6 @@ container.registerSingleton(SetOrderItemQuantityUseCase)
 container.registerSingleton(RemoveOrderItemUseCase)
 container.registerSingleton(CancelOrderUseCase)
 container.registerSingleton(PayOrderUseCase)
+container.registerSingleton(PayOrderV2UseCase)
 container.registerSingleton(OrderElysiaController)
+container.registerSingleton(PayOrderV2ElysiaController)

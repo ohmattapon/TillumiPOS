@@ -1,6 +1,7 @@
 import { t, type TSchema } from 'elysia'
 
 export const idParams = t.Object({ id: t.Numeric({ minimum: 1 }) })
+export const idempotencyHeaders = t.Object({ 'idempotency-key': t.String({ format: 'uuid' }) })
 
 /** Money is always an integer number of satang (1 baht = 100 satang). */
 export const satang = (options?: { minimum?: number }) => t.Integer({ minimum: options?.minimum ?? 0 })
