@@ -21,6 +21,7 @@
 - ทำตาม `AGENTS.md`: commit ด้วย `gitcz --non-interactive` เท่านั้น ห้ามใช้ `git commit` โดยตรง และห้าม `git push` ทุกรูปแบบ เจ้าของโครงการเป็นผู้ push เอง
 - ทุก commit ใส่ `--body="Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"`
 - ไฟล์ทดสอบในแผนนี้ไม่ใช่ command หรือ query จึงไม่อยู่ใต้กฎ CQRS และแผนนี้ไม่ย้ายโค้ดเดิมใน `service.ts`
+- อนุญาต SQL test fixture ขอบเวลาหลังตรวจ cached-client guard เพื่อกำหนด precision แน่นอน ห้ามปัก `test.failing` จากการปัด microseconds ของ fixture
 
 ## Review Focus
 
@@ -65,6 +66,8 @@
 - [ ] **Step 1: ตรวจว่าไม่มีความลับถูก stage**
 
 ```bash
+git status --short --untracked-files=all
+# Review every path; exclude secrets, builds and scratch before staging.
 git add -A
 git status --short | grep -E '(^|/)\.env$|\.dev\.vars$|\.wrangler/' && echo "STOP: secret staged" || echo "clean"
 ```
@@ -74,7 +77,7 @@ Expected: `clean` ถ้าได้ `STOP` ให้ `git reset` แล้ว�
 - [ ] **Step 2: Commit**
 
 ```bash
-gitcz --non-interactive --type=feat --subject="POS API, web app and media worker"
+gitcz --non-interactive --type=feat --subject="Add POS API, web app and media worker" --body="Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -99,7 +102,7 @@ gitcz --non-interactive --type=feat --subject="POS API, web app and media worker
   - `pngFile(name?: string): File` ไฟล์ PNG ขนาด 1×1 ที่ถูกต้อง
   - `resetDatabase(): Promise<void>`
   - `fakeMedia: { url: string; objects: Map<string, Blob>; setFailing(value: boolean): void; reset(): void }`
-- Produces (จาก `apps/api/test/database.ts`): `assertTestDatabase(): string`, `ensureTestDatabase(): Promise<void>`
+- Produces (จาก `apps/api/test/database.ts`): `assertTestDatabase(): string`, `assertConnectedTestDatabase(connection: SQL): Promise<void>`, `ensureTestDatabase(adminFactory?: (url: string) => SQL): Promise<void>`
 
 - [ ] **Step 1: เพิ่ม Eden เป็น devDependency ของ API**
 
@@ -112,12 +115,13 @@ cd apps/api && bun add -d @elysiajs/eden && cd ../..
 สร้าง `apps/api/test/harness.test.ts`:
 
 ```ts
+import { SQL } from 'bun'
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { UsersService } from '../src/modules/users/service'
 import { assertTestDatabase, ensureTestDatabase } from './database'
 import { client, fakeMedia, ok, resetDatabase, signIn } from './harness'
 
-beforeEach(resetDatabase)
+beforeEach(() => resetDatabase())
 
 describe('test harness', () => {
   test('serves the app over HTTP', async () => {
@@ -150,7 +154,7 @@ describe('test harness', () => {
 describe('database guard', () => {
   const original = Bun.env.DATABASE_URL
 
-  test('refuses a database whose name does not end in _test', () => {
+  test('refuses the development database', () => {
     Bun.env.DATABASE_URL = 'postgres://pos:pos@localhost:5433/pos'
     try {
       expect(() => assertTestDatabase()).toThrow('Refusing to run tests against database "pos"')
@@ -159,13 +163,37 @@ describe('database guard', () => {
     }
   })
 
-  test('explains how to start PostgreSQL when it is unreachable', async () => {
-    Bun.env.DATABASE_URL = 'postgres://pos:pos@localhost:1/pos_test'
+  test.each([
+    'postgres://pos:pos@localhost:5433/other_test',
+    'postgres://pos:pos@remote.example:5433/pos_test',
+    'postgres://pos:pos@localhost:5432/pos_test',
+  ])('refuses a non-exact target %s', (url) => {
+    Bun.env.DATABASE_URL = url
+    try { expect(() => assertTestDatabase()).toThrow('expected pos_test on localhost:5433') }
+    finally { Bun.env.DATABASE_URL = original }
+  })
+
+  test('valid env cannot hide the cached connection database', async () => {
+    Bun.env.DATABASE_URL = 'postgres://pos:pos@localhost:5433/pos_test'
+    let truncated = false
+    const wrongConnection = Object.assign(
+      async () => [{ name: 'pos' }],
+      { unsafe: async () => { truncated = true } },
+    ) as unknown as SQL
     try {
-      await expect(ensureTestDatabase()).rejects.toThrow('bun run db:up')
+      await expect(resetDatabase(wrongConnection)).rejects.toThrow('connected database "pos"')
+      expect(truncated).toBe(false)
     } finally {
       Bun.env.DATABASE_URL = original
     }
+  })
+
+  test('explains how to start PostgreSQL when connection fails', async () => {
+    const failingConnection = Object.assign(
+      async () => { throw new Error('connection refused') },
+      { close: async () => {} },
+    ) as unknown as SQL
+    await expect(ensureTestDatabase(() => failingConnection)).rejects.toThrow('bun run db:up')
   })
 })
 ```
@@ -204,23 +232,31 @@ preload = ["./test/setup.ts"]
 ```ts
 import { SQL } from 'bun'
 
-const TEST_SUFFIX = '_test'
-
-/** Returns the database name from DATABASE_URL, refusing anything that is not clearly a test database. */
+/** Refuse every URL except the exact local test target. */
 export function assertTestDatabase(): string {
-  const name = new URL(Bun.env.DATABASE_URL ?? 'postgres://unset/').pathname.slice(1)
-  if (!name.endsWith(TEST_SUFFIX))
-    throw new Error(`Refusing to run tests against database "${name}": the name must end in "${TEST_SUFFIX}"`)
+  const target = new URL(Bun.env.DATABASE_URL ?? 'postgres://unset/')
+  const name = decodeURIComponent(target.pathname.slice(1))
+  if (!['postgres:', 'postgresql:'].includes(target.protocol) || target.hostname !== 'localhost' ||
+      target.port !== '5433' || name !== 'pos_test' || target.search || target.hash)
+    throw new Error(`Refusing to run tests against database "${name}": expected pos_test on localhost:5433`)
   return name
 }
 
+/** Inspect the cached connection itself; mutable env cannot mask its actual database. */
+export async function assertConnectedTestDatabase(connection: SQL): Promise<void> {
+  assertTestDatabase()
+  const [actual] = await connection`select current_database() as name`
+  if (actual?.name !== 'pos_test')
+    throw new Error(`Refusing to reset connected database "${actual?.name}"`)
+}
+
 /** Creates the test database on first use. */
-export async function ensureTestDatabase(): Promise<void> {
+export async function ensureTestDatabase(adminFactory = (url: string) => new SQL(url)): Promise<void> {
   const name = assertTestDatabase()
   const adminUrl = new URL(Bun.env.DATABASE_URL!)
   adminUrl.pathname = '/postgres'
 
-  const admin = new SQL(adminUrl.href)
+  const admin = adminFactory(adminUrl.href)
   try {
     const existing = await admin`select 1 from pg_database where datname = ${name}`
     // CREATE DATABASE cannot take a bound parameter; the name was validated above.
@@ -325,7 +361,7 @@ import { ProductsService } from '../src/modules/catalog/products/service'
 import { InventoryService } from '../src/modules/inventory/service'
 import type { User } from '../src/modules/users/model'
 import { UsersService } from '../src/modules/users/service'
-import { assertTestDatabase } from './database'
+import { assertConnectedTestDatabase } from './database'
 import { fakeMedia } from './media-server'
 
 export { fakeMedia }
@@ -400,11 +436,11 @@ export const pngFile = (name = 'image.png') =>
   new File([Buffer.from(ONE_PIXEL_PNG, 'base64')], name, { type: 'image/png' })
 
 /** Empties every table and the fake media store. Call in beforeEach. */
-export async function resetDatabase(): Promise<void> {
-  assertTestDatabase()
-  const tables: { tablename: string }[] = await sqlClient`select tablename from pg_tables where schemaname = 'public'`
+export async function resetDatabase(connection = sqlClient): Promise<void> {
+  await assertConnectedTestDatabase(connection)
+  const tables: { tablename: string }[] = await connection`select tablename from pg_tables where schemaname = 'public'`
   const names = tables.map((table) => `"${table.tablename}"`).join(', ')
-  await sqlClient.unsafe(`truncate table ${names} restart identity cascade`)
+  await connection.unsafe(`truncate table ${names} restart identity cascade`)
   fakeMedia.reset()
 }
 ```
@@ -412,12 +448,12 @@ export async function resetDatabase(): Promise<void> {
 - [ ] **Step 9: รันให้ผ่าน**
 
 Run: `bun run test`
-Expected: PASS ทั้ง 6 กรณีใน `harness.test.ts` และ 8 กรณีเดิมใน `pricing.test.ts`
+Expected: PASS ทุกกรณี harness และ guard พร้อม 8 กรณีเดิมใน `pricing.test.ts`
 
 - [ ] **Step 10: ตรวจว่าฐานข้อมูลพัฒนาไม่ถูกแตะ**
 
-Run: `docker compose exec -T db psql -U pos -d pos -tc "select count(*) from users"`
-Expected: ตัวเลขมากกว่า 0 (ผู้ใช้ในฐานพัฒนายังอยู่)
+Run: fingerprint comparison ตาม Task 8 Step 6 โดยเทียบ baseline ที่บันทึกก่อน Task 1
+Expected: SHA256 ครบ schema/data/sequences ตรงกับ baseline
 
 - [ ] **Step 11: typecheck และ commit**
 
@@ -445,7 +481,7 @@ gitcz --non-interactive --type=test --subject="integration test harness on a ded
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { client, login, ok, PASSWORD, pngFile, resetDatabase, seedProduct, signIn } from '../../../test/harness'
 
-beforeEach(resetDatabase)
+beforeEach(() => resetDatabase())
 
 describe('login', () => {
   test('starts a session and returns the user without any password field', async () => {
@@ -1251,8 +1287,14 @@ describe('sales summary', () => {
       }),
     )
 
-    const endingAtSale = await summaryFor({ from: new Date(Date.now() - HOUR), to: sale.createdAt })
-    const startingAtSale = await summaryFor({ from: sale.createdAt, to: new Date(Date.now() + HOUR) })
+    const { client: sqlClient } = await import('../../db/client')
+    const { assertConnectedTestDatabase } = await import('../../../test/database')
+    const boundary = new Date('2026-01-15T10:00:00.000Z')
+    await assertConnectedTestDatabase(sqlClient)
+    // Fixture only: exact millisecond precision in both PostgreSQL and JS Date.
+    await sqlClient`update sales set created_at = ${boundary} where id = ${sale.id}`
+    const endingAtSale = await summaryFor({ from: new Date(boundary.getTime() - HOUR), to: boundary })
+    const startingAtSale = await summaryFor({ from: boundary, to: new Date(boundary.getTime() + HOUR) })
 
     expect(endingAtSale.saleCount).toBe(0)
     expect(startingAtSale.saleCount).toBe(1)
@@ -1263,7 +1305,7 @@ describe('sales summary', () => {
 - [ ] **Step 3: รัน**
 
 Run: `bun run test`
-Expected: PASS ทุกกรณี หมายเหตุสำหรับกรณีสุดท้าย: PostgreSQL เก็บเวลาละเอียดถึงไมโครวินาที แต่ `Date` ของ JavaScript ละเอียดถึงมิลลิวินาที ถ้ากรณี "the period end is exclusive" ล้มเหลวเพราะการปัดเศษนี้ ให้บันทึกเป็นบั๊กตามข้อแรกของ Global Constraints (ช่วงเวลาที่ชนขอบอาจนับบิลผิดด้าน) แล้วปักด้วย `test.failing`
+Expected: PASS ทุกกรณี ขอบเวลาใช้ fixture ที่กำหนด precision แน่นอน ห้ามบันทึก production bug หรือปัก `test.failing` จากการปัด microseconds ของ fixture
 
 - [ ] **Step 4: Commit**
 
@@ -1468,22 +1510,59 @@ jobs:
 
 - [ ] **Step 5: จำลองสภาพ CI ในเครื่อง**
 
-ตรวจว่าขั้นตอนของ CI ผ่านโดยไม่พึ่งไฟล์ที่ไม่ได้ commit:
+Commit Task 8 ตาม Step 7 ก่อนขั้นนี้ เพื่อให้ committed HEAD มี workflow และ lint script แล้วตรวจใน checkout ใหม่ที่ไม่มี ignored local files:
 
-```bash
-bun install --frozen-lockfile
-bun run typecheck
-bun run lint
-bun run test
-bun run test
+```powershell
+$ciCheckout = Join-Path $env:TEMP ("pos-ci-" + [guid]::NewGuid())
+$ciHead = git rev-parse HEAD
+git clone --no-local --no-hardlinks D:\POS $ciCheckout
+if ($LASTEXITCODE -ne 0) { throw 'Clean checkout failed' }
+$ciVariables = @('DATABASE_URL', 'JWT_SECRET', 'MEDIA_TOKEN', 'MEDIA_URL', 'VAT_RATE_BP', 'SHOP_TIME_ZONE', 'COOKIE_SECURE', 'NODE_ENV')
+$priorEnv = @{}
+foreach ($name in $ciVariables) {
+  $priorEnv[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
+  [Environment]::SetEnvironmentVariable($name, $null, 'Process')
+}
+Push-Location $ciCheckout
+try {
+  git checkout --detach $ciHead
+  if ($LASTEXITCODE -ne 0) { throw 'Checkout failed' }
+  foreach ($path in @('node_modules', '.env', 'apps/api/.env', 'apps/media/.dev.vars')) {
+    if (Test-Path $path) { throw "Unexpected local state: $path" }
+  }
+  bun install --frozen-lockfile
+  if ($LASTEXITCODE -ne 0) { throw 'Frozen install failed' }
+  Copy-Item apps/media/.dev.vars.example apps/media/.dev.vars
+  foreach ($check in @('typecheck', 'lint', 'test', 'test')) {
+    bun run $check
+    if ($LASTEXITCODE -ne 0) { throw "CI simulation failed: $check" }
+  }
+} finally {
+  Pop-Location
+  foreach ($name in $ciVariables) {
+    [Environment]::SetEnvironmentVariable($name, $priorEnv[$name], 'Process')
+  }
+}
 ```
 
-Expected: ทุกคำสั่งจบด้วย exit code 0 และการทดสอบสองรอบให้ผลเหมือนกัน
+Expected: ทุกคำสั่งจบด้วย exit code 0 และการทดสอบสองรอบให้ผลเหมือนกัน ห้ามคัดลอก ignored `.env` หรือ dependencies เดิม ใช้เฉพาะ committed `.env.test` และ `.dev.vars.example` ล้าง inherited production environment ใน subprocess ก่อนรัน เก็บ checkout เป็นหลักฐานจนตรวจเสร็จ
 
 - [ ] **Step 6: ตรวจว่าฐานข้อมูลพัฒนาไม่ถูกแตะ**
 
-Run: `docker compose exec -T db psql -U pos -d pos -tc "select (select count(*) from users), (select count(*) from sales)"`
-Expected: ตัวเลขทั้งสองมากกว่า 0 และเท่ากับก่อนเริ่มแผนนี้ (ผู้ใช้ 2 คน บิล 13 ใบ ถ้าไม่ได้ใช้งานระบบเพิ่มระหว่างทาง)
+ก่อน Task 1 เก็บ baseline fingerprint ของ `pos` ครบ schema, data ทุกตารางและ sequence values โดยใช้ `pg_dump --no-owner --no-privileges` hash ข้อมูลในหน่วยความจำ ไม่พิมพ์ข้อมูลแถวหรือความลับ เก็บเพียง SHA256 ใน ignored ledger:
+
+```powershell
+$ledger = '.superpowers/sdd/2026-10-13-test-suite-ci'
+# Controller recorded dev-before.sha256 before implementation.
+# Helper strips comments, blank lines, randomized restrict/unrestrict markers,
+# hashes all remaining pg_dump output including sequence setval statements.
+& "$ledger/dev-fingerprint.ps1" -OutputPath "$ledger/dev-after.sha256"
+if ((Get-Content "$ledger/dev-before.sha256") -ne (Get-Content "$ledger/dev-after.sha256")) {
+  throw 'Development database schema/data/sequence fingerprint changed'
+}
+```
+
+Expected: hash ตรงกับ baseline ก่อนเริ่ม implementation ห้ามใช้จำนวนแถวเก่าของบางตารางแทน fingerprint ถ้ามีการใช้งานฐานพัฒนาระหว่างงาน ให้รายงานและตรวจแยกก่อนกล่าวว่าข้อมูลไม่เปลี่ยน
 
 - [ ] **Step 7: Commit**
 
