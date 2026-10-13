@@ -11,6 +11,7 @@ import {
   RecordCashMovementUseCase,
   StartShiftClosingUseCase,
 } from '../../applications/usecases/shift-lifecycle.usecases'
+import { GetShiftSummaryUseCase } from '../../applications/usecases/get-shift-summary.usecase'
 import { OpenShiftUseCase } from '../../applications/usecases/open-shift.usecase'
 import { shiftHttpSchemas } from './schemas/shift.schema'
 
@@ -25,6 +26,7 @@ export class ShiftElysiaController {
     @inject(CloseShiftUseCase) private readonly close: CloseShiftUseCase,
     @inject(RecordCashMovementUseCase) private readonly recordCash: RecordCashMovementUseCase,
     @inject(ListShiftCashEntriesUseCase) private readonly listCash: ListShiftCashEntriesUseCase,
+    @inject(GetShiftSummaryUseCase) private readonly summary: GetShiftSummaryUseCase,
   ) {}
 
   getRoutes() {
@@ -40,6 +42,10 @@ export class ShiftElysiaController {
         })
       .get('/:id', async ({ params, branch }) => (await this.get.execute(params.id, (await branch()).id)).toSnapshot(), {
         auth: true, params: idParams, response: shiftHttpSchemas.shift, detail: { summary: 'รายละเอียดกะ' },
+      })
+      .get('/:id/summary', async ({ params, branch }) => this.summary.execute(params.id, (await branch()).id), {
+        auth: true, params: idParams, response: shiftHttpSchemas.summary,
+        detail: { summary: 'สรุปกะ: ยอด ณ ขณะนี้ถ้ากะเปิดอยู่ หรือยอดที่หยุดไว้ตอนเริ่มนับ' },
       })
       .post('/:id/cash-entries', async ({ params, body, headers, user, branch }) =>
         (await this.recordCash.execute(params.id, body, { id: user.id, displayName: user.displayName, role: user.role }, (await branch()).id, headers['idempotency-key'])).toSnapshot(), {

@@ -9,6 +9,9 @@ import { ShiftElysiaController } from './adapters/controllers/shift.controller'
 import { registerRepositoryToken } from './applications/ports/register.repository'
 import { shiftRepositoryToken } from './applications/ports/shift.repository'
 import { shiftSettingsGuardToken } from './applications/ports/shift-settings-guard.port'
+import { shiftSummaryRepositoryToken } from './applications/ports/shift-summary.repository'
+import { DrizzleShiftSummaryRepository } from './adapters/repository/shift-summary.drizzle.repository'
+import { GetShiftSummaryUseCase } from './applications/usecases/get-shift-summary.usecase'
 import { CreateRegisterUseCase, ListRegistersUseCase, UpdateRegisterUseCase } from './applications/usecases/register.usecases'
 import { OpenShiftUseCase } from './applications/usecases/open-shift.usecase'
 import {
@@ -26,6 +29,8 @@ container.register(registerRepositoryToken, { useClass: DrizzleRegisterRepositor
 container.register(shiftRepositoryToken, { useClass: DrizzleShiftRepository })
 container.register(TOKENS.ShiftLedger, { useClass: DrizzleShiftLedgerAdapter })
 container.register(shiftSettingsGuardToken, { useClass: DrizzleShiftSettingsGuard })
+container.register(shiftSummaryRepositoryToken, { useClass: DrizzleShiftSummaryRepository })
+container.registerSingleton(GetShiftSummaryUseCase)
 container.registerSingleton(ListRegistersUseCase)
 container.registerSingleton(CreateRegisterUseCase)
 container.registerSingleton(UpdateRegisterUseCase)
