@@ -3,6 +3,7 @@ import type { ICategoryRepository } from '../modules/categories/applications/por
 import type { IStockLedger } from '../modules/inventory/applications/ports/stock-ledger.port'
 import type { IStockMovementRepository } from '../modules/inventory/applications/ports/stock-movement.repository'
 import type { IProductRepository } from '../modules/products/applications/ports/product.repository'
+import type { ISaleRepository } from '../modules/sales/applications/ports/sale.repository'
 import type { IMediaStorage } from '../modules/shared/ports/media-storage.port'
 import type { IPasswordHasher } from '../modules/shared/ports/password-hasher.port'
 import type { IUnitOfWork } from '../modules/shared/ports/unit-of-work.port'
@@ -66,4 +67,14 @@ export const mockStockMovementRepository = (): Mocked<IStockMovementRepository> 
 
 export const mockStockLedger = (): Mocked<IStockLedger> => ({
   record: mock<IStockLedger['record']>(),
+})
+
+export const mockSaleRepository = (): Mocked<ISaleRepository> => ({
+  nextReceiptNo: mock<ISaleRepository['nextReceiptNo']>(),
+  create: mock<ISaleRepository['create']>(),
+  findById: mock<ISaleRepository['findById']>(),
+  findByIdForUpdate: mock<ISaleRepository['findByIdForUpdate']>(),
+  saveVoid: mock<ISaleRepository['saveVoid']>(async () => {}),
+  findHeaders: mock<ISaleRepository['findHeaders']>(),
+  sumCompleted: mock<ISaleRepository['sumCompleted']>(),
 })

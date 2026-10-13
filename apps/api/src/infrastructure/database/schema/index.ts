@@ -1,6 +1,6 @@
-// Tables move here module by module during the hexagonal migration; the rest still live with their module.
+// Every table, aggregated for Drizzle and drizzle-kit.
 export * from './categories'
 export * from './products'
 export * from './stock-movements'
+export * from './sales'
 export * from './users'
-export * from '../../../modules/sales/schema'

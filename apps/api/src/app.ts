@@ -6,7 +6,7 @@ import { AuthElysiaController } from './modules/auth/adapters/controllers/auth.c
 import { catalog } from './modules/catalog'
 import { InventoryElysiaController } from './modules/inventory/adapters/controllers/inventory.controller'
 import './modules/di-registrations'
-import { sales } from './modules/sales'
+import { SaleElysiaController } from './modules/sales/adapters/controllers/sale.controller'
 import { UserElysiaController } from './modules/users/adapters/controllers/user.controller'
 import { errorHandler } from './shared/plugins/error-handler'
 
@@ -16,7 +16,7 @@ const api = new Elysia({ name: 'api', prefix: '/api' })
   .use(container.resolve(UserElysiaController).getRoutes())
   .use(catalog)
   .use(container.resolve(InventoryElysiaController).getRoutes())
-  .use(sales)
+  .use(container.resolve(SaleElysiaController).getRoutes())
 
 export const app = new Elysia()
   .use(errorHandler)

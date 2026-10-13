@@ -1,0 +1,23 @@
+import { z } from 'zod'
+import { PAYMENT_METHODS } from '../../../../domains/sale.domain'
+
+const payment = z.object({
+  method: z.enum(PAYMENT_METHODS),
+  amountSatang: z.number().int().min(1),
+})
+
+export const completeSaleSchema = z.object({
+  items: z.array(z.object({ productId: z.number().int(), quantity: z.number().int().min(1) })).min(1),
+  discountSatang: z.number().int().min(0).optional(),
+  payments: z.array(payment).min(1),
+})
+
+export const voidSaleSchema = z.object({ reason: z.string().min(1).max(500) })
+
+export const listSalesSchema = z.object({
+  from: z.date().optional(),
+  to: z.date().optional(),
+  limit: z.number().int().min(1).max(500).optional(),
+})
+
+export const salesSummarySchema = z.object({ from: z.date(), to: z.date() })

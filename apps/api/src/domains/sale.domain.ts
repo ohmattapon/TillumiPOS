@@ -1,0 +1,192 @@
+import { DomainConflictError } from './errors/domain-conflict.error'
+import { DomainError } from './errors/domain-error'
+import type { ProductEntity } from './product.domain'
+
+export const PAYMENT_METHODS = ['cash', 'promptpay', 'card'] as const
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
+
+export const SALE_STATUSES = ['completed', 'voided'] as const
+export type SaleStatus = (typeof SALE_STATUSES)[number]
+
+/** One receipt line. Name, SKU, price and cost are snapshots, so later product edits never change a receipt. */
+export interface SaleItem {
+  productId: number
+  productName: string
+  sku: string
+  unitPriceSatang: number
+  unitCostSatang: number
+  quantity: number
+  lineTotalSatang: number
+}
+
+export interface SalePayment {
+  method: PaymentMethod
+  amountSatang: number
+}
+
+interface SaleTotals {
+  subtotalSatang: number
+  discountSatang: number
+  totalSatang: number
+  /** VAT contained in totalSatang (prices include VAT). */
+  vatSatang: number
+  paidSatang: number
+  changeSatang: number
+}
+
+/** A priced and settled sale that has not been stored yet: it has no id, receipt number or timestamp. */
+export interface NewSale extends SaleTotals {
+  cashierId: number
+  cashierName: string
+  items: SaleItem[]
+  payments: SalePayment[]
+}
+
+export interface SaleEntityProps extends NewSale {
+  id: number
+  receiptNo: string
+  status: SaleStatus
+  voidedById: number | null
+  voidedAt: Date | null
+  voidReason: string | null
+  createdAt: Date
+}
+
+export interface CompleteSaleInput {
+  lines: { product: ProductEntity; quantity: number }[]
+  discountSatang: number
+  payments: SalePayment[]
+  /** VAT rate in basis points (700 = 7%). */
+  vatRateBp: number
+  cashier: { id: number; displayName: string }
+}
+
+const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
+const isWholeAmount = (value: number) => Number.isInteger(value) && value >= 0
+
+/**
+ * A sale and its lines and payments. A sale is never edited or deleted:
+ * the only change it can go through is being voided, once.
+ */
+export class SaleEntity {
+  public readonly id: number
+  public readonly receiptNo: string
+  public readonly status: SaleStatus
+  public readonly subtotalSatang: number
+  public readonly discountSatang: number
+  public readonly totalSatang: number
+  public readonly vatSatang: number
+  public readonly paidSatang: number
+  public readonly changeSatang: number
+  public readonly cashierId: number
+  public readonly cashierName: string
+  public readonly voidedById: number | null
+  public readonly voidedAt: Date | null
+  public readonly voidReason: string | null
+  public readonly createdAt: Date
+  public readonly items: readonly SaleItem[]
+  public readonly payments: readonly SalePayment[]
+
+  constructor(props: SaleEntityProps) {
+    if (!SALE_STATUSES.includes(props.status)) throw new DomainError('สถานะของบิลไม่ถูกต้อง', 'INVALID_SALE')
+    if (props.status === 'voided' && !props.voidedAt)
+      throw new DomainError('บิลที่ยกเลิกต้องมีเวลาที่ยกเลิก', 'INVALID_SALE')
+
+    this.id = props.id
+    this.receiptNo = props.receiptNo
+    this.status = props.status
+    this.subtotalSatang = props.subtotalSatang
+    this.discountSatang = props.discountSatang
+    this.totalSatang = props.totalSatang
+    this.vatSatang = props.vatSatang
+    this.paidSatang = props.paidSatang
+    this.changeSatang = props.changeSatang
+    this.cashierId = props.cashierId
+    this.cashierName = props.cashierName
+    this.voidedById = props.voidedById
+    this.voidedAt = props.voidedAt
+    this.voidReason = props.voidReason
+    this.createdAt = props.createdAt
+    this.items = props.items
+    this.payments = props.payments
+  }
+
+  /**
+   * Prices and settles a sale. All amounts are integer satang. Prices include VAT,
+   * so VAT is extracted from the discounted total rather than added on top.
+   */
+  static complete({ lines, discountSatang, payments, vatRateBp, cashier }: CompleteSaleInput): NewSale {
+    if (lines.length === 0) throw new DomainError('บิลต้องมีสินค้าอย่างน้อย 1 รายการ', 'EMPTY_SALE')
+    if (lines.some((line) => !Number.isInteger(line.quantity) || line.quantity < 1))
+      throw new DomainError('จำนวนสินค้าต้องเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป', 'INVALID_QUANTITY')
+    if (!isWholeAmount(discountSatang)) throw new DomainError('ส่วนลดต้องเป็นจำนวนเต็มสตางค์ที่ไม่ติดลบ', 'INVALID_DISCOUNT')
+    if (payments.some((payment) => !isWholeAmount(payment.amountSatang) || payment.amountSatang < 1))
+      throw new DomainError('ยอดชำระแต่ละรายการต้องเป็นจำนวนเต็มสตางค์ตั้งแต่ 1 ขึ้นไป', 'INVALID_PAYMENT')
+
+    const items: SaleItem[] = lines.map(({ product, quantity }) => ({
+      productId: product.id,
+      productName: product.name,
+      sku: product.sku,
+      unitPriceSatang: product.priceSatang,
+      unitCostSatang: product.costSatang,
+      quantity,
+      lineTotalSatang: product.priceSatang * quantity,
+    }))
+
+    const subtotalSatang = sum(items.map((item) => item.lineTotalSatang))
+    if (discountSatang > subtotalSatang) throw new DomainError('ส่วนลดมากกว่ายอดรวมสินค้า', 'DISCOUNT_TOO_LARGE')
+    const totalSatang = subtotalSatang - discountSatang
+    const vatSatang = Math.round((totalSatang * vatRateBp) / (10_000 + vatRateBp))
+
+    const paidSatang = sum(payments.map((payment) => payment.amountSatang))
+    if (paidSatang < totalSatang) throw new DomainError('ยอดชำระไม่ครบ', 'UNDERPAID')
+    const changeSatang = paidSatang - totalSatang
+    const cashSatang = sum(payments.filter((payment) => payment.method === 'cash').map((payment) => payment.amountSatang))
+    // Change can only come out of the cash drawer.
+    if (changeSatang > cashSatang) throw new DomainError('ยอดชำระที่ไม่ใช่เงินสดเกินยอดที่ต้องจ่าย', 'OVERPAID')
+
+    return {
+      subtotalSatang,
+      discountSatang,
+      totalSatang,
+      vatSatang,
+      paidSatang,
+      changeSatang,
+      cashierId: cashier.id,
+      cashierName: cashier.displayName,
+      items,
+      payments: payments.map(({ method, amountSatang }) => ({ method, amountSatang })),
+    }
+  }
+
+  /** The voided version of this sale. A sale can be voided only once. */
+  void(reason: string, voidedById: number, at: Date): SaleEntity {
+    if (this.status === 'voided') throw new DomainConflictError('บิลนี้ถูกยกเลิกไปแล้ว', 'ALREADY_VOIDED')
+    if (reason.length < 1 || reason.length > 500)
+      throw new DomainError('เหตุผลที่ยกเลิกต้องยาว 1 ถึง 500 ตัวอักษร', 'INVALID_VOID_REASON')
+
+    return new SaleEntity({ ...this.toSnapshot(), status: 'voided', voidedById, voidedAt: at, voidReason: reason })
+  }
+
+  toSnapshot(): SaleEntityProps {
+    return {
+      id: this.id,
+      receiptNo: this.receiptNo,
+      status: this.status,
+      subtotalSatang: this.subtotalSatang,
+      discountSatang: this.discountSatang,
+      totalSatang: this.totalSatang,
+      vatSatang: this.vatSatang,
+      paidSatang: this.paidSatang,
+      changeSatang: this.changeSatang,
+      cashierId: this.cashierId,
+      cashierName: this.cashierName,
+      voidedById: this.voidedById,
+      voidedAt: this.voidedAt,
+      voidReason: this.voidReason,
+      createdAt: this.createdAt,
+      items: this.items.map((item) => ({ ...item })),
+      payments: this.payments.map((payment) => ({ ...payment })),
+    }
+  }
+}

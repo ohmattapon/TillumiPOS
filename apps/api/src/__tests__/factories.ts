@@ -1,5 +1,6 @@
 import { CategoryEntity, type CategoryEntityProps } from '../domains/category.domain'
 import { ProductEntity, type ProductEntityProps } from '../domains/product.domain'
+import { SaleEntity, type SaleEntityProps } from '../domains/sale.domain'
 import { StockMovementEntity, type StockMovementEntityProps } from '../domains/stock-movement.domain'
 import { UserEntity, type UserEntityProps } from '../domains/user.domain'
 
@@ -36,5 +37,38 @@ export const makeStockMovement = (overrides: Partial<StockMovementEntityProps> =
     note: null,
     userId: 1,
     createdAt: new Date('2026-10-13T06:00:00Z'),
+    ...overrides,
+  })
+
+/** A completed sale of 3 x 10.00 paid with 50.00 cash. */
+export const makeSale = (overrides: Partial<SaleEntityProps> = {}) =>
+  new SaleEntity({
+    id: 1,
+    receiptNo: '20261013-00001',
+    status: 'completed',
+    subtotalSatang: 3000,
+    discountSatang: 0,
+    totalSatang: 3000,
+    vatSatang: 196,
+    paidSatang: 5000,
+    changeSatang: 2000,
+    cashierId: 1,
+    cashierName: 'สมชาย',
+    voidedById: null,
+    voidedAt: null,
+    voidReason: null,
+    createdAt: new Date('2026-10-13T06:00:00Z'),
+    items: [
+      {
+        productId: 1,
+        productName: 'น้ำดื่ม',
+        sku: 'SKU-1',
+        unitPriceSatang: 1000,
+        unitCostSatang: 600,
+        quantity: 3,
+        lineTotalSatang: 3000,
+      },
+    ],
+    payments: [{ method: 'cash', amountSatang: 5000 }],
     ...overrides,
   })
