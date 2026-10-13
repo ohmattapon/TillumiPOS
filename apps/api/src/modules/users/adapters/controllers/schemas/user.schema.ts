@@ -9,6 +9,7 @@ export const userSchemas = {
     username: t.String(),
     displayName: t.String(),
     role,
+    branchId: t.Integer(),
     isActive: t.Boolean(),
   }),
   create: t.Object({
@@ -16,12 +17,15 @@ export const userSchemas = {
     password,
     displayName: t.String({ minLength: 1, maxLength: 100 }),
     role,
+    // Defaults to the branch the owner is working in.
+    branchId: t.Optional(t.Integer({ minimum: 1 })),
   }),
   update: t.Partial(
     t.Object({
       password,
       displayName: t.String({ minLength: 1, maxLength: 100 }),
       role,
+      branchId: t.Integer({ minimum: 1 }),
       isActive: t.Boolean(),
     }),
   ),

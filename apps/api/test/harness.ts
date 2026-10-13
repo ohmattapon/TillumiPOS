@@ -14,6 +14,7 @@ import type { IMediaStorage } from '../src/modules/shared/ports/media-storage.po
 import { TOKENS } from '../src/modules/tokens'
 import { ReceiveStockUseCase } from '../src/modules/inventory/applications/usecases/receive-stock.usecase'
 import type { UserResponse as User } from '../src/modules/users/adapters/controllers/schemas/user.schema'
+import { CreateBranchUseCase } from '../src/modules/branches/applications/usecases/create-branch.usecase'
 import { CreateUserUseCase } from '../src/modules/users/applications/usecases/create-user.usecase'
 import { assertConnectedTestDatabase, ensureTestDatabase } from './database'
 import { fakeMedia } from './media-server'
@@ -32,9 +33,15 @@ const origin = `http://localhost:${app.server!.port}`
 /** Root of the versioned API, for the few tests that need raw HTTP rather than the typed client. */
 export const baseUrl = `${origin}/api/v1`
 
-/** Typed client for the API, optionally carrying a session cookie. */
-export const client = (cookie?: string) => {
-  const api = treaty<App>(origin, cookie ? { headers: { cookie } } : {}).api.v1
+/** The branch every test starts with: the schema's own default, recreated after each reset. */
+export const MAIN_BRANCH_ID = 1
+
+/** Typed client for the API, optionally carrying a session cookie and the branch to work in. */
+export const client = (cookie?: string, branchId?: number) => {
+  const headers: Record<string, string> = {}
+  if (cookie) headers.cookie = cookie
+  if (branchId !== undefined) headers['x-branch-id'] = String(branchId)
+  const api = treaty<App>(origin, { headers }).api.v1
   // Eden's dynamic route proxy exposes a `then` property. Hide it so returning
   // this client from an async helper does not trigger Promise assimilation.
   return new Proxy(api, { get: (target, key) => key === 'then' ? undefined : Reflect.get(target, key) })
@@ -50,22 +57,34 @@ export interface Session {
 export const PASSWORD = 'test-password-1'
 
 /** Logs in over HTTP and returns a client holding the session cookie. */
-export async function login(username: string, password = PASSWORD): Promise<Api> {
+export async function login(username: string, password = PASSWORD, branchId?: number): Promise<Api> {
   const response = await fetch(`${baseUrl}/auth/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ username, password }),
   })
   if (!response.ok) throw new Error(`Login as "${username}" failed with ${response.status}`)
-  return client(response.headers.getSetCookie()[0]!.split(';')[0])
+  return client(response.headers.getSetCookie()[0]!.split(';')[0], branchId)
 }
 
-/** Creates a user with the given role and logs them in. */
-export async function signIn(role: User['role'] = 'owner', username: string = role): Promise<Session> {
+/**
+ * Creates a user with the given role in a branch and logs them in. The session works in the user's own
+ * branch unless `workingBranchId` says otherwise (only an owner may).
+ */
+export async function signIn(
+  role: User['role'] = 'owner',
+  username: string = role,
+  { branchId = MAIN_BRANCH_ID, workingBranchId }: { branchId?: number; workingBranchId?: number } = {},
+): Promise<Session> {
   const created = await container
     .resolve(CreateUserUseCase)
-    .execute({ username, password: PASSWORD, displayName: username, role })
-  return { api: await login(username), user: created.toSnapshot() }
+    .execute({ username, password: PASSWORD, displayName: username, role, branchId }, branchId)
+  return { api: await login(username, PASSWORD, workingBranchId), user: created.toSnapshot() }
+}
+
+/** Creates another branch, e.g. to check that stock and receipts stay apart. */
+export async function seedBranch(code = 'BKK', name = 'สาขากรุงเทพ') {
+  return (await container.resolve(CreateBranchUseCase).execute({ code, name })).toSnapshot()
 }
 
 let productCounter = 0
@@ -73,7 +92,7 @@ let productCounter = 0
 /** Creates a product (price 10.00, cost 6.00 unless overridden) and optionally receives opening stock. */
 export async function seedProduct(
   by: Session,
-  { stock = 0, ...input }: Partial<CreateProduct> & { stock?: number } = {},
+  { stock = 0, branchId = MAIN_BRANCH_ID, ...input }: Partial<CreateProduct> & { stock?: number; branchId?: number } = {},
 ): Promise<Product> {
   const n = ++productCounter
   const product = await container.resolve(CreateProductUseCase).execute({
@@ -82,10 +101,11 @@ export async function seedProduct(
     priceSatang: 1000,
     costSatang: 600,
     ...input,
-  })
-  if (stock > 0) await container.resolve(ReceiveStockUseCase).execute({ productId: product.id, quantity: stock }, by.user.id)
+  }, branchId)
+  if (stock > 0)
+    await container.resolve(ReceiveStockUseCase).execute({ productId: product.id, quantity: stock }, by.user.id, branchId)
   return toProductResponse(
-    await container.resolve(GetProductUseCase).execute(product.id),
+    await container.resolve(GetProductUseCase).execute(product.id, branchId),
     container.resolve<IMediaStorage>(TOKENS.MediaStorage),
   )
 }
@@ -114,5 +134,7 @@ export async function resetDatabase(connection = sqlClient): Promise<void> {
   const tables: { tablename: string }[] = await connection`select tablename from pg_tables where schemaname = 'public'`
   const names = tables.map((table) => `"${table.tablename}"`).join(', ')
   await connection.unsafe(`truncate table ${names} restart identity cascade`)
+  // The schema ships with one branch; truncating removed it, so put it back for the next test.
+  await connection.unsafe(`insert into branches (code, name) values ('MAIN', 'สาขาหลัก')`)
   fakeMedia.reset()
 }

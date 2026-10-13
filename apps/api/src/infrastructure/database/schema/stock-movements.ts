@@ -1,5 +1,6 @@
 import { index, integer, pgEnum, pgTable, text } from 'drizzle-orm/pg-core'
 import { createdAt, id } from '../columns'
+import { branches } from './branches'
 import { products } from './products'
 import { users } from './users'
 
@@ -11,6 +12,9 @@ export const stockMovements = pgTable(
   'stock_movements',
   {
     id: id(),
+    branchId: integer()
+      .notNull()
+      .references(() => branches.id),
     productId: integer()
       .notNull()
       .references(() => products.id),
@@ -26,5 +30,5 @@ export const stockMovements = pgTable(
       .references(() => users.id),
     createdAt: createdAt(),
   },
-  (table) => [index().on(table.productId, table.createdAt)],
+  (table) => [index().on(table.branchId, table.productId, table.createdAt)],
 )

@@ -18,6 +18,7 @@ const headerColumns = {
   vatSatang: sales.vatSatang,
   vatMode: sales.vatMode,
   vatRateBp: sales.vatRateBp,
+  branchId: sales.branchId,
   paidSatang: sales.paidSatang,
   changeSatang: sales.changeSatang,
   cashierId: sales.cashierId,
@@ -43,18 +44,18 @@ const total = (expression: SQL) => sql<number>`coalesce(sum(${expression}), 0)`.
 export class DrizzleSaleRepository implements ISaleRepository {
   constructor(@inject(shopSettingsRepositoryToken) private readonly settings: IShopSettingsRepository) {}
 
-  async nextReceiptNo() {
+  async nextReceiptNo(branch: { id: number; code: string }) {
     const { timeZone } = await this.settings.get()
-    // One row per business day, row-locked on increment, so numbers have no gaps.
+    // One row per branch and business day, row-locked on increment, so numbers have no gaps.
     const [counter] = await currentExecutor()
       .insert(receiptCounters)
-      .values({ day: sql`(now() at time zone ${timeZone})::date`, lastNumber: 1 })
+      .values({ branchId: branch.id, day: sql`(now() at time zone ${timeZone})::date`, lastNumber: 1 })
       .onConflictDoUpdate({
-        target: receiptCounters.day,
+        target: [receiptCounters.branchId, receiptCounters.day],
         set: { lastNumber: sql`${receiptCounters.lastNumber} + 1` },
       })
       .returning()
-    return counter!.day.replaceAll('-', '') + '-' + String(counter!.lastNumber).padStart(5, '0')
+    return [branch.code, counter!.day.replaceAll('-', ''), String(counter!.lastNumber).padStart(5, '0')].join('-')
   }
 
   async create(sale: NewSale, receiptNo: string) {
@@ -91,6 +92,7 @@ export class DrizzleSaleRepository implements ISaleRepository {
 
   async findHeaders(query: IFindSalesQuery): Promise<Page<ISaleHeader>> {
     const matching = and(
+      eq(sales.branchId, query.branchId),
       query.from ? gte(sales.createdAt, query.from) : undefined,
       query.to ? lt(sales.createdAt, query.to) : undefined,
     )
@@ -107,9 +109,14 @@ export class DrizzleSaleRepository implements ISaleRepository {
     return { items, total: counted!.total }
   }
 
-  async sumCompleted({ from, to }: { from: Date; to: Date }): Promise<ISalesTotals> {
+  async sumCompleted({ from, to, branchId }: { from: Date; to: Date; branchId: number }): Promise<ISalesTotals> {
     const executor = currentExecutor()
-    const inPeriod = and(eq(sales.status, 'completed'), gte(sales.createdAt, from), lt(sales.createdAt, to))
+    const inPeriod = and(
+      eq(sales.branchId, branchId),
+      eq(sales.status, 'completed'),
+      gte(sales.createdAt, from),
+      lt(sales.createdAt, to),
+    )
 
     const [totals] = await executor
       .select({

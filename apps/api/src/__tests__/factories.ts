@@ -1,3 +1,4 @@
+import { BranchEntity, type BranchEntityProps } from '../domains/branch.domain'
 import { CategoryEntity, type CategoryEntityProps } from '../domains/category.domain'
 import { ProductEntity, type ProductEntityProps } from '../domains/product.domain'
 import { SaleEntity, type SaleEntityProps } from '../domains/sale.domain'
@@ -7,8 +8,19 @@ import { UserEntity, type UserEntityProps } from '../domains/user.domain'
 export const makeCategory = (overrides: Partial<CategoryEntityProps> = {}) =>
   new CategoryEntity({ id: 1, name: 'เครื่องดื่ม', sortOrder: 0, isActive: true, ...overrides })
 
+export const makeBranch = (overrides: Partial<BranchEntityProps> = {}) =>
+  new BranchEntity({ id: 1, code: 'MAIN', name: 'สาขาหลัก', address: null, phone: null, isActive: true, ...overrides })
+
 export const makeUser = (overrides: Partial<UserEntityProps> = {}) =>
-  new UserEntity({ id: 1, username: 'somchai', displayName: 'สมชาย', role: 'cashier', isActive: true, ...overrides })
+  new UserEntity({
+    id: 1,
+    username: 'somchai',
+    displayName: 'สมชาย',
+    role: 'cashier',
+    branchId: 1,
+    isActive: true,
+    ...overrides,
+  })
 
 export const makeProduct = (overrides: Partial<ProductEntityProps> = {}) =>
   new ProductEntity({
@@ -29,6 +41,7 @@ export const makeProduct = (overrides: Partial<ProductEntityProps> = {}) =>
 export const makeStockMovement = (overrides: Partial<StockMovementEntityProps> = {}) =>
   new StockMovementEntity({
     id: 1,
+    branchId: 1,
     productId: 1,
     type: 'receive',
     quantity: 10,
@@ -44,7 +57,8 @@ export const makeStockMovement = (overrides: Partial<StockMovementEntityProps> =
 export const makeSale = (overrides: Partial<SaleEntityProps> = {}) =>
   new SaleEntity({
     id: 1,
-    receiptNo: '20261013-00001',
+    receiptNo: 'MAIN-20261013-00001',
+    branchId: 1,
     status: 'completed',
     subtotalSatang: 3000,
     discountSatang: 0,

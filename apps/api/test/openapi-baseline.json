@@ -80,6 +80,18 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "displayName": {
                       "type": "string"
                     },
@@ -114,6 +126,7 @@
                     "username",
                     "displayName",
                     "role",
+                    "branchId",
                     "isActive"
                   ],
                   "type": "object"
@@ -167,6 +180,18 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "displayName": {
                       "type": "string"
                     },
@@ -201,6 +226,7 @@
                     "username",
                     "displayName",
                     "role",
+                    "branchId",
                     "isActive"
                   ],
                   "type": "object"
@@ -213,6 +239,473 @@
         "summary": "ข้อมูลผู้ใช้ที่เข้าสู่ระบบอยู่",
         "tags": [
           "Auth"
+        ]
+      }
+    },
+    "/api/v1/branches/": {
+      "get": {
+        "operationId": "getApiV1Branches",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "address": {
+                            "maxLength": 500,
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "name": {
+                            "maxLength": 100,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "phone": {
+                            "maxLength": 30,
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "code",
+                          "name",
+                          "address",
+                          "phone",
+                          "isActive"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "รายการสาขา (เจ้าของเห็นทุกสาขา พนักงานเห็นสาขาของตน)",
+        "tags": [
+          "Branches"
+        ]
+      },
+      "post": {
+        "operationId": "postApiV1Branches",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "address": {
+                    "maxLength": 500,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "code": {
+                    "maxLength": 10,
+                    "minLength": 2,
+                    "type": "string"
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "phone": {
+                    "maxLength": 30,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "code",
+                  "name"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "address": {
+                    "maxLength": 500,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "code": {
+                    "maxLength": 10,
+                    "minLength": 2,
+                    "type": "string"
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "phone": {
+                    "maxLength": 30,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "code",
+                  "name"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "address": {
+                    "maxLength": 500,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "code": {
+                    "maxLength": 10,
+                    "minLength": 2,
+                    "type": "string"
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "phone": {
+                    "maxLength": 30,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "code",
+                  "name"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "address": {
+                      "maxLength": 500,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "maxLength": 100,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "phone": {
+                      "maxLength": 30,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name",
+                    "address",
+                    "phone",
+                    "isActive"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "เพิ่มสาขา",
+        "tags": [
+          "Branches"
+        ]
+      }
+    },
+    "/api/v1/branches/{id}": {
+      "patch": {
+        "operationId": "patchApiV1BranchesById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "address": {
+                    "maxLength": 500,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "phone": {
+                    "maxLength": 30,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "address": {
+                    "maxLength": 500,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "phone": {
+                    "maxLength": 30,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "address": {
+                    "maxLength": 500,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "phone": {
+                    "maxLength": 30,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "address": {
+                      "maxLength": 500,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "maxLength": 100,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "phone": {
+                      "maxLength": 30,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name",
+                    "address",
+                    "phone",
+                    "isActive"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "แก้ไขหรือปิดสาขา",
+        "tags": [
+          "Branches"
         ]
       }
     },
@@ -856,7 +1349,7 @@
             "description": "Response for status 200"
           }
         },
-        "summary": "ค้นหาสินค้าด้วยชื่อ SKU หรือบาร์โค้ด",
+        "summary": "ค้นหาสินค้าด้วยชื่อ SKU หรือบาร์โค้ด พร้อมสต็อกของสาขาที่ทำงานอยู่",
         "tags": [
           "Catalog"
         ]
@@ -2362,6 +2855,18 @@
                         }
                       ]
                     },
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -2451,6 +2956,7 @@
                   },
                   "required": [
                     "id",
+                    "branchId",
                     "productId",
                     "type",
                     "quantity",
@@ -2556,6 +3062,18 @@
                               }
                             ]
                           },
+                          "branchId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "createdAt": {
                             "anyOf": [
                               {
@@ -2645,6 +3163,7 @@
                         },
                         "required": [
                           "id",
+                          "branchId",
                           "productId",
                           "type",
                           "quantity",
@@ -2837,6 +3356,18 @@
                         }
                       ]
                     },
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -2926,6 +3457,7 @@
                   },
                   "required": [
                     "id",
+                    "branchId",
                     "productId",
                     "type",
                     "quantity",
@@ -3042,6 +3574,18 @@
                     "items": {
                       "items": {
                         "properties": {
+                          "branchId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "cashierId": {
                             "anyOf": [
                               {
@@ -3227,6 +3771,7 @@
                           "vatSatang",
                           "vatMode",
                           "vatRateBp",
+                          "branchId",
                           "paidSatang",
                           "changeSatang",
                           "cashierId",
@@ -3578,6 +4123,18 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "cashierId": {
                       "anyOf": [
                         {
@@ -3867,6 +4424,7 @@
                     "vatSatang",
                     "vatMode",
                     "vatRateBp",
+                    "branchId",
                     "paidSatang",
                     "changeSatang",
                     "cashierId",
@@ -3920,6 +4478,18 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "cashierId": {
                       "anyOf": [
                         {
@@ -4209,6 +4779,7 @@
                     "vatSatang",
                     "vatMode",
                     "vatRateBp",
+                    "branchId",
                     "paidSatang",
                     "changeSatang",
                     "cashierId",
@@ -4312,6 +4883,18 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "cashierId": {
                       "anyOf": [
                         {
@@ -4601,6 +5184,7 @@
                     "vatSatang",
                     "vatMode",
                     "vatRateBp",
+                    "branchId",
                     "paidSatang",
                     "changeSatang",
                     "cashierId",
@@ -5243,6 +5827,18 @@
                     "items": {
                       "items": {
                         "properties": {
+                          "branchId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "displayName": {
                             "type": "string"
                           },
@@ -5277,6 +5873,7 @@
                           "username",
                           "displayName",
                           "role",
+                          "branchId",
                           "isActive"
                         ],
                         "type": "object"
@@ -5319,6 +5916,20 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "branchId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
                   "displayName": {
                     "maxLength": 100,
                     "minLength": 1,
@@ -5355,6 +5966,20 @@
             "application/x-www-form-urlencoded": {
               "schema": {
                 "properties": {
+                  "branchId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
                   "displayName": {
                     "maxLength": 100,
                     "minLength": 1,
@@ -5391,6 +6016,20 @@
             "multipart/form-data": {
               "schema": {
                 "properties": {
+                  "branchId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
                   "displayName": {
                     "maxLength": 100,
                     "minLength": 1,
@@ -5433,6 +6072,18 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "displayName": {
                       "type": "string"
                     },
@@ -5467,6 +6118,7 @@
                     "username",
                     "displayName",
                     "role",
+                    "branchId",
                     "isActive"
                   ],
                   "type": "object"
@@ -5511,6 +6163,20 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "branchId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
                   "displayName": {
                     "maxLength": 100,
                     "minLength": 1,
@@ -5538,6 +6204,20 @@
             "application/x-www-form-urlencoded": {
               "schema": {
                 "properties": {
+                  "branchId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
                   "displayName": {
                     "maxLength": 100,
                     "minLength": 1,
@@ -5565,6 +6245,20 @@
             "multipart/form-data": {
               "schema": {
                 "properties": {
+                  "branchId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
                   "displayName": {
                     "maxLength": 100,
                     "minLength": 1,
@@ -5598,6 +6292,18 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "displayName": {
                       "type": "string"
                     },
@@ -5632,6 +6338,7 @@
                     "username",
                     "displayName",
                     "role",
+                    "branchId",
                     "isActive"
                   ],
                   "type": "object"

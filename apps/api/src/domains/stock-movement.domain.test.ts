@@ -4,6 +4,7 @@ import { assertRecordable, StockMovementEntity, type StockMovementEntityProps } 
 
 const valid: StockMovementEntityProps = {
   id: 1,
+  branchId: 1,
   productId: 2,
   type: 'sale',
   quantity: -3,
@@ -40,7 +41,7 @@ describe('StockMovementEntity', () => {
 
 describe('assertRecordable', () => {
   test('accepts a well-formed movement and rejects a zero quantity', () => {
-    expect(() => assertRecordable({ productId: 1, type: 'receive', quantity: 10, userId: 1 })).not.toThrow()
-    expect(() => assertRecordable({ productId: 1, type: 'receive', quantity: 0, userId: 1 })).toThrow(DomainError)
+    expect(() => assertRecordable({ branchId: 1, productId: 1, type: 'receive', quantity: 10, userId: 1 })).not.toThrow()
+    expect(() => assertRecordable({ branchId: 1, productId: 1, type: 'receive', quantity: 0, userId: 1 })).toThrow(DomainError)
   })
 })

@@ -19,13 +19,13 @@ export class VoidSaleUseCase {
     @inject(TOKENS.Clock) private readonly clock: IClock,
   ) {}
 
-  async execute(id: number, input: unknown, user: { id: number }) {
+  async execute(id: number, input: unknown, user: { id: number }, branchId: number) {
     const { reason } = voidSaleSchema.parse(input)
 
     return this.unitOfWork.run(async () => {
       // Locked so two requests cannot both void the sale and return its stock twice.
       const sale = await this.sales.findByIdForUpdate(id)
-      if (!sale) throw new DomainNotFoundError('ไม่พบบิลขาย')
+      if (!sale || sale.branchId !== branchId) throw new DomainNotFoundError('ไม่พบบิลขาย')
 
       const voided = sale.void(reason, user.id, this.clock.now())
       await this.sales.saveVoid(voided)
@@ -34,6 +34,7 @@ export class VoidSaleUseCase {
       const items = [...voided.items].sort((a, b) => a.productId - b.productId)
       for (const item of items)
         await this.ledger.record({
+          branchId: sale.branchId,
           productId: item.productId,
           type: 'void',
           quantity: item.quantity,

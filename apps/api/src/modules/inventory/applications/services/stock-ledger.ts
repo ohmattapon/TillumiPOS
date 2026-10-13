@@ -16,7 +16,7 @@ export class StockLedger implements IStockLedger {
   async record(movement: NewStockMovement) {
     assertRecordable(movement)
 
-    const balanceAfter = await this.products.adjustStock(movement.productId, movement.quantity)
+    const balanceAfter = await this.products.adjustStock(movement.productId, movement.branchId, movement.quantity)
     if (balanceAfter === null) return null
 
     return this.movements.create({ ...movement, balanceAfter })

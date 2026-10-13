@@ -29,43 +29,58 @@ export class ProductElysiaController {
   getRoutes() {
     const toResponse = (product: ProductEntity) => toProductResponse(product, this.media)
 
+    // The catalogue is shared by every branch; only the stock level in a response is the branch's own.
     return new Elysia({ name: 'catalog.products', prefix: '/products' })
       .use(auth)
       .get(
         '/',
-        async ({ query }) => {
-          const { items, total } = await this.listProducts.execute(query)
+        async ({ query, branch }) => {
+          const { items, total } = await this.listProducts.execute(query, (await branch()).id)
           return { items: items.map(toResponse), total }
         },
         {
           auth: true,
           query: productSchemas.listQuery,
           response: page(productSchemas.product),
-          detail: { summary: 'ค้นหาสินค้าด้วยชื่อ SKU หรือบาร์โค้ด' },
+          detail: { summary: 'ค้นหาสินค้าด้วยชื่อ SKU หรือบาร์โค้ด พร้อมสต็อกของสาขาที่ทำงานอยู่' },
         },
       )
-      .get('/:id', async ({ params }) => toResponse(await this.getProduct.execute(params.id)), {
-        auth: true,
-        params: idParams,
-        response: productSchemas.product,
-        detail: { summary: 'รายละเอียดสินค้า' },
-      })
-      .post('/', async ({ body }) => toResponse(await this.createProduct.execute(body)), {
-        auth: ['owner'],
-        body: productSchemas.create,
-        response: productSchemas.product,
-        detail: { summary: 'เพิ่มสินค้า' },
-      })
-      .patch('/:id', async ({ params, body }) => toResponse(await this.updateProduct.execute(params.id, body)), {
-        auth: ['owner'],
-        params: idParams,
-        body: productSchemas.update,
-        response: productSchemas.product,
-        detail: { summary: 'แก้ไขสินค้า (สต็อกแก้ผ่าน inventory เท่านั้น)' },
-      })
+      .get(
+        '/:id',
+        async ({ params, branch }) => toResponse(await this.getProduct.execute(params.id, (await branch()).id)),
+        {
+          auth: true,
+          params: idParams,
+          response: productSchemas.product,
+          detail: { summary: 'รายละเอียดสินค้า' },
+        },
+      )
+      .post(
+        '/',
+        async ({ body, branch }) => toResponse(await this.createProduct.execute(body, (await branch()).id)),
+        {
+          auth: ['owner'],
+          body: productSchemas.create,
+          response: productSchemas.product,
+          detail: { summary: 'เพิ่มสินค้า' },
+        },
+      )
+      .patch(
+        '/:id',
+        async ({ params, body, branch }) =>
+          toResponse(await this.updateProduct.execute(params.id, body, (await branch()).id)),
+        {
+          auth: ['owner'],
+          params: idParams,
+          body: productSchemas.update,
+          response: productSchemas.product,
+          detail: { summary: 'แก้ไขสินค้า (สต็อกแก้ผ่าน inventory เท่านั้น)' },
+        },
+      )
       .put(
         '/:id/image',
-        async ({ params, body }) => toResponse(await this.setProductImage.execute(params.id, body.file)),
+        async ({ params, body, branch }) =>
+          toResponse(await this.setProductImage.execute(params.id, body.file, (await branch()).id)),
         {
           auth: ['owner'],
           params: idParams,
@@ -74,11 +89,16 @@ export class ProductElysiaController {
           detail: { summary: 'อัปโหลดรูปสินค้า (JPEG, PNG, WebP ไม่เกิน 5 MB) แทนรูปเดิม' },
         },
       )
-      .delete('/:id/image', async ({ params }) => toResponse(await this.removeProductImage.execute(params.id)), {
-        auth: ['owner'],
-        params: idParams,
-        response: productSchemas.product,
-        detail: { summary: 'ลบรูปสินค้า' },
-      })
+      .delete(
+        '/:id/image',
+        async ({ params, branch }) =>
+          toResponse(await this.removeProductImage.execute(params.id, (await branch()).id)),
+        {
+          auth: ['owner'],
+          params: idParams,
+          response: productSchemas.product,
+          detail: { summary: 'ลบรูปสินค้า' },
+        },
+      )
   }
 }

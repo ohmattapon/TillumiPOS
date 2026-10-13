@@ -6,6 +6,8 @@ export type StockMovementType = (typeof STOCK_MOVEMENT_TYPES)[number]
 
 /** What is known about a movement before it is stored: the ledger works out the balance. */
 export interface NewStockMovement {
+  /** The branch whose shelves change. */
+  branchId: number
   productId: number
   type: StockMovementType
   /** Signed: positive adds stock, negative removes it. */
@@ -18,6 +20,7 @@ export interface NewStockMovement {
 
 export interface StockMovementEntityProps {
   id: number
+  branchId: number
   productId: number
   type: StockMovementType
   quantity: number
@@ -40,6 +43,7 @@ export function assertRecordable(movement: NewStockMovement): void {
 /** One row of the append-only stock ledger. Never changed after it is written. */
 export class StockMovementEntity {
   public readonly id: number
+  public readonly branchId: number
   public readonly productId: number
   public readonly type: StockMovementType
   public readonly quantity: number
@@ -54,6 +58,7 @@ export class StockMovementEntity {
     if (!Number.isInteger(props.balanceAfter)) throw invalid('ยอดคงเหลือต้องเป็นจำนวนเต็ม')
 
     this.id = props.id
+    this.branchId = props.branchId
     this.productId = props.productId
     this.type = props.type
     this.quantity = props.quantity
@@ -67,6 +72,7 @@ export class StockMovementEntity {
   toSnapshot(): StockMovementEntityProps {
     return {
       id: this.id,
+      branchId: this.branchId,
       productId: this.productId,
       type: this.type,
       quantity: this.quantity,

@@ -13,11 +13,11 @@ export class RemoveProductImageUseCase {
     @inject(TOKENS.MediaStorage) private readonly media: IMediaStorage,
   ) {}
 
-  async execute(id: number) {
-    const existing = await this.products.findById(id)
+  async execute(id: number, branchId: number) {
+    const existing = await this.products.findById(id, branchId)
     if (!existing) throw new DomainNotFoundError('ไม่พบสินค้า')
 
-    const updated = await this.products.setImageKey(id, null)
+    const updated = await this.products.setImageKey(id, null, branchId)
     // Best effort, as when replacing an image.
     if (existing.imageKey) await this.media.delete(existing.imageKey).catch(() => {})
     return updated

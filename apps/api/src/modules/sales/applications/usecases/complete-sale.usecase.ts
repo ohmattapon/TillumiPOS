@@ -24,7 +24,7 @@ export class CompleteSaleUseCase {
     @inject(shopSettingsRepositoryToken) private readonly settings: IShopSettingsRepository,
   ) {}
 
-  async execute(input: unknown, cashier: { id: number; displayName: string }) {
+  async execute(input: unknown, cashier: { id: number; displayName: string }, branch: { id: number; code: string }) {
     const dto = completeSaleSchema.parse(input)
 
     // Merge repeated products; a Map keeps the order they were added to the cart.
@@ -36,7 +36,7 @@ export class CompleteSaleUseCase {
       const shop = await this.settings.get()
 
       // Locked until the sale commits, so two tills cannot sell the same last unit.
-      const locked = await this.products.findManyForUpdate([...quantities.keys()])
+      const locked = await this.products.findManyForUpdate([...quantities.keys()], branch.id)
       const productsById = new Map(locked.map((product) => [product.id, product]))
 
       const lines = [...quantities].map(([productId, quantity]) => {
@@ -52,13 +52,15 @@ export class CompleteSaleUseCase {
         payments: dto.payments,
         vatMode: shop.vatMode,
         vatRateBp: shop.vatRateBp,
+        branchId: branch.id,
         cashier,
       })
       // Taken only after every rule has passed; it still rolls back with the sale if a later step fails.
-      const sale = await this.sales.create(priced, await this.sales.nextReceiptNo())
+      const sale = await this.sales.create(priced, await this.sales.nextReceiptNo(branch))
 
       for (const item of sale.items)
         await this.ledger.record({
+          branchId: branch.id,
           productId: item.productId,
           type: 'sale',
           quantity: -item.quantity,

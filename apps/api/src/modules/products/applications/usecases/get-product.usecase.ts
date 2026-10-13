@@ -8,8 +8,8 @@ import type { IProductRepository } from '../ports/product.repository'
 export class GetProductUseCase {
   constructor(@inject(productRepositoryToken) private readonly products: IProductRepository) {}
 
-  async execute(id: number) {
-    const product = await this.products.findById(id)
+  async execute(id: number, branchId: number) {
+    const product = await this.products.findById(id, branchId)
     if (!product) throw new DomainNotFoundError('ไม่พบสินค้า')
     return product
   }

@@ -15,6 +15,7 @@ export const createUserSchema = z.object({
   password,
   displayName,
   role,
+  branchId: z.number().int().positive().optional(),
 })
 
 export const updateUserSchema = z
@@ -22,6 +23,7 @@ export const updateUserSchema = z
     password,
     displayName,
     role,
+    branchId: z.number().int().positive(),
     isActive: z.boolean(),
   })
   .partial()

@@ -5,6 +5,7 @@ const note = t.Optional(t.String({ maxLength: 500 }))
 export const inventorySchemas = {
   movement: t.Object({
     id: t.Integer(),
+    branchId: t.Integer(),
     productId: t.Integer(),
     type: t.Union([t.Literal('receive'), t.Literal('sale'), t.Literal('void'), t.Literal('adjust')]),
     quantity: t.Integer(),

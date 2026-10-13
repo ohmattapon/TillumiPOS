@@ -18,16 +18,17 @@ export class ReceiveStockUseCase {
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
   ) {}
 
-  async execute(input: unknown, userId: number) {
+  async execute(input: unknown, userId: number, branchId: number) {
     const dto = receiveStockSchema.parse(input)
 
     return this.unitOfWork.run(async () => {
       // Locked so the balance cannot move between this read and the ledger write.
-      const [product] = await this.products.findManyForUpdate([dto.productId])
+      const [product] = await this.products.findManyForUpdate([dto.productId], branchId)
       if (!product) throw new DomainNotFoundError('ไม่พบสินค้า')
       if (!product.trackStock) throw new DomainError('สินค้านี้ไม่ได้ตั้งให้นับสต็อก', 'STOCK_NOT_TRACKED')
 
       const movement = await this.ledger.record({
+        branchId,
         productId: dto.productId,
         type: 'receive',
         quantity: dto.quantity,

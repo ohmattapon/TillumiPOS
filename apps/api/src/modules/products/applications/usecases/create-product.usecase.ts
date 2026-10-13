@@ -9,7 +9,7 @@ import type { IProductRepository } from '../ports/product.repository'
 export class CreateProductUseCase {
   constructor(@inject(productRepositoryToken) private readonly products: IProductRepository) {}
 
-  async execute(input: unknown) {
+  async execute(input: unknown, branchId: number) {
     const dto = createProductSchema.parse(input)
 
     return this.products.create(
@@ -27,6 +27,7 @@ export class CreateProductUseCase {
         isActive: true,
         imageKey: null,
       }),
+      branchId,
     )
   }
 }

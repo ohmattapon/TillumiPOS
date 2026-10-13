@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { DomainError } from './errors/domain-error'
 import { UserEntity } from './user.domain'
 
-const valid = { id: 1, username: 'somchai', displayName: 'สมชาย', role: 'cashier' as const, isActive: true }
+const valid = { id: 1, username: 'somchai', displayName: 'สมชาย', role: 'cashier' as const, branchId: 1, isActive: true }
 const owner = new UserEntity({ ...valid, role: 'owner' })
 
 describe('UserEntity', () => {

@@ -8,7 +8,7 @@ import { listStockMovementsSchema } from '../schemas/inventory-schemas'
 export class ListStockMovementsUseCase {
   constructor(@inject(stockMovementRepositoryToken) private readonly movements: IStockMovementRepository) {}
 
-  async execute(input: unknown = {}) {
-    return this.movements.findAll(listStockMovementsSchema.parse(input))
+  async execute(input: unknown, branchId: number) {
+    return this.movements.findAll({ ...listStockMovementsSchema.parse(input), branchId })
   }
 }

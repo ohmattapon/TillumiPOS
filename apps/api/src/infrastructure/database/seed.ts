@@ -1,11 +1,12 @@
 import 'reflect-metadata'
-import { count } from 'drizzle-orm'
+import { count, eq } from 'drizzle-orm'
 import { container } from 'tsyringe'
 import { CreateCategoryUseCase } from '../../modules/categories/applications/usecases/create-category.usecase'
 import '../../modules/di-registrations'
 import { CreateProductUseCase } from '../../modules/products/applications/usecases/create-product.usecase'
 import { ReceiveStockUseCase } from '../../modules/inventory/applications/usecases/receive-stock.usecase'
 import { CreateUserUseCase } from '../../modules/users/applications/usecases/create-user.usecase'
+import { branches } from './schema/branches'
 import { users } from './schema/users'
 import { client, db } from '../../libs/db'
 
@@ -14,7 +15,13 @@ if (existing!.total > 0) {
   console.log('Database already has users, skipping seed')
 } else {
   const password = Bun.env.SEED_OWNER_PASSWORD ?? 'admin1234'
-  const owner = await container.resolve(CreateUserUseCase).execute({ username: 'admin', password, displayName: 'เจ้าของร้าน', role: 'owner' })
+  // The migration that introduced branches created this one, so every database has it.
+  const [main] = await db.select({ id: branches.id }).from(branches).where(eq(branches.code, 'MAIN'))
+  const branchId = main!.id
+  const owner = await container.resolve(CreateUserUseCase).execute(
+    { username: 'admin', password, displayName: 'เจ้าของร้าน', role: 'owner' },
+    branchId,
+  )
 
   const createCategory = container.resolve(CreateCategoryUseCase)
   const drinks = await createCategory.execute({ name: 'เครื่องดื่ม', sortOrder: 1 })
@@ -27,8 +34,8 @@ if (existing!.total > 0) {
     { sku: 'SNK-002', barcode: '8850000000042', name: 'ช็อกโกแลตแท่ง', categoryId: snacks.id, priceSatang: 2500, costSatang: 1800 },
   ]
   for (const sample of samples) {
-    const product = await container.resolve(CreateProductUseCase).execute(sample)
-    await container.resolve(ReceiveStockUseCase).execute({ productId: product.id, quantity: 50, note: 'ยอดยกมา' }, owner.id)
+    const product = await container.resolve(CreateProductUseCase).execute(sample, branchId)
+    await container.resolve(ReceiveStockUseCase).execute({ productId: product.id, quantity: 50, note: 'ยอดยกมา' }, owner.id, branchId)
   }
 
   console.log(`Seeded owner "admin" (password: ${password}) and ${samples.length} sample products`)

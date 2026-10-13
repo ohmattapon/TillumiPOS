@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
-import { makeUser } from '../../../../__tests__/factories'
-import { mockPasswordHasher, mockUnitOfWork, mockUserRepository } from '../../../../__tests__/mocks'
+import { makeBranch, makeUser } from '../../../../__tests__/factories'
+import {
+  mockBranchRepository,
+  mockPasswordHasher,
+  mockUnitOfWork,
+  mockUserRepository,
+} from '../../../../__tests__/mocks'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import { CreateUserUseCase } from './create-user.usecase'
@@ -10,10 +15,13 @@ import { UpdateUserUseCase } from './update-user.usecase'
 
 let repo: ReturnType<typeof mockUserRepository>
 let hasher: ReturnType<typeof mockPasswordHasher>
+let branches: ReturnType<typeof mockBranchRepository>
 
 beforeEach(() => {
   repo = mockUserRepository()
   hasher = mockPasswordHasher()
+  branches = mockBranchRepository()
+  branches.findById.mockResolvedValue(makeBranch())
 })
 
 describe('ListUsersUseCase', () => {
@@ -31,17 +39,18 @@ describe('CreateUserUseCase', () => {
 
   beforeEach(() => {
     repo.create.mockImplementation(async (entity) => makeUser({ ...entity.toSnapshot(), id: 5 }))
-    useCase = new CreateUserUseCase(repo, hasher)
+    useCase = new CreateUserUseCase(repo, branches, hasher)
   })
 
   test('stores an active user with a lower-cased username and a hashed password', async () => {
-    const created = await useCase.execute(input)
+    const created = await useCase.execute(input, 1)
 
     expect(created.toSnapshot()).toEqual({
       id: 5,
       username: 'somchai',
       displayName: 'สมชาย',
       role: 'cashier',
+      branchId: 1,
       isActive: true,
     })
     const [entity, passwordHash] = repo.create.mock.calls[0]!
@@ -58,13 +67,30 @@ describe('CreateUserUseCase', () => {
     ['an empty display name', { ...input, displayName: '' }],
     ['a missing field', { username: 'somchai' }],
   ])('rejects %s without hashing or storing anything', async (_label, bad) => {
-    await expect(useCase.execute(bad)).rejects.toBeInstanceOf(ZodError)
+    await expect(useCase.execute(bad, 1)).rejects.toBeInstanceOf(ZodError)
     expect(hasher.hash).not.toHaveBeenCalled()
     expect(repo.create).not.toHaveBeenCalled()
   })
 
+  test('uses the branch named in the request, else the one the owner works in', async () => {
+    await useCase.execute({ ...input, branchId: 3 }, 1)
+    await useCase.execute(input, 2)
+
+    expect(repo.create.mock.calls.map(([entity]) => entity.branchId)).toEqual([3, 2])
+    expect(branches.findById.mock.calls.map(([id]) => id)).toEqual([3, 2])
+  })
+
+  test('refuses an unknown or closed branch without storing anything', async () => {
+    branches.findById.mockResolvedValueOnce(null)
+    await expect(useCase.execute(input, 9)).rejects.toMatchObject({ code: 'BRANCH_NOT_FOUND' })
+
+    branches.findById.mockResolvedValueOnce(makeBranch({ isActive: false }))
+    await expect(useCase.execute(input, 1)).rejects.toMatchObject({ code: 'BRANCH_INACTIVE' })
+    expect(repo.create).not.toHaveBeenCalled()
+  })
+
   test('ignores fields a caller must not set, such as isActive and id', async () => {
-    await useCase.execute({ ...input, isActive: false, id: 99 })
+    await useCase.execute({ ...input, isActive: false, id: 99 }, 1)
 
     expect(repo.create.mock.calls[0]![0].toSnapshot()).toMatchObject({ id: 0, isActive: true })
   })
@@ -73,7 +99,7 @@ describe('CreateUserUseCase', () => {
     const conflict = new DomainConflictError('ข้อมูลซ้ำกับที่มีอยู่แล้ว', 'DUPLICATE')
     repo.create.mockRejectedValue(conflict)
 
-    await expect(useCase.execute(input)).rejects.toBe(conflict)
+    await expect(useCase.execute(input, 1)).rejects.toBe(conflict)
   })
 })
 
@@ -86,7 +112,7 @@ describe('UpdateUserUseCase', () => {
     repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 4 }))
     repo.update.mockImplementation(async (entity) => entity)
     repo.countActiveOwners.mockResolvedValue(1)
-    useCase = new UpdateUserUseCase(repo, hasher, unitOfWork)
+    useCase = new UpdateUserUseCase(repo, branches, hasher, unitOfWork)
   })
 
   test('changes only the given fields, inside one unit of work, reading with a row lock', async () => {
