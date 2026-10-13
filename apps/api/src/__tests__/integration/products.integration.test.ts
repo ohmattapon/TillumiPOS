@@ -78,4 +78,50 @@ describe('products', () => {
     expect(ok(result).stockQty).toBe(5)
     expect(ok(await owner.api.catalog.products({ id: product.id }).get()).stockQty).toBe(5)
   })
+
+  test('a product cannot point at a category that does not exist', async () => {
+    const result = await owner.api.catalog.products.post({ sku: 'NEW-1', name: 'New', priceSatang: 100, categoryId: 9999 })
+
+    expect(result.status).toBe(409)
+    expect(result.error?.value).toMatchObject({
+      code: 'IN_USE',
+      message: 'ข้อมูลนี้ถูกอ้างอิงอยู่ หรืออ้างถึงข้อมูลที่ไม่มีอยู่',
+    })
+  })
+
+  test('barcode and category can be cleared with null', async () => {
+    const category = ok(await owner.api.catalog.categories.post({ name: 'Drinks' }))
+    const product = await seedProduct(owner, { barcode: '123', categoryId: category.id })
+
+    const cleared = ok(await owner.api.catalog.products({ id: product.id }).patch({ barcode: null, categoryId: null }))
+
+    expect(cleared).toMatchObject({ barcode: null, categoryId: null, name: product.name })
+  })
+
+  test('an unknown product is not found', async () => {
+    const read = await owner.api.catalog.products({ id: 9999 }).get()
+    const updated = await owner.api.catalog.products({ id: 9999 }).patch({ name: 'Ghost' })
+
+    expect(read.status).toBe(404)
+    expect(read.error?.value).toMatchObject({ code: 'NOT_FOUND', message: 'ไม่พบสินค้า' })
+    expect(updated.status).toBe(404)
+  })
+
+  test('a created product returns exactly the public fields', async () => {
+    const created = ok(await owner.api.catalog.products.post({ sku: 'NEW-1', name: 'New', priceSatang: 100 }))
+
+    expect(created).toEqual({
+      id: expect.any(Number),
+      sku: 'NEW-1',
+      barcode: null,
+      name: 'New',
+      categoryId: null,
+      priceSatang: 100,
+      costSatang: 0,
+      trackStock: true,
+      stockQty: 0,
+      isActive: true,
+      imageUrl: null,
+    })
+  })
 })
