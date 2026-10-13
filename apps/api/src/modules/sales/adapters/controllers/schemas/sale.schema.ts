@@ -25,6 +25,12 @@ const header = {
 }
 
 const payment = t.Object({ method, amountSatang: satang({ minimum: 1 }) })
+// What a request may carry for a payment: a `promptpay` one is backed by a confirmed QR payment.
+const paymentRequest = t.Object({
+  method,
+  amountSatang: satang({ minimum: 1 }),
+  qrPaymentId: t.Optional(t.Integer({ minimum: 1 })),
+})
 
 export const saleSchemas = {
   saleHeader: t.Object(header),
@@ -45,7 +51,7 @@ export const saleSchemas = {
   create: t.Object({
     items: t.Array(t.Object({ productId: t.Integer(), quantity: t.Integer({ minimum: 1 }) }), { minItems: 1 }),
     discountSatang: t.Optional(satang()),
-    payments: t.Array(payment, { minItems: 1 }),
+    payments: t.Array(paymentRequest, { minItems: 1 }),
   }),
   void: t.Object({ reason: t.String({ minLength: 1, maxLength: 500 }) }),
   listQuery: t.Object({

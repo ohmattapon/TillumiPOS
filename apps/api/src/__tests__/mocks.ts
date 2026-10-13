@@ -4,6 +4,9 @@ import type { ICategoryRepository } from '../modules/categories/applications/por
 import type { IStockLedger } from '../modules/inventory/applications/ports/stock-ledger.port'
 import type { IStockMovementRepository } from '../modules/inventory/applications/ports/stock-movement.repository'
 import type { IOrderRepository } from '../modules/orders/applications/ports/order.repository'
+import type { IQrPaymentGateway } from '../modules/qr-payments/applications/ports/qr-payment-gateway.port'
+import type { IQrPaymentRepository } from '../modules/qr-payments/applications/ports/qr-payment.repository'
+import type { IQrPaymentClaims } from '../modules/qr-payments/applications/ports/qr-payment-claims.port'
 import type { ISaleCheckout } from '../modules/sales/applications/ports/sale-checkout.port'
 import type { IProductRepository } from '../modules/products/applications/ports/product.repository'
 import type { IShopSettingsRepository } from '../modules/settings/applications/ports/shop-settings.repository'
@@ -91,6 +94,28 @@ export const mockBranchRepository = (): Mocked<IBranchRepository> => ({
   create: mock<IBranchRepository['create']>(),
   update: mock<IBranchRepository['update']>(),
   countActive: mock<IBranchRepository['countActive']>(),
+})
+
+export const mockQrPaymentRepository = (): Mocked<IQrPaymentRepository> => ({
+  create: mock<IQrPaymentRepository['create']>(),
+  findById: mock<IQrPaymentRepository['findById']>(),
+  findByIdForUpdate: mock<IQrPaymentRepository['findByIdForUpdate']>(),
+  findByReferenceForUpdate: mock<IQrPaymentRepository['findByReferenceForUpdate']>(),
+  save: mock<IQrPaymentRepository['save']>(async (payment) => payment),
+})
+
+export const mockQrPaymentGateway = (): Mocked<IQrPaymentGateway> => ({
+  isEnabled: mock<IQrPaymentGateway['isEnabled']>(() => true),
+  createQr: mock<IQrPaymentGateway['createQr']>(),
+  findPayment: mock<IQrPaymentGateway['findPayment']>(),
+})
+
+export const mockClock = (now: Date) => ({ now: mock(() => now) })
+
+export const mockQrPaymentClaims = (): Mocked<IQrPaymentClaims> => ({
+  isRequired: mock<IQrPaymentClaims['isRequired']>(() => false),
+  assertClaimable: mock<IQrPaymentClaims['assertClaimable']>(async () => {}),
+  consume: mock<IQrPaymentClaims['consume']>(async () => {}),
 })
 
 export const mockOrderRepository = (): Mocked<IOrderRepository> => ({

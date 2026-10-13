@@ -1,0 +1,46 @@
+import { inject, injectable } from 'tsyringe'
+import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
+import type { IClock } from '../../../shared/ports/clock.port'
+import { TOKENS } from '../../../tokens'
+import { qrPaymentGatewayToken } from '../ports/qr-payment-gateway.port'
+import type { IQrPaymentGateway } from '../ports/qr-payment-gateway.port'
+import { qrPaymentRepositoryToken } from '../ports/qr-payment.repository'
+import type { IQrPaymentRepository } from '../ports/qr-payment.repository'
+import { createQrPaymentSchema } from '../schemas/qr-payment-schemas'
+
+/** How long a QR is shown for. The bank sets no expiry; this only stops waiting and polling. */
+export const QR_VALID_FOR_MS = 10 * 60 * 1000
+
+/** Command: asks the bank for a QR for an exact amount and keeps track of it until it is paid. */
+@injectable()
+export class CreateQrPaymentUseCase {
+  constructor(
+    @inject(qrPaymentGatewayToken) private readonly gateway: IQrPaymentGateway,
+    @inject(qrPaymentRepositoryToken) private readonly payments: IQrPaymentRepository,
+    @inject(TOKENS.Clock) private readonly clock: IClock,
+  ) {}
+
+  async execute(input: unknown, actor: { userId: number; branch: { id: number; code: string } }) {
+    const dto = createQrPaymentSchema.parse(input)
+    if (!this.gateway.isEnabled())
+      throw new DomainConflictError('ร้านนี้ยังไม่ได้ตั้งค่าการรับชำระด้วย QR', 'QR_NOT_CONFIGURED')
+
+    // Reference 1: 16 characters of A-Z and 0-9, unique, and unguessable.
+    const reference = 'QR' + crypto.randomUUID().replaceAll('-', '').slice(0, 14).toUpperCase()
+    const qr = await this.gateway.createQr({
+      reference,
+      amountSatang: dto.amountSatang,
+      branchCode: actor.branch.code,
+    })
+
+    const payment = await this.payments.create({
+      branchId: actor.branch.id,
+      reference,
+      amountSatang: dto.amountSatang,
+      qrRawData: qr.qrRawData,
+      expiresAt: new Date(this.clock.now().getTime() + QR_VALID_FOR_MS),
+      createdById: actor.userId,
+    })
+    return { payment, qrImage: qr.qrImage }
+  }
+}

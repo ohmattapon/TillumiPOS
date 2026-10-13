@@ -22,7 +22,13 @@ export const cancelOrderSchema = z.object({ reason: z.string().min(1).max(500) }
 export const payOrderSchema = z.object({
   discountSatang: z.number().int().min(0).optional(),
   payments: z
-    .array(z.object({ method: z.enum(PAYMENT_METHODS), amountSatang: z.number().int().min(1) }))
+    .array(
+      z.object({
+        method: z.enum(PAYMENT_METHODS),
+        amountSatang: z.number().int().min(1),
+        qrPaymentId: z.number().int().positive().optional(),
+      }),
+    )
     .min(1),
 })
 
