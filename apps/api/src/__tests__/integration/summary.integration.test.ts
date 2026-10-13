@@ -84,7 +84,7 @@ describe('sales summary', () => {
       }),
     )
 
-    const { client: sqlClient } = await import('../../db/client')
+    const { client: sqlClient } = await import('../../libs/db')
     const { assertConnectedTestDatabase } = await import('../../../test/database')
     const boundary = new Date('2026-01-15T10:00:00.000Z')
     await assertConnectedTestDatabase(sqlClient)

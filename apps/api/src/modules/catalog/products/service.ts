@@ -1,5 +1,5 @@
 import { and, eq, ilike, inArray, or, sql } from 'drizzle-orm'
-import { db, type Executor, type Tx } from '../../../db/client'
+import { db, type Executor, type Tx } from '../../../libs/db'
 import { notFound } from '../../../shared/errors'
 import { MediaStorage } from '../../../shared/media'
 import type { CreateProduct, Product, ProductListQuery, UpdateProduct } from './model'

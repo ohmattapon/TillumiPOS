@@ -1,5 +1,5 @@
 import { boolean, pgEnum, pgTable, text } from 'drizzle-orm/pg-core'
-import { id, timestamps } from '../../db/columns'
+import { id, timestamps } from '../../infrastructure/database/columns'
 
 export const userRole = pgEnum('user_role', ['owner', 'cashier'])
 export type UserRole = (typeof userRole.enumValues)[number]

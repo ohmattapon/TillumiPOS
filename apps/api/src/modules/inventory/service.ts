@@ -1,5 +1,5 @@
 import { desc, eq } from 'drizzle-orm'
-import { db, type Tx } from '../../db/client'
+import { db, type Tx } from '../../libs/db'
 import { badRequest, notFound } from '../../shared/errors'
 import { ProductsService } from '../catalog/products/service'
 import type { AdjustStock, MovementsQuery, ReceiveStock, StockMovement } from './model'

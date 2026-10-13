@@ -1,7 +1,7 @@
 import { boolean, check, index, integer, pgTable, text } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
-import { id, timestamps } from '../../../db/columns'
-import { categories } from '../categories/schema'
+import { id, timestamps } from '../../../infrastructure/database/columns'
+import { categories } from '../../../infrastructure/database/schema/categories'
 
 export const products = pgTable(
   'products',

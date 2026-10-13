@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia'
-import { env } from '../../config/env'
+import { env } from '../../libs/env'
 import { unauthorized } from '../../shared/errors'
 import { auth as authPlugin, SESSION_COOKIE, SESSION_MAX_AGE } from '../../shared/plugins/auth'
 import { UserModel } from '../users/model'

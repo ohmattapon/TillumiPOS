@@ -1,10 +1,10 @@
 import { count } from 'drizzle-orm'
-import { CategoriesService } from '../modules/catalog/categories/service'
-import { ProductsService } from '../modules/catalog/products/service'
-import { InventoryService } from '../modules/inventory/service'
-import { users } from '../modules/users/schema'
-import { UsersService } from '../modules/users/service'
-import { client, db } from './client'
+import { CategoriesService } from '../../modules/catalog/categories/service'
+import { ProductsService } from '../../modules/catalog/products/service'
+import { InventoryService } from '../../modules/inventory/service'
+import { users } from '../../modules/users/schema'
+import { UsersService } from '../../modules/users/service'
+import { client, db } from '../../libs/db'
 
 const [existing] = await db.select({ total: count() }).from(users)
 if (existing!.total > 0) {

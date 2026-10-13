@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm'
-import { db } from '../../../db/client'
+import { db } from '../../../libs/db'
 import { notFound } from '../../../shared/errors'
 import type { Category, CreateCategory, UpdateCategory } from './model'
-import { categories } from './schema'
+import { categories } from '../../../infrastructure/database/schema/categories'
 
 const columns = {
   id: categories.id,
