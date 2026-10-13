@@ -99,13 +99,11 @@ function start(): FakeScb {
       if (url.pathname === '/v1/payment/billpayment/inquiry' && request.method === 'GET') {
         const query = url.searchParams
         const payment = payments.get(query.get('reference1') ?? '')
-        if (
-          query.get('eventCode') !== '00300100' ||
-          query.get('billerId') !== credentials.billerId ||
-          !payment ||
-          query.get('transactionDate') !== thaiDate(payment.paidAt)
-        )
-          return Response.json(envelope(1010, 'Data not found'), { status: 404 })
+        if (query.get('eventCode') !== '00300100' || query.get('billerId') !== credentials.billerId)
+          return Response.json(envelope(1002, 'Invalid parameter'), { status: 400 })
+        // What the real sandbox answers when no payment is known for the reference.
+        if (!payment || query.get('transactionDate') !== thaiDate(payment.paidAt))
+          return Response.json(envelope(1104, 'Requested entity record does not exist'), { status: 404 })
 
         return Response.json(
           envelope(1000, 'Success', [
