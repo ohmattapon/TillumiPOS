@@ -2,7 +2,7 @@ import { treaty } from '@elysiajs/eden'
 import type { App } from '@pos/api'
 
 // End-to-end typed client: routes, bodies and responses are inferred from the API source.
-export const { api } = treaty<App>(window.location.origin)
+export const api = treaty<App>(window.location.origin).api.v1
 
 export class ApiError extends Error {
   status: number
@@ -24,8 +24,9 @@ interface EdenResult<T> {
 export async function unwrap<T>(request: Promise<EdenResult<T>>): Promise<T> {
   const { data, error } = await request
   if (error) {
-    const body = error.value as { code?: string; message?: string } | null
-    throw new ApiError(Number(error.status), body?.code ?? 'UNKNOWN', body?.message ?? 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้')
+    // Errors are RFC 9457 problem details: `detail` is the message for the user, `code` the stable identifier.
+    const body = error.value as { code?: string; detail?: string } | null
+    throw new ApiError(Number(error.status), body?.code ?? 'UNKNOWN', body?.detail ?? 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้')
   }
   return data as T
 }

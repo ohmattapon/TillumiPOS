@@ -13,13 +13,13 @@ export const meQuery = queryOptions({
 
 export const categoriesQuery = queryOptions({
   queryKey: ['categories'],
-  queryFn: () => unwrap(api.catalog.categories.get()),
+  queryFn: async () => (await unwrap(api.catalog.categories.get())).items,
 })
 
 export const productsQuery = (includeInactive = false) =>
   queryOptions({
     queryKey: ['products', { includeInactive }],
-    queryFn: () => unwrap(api.catalog.products.get({ query: { includeInactive, limit: 1000 } })),
+    queryFn: async () => (await unwrap(api.catalog.products.get({ query: { includeInactive, limit: 1000 } }))).items,
   })
 
 /** Start of today and of tomorrow in the browser's time zone. */
@@ -33,7 +33,7 @@ export function todayRange() {
 
 export const salesTodayQuery = queryOptions({
   queryKey: ['sales', 'today'],
-  queryFn: () => unwrap(api.sales.get({ query: { ...todayRange(), limit: 500 } })),
+  queryFn: async () => (await unwrap(api.sales.get({ query: { ...todayRange(), limit: 500 } }))).items,
 })
 
 export const summaryTodayQuery = queryOptions({
