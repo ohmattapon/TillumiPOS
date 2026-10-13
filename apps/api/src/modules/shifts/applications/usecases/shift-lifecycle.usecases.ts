@@ -12,7 +12,9 @@ import { registerRepositoryToken } from '../ports/register.repository'
 import type { IRegisterRepository } from '../ports/register.repository'
 import { shiftRepositoryToken } from '../ports/shift.repository'
 import type { IShiftRepository } from '../ports/shift.repository'
-import { cashEntryListSchema, cashMovementSchema, closeShiftSchema, shiftListSchema, shiftRevisionSchema } from '../schemas/shift-schemas'
+import { qrShiftReadinessToken } from '../../../qr-payments/applications/ports/qr-shift-readiness.port'
+import type { IQrShiftReadiness } from '../../../qr-payments/applications/ports/qr-shift-readiness.port'
+import { cashEntryListSchema, cashMovementSchema, closeShiftSchema, shiftListSchema, shiftRevisionSchema, startClosingSchema } from '../schemas/shift-schemas'
 import { restoreCashEntrySnapshot, restoreShiftSnapshot } from '../shift-snapshot'
 
 interface Actor { id: number; displayName: string; role: 'owner' | 'cashier' }
@@ -60,15 +62,26 @@ export class StartShiftClosingUseCase {
     @inject(TOKENS.UnitOfWork) private readonly uow: IUnitOfWork,
     @inject(TOKENS.Clock) private readonly clock: IClock,
     @inject(TOKENS.Idempotency) private readonly idempotency: CommandIdempotency,
+    @inject(qrShiftReadinessToken) private readonly qrReadiness: IQrShiftReadiness,
   ) {}
-  async execute(id: number, actor: Actor, branchId: number, idempotencyKey: string) {
+  async execute(id: number, input: unknown, actor: Actor, branchId: number, idempotencyKey: string) {
+    const dto = startClosingSchema.parse(input ?? {})
     if (!await this.policy.isShiftsEnabled()) throw new DomainConflictError('เริ่มนับกะได้เมื่อ CHECKOUT_MODE=shifts', 'CHECKOUT_MODE_REQUIRED')
     return this.uow.run(() => this.idempotency.execute(
       { actorId: actor.id, branchId, action: 'shifts.start-closing', key: idempotencyKey },
-      { shiftId: id },
+      { shiftId: id, ...dto },
       async () => {
       const shift = await this.shifts.findByIdForUpdate(id, branchId)
       if (!shift) throw new DomainNotFoundError('ไม่พบกะ', 'SHIFT_NOT_FOUND')
+      // Read after the shift is locked: a QR request reserves under the same lock, so none can slip in.
+      const qr = await this.qrReadiness.forShift(id)
+      if (qr.unresolvedAttempts > 0)
+        throw new DomainConflictError('มีการขอ QR ที่ยังไม่ทราบผล กรุณาตรวจสอบก่อนเริ่มนับ', 'QR_PAYMENT_UNRESOLVED', { count: qr.unresolvedAttempts })
+      if (qr.paidUnclaimed > 0)
+        throw new DomainConflictError('มีเงินจาก QR ที่จ่ายแล้วแต่ยังไม่มีบิล กรุณาจัดการก่อนเริ่มนับ', 'QR_PAYMENT_UNRESOLVED', { count: qr.paidUnclaimed })
+      // Stopping the wait does not revoke a QR at the bank: whoever counts has to know money may still come.
+      if (qr.pending.count > 0 && !dto.acknowledgePendingQr)
+        throw new DomainConflictError('ยังมี QR ที่รอลูกค้าจ่าย กรุณายืนยันว่ารับทราบก่อนเริ่มนับ', 'QR_PENDING_ACKNOWLEDGEMENT_REQUIRED', { count: qr.pending.count, amountSatang: qr.pending.amountSatang })
       const expected = shift.expectedCashSatang(await this.shifts.cashDeltas(id))
       return this.shifts.update(shift.startClosing(actor.id, actor.displayName, this.clock.now(), expected))
       },
@@ -115,6 +128,7 @@ export class CloseShiftUseCase {
     @inject(TOKENS.UnitOfWork) private readonly uow: IUnitOfWork,
     @inject(TOKENS.Clock) private readonly clock: IClock,
     @inject(TOKENS.Idempotency) private readonly idempotency: CommandIdempotency,
+    @inject(qrShiftReadinessToken) private readonly qrReadiness: IQrShiftReadiness,
   ) {}
   async execute(id: number, input: unknown, actor: Actor, branchId: number, idempotencyKey: string) {
     const dto = closeShiftSchema.parse(input)
@@ -127,6 +141,9 @@ export class CloseShiftUseCase {
       if (!shift) throw new DomainNotFoundError('ไม่พบกะ', 'SHIFT_NOT_FOUND')
       if (actor.role !== 'owner' && actor.id !== shift.closingStartedById)
         throw new DomainConflictError('เฉพาะผู้เริ่มนับหรือเจ้าของร้านยืนยันปิดกะได้', 'SHIFT_CLOSING_OWNER_REQUIRED')
+      // The bank may have confirmed a payment while the drawer was being counted.
+      if ((await this.qrReadiness.forShift(id)).paidUnclaimed > 0)
+        throw new DomainConflictError('มีเงินจาก QR เข้ามาระหว่างนับและยังไม่มีบิล กรุณายกเลิกการนับแล้วจัดการก่อน', 'QR_PAYMENT_UNRESOLVED')
       const deltas = await this.shifts.cashDeltas(id)
       const expected = shift.expectedCashSatang(deltas)
       if (shift.closingExpectedCashSatang !== expected)

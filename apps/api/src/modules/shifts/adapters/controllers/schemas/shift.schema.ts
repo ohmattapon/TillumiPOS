@@ -20,6 +20,7 @@ export const shiftHttpSchemas = {
   }),
   openShift: t.Object({ registerId: t.Integer({ minimum: 1 }), openingCashSatang: t.Integer({ minimum: 0, maximum: 2_147_483_647 }), openingNote: t.Optional(t.Nullable(t.String({ maxLength: 500 }))) }),
   closeShift: t.Object({ closingRevision: t.Integer({ minimum: 1 }), countedCashSatang: t.Integer({ minimum: 0, maximum: 2_147_483_647 }), reason: t.Optional(t.String({ maxLength: 500 })) }),
+  startClosing: t.Optional(t.Object({ acknowledgePendingQr: t.Optional(t.Boolean()) })),
   shiftRevision: t.Object({ closingRevision: t.Integer({ minimum: 1 }) }),
   cashEntry: t.Object({
     id: t.Integer(), shiftId: t.Integer(), kind: t.Union([t.Literal('cash_sale'), t.Literal('cash_in'), t.Literal('cash_out'), t.Literal('cash_refund')]),

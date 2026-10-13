@@ -105,6 +105,7 @@ export const mockQrPaymentRepository = (): Mocked<IQrPaymentRepository> => ({
   findById: mock<IQrPaymentRepository['findById']>(),
   findByIdForUpdate: mock<IQrPaymentRepository['findByIdForUpdate']>(),
   findByReferenceForUpdate: mock<IQrPaymentRepository['findByReferenceForUpdate']>(),
+  findUnclaimed: mock<IQrPaymentRepository['findUnclaimed']>(),
   save: mock<IQrPaymentRepository['save']>(async (payment) => payment),
 })
 

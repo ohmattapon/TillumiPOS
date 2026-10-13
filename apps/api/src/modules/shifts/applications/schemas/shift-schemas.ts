@@ -22,6 +22,9 @@ export const closeShiftSchema = z.object({
   reason: z.string().max(500).optional(),
 })
 
+/** Counting may start over QRs that are still waiting to be paid only when the person counting says they know. */
+export const startClosingSchema = z.object({ acknowledgePendingQr: z.boolean().optional() })
+
 export const shiftRevisionSchema = z.object({ closingRevision: z.number().int().positive() })
 
 export const cashMovementSchema = z.object({

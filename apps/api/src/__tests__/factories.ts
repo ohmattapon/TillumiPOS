@@ -40,6 +40,10 @@ export const makeQrPayment = (overrides: Partial<QrPaymentEntityProps> = {}) =>
     paidAt: null,
     lastCheckedAt: null,
     saleId: null,
+    originShiftId: null,
+    dismissedAt: null,
+    dismissedById: null,
+    dismissReason: null,
     createdAt: new Date('2026-10-13T06:00:00Z'),
     ...overrides,
   })

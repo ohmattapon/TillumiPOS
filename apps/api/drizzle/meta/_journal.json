@@ -64,6 +64,13 @@
       "when": 1791898500685,
       "tag": "0008_red_black_widow",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791932834910,
+      "tag": "0009_qr_shift_recovery",
+      "breakpoints": true
     }
   ]
 }

@@ -25,10 +25,11 @@ interface ScbResponse {
   body: ScbEnvelope
 }
 
-const unavailable = (detail?: string) =>
+const unavailable = (detail?: string, outcome?: 'unknown') =>
   new DomainExternalServiceError(
     detail ? `ติดต่อ SCB ไม่ได้: ${detail}` : 'ติดต่อ SCB ไม่ได้ กรุณาลองใหม่อีกครั้ง',
     'QR_GATEWAY_ERROR',
+    outcome && { outcome },
   )
 
 /** "50.00" for 5000 satang: SCB takes a decimal string. */
@@ -52,7 +53,12 @@ export class ScbQrGateway implements IQrPaymentGateway {
 
   async createQr({ reference, amountSatang, branchCode }: { reference: string; amountSatang: number; branchCode: string }) {
     const config = this.config()
-    const { httpStatus, body } = await this.call(config, 'POST', '/v1/payment/qrcode/create', {
+    // A token problem happens before the request is sent, so it is a plain failure: no QR was made.
+    await this.accessToken(config)
+
+    let answer: ScbResponse
+    try {
+      answer = await this.call(config, 'POST', '/v1/payment/qrcode/create', {
       qrType: 'PP',
       ppType: 'BILLERID',
       ppId: config.billerId,
@@ -61,8 +67,15 @@ export class ScbQrGateway implements IQrPaymentGateway {
       ...(config.twoReferences && { ref2: branchCode }),
       // Prefix + branch: routes SCB's callback to us and shows which branch a payment was for.
       ref3: (config.ref3Prefix + branchCode).slice(0, 20),
-    })
+      })
+    } catch {
+      // The request left and no answer came back: the bank may or may not have made the QR.
+      throw unavailable(undefined, 'unknown')
+    }
 
+    const { httpStatus, body } = answer
+    // A server error says nothing about whether the QR exists either.
+    if (httpStatus >= 500) throw unavailable(body.status?.description, 'unknown')
     const data = body.data as Partial<QrCode> | undefined
     if (httpStatus !== 200 || body.status?.code !== STATUS_SUCCESS || !data?.qrRawData)
       throw unavailable(body.status?.description)
