@@ -1,6 +1,7 @@
 import type { Category, Product } from '@pos/api/types'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -9,8 +10,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { ProductImage } from './ProductImage'
+import { useFormat, useSettings } from '@/features/settings'
 import { useSaveProduct } from '../api'
-import { parseBaht } from '@/lib/money'
 
 // Radix Select cannot use an empty string as an item value.
 const NO_CATEGORY = 'none'
@@ -23,13 +24,17 @@ interface Props {
 }
 
 export function ProductFormDialog({ product, categories, onClose }: Props) {
+  const { t } = useTranslation('products')
+  const { t: tc } = useTranslation()
+  const { money, currency } = useFormat()
+  const { vatMode } = useSettings()
   const [form, setForm] = useState({
     sku: product?.sku ?? '',
     barcode: product?.barcode ?? '',
     name: product?.name ?? '',
     categoryId: product?.categoryId ? String(product.categoryId) : NO_CATEGORY,
-    price: product ? String(product.priceSatang / 100) : '',
-    cost: product ? String(product.costSatang / 100) : '',
+    price: product ? money.toInput(product.priceSatang) : '',
+    cost: product ? money.toInput(product.costSatang) : '',
     trackStock: product?.trackStock ?? true,
   })
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm({ ...form, [key]: value })
@@ -49,8 +54,8 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
 
   const shownImage = image === undefined ? (product?.imageUrl ?? null) : preview
 
-  const priceSatang = parseBaht(form.price)
-  const costSatang = form.cost.trim() === '' ? 0 : parseBaht(form.cost)
+  const priceSatang = money.parse(form.price)
+  const costSatang = form.cost.trim() === '' ? 0 : money.parse(form.cost)
 
   const save = useSaveProduct()
 
@@ -73,7 +78,7 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
       },
       {
         onSuccess: (saved) => {
-          toast.success(product ? `บันทึก "${saved.name}" แล้ว` : `เพิ่ม "${saved.name}" แล้ว`)
+          toast.success(t(product ? 'toast.updated' : 'toast.created', { name: saved.name }))
           onClose()
         },
       },
@@ -84,20 +89,20 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{product ? 'แก้ไขสินค้า' : 'เพิ่มสินค้า'}</DialogTitle>
-          <DialogDescription>ราคาขายเป็นราคารวม VAT · จำนวนสต็อกแก้ที่ปุ่มรับเข้าหรือปรับยอด</DialogDescription>
+          <DialogTitle>{product ? t('form.titleEdit') : t('form.titleNew')}</DialogTitle>
+          <DialogDescription>{t('form.description', { priceNote: t(`form.priceNote.${vatMode}`) })}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={submit} className="grid grid-cols-2 gap-4">
           <div className="col-span-2 flex items-center gap-4">
-            <ProductImage src={shownImage} alt="รูปสินค้า" className="size-20 rounded-lg border" />
+            <ProductImage src={shownImage} alt={t('form.imageAlt')} className="size-20 rounded-lg border" />
             <div className="space-y-2">
               <input
                 ref={fileInput}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 className="sr-only"
-                aria-label="เลือกรูปสินค้า"
+                aria-label={t('form.imageInput')}
                 onChange={(event) => {
                   const file = event.target.files?.[0]
                   if (file) chooseImage(file)
@@ -107,32 +112,32 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
               <div className="flex gap-2">
                 <Button type="button" variant="outline" className="h-9" onClick={() => fileInput.current?.click()}>
                   <ImagePlus />
-                  {shownImage ? 'เปลี่ยนรูป' : 'เลือกรูป'}
+                  {shownImage ? t('form.changeImage') : t('form.pickImage')}
                 </Button>
                 {shownImage && (
                   <Button type="button" variant="ghost" className="h-9 text-muted-foreground" onClick={() => chooseImage(null)}>
                     <Trash2 />
-                    ลบรูป
+                    {t('form.removeImage')}
                   </Button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">JPEG, PNG หรือ WebP · ระบบย่อรูปให้อัตโนมัติ</p>
+              <p className="text-xs text-muted-foreground">{t('form.imageHint')}</p>
             </div>
           </div>
           <div className="col-span-2 space-y-2">
-            <Label htmlFor="product-name">ชื่อสินค้า</Label>
+            <Label htmlFor="product-name">{t('form.name')}</Label>
             <Input id="product-name" className="h-10" value={form.name} onChange={(event) => set('name', event.target.value)} required autoFocus />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="product-sku">รหัสสินค้า (SKU)</Label>
+            <Label htmlFor="product-sku">{t('form.sku')}</Label>
             <Input id="product-sku" className="h-10" value={form.sku} onChange={(event) => set('sku', event.target.value)} required />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="product-barcode">บาร์โค้ด</Label>
-            <Input id="product-barcode" className="h-10" value={form.barcode} onChange={(event) => set('barcode', event.target.value)} placeholder="ไม่บังคับ" />
+            <Label htmlFor="product-barcode">{t('form.barcode')}</Label>
+            <Input id="product-barcode" className="h-10" value={form.barcode} onChange={(event) => set('barcode', event.target.value)} placeholder={t('form.optional')} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="product-price">ราคาขาย (บาท)</Label>
+            <Label htmlFor="product-price">{t('form.price', { currency })}</Label>
             <Input
               id="product-price"
               className="h-10 text-right tabular-nums"
@@ -144,7 +149,7 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="product-cost">ต้นทุน (บาท)</Label>
+            <Label htmlFor="product-cost">{t('form.cost', { currency })}</Label>
             <Input
               id="product-cost"
               className="h-10 text-right tabular-nums"
@@ -152,17 +157,17 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
               aria-invalid={costSatang === null}
               value={form.cost}
               onChange={(event) => set('cost', event.target.value)}
-              placeholder="0.00"
+              placeholder={money.plain(0)}
             />
           </div>
           <div className="col-span-2 space-y-2">
-            <Label htmlFor="product-category">หมวดหมู่</Label>
+            <Label htmlFor="product-category">{t('form.category')}</Label>
             <Select value={form.categoryId} onValueChange={(value) => set('categoryId', value)}>
               <SelectTrigger id="product-category" className="h-10! w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NO_CATEGORY}>ไม่ระบุ</SelectItem>
+                <SelectItem value={NO_CATEGORY}>{t('form.noCategory')}</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category.id} value={String(category.id)}>
                     {category.name}
@@ -173,8 +178,8 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
           </div>
           <label className="col-span-2 flex items-center justify-between gap-4 rounded-lg border p-3">
             <span>
-              <span className="block text-sm font-medium">นับสต็อก</span>
-              <span className="block text-xs text-muted-foreground">ปิดสำหรับสินค้าที่ไม่ต้องนับจำนวน เช่น ค่าบริการ</span>
+              <span className="block text-sm font-medium">{t('form.trackStock')}</span>
+              <span className="block text-xs text-muted-foreground">{t('form.trackStockHint')}</span>
             </span>
             <Switch checked={form.trackStock} onCheckedChange={(checked) => set('trackStock', checked)} />
           </label>
@@ -187,10 +192,10 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
 
           <DialogFooter className="col-span-2">
             <Button type="button" variant="outline" className="h-10" onClick={onClose}>
-              ยกเลิก
+              {tc('cancel')}
             </Button>
             <Button type="submit" className="h-10" disabled={save.isPending || priceSatang === null || costSatang === null}>
-              {save.isPending ? 'กำลังบันทึก…' : 'บันทึก'}
+              {save.isPending ? t('form.saving') : t('form.save')}
             </Button>
           </DialogFooter>
         </form>

@@ -1,5 +1,6 @@
 import { Store } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -7,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { useLogin } from '../api'
 
 export function LoginPage() {
+  const { t } = useTranslation('auth')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
 
@@ -25,12 +27,12 @@ export function LoginPage() {
             <Store className="size-6" />
           </span>
           <CardTitle className="text-xl">EasyPOS</CardTitle>
-          <CardDescription>เข้าสู่ระบบเพื่อเริ่มขาย</CardDescription>
+          <CardDescription>{t('subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">ชื่อผู้ใช้</Label>
+              <Label htmlFor="username">{t('username')}</Label>
               <Input
                 id="username"
                 className="h-11 text-base"
@@ -42,7 +44,7 @@ export function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">รหัสผ่าน</Label>
+              <Label htmlFor="password">{t('password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -59,7 +61,7 @@ export function LoginPage() {
               </p>
             )}
             <Button type="submit" disabled={login.isPending} className="h-11 w-full text-base">
-              {login.isPending ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ'}
+              {login.isPending ? t('submitting') : t('submit')}
             </Button>
           </form>
         </CardContent>

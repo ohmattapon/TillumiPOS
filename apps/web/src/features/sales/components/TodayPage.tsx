@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Banknote, PackageX, Receipt as ReceiptIcon, ShoppingCart, TrendingUp, Wallet, type LucideIcon } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel, tableCell, tableHead } from '@/components/Panel'
@@ -10,8 +11,8 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { formatBaht, formatLongDate, formatTime, paymentMethodLabel } from '@/lib/money'
 import { isLowStock, LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
+import { useFormat } from '@/features/settings'
 import { salesTodayQuery, summaryTodayQuery } from '../api'
 
 type StatusFilter = 'all' | 'completed' | 'voided'
@@ -43,6 +44,9 @@ function StatCard({ icon: Icon, label, value, note, footer }: StatProps) {
 }
 
 export function TodayPage({ isOwner }: { isOwner: boolean }) {
+  const { t } = useTranslation('sales')
+  const { t: tc } = useTranslation()
+  const { money, date } = useFormat()
   const sales = useQuery(salesTodayQuery)
   const summary = useQuery({ ...summaryTodayQuery, enabled: isOwner })
   const products = useQuery(productsQuery())
@@ -65,19 +69,19 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
   return (
     <>
       <PageHeader
-        title="วันนี้"
-        highlight={formatLongDate(today)}
-        description={`${allSales.length} บิล · ยกเลิก ${voidedCount} บิล`}
+        title={t('today.title')}
+        highlight={date.longDate(today)}
+        description={t('today.summary', { count: allSales.length, voided: voidedCount })}
       >
         {lowStock.length > 0 && (
           <StatusBadge tone="warning" className="hidden h-7 px-3 sm:inline-flex">
-            สินค้าใกล้หมด {lowStock.length} รายการ
+            {t('today.lowStockBadge', { items: tc('items', { count: lowStock.length }) })}
           </StatusBadge>
         )}
         <Button asChild className="h-9 px-3">
           <Link to="/">
             <ShoppingCart />
-            เปิดหน้าขาย
+            {t('today.openPos')}
           </Link>
         </Button>
       </PageHeader>
@@ -89,29 +93,29 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
               <>
                 <StatCard
                   icon={Banknote}
-                  label="ยอดขายสุทธิ · วันนี้"
-                  value={`฿${formatBaht(stats.totalSatang)}`}
-                  footer={`ส่วนลดรวม ฿${formatBaht(stats.discountSatang)}`}
+                  label={t('stats.netSales')}
+                  value={money.format(stats.totalSatang)}
+                  footer={t('stats.totalDiscount', { amount: money.format(stats.discountSatang) })}
                 />
                 <StatCard
                   icon={ReceiptIcon}
-                  label="จำนวนบิล"
+                  label={t('stats.saleCount')}
                   value={String(stats.saleCount)}
-                  note={voidedCount > 0 && <span className="text-destructive">ยกเลิก {voidedCount}</span>}
-                  footer="นับเฉพาะบิลที่สำเร็จ"
+                  note={voidedCount > 0 && <span className="text-destructive">{t('stats.voided', { count: voidedCount })}</span>}
+                  footer={t('stats.completedOnly')}
                 />
                 <StatCard
                   icon={Wallet}
-                  label="เฉลี่ยต่อบิล"
-                  value={`฿${formatBaht(averageSatang)}`}
-                  footer={`VAT ที่รวมอยู่ ฿${formatBaht(stats.vatSatang)}`}
+                  label={t('stats.average')}
+                  value={money.format(averageSatang)}
+                  footer={t('stats.vatTotal', { amount: money.format(stats.vatSatang) })}
                 />
                 <StatCard
                   icon={TrendingUp}
-                  label="กำไรขั้นต้น"
-                  value={`฿${formatBaht(stats.profitSatang)}`}
-                  note={<span className="text-success">{marginPercent}% ของยอดขาย</span>}
-                  footer="ยอดขายหลังส่วนลด ลบต้นทุนสินค้า"
+                  label={t('stats.grossProfit')}
+                  value={money.format(stats.profitSatang)}
+                  note={<span className="text-success">{t('stats.margin', { percent: marginPercent })}</span>}
+                  footer={t('stats.profitNote')}
                 />
               </>
             ) : (
@@ -122,16 +126,16 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
 
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <Panel
-            title="บิลขายวันนี้"
-            description="แตะที่บิลเพื่อดูรายละเอียด พิมพ์ซ้ำ หรือยกเลิก"
+            title={t('list.title')}
+            description={t('list.description')}
             action={
               <SegmentedTabs
                 value={filter}
                 onChange={setFilter}
                 options={[
-                  { value: 'all', label: 'ทั้งหมด' },
-                  { value: 'completed', label: 'สำเร็จ' },
-                  { value: 'voided', label: 'ยกเลิก' },
+                  { value: 'all', label: t('list.all') },
+                  { value: 'completed', label: t('list.completed') },
+                  { value: 'voided', label: t('list.voided') },
                 ]}
               />
             }
@@ -140,11 +144,11 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className={tableHead}>เลขที่</TableHead>
-                  <TableHead className={tableHead}>เวลา</TableHead>
-                  <TableHead className={tableHead}>พนักงาน</TableHead>
-                  <TableHead className={`${tableHead} text-right`}>ยอดสุทธิ</TableHead>
-                  <TableHead className={tableHead}>สถานะ</TableHead>
+                  <TableHead className={tableHead}>{t('columns.receiptNo')}</TableHead>
+                  <TableHead className={tableHead}>{t('columns.time')}</TableHead>
+                  <TableHead className={tableHead}>{t('columns.cashier')}</TableHead>
+                  <TableHead className={`${tableHead} text-right`}>{t('columns.total')}</TableHead>
+                  <TableHead className={tableHead}>{t('columns.status')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -158,17 +162,17 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
                   >
                     <TableCell className={`${tableCell} font-medium tabular-nums`}>{sale.receiptNo}</TableCell>
                     <TableCell className={`${tableCell} text-muted-foreground tabular-nums`}>
-                      {formatTime(sale.createdAt)}
+                      {date.time(sale.createdAt)}
                     </TableCell>
                     <TableCell className={tableCell}>{sale.cashierName}</TableCell>
                     <TableCell className={`${tableCell} text-right font-medium tabular-nums`}>
-                      {formatBaht(sale.totalSatang)}
+                      {money.plain(sale.totalSatang)}
                     </TableCell>
                     <TableCell className={tableCell}>
                       {sale.status === 'voided' ? (
-                        <StatusBadge tone="danger">ยกเลิก</StatusBadge>
+                        <StatusBadge tone="danger">{t('list.voided')}</StatusBadge>
                       ) : (
-                        <StatusBadge tone="success">สำเร็จ</StatusBadge>
+                        <StatusBadge tone="success">{t('list.completed')}</StatusBadge>
                       )}
                     </TableCell>
                   </TableRow>
@@ -176,7 +180,7 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
                 {!sales.isPending && visibleSales.length === 0 && (
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                      {filter === 'all' ? 'วันนี้ยังไม่มีบิลขาย' : 'ไม่มีบิลในสถานะนี้'}
+                      {filter === 'all' ? t('list.empty') : t('list.emptyFiltered')}
                     </TableCell>
                   </TableRow>
                 )}
@@ -186,9 +190,11 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
 
           <div className="space-y-4">
             <Panel
-              title="ต้องดูแล"
-              description={`สินค้าที่เหลือไม่เกิน ${LOW_STOCK_THRESHOLD} ชิ้น`}
-              action={lowStock.length > 0 && <StatusBadge tone="warning">{lowStock.length} รายการ</StatusBadge>}
+              title={t('attention.title')}
+              description={t('attention.description', { count: LOW_STOCK_THRESHOLD })}
+              action={
+                lowStock.length > 0 && <StatusBadge tone="warning">{tc('items', { count: lowStock.length })}</StatusBadge>
+              }
             >
               <ul className="divide-y">
                 {lowStock.slice(0, 8).map((product) => (
@@ -201,27 +207,27 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
                       <p className="truncate text-xs text-muted-foreground">{product.sku}</p>
                     </div>
                     <StatusBadge tone={product.stockQty <= 0 ? 'danger' : 'warning'}>
-                      {product.stockQty <= 0 ? 'หมด' : `เหลือ ${product.stockQty}`}
+                      {product.stockQty <= 0 ? t('attention.soldOut') : t('attention.left', { count: product.stockQty })}
                     </StatusBadge>
                   </li>
                 ))}
                 {lowStock.length === 0 && (
-                  <li className="px-4 py-6 text-center text-sm text-muted-foreground">สต็อกทุกรายการยังเพียงพอ</li>
+                  <li className="px-4 py-6 text-center text-sm text-muted-foreground">{t('attention.allGood')}</li>
                 )}
               </ul>
             </Panel>
 
             {stats && (
-              <Panel title="รับชำระวันนี้" description="เงินสดหักเงินทอนแล้ว">
+              <Panel title={t('payments.title')} description={t('payments.description')}>
                 <ul className="divide-y">
                   {stats.byMethod.map((row) => (
                     <li key={row.method} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                      <span>{paymentMethodLabel[row.method]}</span>
-                      <span className="font-medium tabular-nums">฿{formatBaht(row.amountSatang)}</span>
+                      <span>{tc(`paymentMethods.${row.method}`)}</span>
+                      <span className="font-medium tabular-nums">{money.format(row.amountSatang)}</span>
                     </li>
                   ))}
                   {stats.byMethod.length === 0 && (
-                    <li className="px-4 py-6 text-center text-sm text-muted-foreground">ยังไม่มีการรับชำระ</li>
+                    <li className="px-4 py-6 text-center text-sm text-muted-foreground">{t('payments.empty')}</li>
                   )}
                 </ul>
               </Panel>

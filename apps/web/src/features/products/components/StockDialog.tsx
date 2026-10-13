@@ -1,5 +1,6 @@
 import type { Product } from '@pos/api/types'
 import { useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -9,11 +10,6 @@ import { useChangeStock, type StockChange } from '../api'
 
 export type StockMode = 'receive' | 'adjust'
 
-const copy = {
-  receive: { title: 'รับสินค้าเข้า', label: 'จำนวนที่รับเข้า (ชิ้น)', submit: 'รับเข้าสต็อก' },
-  adjust: { title: 'ปรับยอดสต็อก', label: 'จำนวนที่นับได้จริง (ชิ้น)', submit: 'ปรับยอด' },
-}
-
 interface Props {
   product: Product
   mode: StockMode
@@ -21,6 +17,8 @@ interface Props {
 }
 
 export function StockDialog({ product, mode, onClose }: Props) {
+  const { t } = useTranslation('products')
+  const { t: tc } = useTranslation()
   const [quantity, setQuantity] = useState('')
   const [note, setNote] = useState('')
 
@@ -40,7 +38,7 @@ export function StockDialog({ product, mode, onClose }: Props) {
         : { mode, productId: product.id, countedQty: value, note: trimmedNote }
     save.mutate(change, {
       onSuccess: (movement) => {
-        toast.success(`"${product.name}" คงเหลือ ${movement.balanceAfter} ชิ้น`)
+        toast.success(t('toast.stockNow', { name: product.name, count: movement.balanceAfter }))
         onClose()
       },
     })
@@ -50,15 +48,15 @@ export function StockDialog({ product, mode, onClose }: Props) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>{copy[mode].title}</DialogTitle>
+          <DialogTitle>{t(`stock.${mode}Title`)}</DialogTitle>
           <DialogDescription>
-            {product.name} · ในระบบมี {product.stockQty} ชิ้น
+            {t('stock.current', { name: product.name, count: product.stockQty })}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="stock-quantity">{copy[mode].label}</Label>
+            <Label htmlFor="stock-quantity">{t(`stock.${mode}Label`)}</Label>
             <Input
               id="stock-quantity"
               className="h-12 text-right text-xl! tabular-nums"
@@ -69,17 +67,17 @@ export function StockDialog({ product, mode, onClose }: Props) {
               required
             />
             <p className="text-xs text-muted-foreground">
-              {balanceAfter === null ? 'กรอกจำนวนเป็นตัวเลขเต็ม' : `หลังบันทึกจะคงเหลือ ${balanceAfter} ชิ้น`}
+              {balanceAfter === null ? t('stock.enterWhole') : t('stock.after', { count: balanceAfter })}
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="stock-note">หมายเหตุ</Label>
+            <Label htmlFor="stock-note">{t('stock.note')}</Label>
             <Input
               id="stock-note"
               className="h-10"
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              placeholder={mode === 'receive' ? 'เช่น เลขที่ใบส่งของ' : 'เช่น นับสต็อกประจำเดือน ของชำรุด'}
+              placeholder={t(`stock.${mode}Note`)}
               maxLength={500}
             />
           </div>
@@ -92,10 +90,10 @@ export function StockDialog({ product, mode, onClose }: Props) {
 
           <DialogFooter>
             <Button type="button" variant="outline" className="h-10" onClick={onClose}>
-              ยกเลิก
+              {tc('cancel')}
             </Button>
             <Button type="submit" className="h-10" disabled={!isValid || save.isPending}>
-              {save.isPending ? 'กำลังบันทึก…' : copy[mode].submit}
+              {save.isPending ? t('stock.saving') : t(`stock.${mode}Submit`)}
             </Button>
           </DialogFooter>
         </form>

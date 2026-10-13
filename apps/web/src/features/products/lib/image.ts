@@ -1,3 +1,5 @@
+import i18n from 'i18next'
+
 const MAX_EDGE = 800
 const QUALITY = 0.85
 
@@ -15,6 +17,6 @@ export async function prepareImage(file: File): Promise<File> {
   bitmap.close()
 
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', QUALITY))
-  if (!blob) throw new Error('แปลงรูปภาพไม่สำเร็จ')
+  if (!blob) throw new Error(i18n.t('products:form.imageFailed'))
   return new File([blob], 'image.webp', { type: blob.type })
 }

@@ -2,6 +2,7 @@ import type { Product } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
 import { MoreHorizontal, PackagePlus, Plus, Search } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel, tableCell, tableHead } from '@/components/Panel'
@@ -20,8 +21,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { formatBaht } from '@/lib/money'
 import { categoriesQuery } from '@/features/categories'
+import { useFormat, useSettings } from '@/features/settings'
 import { productsQuery, useSetProductActive } from '../api'
 import { isLowStock } from '../lib/stock'
 
@@ -30,6 +31,10 @@ type Filter = 'all' | 'low' | 'inactive'
 type OpenDialog = { kind: 'form'; product?: Product } | { kind: 'stock'; product: Product; mode: StockMode } | null
 
 export function ProductsPage() {
+  const { t } = useTranslation('products')
+  const { t: tc } = useTranslation()
+  const { money } = useFormat()
+  const { vatMode } = useSettings()
   const products = useQuery(productsQuery(true))
   const categories = useQuery(categoriesQuery)
 
@@ -43,7 +48,7 @@ export function ProductsPage() {
       { id: product.id, isActive: !product.isActive },
       {
         onSuccess: (updated) =>
-          toast.success(updated.isActive ? `เปิดขาย "${updated.name}" แล้ว` : `ปิดการขาย "${updated.name}" แล้ว`),
+          toast.success(t(updated.isActive ? 'toast.activated' : 'toast.deactivated', { name: updated.name })),
         onError: (error) => toast.error(error.message),
       },
     )
@@ -62,10 +67,16 @@ export function ProductsPage() {
 
   return (
     <>
-      <PageHeader title="สินค้าและสต็อก" description={`${all.length} รายการ · ราคาเป็นบาท รวม VAT`}>
+      <PageHeader
+        title={t('title')}
+        description={t('pageDescription', {
+          items: tc('items', { count: all.length }),
+          priceNote: t(`priceNote.${vatMode}`),
+        })}
+      >
         <Button className="h-9 px-3" onClick={() => setDialog({ kind: 'form' })}>
           <Plus />
-          เพิ่มสินค้า
+          {t('add')}
         </Button>
       </PageHeader>
 
@@ -75,37 +86,37 @@ export function ProductsPage() {
             value={filter}
             onChange={setFilter}
             options={[
-              { value: 'all', label: 'ทั้งหมด', count: all.length },
-              { value: 'low', label: 'ใกล้หมด', count: all.filter((product) => product.isActive && isLowStock(product)).length },
-              { value: 'inactive', label: 'ปิดการขาย', count: all.filter((product) => !product.isActive).length },
+              { value: 'all', label: t('filters.all'), count: all.length },
+              { value: 'low', label: t('filters.low'), count: all.filter((product) => product.isActive && isLowStock(product)).length },
+              { value: 'inactive', label: t('filters.inactive'), count: all.filter((product) => !product.isActive).length },
             ]}
           />
           <div className="relative ml-auto w-full max-w-xs">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="h-9 pl-9"
-              placeholder="ค้นหาชื่อ รหัส หรือบาร์โค้ด"
-              aria-label="ค้นหาสินค้า"
+              placeholder={t('search.placeholder')}
+              aria-label={t('search.label')}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
         </div>
 
-        <Panel title="รายการสินค้า" description={`แสดง ${visible.length} จาก ${all.length} รายการ`}>
+        <Panel title={t('list.title')} description={t('list.description', { shown: visible.length, total: all.length })}>
           {products.error && <p className="p-4 text-sm text-destructive">{products.error.message}</p>}
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className={tableHead}>สินค้า</TableHead>
-                <TableHead className={tableHead}>หมวดหมู่</TableHead>
-                <TableHead className={tableHead}>บาร์โค้ด</TableHead>
-                <TableHead className={`${tableHead} text-right`}>ราคาขาย</TableHead>
-                <TableHead className={`${tableHead} text-right`}>ต้นทุน</TableHead>
-                <TableHead className={`${tableHead} text-right`}>คงเหลือ</TableHead>
-                <TableHead className={tableHead}>สถานะ</TableHead>
+                <TableHead className={tableHead}>{t('columns.product')}</TableHead>
+                <TableHead className={tableHead}>{t('columns.category')}</TableHead>
+                <TableHead className={tableHead}>{t('columns.barcode')}</TableHead>
+                <TableHead className={`${tableHead} text-right`}>{t('columns.price')}</TableHead>
+                <TableHead className={`${tableHead} text-right`}>{t('columns.cost')}</TableHead>
+                <TableHead className={`${tableHead} text-right`}>{t('columns.stock')}</TableHead>
+                <TableHead className={tableHead}>{t('columns.status')}</TableHead>
                 <TableHead className={`${tableHead} w-0`}>
-                  <span className="sr-only">การทำงาน</span>
+                  <span className="sr-only">{t('columns.actions')}</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -125,22 +136,22 @@ export function ProductsPage() {
                     {(product.categoryId && categoryName.get(product.categoryId)) || '—'}
                   </TableCell>
                   <TableCell className={`${tableCell} tabular-nums`}>{product.barcode ?? '—'}</TableCell>
-                  <TableCell className={`${tableCell} text-right tabular-nums`}>{formatBaht(product.priceSatang)}</TableCell>
-                  <TableCell className={`${tableCell} text-right tabular-nums`}>{formatBaht(product.costSatang)}</TableCell>
+                  <TableCell className={`${tableCell} text-right tabular-nums`}>{money.plain(product.priceSatang)}</TableCell>
+                  <TableCell className={`${tableCell} text-right tabular-nums`}>{money.plain(product.costSatang)}</TableCell>
                   <TableCell className={`${tableCell} text-right font-medium tabular-nums`}>
                     {product.trackStock ? product.stockQty : '—'}
                   </TableCell>
                   <TableCell className={tableCell}>
                     {!product.isActive ? (
-                      <StatusBadge tone="neutral">ปิดการขาย</StatusBadge>
+                      <StatusBadge tone="neutral">{t('status.inactive')}</StatusBadge>
                     ) : !product.trackStock ? (
-                      <StatusBadge tone="neutral">ไม่นับสต็อก</StatusBadge>
+                      <StatusBadge tone="neutral">{t('status.untracked')}</StatusBadge>
                     ) : product.stockQty <= 0 ? (
-                      <StatusBadge tone="danger">หมด</StatusBadge>
+                      <StatusBadge tone="danger">{t('status.out')}</StatusBadge>
                     ) : isLowStock(product) ? (
-                      <StatusBadge tone="warning">ใกล้หมด</StatusBadge>
+                      <StatusBadge tone="warning">{t('status.low')}</StatusBadge>
                     ) : (
-                      <StatusBadge tone="success">พร้อมขาย</StatusBadge>
+                      <StatusBadge tone="success">{t('status.ready')}</StatusBadge>
                     )}
                   </TableCell>
                   <TableCell className={`${tableCell} text-right whitespace-nowrap`}>
@@ -151,25 +162,27 @@ export function ProductsPage() {
                         onClick={() => setDialog({ kind: 'stock', product, mode: 'receive' })}
                       >
                         <PackagePlus />
-                        รับเข้า
+                        {t('actions.receive')}
                       </Button>
                     )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="size-9" aria-label={`การทำงานอื่นของ ${product.name}`}>
+                        <Button variant="ghost" className="size-9" aria-label={t('actions.more', { name: product.name })}>
                           <MoreHorizontal />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => setDialog({ kind: 'form', product })}>แก้ไขสินค้า</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setDialog({ kind: 'form', product })}>
+                          {t('actions.edit')}
+                        </DropdownMenuItem>
                         {product.trackStock && (
                           <DropdownMenuItem onSelect={() => setDialog({ kind: 'stock', product, mode: 'adjust' })}>
-                            ปรับยอดสต็อก
+                            {t('actions.adjust')}
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onSelect={() => toggleActive(product)}>
-                          {product.isActive ? 'ปิดการขาย' : 'เปิดการขาย'}
+                          {product.isActive ? t('actions.deactivate') : t('actions.activate')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -179,7 +192,7 @@ export function ProductsPage() {
               {!products.isPending && visible.length === 0 && (
                 <TableRow className="hover:bg-transparent">
                   <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                    ไม่พบสินค้า
+                    {t('list.empty')}
                   </TableCell>
                 </TableRow>
               )}

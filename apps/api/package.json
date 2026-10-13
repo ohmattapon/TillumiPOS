@@ -4,7 +4,9 @@
   "type": "module",
   "exports": {
     ".": "./src/app.ts",
-    "./types": "./src/types.ts"
+    "./types": "./src/types.ts",
+    "./pricing": "./src/domains/pricing.ts",
+    "./shop-settings": "./src/domains/shop-settings.domain.ts"
   },
   "scripts": {
     "dev": "bun --env-file=../../.env --watch src/index.ts",

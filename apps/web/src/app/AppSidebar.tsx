@@ -1,6 +1,17 @@
 import type { User } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarCheck, ChevronsUpDown, LogOut, Package, ShoppingCart, Store, UserRound, type LucideIcon } from 'lucide-react'
+import {
+  CalendarCheck,
+  ChevronsUpDown,
+  LogOut,
+  Package,
+  Settings,
+  ShoppingCart,
+  Store,
+  UserRound,
+  type LucideIcon,
+} from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { NavLink, useLocation } from 'react-router'
 import {
   DropdownMenu,
@@ -23,6 +34,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { isLowStock, productsQuery } from '@/features/products'
+import { useSettings } from '@/features/settings'
 
 interface NavItem {
   to: string
@@ -31,29 +43,36 @@ interface NavItem {
   badge?: number
 }
 
-const roleLabel = { owner: 'เจ้าของร้าน', cashier: 'แคชเชียร์' } as const
-
 // Active item reads as a raised white card with accent-coloured text.
 const activeItem =
   'data-[active=true]:bg-background data-[active=true]:text-primary data-[active=true]:shadow-sm data-[active=true]:ring-1 data-[active=true]:ring-border'
 
 export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => void }) {
+  const { t } = useTranslation('app')
   const { pathname } = useLocation()
+  const { shopName } = useSettings()
   const isOwner = user.role === 'owner'
   const products = useQuery(productsQuery())
-  const lowStockCount =
-    products.data?.filter(isLowStock).length ?? 0
+  const lowStockCount = products.data?.filter(isLowStock).length ?? 0
 
   const groups: { label: string; items: NavItem[] }[] = [
     {
-      label: 'งานขาย',
+      label: t('groups.sales'),
       items: [
-        { to: '/', label: 'ขายสินค้า', icon: ShoppingCart },
-        { to: '/today', label: 'วันนี้', icon: CalendarCheck },
+        { to: '/', label: t('nav.sell'), icon: ShoppingCart },
+        { to: '/today', label: t('nav.today'), icon: CalendarCheck },
       ],
     },
     ...(isOwner
-      ? [{ label: 'จัดการ', items: [{ to: '/products', label: 'สินค้าและสต็อก', icon: Package, badge: lowStockCount }] }]
+      ? [
+          {
+            label: t('groups.manage'),
+            items: [
+              { to: '/products', label: t('nav.products'), icon: Package, badge: lowStockCount },
+              { to: '/settings', label: t('nav.settings'), icon: Settings },
+            ],
+          },
+        ]
       : []),
   ]
 
@@ -67,7 +86,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
                 <span className="flex aspect-square size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
                   <Store className="size-4" />
                 </span>
-                <span className="text-lg font-semibold">EasyPOS</span>
+                <span className="truncate text-lg font-semibold">{shopName}</span>
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -115,7 +134,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
                   </span>
                   <span className="grid flex-1 text-left leading-tight">
                     <span className="truncate text-sm font-medium">{user.displayName}</span>
-                    <span className="truncate text-xs text-muted-foreground">{roleLabel[user.role]}</span>
+                    <span className="truncate text-xs text-muted-foreground">{t(`roles.${user.role}`)}</span>
                   </span>
                   <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
                 </SidebarMenuButton>
@@ -125,7 +144,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={onLogout}>
                   <LogOut />
-                  ออกจากระบบ
+                  {t('logout')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
