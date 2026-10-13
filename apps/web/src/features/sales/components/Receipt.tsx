@@ -1,5 +1,7 @@
 import type { Sale } from '@pos/api/types'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { branchesQuery } from '@/features/branches'
 import { useFormat, useSettings } from '@/features/settings'
 
 /** Receipt body. Shown inside a dialog on screen and printed on its own (see the print rules in index.css). */
@@ -7,9 +9,15 @@ export function Receipt({ sale }: { sale: Sale }) {
   const { t } = useTranslation('sales')
   const { t: tc } = useTranslation()
   const { money, date } = useFormat()
-  const { shopName, taxId, address, phone } = useSettings()
+  const shop = useSettings()
+  const branches = useQuery(branchesQuery).data
   const row = 'flex justify-between gap-4'
 
+  // The branch that made the sale, with the shop's own address and phone where the branch has none.
+  const branch = branches?.find((item) => item.id === sale.branchId)
+  const { shopName, taxId } = shop
+  const address = branch?.address ?? shop.address
+  const phone = branch?.phone ?? shop.phone
   // The tax rules the sale was rung up under, not today's settings: changing them never rewrites old bills.
   const vatRate = String(sale.vatRateBp / 100)
   const vatAdded = sale.vatMode === 'exclusive'
@@ -19,6 +27,7 @@ export function Receipt({ sale }: { sale: Sale }) {
     <div className="space-y-2 font-mono text-sm tabular-nums">
       <div className="text-center">
         <p className="text-base font-bold">{shopName}</p>
+        {branch && branch.name !== shopName && <p>{branch.name}</p>}
         {address && <p>{address}</p>}
         {phone && <p>{t('receipt.phone', { phone })}</p>}
         {taxId && <p>{t('receipt.taxId', { taxId })}</p>}

@@ -7,6 +7,7 @@ const th = {
     sell: 'ขายสินค้า',
     today: 'วันนี้',
     products: 'สินค้าและสต็อก',
+    branches: 'สาขา',
     settings: 'ตั้งค่าร้าน',
   },
   roles: {
@@ -25,6 +26,7 @@ const en = {
     sell: 'Sell',
     today: 'Today',
     products: 'Products & stock',
+    branches: 'Branches',
     settings: 'Shop settings',
   },
   roles: {

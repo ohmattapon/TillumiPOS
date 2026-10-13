@@ -1,6 +1,7 @@
 import type { User } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
 import {
+  Building2,
   CalendarCheck,
   ChevronsUpDown,
   LogOut,
@@ -33,6 +34,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
+import { BranchSwitcher, useActiveBranch } from '@/features/branches'
+import { clearCart } from '@/features/pos'
 import { isLowStock, productsQuery } from '@/features/products'
 import { useSettings } from '@/features/settings'
 
@@ -51,6 +54,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
   const { t } = useTranslation('app')
   const { pathname } = useLocation()
   const { shopName } = useSettings()
+  const { branch, canSwitch } = useActiveBranch()
   const isOwner = user.role === 'owner'
   const products = useQuery(productsQuery())
   const lowStockCount = products.data?.filter(isLowStock).length ?? 0
@@ -69,6 +73,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
             label: t('groups.manage'),
             items: [
               { to: '/products', label: t('nav.products'), icon: Package, badge: lowStockCount },
+              { to: '/branches', label: t('nav.branches'), icon: Building2 },
               { to: '/settings', label: t('nav.settings'), icon: Settings },
             ],
           },
@@ -91,6 +96,19 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        {canSwitch ? (
+          <div className="px-2 group-data-[collapsible=icon]:hidden">
+            {/* The cart is for the branch it was rung up in, so a switch starts a fresh one. */}
+            <BranchSwitcher onSwitched={clearCart} />
+          </div>
+        ) : (
+          branch &&
+          branch.name !== shopName && (
+            <p className="truncate px-4 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+              {branch.name}
+            </p>
+          )
+        )}
       </SidebarHeader>
 
       <SidebarContent>
