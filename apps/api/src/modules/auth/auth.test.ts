@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
+import { app } from '../../app'
 import { client, login, ok, PASSWORD, pngFile, resetDatabase, seedProduct, signIn } from '../../../test/harness'
 
 beforeEach(() => resetDatabase())
@@ -34,8 +35,18 @@ describe('login', () => {
     expect(result.error?.value).toMatchObject({ code: 'UNAUTHORIZED' })
   })
 
-  test('a garbage session cookie is refused, not an internal error', async () => {
-    const result = await client('session=not-a-jwt').auth.me.get()
+  test('a tampered session cookie is refused, not an internal error', async () => {
+    await signIn('owner', 'boss')
+    const response = await fetch(`http://localhost:${app.server!.port}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: 'boss', password: PASSWORD }),
+    })
+    const cookie = response.headers.getSetCookie()[0]!.split(';')[0]!
+    const [name, token] = cookie.split('=')
+    const segments = token!.split('.')
+    segments[2] = `${segments[2]![0] === 'a' ? 'b' : 'a'}${segments[2]!.slice(1)}`
+    const result = await client(`${name}=${segments.join('.')}`).auth.me.get()
 
     expect(result.status).toBe(401)
   })
@@ -46,6 +57,7 @@ describe('roles', () => {
     const owner = await signIn('owner')
     const cashier = await signIn('cashier')
     const product = await seedProduct(owner, { stock: 5 })
+    const category = ok(await owner.api.catalog.categories.post({ name: 'Drinks' }))
     const sale = ok(
       await cashier.api.sales.post({
         items: [{ productId: product.id, quantity: 1 }],
@@ -60,6 +72,7 @@ describe('roles', () => {
       cashier.api.users.post({ username: 'newbie', password: PASSWORD, displayName: 'New', role: 'cashier' }),
       cashier.api.users({ id: owner.user.id }).patch({ displayName: 'Renamed' }),
       cashier.api.catalog.categories.post({ name: 'Drinks' }),
+      cashier.api.catalog.categories({ id: category.id }).patch({ name: 'Renamed drinks' }),
       cashier.api.catalog.products.post({ sku: 'NEW-1', name: 'New', priceSatang: 100 }),
       cashier.api.catalog.products({ id: product.id }).patch({ priceSatang: 1 }),
       cashier.api.catalog.products({ id: product.id }).image.put({ file: pngFile() }),
