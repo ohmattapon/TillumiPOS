@@ -83,4 +83,12 @@ describe('categories', () => {
 
     expect(ok(await owner.api.catalog.categories.post({ name })).name).toBe(name)
   })
+
+  test('an update with no fields returns the category unchanged', async () => {
+    const created = ok(await owner.api.catalog.categories.post({ name: 'Drinks', sortOrder: 3 }))
+
+    const unchanged = ok(await owner.api.catalog.categories({ id: created.id }).patch({}))
+
+    expect(unchanged).toEqual(created)
+  })
 })
