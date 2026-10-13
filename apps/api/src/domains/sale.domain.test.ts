@@ -165,6 +165,10 @@ describe('SaleEntity.complete: amount ceiling', () => {
 })
 
 describe('SaleEntity.complete: lines', () => {
+  test('keeps the shift that owns a v2 sale', () => {
+    expect(complete({ shiftId: 42 } as never)).toMatchObject({ shiftId: 42 })
+  })
+
   test('snapshots name, SKU, price and cost of each product, and records the cashier', () => {
     const sale = complete({ lines: [line(2500, 2, 4)], payments: cash(5000) })
 

@@ -17,6 +17,8 @@ export interface CheckoutRequest {
   payments: (SalePayment & { qrPaymentId?: number })[]
   cashier: { id: number; displayName: string }
   branch: { id: number; code: string }
+  /** Required for shift-mode v2 requests; legacy v1 passes no shift. */
+  shiftId?: number
 }
 
 /**

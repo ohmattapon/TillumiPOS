@@ -14,6 +14,18 @@ const item = t.Object({
   lineTotalSatang: t.Integer(),
 })
 
+const pay = t.Object({
+  discountSatang: t.Optional(satang()),
+  payments: t.Array(
+    t.Object({
+      method,
+      amountSatang: satang({ minimum: 1 }),
+      qrPaymentId: t.Optional(t.Integer({ minimum: 1 })),
+    }),
+    { minItems: 1 },
+  ),
+})
+
 export const orderSchemas = {
   order: t.Object({
     id: t.Integer(),
@@ -43,18 +55,8 @@ export const orderSchemas = {
   addItem: t.Object({ productId: t.Integer({ minimum: 1 }), quantity: t.Integer({ minimum: 1 }) }),
   setQuantity: t.Object({ quantity: t.Integer({ minimum: 1 }) }),
   cancel: t.Object({ reason: t.String({ minLength: 1, maxLength: 500 }) }),
-  pay: t.Object({
-    discountSatang: t.Optional(satang()),
-    payments: t.Array(
-      t.Object({
-        method,
-        amountSatang: satang({ minimum: 1 }),
-        // The confirmed QR payment backing a `promptpay` payment.
-        qrPaymentId: t.Optional(t.Integer({ minimum: 1 })),
-      }),
-      { minItems: 1 },
-    ),
-  }),
+  pay,
+  payV2: t.Composite([pay, t.Object({ shiftId: t.Integer({ minimum: 1 }) })]),
   listQuery: t.Object({
     status: t.Optional(status),
     limit: t.Optional(t.Numeric({ minimum: 1, maximum: 500 })),

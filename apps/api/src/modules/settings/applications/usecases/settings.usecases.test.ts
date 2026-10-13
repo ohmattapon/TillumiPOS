@@ -1,17 +1,20 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
-import { mockShopSettingsRepository } from '../../../../__tests__/mocks'
+import { mockShopSettingsRepository, mockShiftSettingsGuard, mockUnitOfWork } from '../../../../__tests__/mocks'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DEFAULT_SHOP_SETTINGS, ShopSettingsEntity } from '../../../../domains/shop-settings.domain'
 import { GetShopSettingsUseCase } from './get-shop-settings.usecase'
 import { UpdateShopSettingsUseCase } from './update-shop-settings.usecase'
 
 let repo: ReturnType<typeof mockShopSettingsRepository>
+let shiftGuard: ReturnType<typeof mockShiftSettingsGuard>
 const current = new ShopSettingsEntity({ ...DEFAULT_SHOP_SETTINGS, shopName: 'ร้านสมชาย', taxId: '0105500000000' })
 
 beforeEach(() => {
   repo = mockShopSettingsRepository()
+  shiftGuard = mockShiftSettingsGuard()
   repo.get.mockResolvedValue(current)
+  repo.getForUpdate.mockResolvedValue(current)
   repo.save.mockImplementation(async (settings) => settings)
 })
 
@@ -22,7 +25,7 @@ describe('GetShopSettingsUseCase', () => {
 })
 
 describe('UpdateShopSettingsUseCase', () => {
-  const update = (input: unknown) => new UpdateShopSettingsUseCase(repo).execute(input)
+  const update = (input: unknown) => new UpdateShopSettingsUseCase(repo, shiftGuard, mockUnitOfWork()).execute(input)
 
   test('changes only the given fields and stores the result', async () => {
     const saved = await update({ vatMode: 'exclusive', vatRateBp: 1000 })
@@ -48,6 +51,18 @@ describe('UpdateShopSettingsUseCase', () => {
     expect(saved).toMatchObject({ shopName: 'ร้านใหม่', currency: 'USD' })
   })
 
+  test('checks active shifts before changing currency', async () => {
+    await update({ currency: 'USD' })
+
+    expect(shiftGuard.assertCurrencyChangeAllowed).toHaveBeenCalledTimes(1)
+  })
+
+  test('does not check shifts for unrelated settings changes', async () => {
+    await update({ shopName: 'ร้านใหม่' })
+
+    expect(shiftGuard.assertCurrencyChangeAllowed).not.toHaveBeenCalled()
+  })
+
   test.each([
     ['an empty shop name', { shopName: '   ' }],
     ['a VAT rate above 100%', { vatRateBp: 10_001 }],
@@ -57,7 +72,7 @@ describe('UpdateShopSettingsUseCase', () => {
     ['a currency code of the wrong length', { currency: 'BAHT' }],
   ])('rejects %s before reading or storing anything', async (_label, input) => {
     await expect(update(input)).rejects.toBeInstanceOf(ZodError)
-    expect(repo.get).not.toHaveBeenCalled()
+    expect(repo.getForUpdate).not.toHaveBeenCalled()
     expect(repo.save).not.toHaveBeenCalled()
   })
 

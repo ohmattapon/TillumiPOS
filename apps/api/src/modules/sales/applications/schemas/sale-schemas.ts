@@ -14,6 +14,8 @@ export const completeSaleSchema = z.object({
   payments: z.array(payment).min(1),
 })
 
+export const completeSaleV2Schema = completeSaleSchema.extend({ shiftId: z.number().int().positive() })
+
 export const voidSaleSchema = z.object({ reason: z.string().min(1).max(500) })
 
 export const listSalesSchema = z.object({

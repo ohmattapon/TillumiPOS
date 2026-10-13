@@ -1,5 +1,6 @@
 import { inject, injectable } from 'tsyringe'
 import { DomainError } from '../../../../domains/errors/domain-error'
+import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { SaleEntity } from '../../../../domains/sale.domain'
 import { stockLedgerToken } from '../../../inventory/applications/ports/stock-ledger.port'
 import type { IStockLedger } from '../../../inventory/applications/ports/stock-ledger.port'
@@ -9,6 +10,9 @@ import { productRepositoryToken } from '../../../products/applications/ports/pro
 import type { IProductRepository } from '../../../products/applications/ports/product.repository'
 import { shopSettingsRepositoryToken } from '../../../settings/applications/ports/shop-settings.repository'
 import type { IShopSettingsRepository } from '../../../settings/applications/ports/shop-settings.repository'
+import { TOKENS } from '../../../tokens'
+import type { ICheckoutPolicy } from '../../../shared/ports/checkout-policy.port'
+import type { IShiftLedger } from '../../../shared/ports/shift-ledger.port'
 import { saleRepositoryToken } from '../ports/sale.repository'
 import type { ISaleRepository } from '../ports/sale.repository'
 import type { CheckoutRequest, ISaleCheckout } from '../ports/sale-checkout.port'
@@ -21,9 +25,17 @@ export class SaleCheckout implements ISaleCheckout {
     @inject(stockLedgerToken) private readonly ledger: IStockLedger,
     @inject(shopSettingsRepositoryToken) private readonly settings: IShopSettingsRepository,
     @inject(qrPaymentClaimsToken) private readonly qrPayments: IQrPaymentClaims,
+    @inject(TOKENS.CheckoutPolicy) private readonly checkoutPolicy: ICheckoutPolicy,
+    @inject(TOKENS.ShiftLedger) private readonly shiftLedger: IShiftLedger,
   ) {}
 
-  async checkout({ lines: requested, discountSatang, payments, cashier, branch }: CheckoutRequest) {
+  async checkout({ lines: requested, discountSatang, payments, cashier, branch, shiftId }: CheckoutRequest) {
+    const shiftsEnabled = await this.checkoutPolicy.isShiftsEnabled()
+    if (shiftsEnabled && shiftId === undefined)
+      throw new DomainConflictError('กรุณาระบุกะที่เปิดอยู่ก่อนรับชำระ', 'SHIFT_REQUIRED')
+    if (!shiftsEnabled && shiftId !== undefined)
+      throw new DomainConflictError('การชำระด้วยกะต้องเปิด CHECKOUT_MODE=shifts', 'CHECKOUT_MODE_REQUIRED')
+    if (shiftId !== undefined) await this.shiftLedger.assertOpenForCheckout(shiftId, branch.id)
     // Merge repeated products; a Map keeps the order they were added. The first quoted price of a product wins.
     const quantities = new Map<number, number>()
     const quoted = new Map<number, number>()
@@ -54,6 +66,7 @@ export class SaleCheckout implements ISaleCheckout {
       vatMode: shop.vatMode,
       vatRateBp: shop.vatRateBp,
       branchId: branch.id,
+      shiftId: shiftId ?? null,
       cashier,
     })
     // Money that a bank has confirmed backs QR payments; checked here, after the amounts are known to add up.
@@ -73,6 +86,17 @@ export class SaleCheckout implements ISaleCheckout {
         reference: sale.receiptNo,
         userId: cashier.id,
       })
+
+    if (shiftId !== undefined) {
+      const cashTendered = sale.payments
+        .filter((payment) => payment.method === 'cash')
+        .reduce((amount, payment) => amount + payment.amountSatang, 0)
+      const netCash = cashTendered - sale.changeSatang
+      await this.shiftLedger.recordSaleCash({
+        shiftId, branchId: branch.id, saleId: sale.id, receiptNo: sale.receiptNo,
+        actorId: cashier.id, actorName: cashier.displayName, amountSatang: netCash, createdAt: sale.createdAt,
+      })
+    }
 
     return sale
   }

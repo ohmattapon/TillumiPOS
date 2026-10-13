@@ -4,6 +4,7 @@ import { branches } from './branches'
 import { products } from './products'
 import { vatMode } from './shop-settings'
 import { users } from './users'
+import { shifts } from './shifts'
 
 export const saleStatus = pgEnum('sale_status', ['completed', 'voided'])
 export const paymentMethod = pgEnum('payment_method', ['cash', 'promptpay', 'card'])
@@ -30,6 +31,7 @@ export const sales = pgTable(
     branchId: integer()
       .notNull()
       .references(() => branches.id),
+    shiftId: integer().references(() => shifts.id),
     status: saleStatus().notNull().default('completed'),
     subtotalSatang: integer().notNull(),
     discountSatang: integer().notNull().default(0),
@@ -51,7 +53,7 @@ export const sales = pgTable(
     voidReason: text(),
     createdAt: createdAt(),
   },
-  (table) => [index().on(table.createdAt), index().on(table.branchId, table.createdAt)],
+  (table) => [index().on(table.createdAt), index().on(table.branchId, table.createdAt), index().on(table.shiftId, table.createdAt)],
 )
 
 export const saleItems = pgTable(

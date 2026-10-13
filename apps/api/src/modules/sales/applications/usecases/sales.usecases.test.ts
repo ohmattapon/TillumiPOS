@@ -8,6 +8,8 @@ import {
   mockShopSettingsRepository,
   mockStockLedger,
   mockUnitOfWork,
+  mockCheckoutPolicy,
+  mockShiftLedger,
 } from '../../../../__tests__/mocks'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
@@ -29,6 +31,8 @@ let ledger: ReturnType<typeof mockStockLedger>
 let unitOfWork: ReturnType<typeof mockUnitOfWork>
 let settings: ReturnType<typeof mockShopSettingsRepository>
 let qrPayments: ReturnType<typeof mockQrPaymentClaims>
+let checkoutPolicy: ReturnType<typeof mockCheckoutPolicy>
+let shiftLedger: ReturnType<typeof mockShiftLedger>
 
 beforeEach(() => {
   sales = mockSaleRepository()
@@ -37,6 +41,8 @@ beforeEach(() => {
   unitOfWork = mockUnitOfWork()
   settings = mockShopSettingsRepository()
   qrPayments = mockQrPaymentClaims()
+  checkoutPolicy = mockCheckoutPolicy()
+  shiftLedger = mockShiftLedger()
   settings.get.mockResolvedValue(new ShopSettingsEntity(DEFAULT_SHOP_SETTINGS))
   ledger.record.mockResolvedValue(makeStockMovement())
 })
@@ -52,7 +58,7 @@ describe('CompleteSaleUseCase', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments), unitOfWork)
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger), unitOfWork)
   })
 
   const sell = (overrides: Record<string, unknown> = {}) =>
@@ -255,7 +261,7 @@ describe('QR payments in a sale', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments), unitOfWork)
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger), unitOfWork)
   })
 
   test('a promptpay payment backed by a QR is checked for this branch and amount, then used by the sale', async () => {

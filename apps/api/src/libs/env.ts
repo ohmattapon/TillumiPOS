@@ -1,3 +1,5 @@
+import { resolveCheckoutMode } from './checkout-mode'
+
 const required = (key: string) => {
   const value = Bun.env[key]
   if (!value) throw new Error(`Missing required environment variable: ${key}`)
@@ -12,4 +14,5 @@ export const env = {
   mediaUrl: required('MEDIA_URL').replace(/\/+$/, ''),
   mediaToken: required('MEDIA_TOKEN'),
   cookieSecure: Bun.env.COOKIE_SECURE === 'true',
+  checkoutMode: resolveCheckoutMode(),
 }

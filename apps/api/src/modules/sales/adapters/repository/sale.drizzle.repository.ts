@@ -19,6 +19,7 @@ const headerColumns = {
   vatMode: sales.vatMode,
   vatRateBp: sales.vatRateBp,
   branchId: sales.branchId,
+  shiftId: sales.shiftId,
   paidSatang: sales.paidSatang,
   changeSatang: sales.changeSatang,
   cashierId: sales.cashierId,

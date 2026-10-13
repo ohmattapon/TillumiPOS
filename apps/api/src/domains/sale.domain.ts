@@ -43,6 +43,8 @@ export interface NewSale extends SaleTotals {
   vatRateBp: number
   /** The branch that made the sale; its stock is the one that changes. */
   branchId: number
+  /** Shift recorded by API v2; legacy v1 sales keep this null. */
+  shiftId?: number | null
   cashierId: number
   cashierName: string
   items: SaleItem[]
@@ -67,6 +69,7 @@ export interface CompleteSaleInput {
   /** VAT rate in basis points (700 = 7%). */
   vatRateBp: number
   branchId: number
+  shiftId?: number | null
   cashier: { id: number; displayName: string }
 }
 
@@ -94,6 +97,7 @@ export class SaleEntity {
   public readonly vatMode: VatMode
   public readonly vatRateBp: number
   public readonly branchId: number
+  public readonly shiftId: number | null
   public readonly cashierId: number
   public readonly cashierName: string
   public readonly voidedById: number | null
@@ -120,6 +124,7 @@ export class SaleEntity {
     this.vatMode = props.vatMode
     this.vatRateBp = props.vatRateBp
     this.branchId = props.branchId
+    this.shiftId = props.shiftId ?? null
     this.cashierId = props.cashierId
     this.cashierName = props.cashierName
     this.voidedById = props.voidedById
@@ -134,7 +139,7 @@ export class SaleEntity {
    * Prices and settles a sale. All amounts are integer satang. Prices include VAT,
    * so VAT is extracted from the discounted total rather than added on top.
    */
-  static complete({ lines, discountSatang, payments, vatMode, vatRateBp, branchId, cashier }: CompleteSaleInput): NewSale {
+  static complete({ lines, discountSatang, payments, vatMode, vatRateBp, branchId, shiftId, cashier }: CompleteSaleInput): NewSale {
     if (lines.length === 0) throw new DomainError('บิลต้องมีสินค้าอย่างน้อย 1 รายการ', 'EMPTY_SALE')
     if (lines.some((line) => !Number.isInteger(line.quantity) || line.quantity < 1))
       throw new DomainError('จำนวนสินค้าต้องเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป', 'INVALID_QUANTITY')
@@ -177,6 +182,7 @@ export class SaleEntity {
       vatMode,
       vatRateBp: vatMode === 'none' ? 0 : vatRateBp,
       branchId,
+      shiftId: shiftId ?? null,
       cashierId: cashier.id,
       cashierName: cashier.displayName,
       items,
@@ -207,6 +213,7 @@ export class SaleEntity {
       vatMode: this.vatMode,
       vatRateBp: this.vatRateBp,
       branchId: this.branchId,
+      shiftId: this.shiftId,
       cashierId: this.cashierId,
       cashierName: this.cashierName,
       voidedById: this.voidedById,
