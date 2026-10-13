@@ -1,7 +1,9 @@
 import type { Sale } from '@pos/api/types'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/PageHeader'
-import { formatLongDate, type PaymentMethod } from '@/lib/money'
+import { useFormat } from '@/features/settings'
+import type { PaymentMethod } from '@/lib/money'
 import { useCheckout } from '../api'
 import { useCart } from '../hooks/use-cart'
 import { hasKeyboard } from '../lib/focus'
@@ -13,6 +15,8 @@ import { ReceiptDialog } from './ReceiptDialog'
 
 /** The sell screen: pick products, review the cart, take payment, show the receipt. */
 export function PosPage() {
+  const { t } = useTranslation('pos')
+  const { date } = useFormat()
   const cart = useCart()
   const clearCart = useCartStore((state) => state.clear)
   const checkout = useCheckout()
@@ -62,7 +66,7 @@ export function PosPage() {
 
   return (
     <>
-      <PageHeader title="ขายสินค้า" highlight={formatLongDate(today)} description="สแกนบาร์โค้ด หรือแตะสินค้าเพื่อเพิ่มลงตะกร้า" />
+      <PageHeader title={t('title')} highlight={date.longDate(today)} description={t('description')} />
 
       <div className="flex min-h-0 flex-1 print:hidden">
         <ProductPicker searchRef={searchRef} />

@@ -1,0 +1,6 @@
+export type { ShopSettings } from '@pos/api/types'
+export { settingsKeys, settingsQuery } from './api'
+export { SettingsPage } from './components/SettingsPage'
+export { useFormat } from './hooks/use-format'
+export { useSettings } from './hooks/use-settings'
+export { locales as settingsLocales } from './locales'

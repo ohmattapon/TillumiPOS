@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Printer } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -16,6 +17,8 @@ interface Props {
 }
 
 export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
+  const { t } = useTranslation('sales')
+  const { t: tc } = useTranslation()
   const [isVoiding, setIsVoiding] = useState(false)
   const [reason, setReason] = useState('')
 
@@ -27,8 +30,8 @@ export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader className="print:hidden">
-          <DialogTitle>รายละเอียดบิล</DialogTitle>
-          <DialogDescription>{sale.data ? `เลขที่ ${sale.data.receiptNo}` : 'กำลังโหลด…'}</DialogDescription>
+          <DialogTitle>{t('detail.title')}</DialogTitle>
+          <DialogDescription>{sale.data ? t('detail.receiptNo', { receiptNo: sale.data.receiptNo }) : tc('loading')}</DialogDescription>
         </DialogHeader>
 
         {sale.error && <p className="text-sm text-destructive">{sale.error.message}</p>}
@@ -41,7 +44,7 @@ export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
               event.preventDefault()
               voidSale.mutate(reason.trim(), {
                 onSuccess: (voided) => {
-                  toast.success(`ยกเลิกบิล ${voided.receiptNo} และคืนสต็อกแล้ว`)
+                  toast.success(t('detail.voidedToast', { receiptNo: voided.receiptNo }))
                   setIsVoiding(false)
                 },
                 onError: (error) => toast.error(error.message),
@@ -49,21 +52,21 @@ export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
             }}
           >
             <div className="space-y-2">
-              <Label htmlFor="void-reason">เหตุผลที่ยกเลิก</Label>
+              <Label htmlFor="void-reason">{t('detail.voidReason')}</Label>
               <Textarea
                 id="void-reason"
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
-                placeholder="เช่น ลูกค้าเปลี่ยนใจ คิดเงินผิด"
+                placeholder={t('detail.voidPlaceholder')}
                 maxLength={500}
                 autoFocus
                 required
               />
-              <p className="text-xs text-muted-foreground">สต็อกของสินค้าในบิลจะถูกคืนอัตโนมัติ และยกเลิกแล้วย้อนกลับไม่ได้</p>
+              <p className="text-xs text-muted-foreground">{t('detail.voidWarning')}</p>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <Button type="button" variant="outline" className="h-10" onClick={() => setIsVoiding(false)}>
-                ไม่ยกเลิก
+                {t('detail.keep')}
               </Button>
               <Button
                 type="submit"
@@ -71,7 +74,7 @@ export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
                 className="h-10"
                 disabled={reason.trim() === '' || voidSale.isPending}
               >
-                {voidSale.isPending ? 'กำลังยกเลิก…' : 'ยืนยันยกเลิกบิล'}
+                {voidSale.isPending ? t('detail.voiding') : t('detail.confirmVoid')}
               </Button>
             </div>
           </form>
@@ -79,12 +82,12 @@ export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
           <div className="flex gap-2 print:hidden">
             {canVoid && sale.data?.status === 'completed' && (
               <Button variant="destructive" className="h-10 flex-1" onClick={() => setIsVoiding(true)}>
-                ยกเลิกบิล
+                {t('detail.voidSale')}
               </Button>
             )}
             <Button variant="outline" className="h-10 flex-1" disabled={!sale.data} onClick={() => window.print()}>
               <Printer />
-              พิมพ์
+              {t('detail.print')}
             </Button>
           </div>
         )}

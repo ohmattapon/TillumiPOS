@@ -1,6 +1,10 @@
 import type { Product } from '@pos/api/types'
 import { describe, expect, test } from 'bun:test'
-import { priceCart } from './cart'
+import { createMoney } from '@/lib/money'
+import { priceCart, type PricingOptions } from './cart'
+
+const baht = createMoney('THB', 'th')
+const inclusive: PricingOptions = { vatMode: 'inclusive', vatRateBp: 700, parseAmount: baht.parse }
 
 const product = (overrides: Partial<Product>): Product => ({
   id: 1,
@@ -31,6 +35,7 @@ describe('priceCart', () => {
       ],
       catalogue(tea, cake),
       '',
+      inclusive,
     )
 
     expect(cart).toMatchObject({ itemCount: 3, subtotalSatang: 10700, discountSatang: 0, totalSatang: 10700, canPay: true })
@@ -38,27 +43,27 @@ describe('priceCart', () => {
   })
 
   test('an empty cart cannot be paid', () => {
-    expect(priceCart([], catalogue(tea), '')).toMatchObject({ totalSatang: 0, canPay: false })
+    expect(priceCart([], catalogue(tea), '', inclusive)).toMatchObject({ totalSatang: 0, canPay: false })
   })
 
-  test('applies a discount typed in baht', () => {
-    const cart = priceCart([{ productId: 1, quantity: 2 }], catalogue(tea), '7.50')
+  test('applies a discount typed in the shop currency', () => {
+    const cart = priceCart([{ productId: 1, quantity: 2 }], catalogue(tea), '7.50', inclusive)
 
     expect(cart).toMatchObject({ discountSatang: 750, totalSatang: 4250, isDiscountValid: true })
   })
 
   test('a discount above the subtotal is invalid, ignored in the total, and blocks payment', () => {
-    const cart = priceCart([{ productId: 1, quantity: 1 }], catalogue(tea), '25.01')
+    const cart = priceCart([{ productId: 1, quantity: 1 }], catalogue(tea), '25.01', inclusive)
 
     expect(cart).toMatchObject({ isDiscountValid: false, discountSatang: 0, totalSatang: 2500, canPay: false })
   })
 
   test.each(['abc', '-5', '1,2,x'])('a discount of %p is invalid', (discount) => {
-    expect(priceCart([{ productId: 1, quantity: 1 }], catalogue(tea), discount).isDiscountValid).toBe(false)
+    expect(priceCart([{ productId: 1, quantity: 1 }], catalogue(tea), discount, inclusive).isDiscountValid).toBe(false)
   })
 
   test('a discount that makes the sale free cannot be paid', () => {
-    const cart = priceCart([{ productId: 1, quantity: 1 }], catalogue(tea), '25')
+    const cart = priceCart([{ productId: 1, quantity: 1 }], catalogue(tea), '25', inclusive)
 
     expect(cart).toMatchObject({ isDiscountValid: true, totalSatang: 0, canPay: false })
   })
@@ -71,6 +76,7 @@ describe('priceCart', () => {
       ],
       catalogue(tea, cake),
       '',
+      inclusive,
     )
 
     expect(cart.lines.map((line) => line.exceedsStock)).toEqual([false, true])
@@ -87,6 +93,7 @@ describe('priceCart', () => {
       ],
       catalogue(cake, service),
       '',
+      inclusive,
     )
 
     expect(cart.canPay).toBe(true)
@@ -100,6 +107,7 @@ describe('priceCart', () => {
       ],
       catalogue(tea),
       '',
+      inclusive,
     )
 
     expect(cart.lines).toHaveLength(1)
@@ -109,10 +117,55 @@ describe('priceCart', () => {
   test('uses the current price, so a repriced product changes the cart', () => {
     const lines = [{ productId: 1, quantity: 2 }]
 
-    const before = priceCart(lines, catalogue(tea), '')
-    const after = priceCart(lines, catalogue({ ...tea, priceSatang: 3000 }), '')
+    const before = priceCart(lines, catalogue(tea), '', inclusive)
+    const after = priceCart(lines, catalogue({ ...tea, priceSatang: 3000 }), '', inclusive)
 
     expect(before.totalSatang).toBe(5000)
     expect(after.totalSatang).toBe(6000)
+  })
+})
+
+describe('priceCart: VAT', () => {
+  const tea = product({ id: 1, priceSatang: 10_000 })
+  const one = [{ productId: 1, quantity: 1 }]
+
+  test('inclusive: VAT is inside the price, so the total is the price', () => {
+    expect(priceCart(one, catalogue(tea), '', inclusive)).toMatchObject({ vatSatang: 654, totalSatang: 10_000 })
+  })
+
+  test('exclusive: VAT is added on top of the price', () => {
+    const cart = priceCart(one, catalogue(tea), '', { ...inclusive, vatMode: 'exclusive' })
+
+    expect(cart).toMatchObject({ subtotalSatang: 10_000, vatSatang: 700, totalSatang: 10_700 })
+  })
+
+  test('exclusive: the discount comes off before VAT is added', () => {
+    const cart = priceCart(one, catalogue(tea), '10', { ...inclusive, vatMode: 'exclusive' })
+
+    expect(cart).toMatchObject({ discountSatang: 1000, vatSatang: 630, totalSatang: 9_630 })
+  })
+
+  test('none: no VAT at all', () => {
+    expect(priceCart(one, catalogue(tea), '', { ...inclusive, vatMode: 'none' })).toMatchObject({
+      vatSatang: 0,
+      totalSatang: 10_000,
+    })
+  })
+
+  test('the total always matches what the shared pricing rule gives the server', async () => {
+    const { calculateTotals } = await import('@pos/api/pricing')
+    const cart = priceCart(one, catalogue(tea), '3.33', { ...inclusive, vatMode: 'exclusive', vatRateBp: 1000 })
+
+    expect(cart.totalSatang).toBe(
+      calculateTotals({ subtotalSatang: 10_000, discountSatang: 333, vatMode: 'exclusive', vatRateBp: 1000 })
+        .totalSatang,
+    )
+  })
+
+  test('a currency without minor units parses the discount as whole amounts', () => {
+    const yen = createMoney('JPY', 'en')
+    const cart = priceCart(one, catalogue(tea), '500', { ...inclusive, vatMode: 'none', parseAmount: yen.parse })
+
+    expect(cart).toMatchObject({ discountSatang: 500, totalSatang: 9_500 })
   })
 })

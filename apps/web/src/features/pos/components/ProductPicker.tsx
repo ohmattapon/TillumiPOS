@@ -2,13 +2,14 @@ import type { Product } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent, type RefObject } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Kbd } from '@/components/Kbd'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
 import { Input } from '@/components/ui/input'
 import { categoriesQuery } from '@/features/categories'
 import { isLowStock, isOutOfStock, ProductImage, productsQuery } from '@/features/products'
-import { formatBaht } from '@/lib/money'
+import { useFormat } from '@/features/settings'
 import { cn } from '@/lib/utils'
 import { hasKeyboard } from '../lib/focus'
 import { useCartStore } from '../store/cart.store'
@@ -20,6 +21,9 @@ interface Props {
 
 /** Search box, category filter and product grid. Picking a product puts it in the cart. */
 export function ProductPicker({ searchRef }: Props) {
+  const { t } = useTranslation('pos')
+  const { t: tc } = useTranslation()
+  const { money } = useFormat()
   const products = useQuery(productsQuery())
   const categories = useQuery(categoriesQuery)
   const addToCart = useCartStore((state) => state.add)
@@ -64,8 +68,8 @@ export function ProductPicker({ searchRef }: Props) {
     const match =
       products.data?.find((product) => product.barcode === term || product.sku.toLowerCase() === term) ??
       (visibleProducts.length === 1 ? visibleProducts[0] : undefined)
-    if (!match) toast.error(`ไม่พบสินค้า "${search.trim()}"`)
-    else if (isOutOfStock(match)) toast.error(`"${match.name}" หมดสต็อก`)
+    if (!match) toast.error(t('picker.notFound', { term: search.trim() }))
+    else if (isOutOfStock(match)) toast.error(t('picker.outOfStock', { name: match.name }))
     else pick(match)
     setSearch('')
   }
@@ -77,8 +81,8 @@ export function ProductPicker({ searchRef }: Props) {
         <Input
           ref={searchRef}
           className="h-12 pr-14 pl-11 text-base!"
-          placeholder="สแกนบาร์โค้ด หรือพิมพ์ชื่อ / รหัสสินค้า แล้วกด Enter"
-          aria-label="ค้นหาสินค้า"
+          placeholder={t('picker.searchPlaceholder')}
+          aria-label={t('picker.searchLabel')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           autoFocus
@@ -94,7 +98,7 @@ export function ProductPicker({ searchRef }: Props) {
           value={category}
           onChange={setCategory}
           options={[
-            { value: 'all', label: 'ทั้งหมด' },
+            { value: 'all', label: tc('all') },
             ...(categories.data ?? [])
               .filter((item) => item.isActive)
               .map((item) => ({ value: String(item.id), label: item.name })),
@@ -114,7 +118,7 @@ export function ProductPicker({ searchRef }: Props) {
             <ProductImage src={product.imageUrl} alt="" className="aspect-[4/3] w-full" />
             <span className="line-clamp-2 min-h-10 px-3 pt-2 text-sm leading-snug font-medium">{product.name}</span>
             <span className="flex items-end justify-between gap-2 px-3 pt-1 pb-3">
-              <span className="text-lg font-semibold tabular-nums">฿{formatBaht(product.priceSatang)}</span>
+              <span className="text-lg font-semibold tabular-nums">{money.format(product.priceSatang)}</span>
               {product.trackStock && (
                 <span
                   className={cn(
@@ -122,14 +126,14 @@ export function ProductPicker({ searchRef }: Props) {
                     isLowStock(product) ? 'font-medium text-warning' : 'text-muted-foreground',
                   )}
                 >
-                  {isOutOfStock(product) ? 'หมด' : `เหลือ ${product.stockQty}`}
+                  {isOutOfStock(product) ? t('picker.soldOut') : t('picker.left', { count: product.stockQty })}
                 </span>
               )}
             </span>
           </button>
         ))}
         {!products.isPending && visibleProducts.length === 0 && (
-          <p className="col-span-full py-12 text-center text-muted-foreground">ไม่พบสินค้าที่ตรงกับการค้นหา</p>
+          <p className="col-span-full py-12 text-center text-muted-foreground">{t('picker.noMatches')}</p>
         )}
       </div>
     </section>
