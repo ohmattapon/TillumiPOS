@@ -34,6 +34,8 @@ describe('inventory', () => {
     expect(down).toMatchObject({ type: 'adjust', quantity: -3, balanceAfter: 7, note: 'damaged' })
     expect(up).toMatchObject({ type: 'adjust', quantity: 5, balanceAfter: 12 })
     expect(await stockOf(product.id)).toBe(12)
+    expect((await movementsOf(product.id)).slice(0, 2).map(({ quantity, balanceAfter }) => ({ quantity, balanceAfter })))
+      .toEqual([{ quantity: 5, balanceAfter: 12 }, { quantity: -3, balanceAfter: 7 }])
   })
 
   test('a count equal to the current balance is rejected and records nothing', async () => {
