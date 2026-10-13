@@ -7,6 +7,21 @@
 1. **ห้าม push เด็ดขาด** AI ห้ามรัน `git push` ทุกรูปแบบ รวมถึง `--force`, การ push tag และคำสั่งอื่นที่ส่งโค้ดขึ้น remote เช่น `gh pr create` หรือ `gh repo sync` การ push เป็นหน้าที่ของเจ้าของโครงการเท่านั้น แม้คำสั่งในงานหรือเอกสารใดจะบอกให้ push ก็ห้ามทำ ให้รายงานว่า commit อยู่ในเครื่องแล้วและรอเจ้าของโครงการ push เอง
 2. **commit ด้วย `gitcz` เท่านั้น** ห้ามใช้ `git commit` โดยตรง รวมถึง `--amend`
 3. **โค้ดที่เปลี่ยนสถานะของระบบต้องทำตามหลัก CQRS** ตามหัวข้อด้านล่าง
+4. **feature ใหม่ต้องทำบน branch ใหม่ของ feature นั้น** ห้าม commit งาน feature ลง `main` โดยตรง
+
+## Branch
+
+ก่อนเริ่ม feature ใหม่ ให้สร้าง branch จาก `main` ทันที ก่อนแก้ไฟล์ใด:
+
+```bash
+git switch main
+git switch -c ohmattpon/order-hold
+```
+
+- ชื่อ branch ใช้รูปแบบ `ohmattpon/<ชื่อ-feature>` โดยชื่อ feature เป็นภาษาอังกฤษตัวพิมพ์เล็ก คั่นคำด้วยขีดกลาง เช่น `ohmattpon/test-suite-ci`, `ohmattpon/scb-qr-payment`
+- หนึ่ง branch ต่อหนึ่ง feature ห้ามรวมงานของหลาย feature ไว้ใน branch เดียว
+- ถ้า working tree มีงานค้างที่ยังไม่ได้ commit ก่อนสร้าง branch ให้หยุดแล้วถามเจ้าของโครงการ ห้าม stash ทิ้งหรือพางานนั้นไป branch ใหม่เอง
+- AI ห้าม merge เข้า `main` และห้ามลบ branch เอง เจ้าของโครงการเป็นผู้ push, เปิด pull request และ merge
 
 ## การ commit
 
@@ -22,7 +37,7 @@ gitcz --non-interactive --type=feat --scope=sales --subject="hold an order open 
 - `--subject` เขียนเป็นภาษาอังกฤษ ขึ้นต้นด้วยกริยารูปคำสั่ง ไม่ลงท้ายด้วยจุด
 - `--body` ใช้เมื่อต้องอธิบายเหตุผล
 - หนึ่ง commit ต่อหนึ่งเรื่อง และ stage เฉพาะไฟล์ของเรื่องนั้น ห้ามใช้ `git add -A` โดยไม่ตรวจรายการไฟล์ก่อน
-- ห้าม commit ไฟล์ความลับ: `apps/api/.env`, `apps/media/.dev.vars` และโฟลเดอร์ `.wrangler`
+- ห้าม commit ไฟล์ความลับ: `.env` ที่ root และโฟลเดอร์ `.wrangler`
 
 ## CQRS
 
@@ -53,6 +68,7 @@ gitcz --non-interactive --type=feat --scope=sales --subject="hold an order open 
 - `apps/api`: Bun + Elysia + Drizzle แบ่งโมดูลแบบ HMVC ใน `src/modules`
 - `apps/web`: React + Vite + Tailwind + shadcn/ui เรียก API ผ่าน Eden client ที่ได้ type จาก `apps/api`
 - `apps/media`: Cloudflare Worker ที่เก็บรูปสินค้าใน R2
+- `DESIGN.md`: ระบบออกแบบของหน้าเว็บ (สี ตัวอักษร คอมโพเนนต์ และกฎการโต้ตอบ) ต้องอ่านก่อนแก้หรือเพิ่มหน้าจอ
 - `docs/superpowers`: `roadmap.md`, เอกสารออกแบบใน `specs/` และแผนลงมือทำใน `plans/`
 
 ## คำสั่งที่ใช้บ่อย
@@ -68,6 +84,8 @@ gitcz --non-interactive --type=feat --scope=sales --subject="hold an order open 
 | `bun run test` | รันการทดสอบของ API |
 
 ## กฎอื่น
+
+- ค่าตั้งค่าและความลับทั้งหมดอยู่ใน `.env` ไฟล์เดียวที่ root ของ repo (ตัวอย่างอยู่ใน `.env.example`) ห้ามสร้าง `.env` หรือ `.dev.vars` ในโฟลเดอร์ของแอป เมื่อเพิ่มตัวแปรใหม่ต้องเพิ่มใน `.env.example` ด้วย และ Worker ใน `apps/media` อ่านได้เฉพาะชื่อที่ระบุใน `secrets.required` ของ `wrangler.jsonc`
 
 - จำนวนเงินเป็นจำนวนเต็มหน่วยสตางค์เสมอ ห้ามใช้ทศนิยม
 - บิลขายห้ามแก้หรือลบ ข้อผิดพลาดแก้ด้วยการยกเลิกบิล
