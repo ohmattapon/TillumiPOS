@@ -1579,4 +1579,4 @@ gitcz --non-interactive --type=ci --subject="typecheck, lint and integration tes
 
 | # | อาการ | การทดสอบที่ปักไว้ | สถานะ |
 |---|---|---|---|
-| 1 | บรรทัดขายที่ราคา × จำนวนเกิน 2,147,483,647 สตางค์ ทำให้ฐานข้อมูลปฏิเสธและ API ตอบ 500 แทนข้อผิดพลาดระดับ 4xx | `sales.test.ts`: `a line total beyond the integer range is a client error, not a crash` | คาดการณ์ไว้ ยืนยันเมื่อรัน Task 5 |
+| 1 | บรรทัดขายที่ราคา × จำนวนเกิน 2,147,483,647 สตางค์ ทำให้ฐานข้อมูลปฏิเสธและ API ตอบ 500 แทนข้อผิดพลาดระดับ 4xx | `sales.test.ts`: `a line total beyond the integer range is a client error, not a crash` | ยืนยันแล้วเมื่อรัน Task 5: PostgreSQL ตอบ `integer out of range` (22003) และ API ตอบ 500 ยังไม่ได้แก้ |
