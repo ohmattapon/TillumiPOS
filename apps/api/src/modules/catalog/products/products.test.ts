@@ -66,12 +66,16 @@ describe('products', () => {
     expect(await search('a_b')).toEqual(['a_b snack'])
   })
 
-  test('stock cannot be changed through the product update route', async () => {
+  test('an unknown stock field is ignored and cannot mutate stock', async () => {
     const product = await seedProduct(owner, { stock: 5 })
 
-    // stockQty is not part of the update body; an unknown field must not slip through.
-    await owner.api.catalog.products({ id: product.id }).patch({ name: 'Renamed', stockQty: 999 } as never)
+    const result = await owner.api.catalog.products({ id: product.id }).patch({
+      name: 'Renamed',
+      stockQty: 999,
+    } as never)
 
+    expect(result.status).toBe(200)
+    expect(ok(result).stockQty).toBe(5)
     expect(ok(await owner.api.catalog.products({ id: product.id }).get()).stockQty).toBe(5)
   })
 })
