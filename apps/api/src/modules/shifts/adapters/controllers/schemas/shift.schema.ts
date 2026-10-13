@@ -20,6 +20,20 @@ export const shiftHttpSchemas = {
   }),
   openShift: t.Object({ registerId: t.Integer({ minimum: 1 }), openingCashSatang: t.Integer({ minimum: 0, maximum: 2_147_483_647 }), openingNote: t.Optional(t.Nullable(t.String({ maxLength: 500 }))) }),
   closeShift: t.Object({ closingRevision: t.Integer({ minimum: 1 }), countedCashSatang: t.Integer({ minimum: 0, maximum: 2_147_483_647 }), reason: t.Optional(t.String({ maxLength: 500 })) }),
+  summary: t.Object({
+    // true once counting has started: the numbers no longer move.
+    frozen: t.Boolean(),
+    capturedAt: nullableDate,
+    summary: t.Object({
+      saleCount: t.Integer(), grossSalesSatang: t.Integer(), voidedCount: t.Integer(), voidedSatang: t.Integer(),
+      netSalesSatang: t.Integer(), changeSatang: t.Integer(),
+      tendered: t.Array(t.Object({ method: t.Union([t.Literal('cash'), t.Literal('promptpay'), t.Literal('card')]), amountSatang: t.Integer() })),
+      cashSaleSatang: t.Integer(), cashInSatang: t.Integer(), cashOutSatang: t.Integer(), cashRefundSatang: t.Integer(),
+      openingCashSatang: t.Integer(), expectedCashSatang: t.Integer(),
+    }),
+    // Sales of the shift voided after the summary was frozen: shown beside it, never inside it.
+    voidedAfterCutoff: t.Object({ count: t.Integer(), amountSatang: t.Integer() }),
+  }),
   startClosing: t.Optional(t.Object({ acknowledgePendingQr: t.Optional(t.Boolean()) })),
   shiftRevision: t.Object({ closingRevision: t.Integer({ minimum: 1 }) }),
   cashEntry: t.Object({

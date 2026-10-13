@@ -71,6 +71,13 @@
       "when": 1791932834910,
       "tag": "0009_qr_shift_recovery",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791933962470,
+      "tag": "0010_shift_summaries",
+      "breakpoints": true
     }
   ]
 }

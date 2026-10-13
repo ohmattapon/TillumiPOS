@@ -2,6 +2,7 @@ import { inject, injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import { ShiftEntity } from '../../../../domains/shift.domain'
+import { buildShiftSummary } from '../../../../domains/shift-summary'
 import { ShiftCashEntryEntity } from '../../../../domains/shift-cash-entry.domain'
 import { TOKENS } from '../../../tokens'
 import type { IClock } from '../../../shared/ports/clock.port'
@@ -14,6 +15,10 @@ import { shiftRepositoryToken } from '../ports/shift.repository'
 import type { IShiftRepository } from '../ports/shift.repository'
 import { qrShiftReadinessToken } from '../../../qr-payments/applications/ports/qr-shift-readiness.port'
 import type { IQrShiftReadiness } from '../../../qr-payments/applications/ports/qr-shift-readiness.port'
+import { shiftSalesTotalsToken } from '../../../sales/applications/ports/shift-sales-totals.port'
+import type { IShiftSalesTotals } from '../../../sales/applications/ports/shift-sales-totals.port'
+import { shiftSummaryRepositoryToken } from '../ports/shift-summary.repository'
+import type { IShiftSummaryRepository } from '../ports/shift-summary.repository'
 import { cashEntryListSchema, cashMovementSchema, closeShiftSchema, shiftListSchema, shiftRevisionSchema, startClosingSchema } from '../schemas/shift-schemas'
 import { restoreCashEntrySnapshot, restoreShiftSnapshot } from '../shift-snapshot'
 
@@ -63,6 +68,8 @@ export class StartShiftClosingUseCase {
     @inject(TOKENS.Clock) private readonly clock: IClock,
     @inject(TOKENS.Idempotency) private readonly idempotency: CommandIdempotency,
     @inject(qrShiftReadinessToken) private readonly qrReadiness: IQrShiftReadiness,
+    @inject(shiftSummaryRepositoryToken) private readonly summaries: IShiftSummaryRepository,
+    @inject(shiftSalesTotalsToken) private readonly salesTotals: IShiftSalesTotals,
   ) {}
   async execute(id: number, input: unknown, actor: Actor, branchId: number, idempotencyKey: string) {
     const dto = startClosingSchema.parse(input ?? {})
@@ -83,7 +90,14 @@ export class StartShiftClosingUseCase {
       if (qr.pending.count > 0 && !dto.acknowledgePendingQr)
         throw new DomainConflictError('ยังมี QR ที่รอลูกค้าจ่าย กรุณายืนยันว่ารับทราบก่อนเริ่มนับ', 'QR_PENDING_ACKNOWLEDGEMENT_REQUIRED', { count: qr.pending.count, amountSatang: qr.pending.amountSatang })
       const expected = shift.expectedCashSatang(await this.shifts.cashDeltas(id))
-      return this.shifts.update(shift.startClosing(actor.id, actor.displayName, this.clock.now(), expected))
+      const now = this.clock.now()
+      // Frozen with the shift locked: checkout takes the same lock, so every sale is either in it or refused.
+      await this.summaries.freeze(
+        id,
+        buildShiftSummary(shift.openingCashSatang, await this.salesTotals.forShift(id), await this.summaries.cashTotals(id)),
+        now,
+      )
+      return this.shifts.update(shift.startClosing(actor.id, actor.displayName, now, expected))
       },
       (shift) => shift.toSnapshot(),
       async (snapshot) => restoreShiftSnapshot(snapshot),
@@ -99,6 +113,7 @@ export class CancelShiftClosingUseCase {
     @inject(shiftRepositoryToken) private readonly shifts: IShiftRepository,
     @inject(TOKENS.UnitOfWork) private readonly uow: IUnitOfWork,
     @inject(TOKENS.Idempotency) private readonly idempotency: CommandIdempotency,
+    @inject(shiftSummaryRepositoryToken) private readonly summaries: IShiftSummaryRepository,
   ) {}
   async execute(id: number, input: unknown, actor: Actor, branchId: number, idempotencyKey: string) {
     const dto = shiftRevisionSchema.parse(input)
@@ -111,7 +126,10 @@ export class CancelShiftClosingUseCase {
       if (!shift) throw new DomainNotFoundError('ไม่พบกะ', 'SHIFT_NOT_FOUND')
       if (actor.role !== 'owner' && actor.id !== shift.closingStartedById)
         throw new DomainConflictError('เฉพาะผู้เริ่มนับหรือเจ้าของร้านยกเลิกการนับได้', 'SHIFT_CLOSING_OWNER_REQUIRED')
-      return this.shifts.update(shift.cancelClosing(dto.closingRevision))
+      const reopened = await this.shifts.update(shift.cancelClosing(dto.closingRevision))
+      // The shift sells again, so the summary of the abandoned count no longer describes it.
+      await this.summaries.discard(id)
+      return reopened
       },
       (shift) => shift.toSnapshot(),
       async (snapshot) => restoreShiftSnapshot(snapshot),

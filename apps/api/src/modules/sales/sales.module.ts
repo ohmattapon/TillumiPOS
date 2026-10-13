@@ -3,6 +3,8 @@ import { SaleElysiaController } from './adapters/controllers/sale.controller'
 import { DrizzleSaleRepository } from './adapters/repository/sale.drizzle.repository'
 import { saleRepositoryToken } from './applications/ports/sale.repository'
 import { saleCheckoutToken } from './applications/ports/sale-checkout.port'
+import { shiftSalesTotalsToken } from './applications/ports/shift-sales-totals.port'
+import { DrizzleShiftSalesTotals } from './adapters/repository/shift-sales-totals.drizzle.adapter'
 import { SaleCheckout } from './applications/services/sale-checkout'
 import { CompleteSaleUseCase } from './applications/usecases/complete-sale.usecase'
 import { CompleteSaleV2UseCase } from './applications/usecases/complete-sale-v2.usecase'
@@ -16,6 +18,7 @@ import { RecordCashRefundUseCase } from './applications/usecases/record-cash-ref
 
 container.register(saleRepositoryToken, { useClass: DrizzleSaleRepository })
 container.register(saleCheckoutToken, { useClass: SaleCheckout })
+container.register(shiftSalesTotalsToken, { useClass: DrizzleShiftSalesTotals })
 container.registerSingleton(ListSalesUseCase)
 container.registerSingleton(GetSaleUseCase)
 container.registerSingleton(GetSalesSummaryUseCase)
