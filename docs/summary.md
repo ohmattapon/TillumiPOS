@@ -24,7 +24,7 @@ EasyPOS คือ POS แบบโอเพนซอร์สที่ติด�
 | 6 | ออเดอร์ค้างและจ่ายทีหลัง | เสร็จ |
 | ชำระเงินอัตโนมัติ | QR ของ SCB (Thai QR Tag 30) | เสร็จฝั่งโค้ด รอทดสอบการจ่ายจริง |
 | 7–9 | ตัวเลือกเสริม, โต๊ะ, ใบสั่งครัว | ยังไม่ทำ (ช่วงร้านอาหาร) |
-| 10 | กะและเงินสดในลิ้นชัก | กำลังทำบน `ohmattpon/cash-shifts`: มีเครื่องคิดเงิน กะ สมุดเงินสด และ checkout `/api/v2` แล้ว ยังขาดการกู้คืน QR ที่ค้าง ประวัติกะที่ปิด และ snapshot ตอนปิดกะ (ดู `docs/superpowers/plans/2026-10-13-cash-shifts.md`) ห้ามเปิด `CHECKOUT_MODE=shifts` กับร้านที่ใช้ QR ธนาคารจนกว่าจะเสร็จ |
+| 10 | กะและเงินสดในลิ้นชัก | กำลังทำบน `ohmattpon/cash-shifts`: มีเครื่องคิดเงิน กะ สมุดเงินสด checkout `/api/v2` และ QR ธนาคารในโหมดกะพร้อมการกู้คืนแล้ว ยังขาดประวัติ/รายละเอียดกะที่ปิด และ snapshot ตอนปิดกะ (ดู `docs/superpowers/plans/2026-10-13-cash-shifts.md`) QR ในโหมดกะทดสอบกับ SCB จำลองเท่านั้น |
 | 11–14 | พิมพ์ใบเสร็จ+หน้าผู้ใช้, สิทธิ์ละเอียด+audit, ที่เก็บรูปเลือกได้, ชุดติดตั้ง | ยังไม่ทำ |
 
 ## ความสามารถที่มีตอนนี้
@@ -98,7 +98,7 @@ EasyPOS คือ POS แบบโอเพนซอร์สที่ติด�
 
 | รายการ | ผล |
 |---|---|
-| ทดสอบ API (unit + integration กับ PostgreSQL จริง) บน `ohmattpon/cash-shifts` | 700 ผ่าน |
+| ทดสอบ API (unit + integration กับ PostgreSQL จริง) บน `ohmattpon/cash-shifts` | 732 ผ่าน |
 | ทดสอบเว็บ | 64 ผ่าน |
 | `typecheck`, `lint`, `vite build`, `openapi:check` | ผ่าน |
 | CI | GitHub Actions รัน typecheck, lint, integration tests |

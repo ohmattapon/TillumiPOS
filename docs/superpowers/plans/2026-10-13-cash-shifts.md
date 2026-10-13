@@ -2,11 +2,13 @@
 
 > **For agentic workers:** Use the repository TDD rules for every behavior change. Implement the tasks in order; no task needs a parallel worker because API contracts, database migrations, checkout, and UI share generated types and state.
 
-## Progress (2026-10-13)
+## Progress (2026-10-14)
 
 - Implemented: versioned cash/card checkout, registers and shared shift lifecycle, append-only cash entries, v1 money-command retirement, permanent activation marker, idempotency, one-time cash refunds, shift/pos screens, localization, and separate OpenAPI baselines.
-- Still required: durable QR attempt/inquiry recovery and its UI; complete closed-shift detail/history; a frozen close snapshot for sales/tenders; currency-change, checkout/close race, and broader browser/device coverage.
-- Do not enable `CHECKOUT_MODE=shifts` for a shop that relies on bank QR until the QR recovery work is complete; see [cash-shift-cutover.md](../../cash-shift-cutover.md).
+- Implemented (Task 5): bank QR inside a shift. Durable `shift_qr_attempts` reserved under the shift lock before the bank is called, the bank called with nothing locked, unknown outcomes kept for recovery (`POST /payments/qr/attempts/{id}/resolve`), a pure-read `GET /payments/qr/{id}` with a separate `refresh` command, the branch-wide paid-unclaimed list, late money sold in a later shift (origin shift and sale shift kept apart), and the counting rules (blocked by unresolved attempts and paid-unclaimed money, acknowledgement for QRs still waiting, close refused when money arrived during the count). Web: QR in shift mode, paying with money that already arrived, and the recovery panel on the shift page.
+- Added beyond the spec, because the spec left no way out: an owner can **dismiss** a paid QR that will never get a sale (`POST /payments/qr/{id}/dismiss`, with a reason). Without it such a payment would keep its shift from ever being counted. Dismissed money stays on record as paid and can no longer pay for a sale. The spec's `IShiftQrAttempts` port is named `IQrAttemptRepository` and lives in the qr-payments module, next to `IQrShiftReadiness`.
+- Still required: complete closed-shift detail/history; a frozen close snapshot for sales/tenders; currency-change, checkout/close race, and broader browser/device coverage.
+- Bank QR in shift mode is tested against the fake SCB only. No real bank payment has been made through it; verify one before relying on it. See [cash-shift-cutover.md](../../cash-shift-cutover.md).
 
 **Goal:** Add shared register shifts with an append-only cash ledger, versioned checkout, safe QR recovery, void cash refunds, and a POS workflow that keeps sales and drawer totals tied to an explicitly open shift.
 
@@ -148,9 +150,9 @@ Introduce branch-bound registers and persistent shift state, then expose registe
 - Must wait for: Tasks 3 and 4
 - Race risk: QR callbacks and checkout/close transactions; use only fake SCB in automated tests
 
-- [ ] Add failing refund and QR recovery integration tests.
-- [ ] Implement attempts, inquiry-driven paid status, recovery, and explicit cash refund.
-- [ ] Run targeted tests and refactor.
+- [x] Add failing refund and QR recovery integration tests.
+- [x] Implement attempts, inquiry-driven paid status, recovery, and explicit cash refund.
+- [x] Run targeted tests and refactor.
 
 ## Task 6: Web shift and register feature
 
