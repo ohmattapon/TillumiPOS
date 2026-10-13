@@ -10,6 +10,8 @@ const TIMEOUT_MS = 8000
 /** Thai QR Code Tag 30 (customer scans, merchant receives): the event code of the inquiry. */
 const EVENT_CODE_QR30 = '00300100'
 const STATUS_SUCCESS = 1000
+/** SCB's answer (HTTP 404) when it knows no payment for the reference: the customer has not paid yet. */
+const STATUS_NOT_FOUND = 1104
 /** Renewed this long before it really expires, so a token never dies mid-request. */
 const TOKEN_SAFETY_MS = 60_000
 
@@ -81,9 +83,12 @@ export class ScbQrGateway implements IQrPaymentGateway {
       })
       const { httpStatus, body } = await this.call(config, 'GET', `/v1/payment/billpayment/inquiry?${query}`)
 
-      // Not found is an answer, not a failure: the inquiry only returns payments that went through.
-      if (httpStatus >= 500) throw unavailable()
-      if (httpStatus !== 200 || body.status?.code !== STATUS_SUCCESS || !Array.isArray(body.data)) continue
+      // "Not found" is an answer, not a failure: the inquiry only returns payments that went through.
+      if (body.status?.code === STATUS_NOT_FOUND) continue
+      // Anything else that is not a clean success (wrong biller, bad request, outage) is a failure to
+      // report, not a payment that has not happened: treating it as "not paid" would hide a bad setup.
+      if (httpStatus !== 200 || body.status?.code !== STATUS_SUCCESS || !Array.isArray(body.data))
+        throw unavailable(body.status?.description)
 
       const match = (body.data as Record<string, string | undefined>[]).find(
         (item) =>
