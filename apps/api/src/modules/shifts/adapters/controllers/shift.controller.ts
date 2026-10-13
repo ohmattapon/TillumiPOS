@@ -49,9 +49,9 @@ export class ShiftElysiaController {
         const { items, total } = await this.listCash.execute(params.id, query, (await branch()).id)
         return { items: items.map((item) => item.toSnapshot()), total }
       }, { auth: true, params: idParams, query: shiftHttpSchemas.pageQuery, response: page(shiftHttpSchemas.cashEntry), detail: { summary: 'รายการเคลื่อนไหวเงินสดของกะ' } })
-      .post('/:id/start-closing', async ({ params, headers, user, branch }) =>
-        (await this.startClosing.execute(params.id, { id: user.id, displayName: user.displayName, role: user.role }, (await branch()).id, headers['idempotency-key'])).toSnapshot(), {
-          auth: true, headers: idempotencyHeaders, params: idParams, response: shiftHttpSchemas.shift, detail: { summary: 'เริ่มนับเงินปิดกะ' },
+      .post('/:id/start-closing', async ({ params, body, headers, user, branch }) =>
+        (await this.startClosing.execute(params.id, body, { id: user.id, displayName: user.displayName, role: user.role }, (await branch()).id, headers['idempotency-key'])).toSnapshot(), {
+          auth: true, headers: idempotencyHeaders, params: idParams, body: shiftHttpSchemas.startClosing, response: shiftHttpSchemas.shift, detail: { summary: 'เริ่มนับเงินปิดกะ' },
         })
       .post('/:id/cancel-closing', async ({ params, body, headers, user, branch }) =>
         (await this.cancelClosing.execute(params.id, body, { id: user.id, displayName: user.displayName, role: user.role }, (await branch()).id, headers['idempotency-key'])).toSnapshot(), {

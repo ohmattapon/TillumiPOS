@@ -30,6 +30,11 @@ export interface FakeScb {
   revokeTokens(): void
   /** While set, every request answers with this HTTP status. */
   setFailing(status: number | null): void
+  /**
+   * The next QR creation reaches the bank but its answer is lost on the way back (a gateway timeout).
+   * `made` says whether the bank really made the QR before the answer was lost.
+   */
+  loseNextCreateAnswer(made: boolean): void
   /** Applies an environment that points the API at this fake. */
   enableIn(env: Record<string, string | undefined>): void
   reset(): void
@@ -50,6 +55,7 @@ function start(): FakeScb {
   const payments = new Map<string, FakePayment>()
   let validTokens = new Set<string>()
   let failing: number | null = null
+  let lostAnswer: { made: boolean } | null = null
   let tokensIssued = 0
   let transactionCounter = 0
 
@@ -89,6 +95,13 @@ function start(): FakeScb {
         if (!/^[A-Z0-9]{1,20}$/.test(sent?.ref3 ?? '') || !sent?.ref3?.startsWith(credentials.ref3Prefix))
           problems.push('ref3')
         if (problems.length) return Response.json(envelope(1002, `Invalid ${problems.join(', ')}`), { status: 400 })
+
+        if (lostAnswer) {
+          const { made } = lostAnswer
+          lostAnswer = null
+          if (made) created.set(sent!.ref1!, { amount: sent!.amount!, ref3: sent!.ref3!, ref2: sent!.ref2, ppId: sent!.ppId! })
+          return Response.json(envelope(5004, 'Gateway timeout'), { status: 504 })
+        }
 
         created.set(sent!.ref1!, { amount: sent!.amount!, ref3: sent!.ref3!, ref2: sent!.ref2, ppId: sent!.ppId! })
         return Response.json(
@@ -156,6 +169,9 @@ function start(): FakeScb {
     revokeTokens() {
       validTokens = new Set()
     },
+    loseNextCreateAnswer(made) {
+      lostAnswer = { made }
+    },
     setFailing(status) {
       failing = status
     },
@@ -172,6 +188,7 @@ function start(): FakeScb {
       payments.clear()
       validTokens = new Set()
       failing = null
+      lostAnswer = null
       tokensIssued = 0
       transactionCounter = 0
     },

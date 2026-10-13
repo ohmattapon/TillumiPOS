@@ -1,3 +1,4 @@
+import type { Page } from '../../../../domains/page'
 import type { NewQrPayment, QrPaymentEntity } from '../../../../domains/qr-payment.domain'
 
 export interface IQrPaymentRepository {
@@ -7,7 +8,9 @@ export interface IQrPaymentRepository {
   findByIdForUpdate(id: number): Promise<QrPaymentEntity | null>
   /** Row-locked, by the reference the bank reports back. */
   findByReferenceForUpdate(reference: string): Promise<QrPaymentEntity | null>
-  /** Writes the status, bank details, last check and sale of an existing payment. */
+  /** Payments of the branch the bank confirmed that have no sale and were not dismissed, oldest first. */
+  findUnclaimed(query: { branchId: number; limit: number; offset: number }): Promise<Page<QrPaymentEntity>>
+  /** Writes the status, bank details, last check, sale and dismissal of an existing payment. */
   save(payment: QrPaymentEntity): Promise<QrPaymentEntity>
 }
 

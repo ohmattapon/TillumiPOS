@@ -11,7 +11,11 @@ export interface QrCode {
 export interface IQrPaymentGateway {
   /** Whether QR payment is configured for this shop. */
   isEnabled(): boolean
-  /** Throws DomainExternalServiceError when the bank cannot be reached or refuses the request. */
+  /**
+   * Throws DomainExternalServiceError when the bank cannot be reached or refuses the request.
+   * Its `params.outcome` is `'unknown'` when the request was sent and no usable answer came back,
+   * so the bank may have made the QR; without it, no QR was made.
+   */
   createQr(request: { reference: string; amountSatang: number; branchCode: string }): Promise<QrCode>
   /**
    * The payment the bank has actually received for this reference and amount, or null if none yet.
