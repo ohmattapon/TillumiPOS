@@ -1,5 +1,5 @@
 import { t } from 'elysia'
-import { satang } from '../../shared/models'
+import { satang } from '../../../../../shared/models'
 
 const method = t.Union([t.Literal('cash'), t.Literal('promptpay'), t.Literal('card')])
 
@@ -22,7 +22,7 @@ const header = {
 
 const payment = t.Object({ method, amountSatang: satang({ minimum: 1 }) })
 
-export const SaleModel = {
+export const saleSchemas = {
   saleHeader: t.Object(header),
   sale: t.Object({
     ...header,
@@ -62,9 +62,6 @@ export const SaleModel = {
   }),
 }
 
-export type Sale = typeof SaleModel.sale.static
-export type SaleHeader = typeof SaleModel.saleHeader.static
-export type CreateSale = typeof SaleModel.create.static
-export type SaleListQuery = typeof SaleModel.listQuery.static
-export type SaleSummaryQuery = typeof SaleModel.summaryQuery.static
-export type SaleSummary = typeof SaleModel.summary.static
+export type SaleResponse = typeof saleSchemas.sale.static
+export type SaleHeaderResponse = typeof saleSchemas.saleHeader.static
+export type SaleSummaryResponse = typeof saleSchemas.summary.static

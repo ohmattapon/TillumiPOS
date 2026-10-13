@@ -1,7 +1,7 @@
 import { date, index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
-import { createdAt, id } from '../../infrastructure/database/columns'
-import { products } from '../../infrastructure/database/schema/products'
-import { users } from '../../infrastructure/database/schema/users'
+import { createdAt, id } from '../columns'
+import { products } from './products'
+import { users } from './users'
 
 export const saleStatus = pgEnum('sale_status', ['completed', 'voided'])
 export const paymentMethod = pgEnum('payment_method', ['cash', 'promptpay', 'card'])

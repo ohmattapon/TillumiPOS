@@ -3,4 +3,8 @@ export type { UserResponse as User } from './modules/users/adapters/controllers/
 export type { CategoryResponse as Category } from './modules/categories/adapters/controllers/schemas/category.schema'
 export type { ProductResponse as Product } from './modules/products/adapters/controllers/schemas/product.schema'
 export type { StockMovementResponse as StockMovement } from './modules/inventory/adapters/controllers/schemas/inventory.schema'
-export type { Sale, SaleHeader, SaleSummary } from './modules/sales/model'
+export type {
+  SaleHeaderResponse as SaleHeader,
+  SaleResponse as Sale,
+  SaleSummaryResponse as SaleSummary,
+} from './modules/sales/adapters/controllers/schemas/sale.schema'
