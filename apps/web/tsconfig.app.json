@@ -6,6 +6,9 @@
     "module": "esnext",
     "types": ["vite/client", "bun"],
     "strict": true,
+    // The API's source is type-checked here through the Eden `App` type, and it uses decorators.
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "paths": { "@/*": ["./src/*"] },
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
@@ -21,7 +24,6 @@
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"]

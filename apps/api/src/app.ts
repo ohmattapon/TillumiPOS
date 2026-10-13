@@ -1,3 +1,4 @@
+import 'reflect-metadata'
 import { openapi } from '@elysiajs/openapi'
 import { Elysia } from 'elysia'
 import { auth } from './modules/auth'
