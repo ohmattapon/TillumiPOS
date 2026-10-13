@@ -1,4 +1,4 @@
-import { env } from '../config/env'
+import { env } from '../libs/env'
 import { AppError } from './errors'
 
 const unavailable = () => new AppError(502, 'MEDIA_UNAVAILABLE', 'เชื่อมต่อที่เก็บรูปภาพไม่ได้ ลองใหม่อีกครั้ง')

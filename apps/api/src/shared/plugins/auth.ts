@@ -1,6 +1,6 @@
 import { jwt } from '@elysiajs/jwt'
 import { Elysia, t } from 'elysia'
-import { env } from '../../config/env'
+import { env } from '../../libs/env'
 import { UsersService } from '../../modules/users/service'
 import type { UserRole } from '../../modules/users/schema'
 import { forbidden, unauthorized } from '../errors'

@@ -1,5 +1,5 @@
 import { and, count, eq } from 'drizzle-orm'
-import { db } from '../../db/client'
+import { db } from '../../libs/db'
 import { conflict, notFound } from '../../shared/errors'
 import type { CreateUser, UpdateUser, User } from './model'
 import { users } from './schema'

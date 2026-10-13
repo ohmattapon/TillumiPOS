@@ -1,5 +1,5 @@
 import { index, integer, pgEnum, pgTable, text } from 'drizzle-orm/pg-core'
-import { createdAt, id } from '../../db/columns'
+import { createdAt, id } from '../../infrastructure/database/columns'
 import { products } from '../catalog/products/schema'
 import { users } from '../users/schema'
 

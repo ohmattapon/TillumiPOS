@@ -1,6 +1,6 @@
 import { and, count, desc, eq, gte, lt, sql, type SQL } from 'drizzle-orm'
-import { env } from '../../config/env'
-import { db, type Executor, type Tx } from '../../db/client'
+import { env } from '../../libs/env'
+import { db, type Executor, type Tx } from '../../libs/db'
 import { badRequest, conflict, notFound } from '../../shared/errors'
 import { ProductsService } from '../catalog/products/service'
 import { InventoryService } from '../inventory/service'

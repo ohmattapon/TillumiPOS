@@ -1,6 +1,6 @@
 import { treaty } from '@elysiajs/eden'
 import { app, type App } from '../src/app'
-import { client as sqlClient } from '../src/db/client'
+import { client as sqlClient } from '../src/libs/db'
 import type { CreateProduct, Product } from '../src/modules/catalog/products/model'
 import { ProductsService } from '../src/modules/catalog/products/service'
 import { InventoryService } from '../src/modules/inventory/service'
