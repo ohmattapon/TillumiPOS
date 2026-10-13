@@ -1,6 +1,7 @@
 import { SQL } from 'bun'
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { UsersService } from '../src/modules/users/service'
+import { container } from 'tsyringe'
+import { ListUsersUseCase } from '../src/modules/users/applications/usecases/list-users.usecase'
 import { assertTestDatabase, ensureTestDatabase } from './database'
 import { client, fakeMedia, ok, resetDatabase, signIn } from './harness'
 
@@ -18,11 +19,11 @@ describe('test harness', () => {
 
   test('resetDatabase leaves no rows behind', async () => {
     await signIn('owner')
-    expect(await UsersService.list()).toHaveLength(1)
+    expect(await container.resolve(ListUsersUseCase).execute()).toHaveLength(1)
 
     await resetDatabase()
 
-    expect(await UsersService.list()).toHaveLength(0)
+    expect(await container.resolve(ListUsersUseCase).execute()).toHaveLength(0)
   })
 
   test('identity columns restart after a reset', async () => {
