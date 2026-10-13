@@ -1,0 +1,16 @@
+{
+  "name": "pos",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "bun run --filter '*' dev",
+    "dev:api": "bun run --filter @pos/api dev",
+    "dev:web": "bun run --filter @pos/web dev",
+    "db:up": "docker compose up -d db",
+    "db:generate": "bun run --filter @pos/api db:generate",
+    "db:migrate": "bun run --filter @pos/api db:migrate",
+    "db:seed": "bun run --filter @pos/api db:seed",
+    "typecheck": "bun run --filter '*' typecheck",
+    "test": "bun run --filter @pos/api test"
+  }
+}
