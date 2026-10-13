@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { useFormat } from '@/features/settings'
+import { unclaimedQrQuery } from '@/features/shifts'
 import type { PaymentInput, PaymentMethod } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { qrConfigQuery } from '../api'
@@ -28,21 +29,32 @@ interface Props {
   error?: string
   onConfirm: (payment: PaymentInput) => void
   onCancel: () => void
-  qrAvailable?: boolean
+  /** The open shift the payment is taken in. Set in shift mode, where a bank QR is asked for on its behalf. */
+  shiftId?: number
 }
 
-export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onCancel, qrAvailable = true }: Props) {
+export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onCancel, shiftId }: Props) {
   const { t } = useTranslation('pos')
   const { t: tc } = useTranslation()
-  const { money, currency } = useFormat()
+  const { money, currency, date } = useFormat()
   const [method, setMethod] = useState<PaymentMethod>('cash')
   const [received, setReceived] = useState('')
 
   // With a bank QR set up, PromptPay is paid by scanning and confirmed by the bank, not by the cashier.
   const qrEnabled = useQuery(qrConfigQuery).data?.enabled === true
   const usesQr = method === 'promptpay' && qrEnabled
-  const qr = useQrPayment({ amountSatang: totalSatang, active: usesQr && qrAvailable })
-  const qrUnavailable = usesQr && !qrAvailable
+  const qr = useQrPayment({ amountSatang: totalSatang, active: usesQr, shiftId })
+
+  // Money that already arrived for exactly this total and has no sale yet (a late payment, or a sale that
+  // failed after the customer paid). Using it means the customer does not pay twice.
+  const unclaimed = useQuery({ ...unclaimedQrQuery, enabled: usesQr && shiftId !== undefined })
+  const usable = (unclaimed.data?.items ?? []).filter((payment) => payment.amountSatang === totalSatang)
+  const [confirmingId, setConfirmingId] = useState<number | null>(null)
+
+  const payWithArrivedMoney = (qrPaymentId: number) => {
+    qr.cancel()
+    onConfirm({ method: 'promptpay', amountSatang: totalSatang, qrPaymentId })
+  }
 
   // The sale is recorded the moment the bank confirms, so a customer who has paid is never left waiting.
   const recorded = useRef<number | null>(null)
@@ -94,7 +106,7 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
                 key={value}
                 type="button"
                 aria-pressed={method === value}
-                disabled={isSubmitting || (qr.paid !== null && value !== 'promptpay') || (value === 'promptpay' && qrEnabled && !qrAvailable)}
+                disabled={isSubmitting || (qr.paid !== null && value !== 'promptpay')}
                 onClick={() => chooseMethod(value)}
                 className={cn(
                   'flex h-20 flex-col items-center justify-center gap-1.5 rounded-lg border text-sm font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50',
@@ -108,7 +120,36 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
           </div>
 
           {usesQr && <QrPaymentPanel qr={qr} isSaving={isSubmitting} />}
-          {qrUnavailable && <p role="status" className="rounded-md border bg-muted p-3 text-sm text-muted-foreground">{t('payment.qr.qrUnavailableInShifts')}</p>}
+          {usesQr && !qr.paid && usable.length > 0 && (
+            <div className="space-y-2 rounded-lg border p-3">
+              <p className="text-sm font-medium">{t('payment.qr.arrivedTitle')}</p>
+              <ul className="space-y-2">
+                {usable.map((payment) => (
+                  <li key={payment.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span className="text-muted-foreground">
+                      {payment.payerName ?? t('payment.qr.unknownPayer')}
+                      {payment.paidAt ? ` · ${date.dateTime(payment.paidAt)}` : ''}
+                    </span>
+                    {confirmingId === payment.id ? (
+                      <span className="flex gap-2">
+                        <Button type="button" variant="outline" className="h-10" onClick={() => setConfirmingId(null)}>
+                          {tc('cancel')}
+                        </Button>
+                        <Button type="button" className="h-10" disabled={isSubmitting} onClick={() => payWithArrivedMoney(payment.id)}>
+                          {t('payment.qr.arrivedConfirm')}
+                        </Button>
+                      </span>
+                    ) : (
+                      <Button type="button" variant="outline" className="h-10" disabled={isSubmitting} onClick={() => setConfirmingId(payment.id)}>
+                        {t('payment.qr.arrivedUse')}
+                      </Button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {confirmingId !== null && <p className="text-xs text-muted-foreground">{t('payment.qr.arrivedNote')}</p>}
+            </div>
+          )}
 
           {method === 'cash' && (
             <>

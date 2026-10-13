@@ -127,7 +127,7 @@ export function PosPage() {
       {isPaying && (
         <PaymentDialog
           totalSatang={cart.totalSatang}
-          qrAvailable={!needsShift}
+          shiftId={needsShift ? currentShift.data?.id : undefined}
           isSubmitting={payment.isPending}
           error={payment.error?.message}
           onConfirm={pay}
