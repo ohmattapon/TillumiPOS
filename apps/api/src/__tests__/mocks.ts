@@ -3,6 +3,8 @@ import type { IBranchRepository } from '../modules/branches/applications/ports/b
 import type { ICategoryRepository } from '../modules/categories/applications/ports/category.repository'
 import type { IStockLedger } from '../modules/inventory/applications/ports/stock-ledger.port'
 import type { IStockMovementRepository } from '../modules/inventory/applications/ports/stock-movement.repository'
+import type { IOrderRepository } from '../modules/orders/applications/ports/order.repository'
+import type { ISaleCheckout } from '../modules/sales/applications/ports/sale-checkout.port'
 import type { IProductRepository } from '../modules/products/applications/ports/product.repository'
 import type { IShopSettingsRepository } from '../modules/settings/applications/ports/shop-settings.repository'
 import type { ISaleRepository } from '../modules/sales/applications/ports/sale.repository'
@@ -89,6 +91,18 @@ export const mockBranchRepository = (): Mocked<IBranchRepository> => ({
   create: mock<IBranchRepository['create']>(),
   update: mock<IBranchRepository['update']>(),
   countActive: mock<IBranchRepository['countActive']>(),
+})
+
+export const mockOrderRepository = (): Mocked<IOrderRepository> => ({
+  create: mock<IOrderRepository['create']>(),
+  findById: mock<IOrderRepository['findById']>(),
+  findByIdForUpdate: mock<IOrderRepository['findByIdForUpdate']>(),
+  findAll: mock<IOrderRepository['findAll']>(),
+  save: mock<IOrderRepository['save']>(),
+})
+
+export const mockSaleCheckout = (): Mocked<ISaleCheckout> => ({
+  checkout: mock<ISaleCheckout['checkout']>(),
 })
 
 export const mockShopSettingsRepository = (): Mocked<IShopSettingsRepository> => ({

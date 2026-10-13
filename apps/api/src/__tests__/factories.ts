@@ -1,4 +1,5 @@
 import { BranchEntity, type BranchEntityProps } from '../domains/branch.domain'
+import { OrderEntity, type OrderEntityProps } from '../domains/order.domain'
 import { CategoryEntity, type CategoryEntityProps } from '../domains/category.domain'
 import { ProductEntity, type ProductEntityProps } from '../domains/product.domain'
 import { SaleEntity, type SaleEntityProps } from '../domains/sale.domain'
@@ -19,6 +20,24 @@ export const makeUser = (overrides: Partial<UserEntityProps> = {}) =>
     role: 'cashier',
     branchId: 1,
     isActive: true,
+    ...overrides,
+  })
+
+/** An open order with one line of 2 x 25.00. */
+export const makeOrder = (overrides: Partial<OrderEntityProps> = {}) =>
+  new OrderEntity({
+    id: 1,
+    branchId: 1,
+    label: 'โต๊ะ 4',
+    status: 'open',
+    openedById: 1,
+    openedByName: 'สมชาย',
+    saleId: null,
+    cancelReason: null,
+    cancelledById: null,
+    createdAt: new Date('2026-10-13T06:00:00Z'),
+    updatedAt: new Date('2026-10-13T06:00:00Z'),
+    items: [{ productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2 }],
     ...overrides,
   })
 

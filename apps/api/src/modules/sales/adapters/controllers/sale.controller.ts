@@ -1,6 +1,5 @@
 import { Elysia } from 'elysia'
 import { inject, injectable } from 'tsyringe'
-import type { SaleEntity } from '../../../../domains/sale.domain'
 import { idParams, page } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import { CompleteSaleUseCase } from '../../applications/usecases/complete-sale.usecase'
@@ -8,17 +7,8 @@ import { GetSaleUseCase } from '../../applications/usecases/get-sale.usecase'
 import { GetSalesSummaryUseCase } from '../../applications/usecases/get-sales-summary.usecase'
 import { ListSalesUseCase } from '../../applications/usecases/list-sales.usecase'
 import { VoidSaleUseCase } from '../../applications/usecases/void-sale.usecase'
-import { saleSchemas, type SaleResponse } from './schemas/sale.schema'
-
-// Cost and the id of whoever voided the sale are internal: they are not part of the public receipt.
-function toResponse(sale: SaleEntity): SaleResponse {
-  const { voidedById: _internal, items, payments, ...header } = sale.toSnapshot()
-  return {
-    ...header,
-    items: items.map(({ unitCostSatang: _cost, ...item }) => item),
-    payments,
-  }
-}
+import { toSaleResponse as toResponse } from './sale.presenter'
+import { saleSchemas } from './schemas/sale.schema'
 
 @injectable()
 export class SaleElysiaController {

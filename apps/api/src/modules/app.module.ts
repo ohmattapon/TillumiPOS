@@ -5,6 +5,7 @@ import { BranchElysiaController } from './branches/adapters/controllers/branch.c
 import { CategoryElysiaController } from './categories/adapters/controllers/category.controller'
 import './di-registrations'
 import { InventoryElysiaController } from './inventory/adapters/controllers/inventory.controller'
+import { OrderElysiaController } from './orders/adapters/controllers/order.controller'
 import { ProductElysiaController } from './products/adapters/controllers/product.controller'
 import { SaleElysiaController } from './sales/adapters/controllers/sale.controller'
 import { SettingsElysiaController } from './settings/adapters/controllers/settings.controller'
@@ -17,6 +18,7 @@ const categoryController = container.resolve(CategoryElysiaController)
 const productController = container.resolve(ProductElysiaController)
 const inventoryController = container.resolve(InventoryElysiaController)
 const saleController = container.resolve(SaleElysiaController)
+const orderController = container.resolve(OrderElysiaController)
 const settingsController = container.resolve(SettingsElysiaController)
 
 // Categories and products are separate modules that share the /catalog namespace.
@@ -33,4 +35,5 @@ export const appModule = new Elysia({ name: 'api', prefix: '/api/v1' })
   .use(catalog)
   .use(inventoryController.getRoutes())
   .use(saleController.getRoutes())
+  .use(orderController.getRoutes())
   .use(settingsController.getRoutes())

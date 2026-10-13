@@ -1,0 +1,294 @@
+import { beforeEach, describe, expect, test } from 'bun:test'
+import { ZodError } from 'zod'
+import { makeOrder, makeProduct, makeSale } from '../../../../__tests__/factories'
+import {
+  mockOrderRepository,
+  mockProductRepository,
+  mockSaleCheckout,
+  mockUnitOfWork,
+} from '../../../../__tests__/mocks'
+import { OrderEntity } from '../../../../domains/order.domain'
+import { AddOrderItemUseCase } from './add-order-item.usecase'
+import { CancelOrderUseCase } from './cancel-order.usecase'
+import { GetOrderUseCase } from './get-order.usecase'
+import { ListOrdersUseCase } from './list-orders.usecase'
+import { OpenOrderUseCase } from './open-order.usecase'
+import { PayOrderUseCase } from './pay-order.usecase'
+import { RemoveOrderItemUseCase } from './remove-order-item.usecase'
+import { RenameOrderUseCase } from './rename-order.usecase'
+import { SetOrderItemQuantityUseCase } from './set-order-item-quantity.usecase'
+
+let orders: ReturnType<typeof mockOrderRepository>
+let products: ReturnType<typeof mockProductRepository>
+let checkout: ReturnType<typeof mockSaleCheckout>
+let unitOfWork: ReturnType<typeof mockUnitOfWork>
+
+const actor = { user: { id: 7, displayName: 'สมชาย' }, branch: { id: 1, code: 'MAIN' } }
+const tea = makeProduct({ id: 1, name: 'ชา', sku: 'TEA', priceSatang: 2500 })
+const cake = makeProduct({ id: 2, name: 'เค้ก', sku: 'CAKE', priceSatang: 5700 })
+
+beforeEach(() => {
+  orders = mockOrderRepository()
+  products = mockProductRepository()
+  checkout = mockSaleCheckout()
+  unitOfWork = mockUnitOfWork()
+  products.findById.mockImplementation(async (id) => [tea, cake].find((product) => product.id === id) ?? null)
+  orders.save.mockImplementation(async (order) => order)
+})
+
+describe('ListOrdersUseCase', () => {
+  test('lists the open orders of the branch unless another status is asked for', async () => {
+    orders.findAll.mockResolvedValue({ items: [], total: 0 })
+    const useCase = new ListOrdersUseCase(orders)
+
+    await useCase.execute({}, 1)
+    await useCase.execute({ status: 'paid', limit: 10, extra: true }, 2)
+
+    expect(orders.findAll.mock.calls.map(([query]) => query)).toEqual([
+      { status: 'open', branchId: 1 },
+      { status: 'paid', limit: 10, branchId: 2 },
+    ])
+  })
+
+  test('rejects an unknown status', async () => {
+    await expect(new ListOrdersUseCase(orders).execute({ status: 'lost' }, 1)).rejects.toBeInstanceOf(ZodError)
+  })
+})
+
+describe('GetOrderUseCase', () => {
+  test('returns an order of the branch', async () => {
+    const stored = makeOrder({ branchId: 1 })
+    orders.findById.mockResolvedValue(stored)
+
+    expect(await new GetOrderUseCase(orders).execute(1, 1)).toBe(stored)
+  })
+
+  test("an unknown order and another branch's order are both not found", async () => {
+    const useCase = new GetOrderUseCase(orders)
+    orders.findById.mockResolvedValueOnce(null).mockResolvedValueOnce(makeOrder({ branchId: 2 }))
+
+    await expect(useCase.execute(9, 1)).rejects.toMatchObject({ code: 'ORDER_NOT_FOUND' })
+    await expect(useCase.execute(1, 1)).rejects.toMatchObject({ code: 'ORDER_NOT_FOUND' })
+  })
+})
+
+describe('OpenOrderUseCase', () => {
+  let useCase: OpenOrderUseCase
+
+  beforeEach(() => {
+    orders.create.mockImplementation(async (order) => new OrderEntity({ ...order, id: 5, status: 'open', saleId: null, cancelReason: null, cancelledById: null, createdAt: new Date(), updatedAt: new Date() }))
+    useCase = new OpenOrderUseCase(orders, products, unitOfWork)
+  })
+
+  test('opens an empty order for the branch and the person who opened it', async () => {
+    const opened = await useCase.execute({ label: ' โต๊ะ 4 ' }, actor)
+
+    expect(opened).toMatchObject({ id: 5, branchId: 1, label: 'โต๊ะ 4', openedById: 7, openedByName: 'สมชาย', items: [] })
+  })
+
+  test('quotes the current name and price of each product it starts with', async () => {
+    await useCase.execute({ items: [{ productId: 1, quantity: 2 }, { productId: 2, quantity: 1 }] }, actor)
+
+    expect(orders.create.mock.calls[0]![0].items).toEqual([
+      { productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2 },
+      { productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1 },
+    ])
+  })
+
+  test('an unknown or inactive product stops the order from being opened', async () => {
+    await expect(useCase.execute({ items: [{ productId: 99, quantity: 1 }] }, actor)).rejects.toMatchObject({
+      code: 'PRODUCT_NOT_FOUND',
+    })
+
+    products.findById.mockResolvedValue(makeProduct({ id: 3, isActive: false }))
+    await expect(useCase.execute({ items: [{ productId: 3, quantity: 1 }] }, actor)).rejects.toMatchObject({
+      code: 'PRODUCT_INACTIVE',
+    })
+    expect(orders.create).not.toHaveBeenCalled()
+  })
+
+  test('an order may be opened for a product with no stock: stock is taken only at payment', async () => {
+    products.findById.mockResolvedValue(makeProduct({ id: 4, stockQty: 0 }))
+
+    await useCase.execute({ items: [{ productId: 4, quantity: 3 }] }, actor)
+
+    expect(orders.create).toHaveBeenCalled()
+  })
+
+  test.each([
+    ['a quantity of 0', { items: [{ productId: 1, quantity: 0 }] }],
+    ['a label over 100 characters', { label: 'x'.repeat(101) }],
+    ['more than 100 lines', { items: Array.from({ length: 101 }, (_, index) => ({ productId: index + 1, quantity: 1 })) }],
+  ])('rejects %s', async (_label, bad) => {
+    await expect(useCase.execute(bad, actor)).rejects.toBeInstanceOf(ZodError)
+    expect(orders.create).not.toHaveBeenCalled()
+  })
+})
+
+describe('editing an open order', () => {
+  beforeEach(() => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 3, branchId: 1 }))
+  })
+
+  test('adding a product quotes its current price and locks the order first', async () => {
+    const order = await new AddOrderItemUseCase(orders, products, unitOfWork).execute(3, { productId: 2, quantity: 1 }, 1)
+
+    expect(orders.findByIdForUpdate).toHaveBeenCalledWith(3)
+    expect(order.items.map((item) => [item.productId, item.quantity, item.unitPriceSatang])).toEqual([
+      [1, 2, 2500],
+      [2, 1, 5700],
+    ])
+  })
+
+  test('adding a product already on the order keeps its quoted price, even if the menu price changed', async () => {
+    products.findById.mockResolvedValue(makeProduct({ id: 1, priceSatang: 9900 }))
+
+    const order = await new AddOrderItemUseCase(orders, products, unitOfWork).execute(3, { productId: 1, quantity: 1 }, 1)
+
+    expect(order.items).toEqual([{ productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 3 }])
+    expect(products.findById).not.toHaveBeenCalled()
+  })
+
+  test('sets and removes quantities', async () => {
+    const set = await new SetOrderItemQuantityUseCase(orders, unitOfWork).execute(3, 1, { quantity: 6 }, 1)
+    expect(set.items[0]!.quantity).toBe(6)
+
+    const removed = await new RemoveOrderItemUseCase(orders, unitOfWork).execute(3, 1, 1)
+    expect(removed.items).toEqual([])
+  })
+
+  test('renames', async () => {
+    const renamed = await new RenameOrderUseCase(orders, unitOfWork).execute(3, { label: 'โต๊ะ 9' }, 1)
+
+    expect(renamed.label).toBe('โต๊ะ 9')
+  })
+
+  test("another branch's order is not found and nothing is saved", async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 3, branchId: 2 }))
+
+    await expect(
+      new AddOrderItemUseCase(orders, products, unitOfWork).execute(3, { productId: 1, quantity: 1 }, 1),
+    ).rejects.toMatchObject({ code: 'ORDER_NOT_FOUND' })
+    await expect(new RemoveOrderItemUseCase(orders, unitOfWork).execute(3, 1, 1)).rejects.toMatchObject({
+      code: 'ORDER_NOT_FOUND',
+    })
+    expect(orders.save).not.toHaveBeenCalled()
+  })
+
+  test('a closed order cannot be edited', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 3, status: 'cancelled', cancelReason: 'x' }))
+
+    await expect(
+      new SetOrderItemQuantityUseCase(orders, unitOfWork).execute(3, 1, { quantity: 1 }, 1),
+    ).rejects.toMatchObject({ code: 'ORDER_NOT_OPEN' })
+    expect(orders.save).not.toHaveBeenCalled()
+  })
+
+  test.each([
+    ['a quantity of zero', { quantity: 0 }],
+    ['a missing quantity', {}],
+  ])('rejects %s without touching the order', async (_label, bad) => {
+    await expect(new SetOrderItemQuantityUseCase(orders, unitOfWork).execute(3, 1, bad, 1)).rejects.toBeInstanceOf(
+      ZodError,
+    )
+    expect(orders.findByIdForUpdate).not.toHaveBeenCalled()
+  })
+})
+
+describe('CancelOrderUseCase', () => {
+  test('closes an open order with the reason and who did it', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 3 }))
+
+    const cancelled = await new CancelOrderUseCase(orders, unitOfWork).execute(3, { reason: 'ลูกค้าไม่รอ' }, actor)
+
+    expect(cancelled).toMatchObject({ status: 'cancelled', cancelReason: 'ลูกค้าไม่รอ', cancelledById: 7 })
+  })
+
+  test('needs a reason', async () => {
+    await expect(new CancelOrderUseCase(orders, unitOfWork).execute(3, {}, actor)).rejects.toBeInstanceOf(ZodError)
+  })
+
+  test('cannot cancel an order that is already paid', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 3 }).markPaid(10))
+
+    await expect(new CancelOrderUseCase(orders, unitOfWork).execute(3, { reason: 'x' }, actor)).rejects.toMatchObject({
+      code: 'ORDER_NOT_OPEN',
+    })
+  })
+})
+
+describe('PayOrderUseCase', () => {
+  let useCase: PayOrderUseCase
+  const payment = { payments: [{ method: 'cash', amountSatang: 10000 }], discountSatang: 500 }
+
+  beforeEach(() => {
+    orders.findByIdForUpdate.mockResolvedValue(
+      makeOrder({
+        id: 3,
+        items: [
+          { productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2 },
+          { productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1 },
+        ],
+      }),
+    )
+    checkout.checkout.mockResolvedValue(makeSale({ id: 41 }))
+    useCase = new PayOrderUseCase(orders, checkout, unitOfWork)
+  })
+
+  test('sells the order at the prices it quoted, inside one unit of work, and closes it with the sale', async () => {
+    const sale = await useCase.execute(3, payment, actor)
+
+    expect(unitOfWork.run).toHaveBeenCalledTimes(1)
+    expect(checkout.checkout).toHaveBeenCalledWith({
+      lines: [
+        { productId: 1, quantity: 2, unitPriceSatang: 2500 },
+        { productId: 2, quantity: 1, unitPriceSatang: 5700 },
+      ],
+      discountSatang: 500,
+      payments: [{ method: 'cash', amountSatang: 10000 }],
+      cashier: actor.user,
+      branch: actor.branch,
+    })
+    expect(orders.save.mock.calls[0]![0]).toMatchObject({ id: 3, status: 'paid', saleId: 41 })
+    expect(sale.id).toBe(41)
+  })
+
+  test('a failed sale leaves the order open and unsaved', async () => {
+    const failure = new Error('stock')
+    checkout.checkout.mockRejectedValue(failure)
+
+    await expect(useCase.execute(3, payment, actor)).rejects.toBe(failure)
+    expect(orders.save).not.toHaveBeenCalled()
+  })
+
+  test('an empty order is refused before any sale is made', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 3, items: [] }))
+
+    await expect(useCase.execute(3, payment, actor)).rejects.toMatchObject({ code: 'ORDER_EMPTY' })
+    expect(checkout.checkout).not.toHaveBeenCalled()
+  })
+
+  test('a closed order is refused before any sale is made', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 3 }).markPaid(9))
+
+    await expect(useCase.execute(3, payment, actor)).rejects.toMatchObject({ code: 'ORDER_NOT_OPEN' })
+    expect(checkout.checkout).not.toHaveBeenCalled()
+  })
+
+  test("another branch's order is not found", async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 3, branchId: 2 }))
+
+    await expect(useCase.execute(3, payment, actor)).rejects.toMatchObject({ code: 'ORDER_NOT_FOUND' })
+    expect(checkout.checkout).not.toHaveBeenCalled()
+  })
+
+  test.each([
+    ['no payments', { payments: [] }],
+    ['a zero payment', { payments: [{ method: 'cash', amountSatang: 0 }] }],
+    ['an unknown method', { payments: [{ method: 'barter', amountSatang: 1 }] }],
+    ['a negative discount', { ...payment, discountSatang: -1 }],
+  ])('rejects %s without opening a unit of work', async (_label, bad) => {
+    await expect(useCase.execute(3, bad, actor)).rejects.toBeInstanceOf(ZodError)
+    expect(unitOfWork.run).not.toHaveBeenCalled()
+  })
+})
