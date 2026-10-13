@@ -4,6 +4,8 @@ import { PAYMENT_METHODS } from '../../../../domains/sale.domain'
 const payment = z.object({
   method: z.enum(PAYMENT_METHODS),
   amountSatang: z.number().int().min(1),
+  /** The confirmed QR payment this one is backed by (see the qr-payments module). */
+  qrPaymentId: z.number().int().positive().optional(),
 })
 
 export const completeSaleSchema = z.object({

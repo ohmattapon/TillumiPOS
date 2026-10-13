@@ -1,5 +1,6 @@
 import { BranchEntity, type BranchEntityProps } from '../domains/branch.domain'
 import { OrderEntity, type OrderEntityProps } from '../domains/order.domain'
+import { QrPaymentEntity, type QrPaymentEntityProps } from '../domains/qr-payment.domain'
 import { CategoryEntity, type CategoryEntityProps } from '../domains/category.domain'
 import { ProductEntity, type ProductEntityProps } from '../domains/product.domain'
 import { SaleEntity, type SaleEntityProps } from '../domains/sale.domain'
@@ -20,6 +21,26 @@ export const makeUser = (overrides: Partial<UserEntityProps> = {}) =>
     role: 'cashier',
     branchId: 1,
     isActive: true,
+    ...overrides,
+  })
+
+/** A pending QR for 50.00 that expires 10 minutes after it was made. */
+export const makeQrPayment = (overrides: Partial<QrPaymentEntityProps> = {}) =>
+  new QrPaymentEntity({
+    id: 1,
+    branchId: 1,
+    reference: 'QR0123456789ABCD',
+    amountSatang: 5000,
+    qrRawData: '000201010212',
+    expiresAt: new Date('2026-10-13T06:10:00Z'),
+    createdById: 1,
+    status: 'pending',
+    bankTransactionId: null,
+    payerName: null,
+    paidAt: null,
+    lastCheckedAt: null,
+    saleId: null,
+    createdAt: new Date('2026-10-13T06:00:00Z'),
     ...overrides,
   })
 

@@ -4,6 +4,7 @@ import { makeProduct, makeSale, makeStockMovement } from '../../../../__tests__/
 import {
   mockProductRepository,
   mockSaleRepository,
+  mockQrPaymentClaims,
   mockShopSettingsRepository,
   mockStockLedger,
   mockUnitOfWork,
@@ -27,6 +28,7 @@ let products: ReturnType<typeof mockProductRepository>
 let ledger: ReturnType<typeof mockStockLedger>
 let unitOfWork: ReturnType<typeof mockUnitOfWork>
 let settings: ReturnType<typeof mockShopSettingsRepository>
+let qrPayments: ReturnType<typeof mockQrPaymentClaims>
 
 beforeEach(() => {
   sales = mockSaleRepository()
@@ -34,6 +36,7 @@ beforeEach(() => {
   ledger = mockStockLedger()
   unitOfWork = mockUnitOfWork()
   settings = mockShopSettingsRepository()
+  qrPayments = mockQrPaymentClaims()
   settings.get.mockResolvedValue(new ShopSettingsEntity(DEFAULT_SHOP_SETTINGS))
   ledger.record.mockResolvedValue(makeStockMovement())
 })
@@ -49,7 +52,7 @@ describe('CompleteSaleUseCase', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings), unitOfWork)
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments), unitOfWork)
   })
 
   const sell = (overrides: Record<string, unknown> = {}) =>
@@ -235,6 +238,77 @@ describe('CompleteSaleUseCase', () => {
     ledger.record.mockRejectedValue(failure)
 
     await expect(sell()).rejects.toBe(failure)
+  })
+})
+
+describe('QR payments in a sale', () => {
+  let useCase: CompleteSaleUseCase
+  const tea = makeProduct({ id: 1, name: 'ชา', sku: 'TEA', priceSatang: 10000, stockQty: 10 })
+  const cashier = { id: 7, displayName: 'สมชาย' }
+  const branch = { id: 1, code: 'MAIN' }
+  const sellWith = (payments: unknown[]) =>
+    useCase.execute({ items: [{ productId: 1, quantity: 1 }], payments }, cashier, branch)
+
+  beforeEach(() => {
+    products.findManyForUpdate.mockResolvedValue([tea])
+    sales.nextReceiptNo.mockResolvedValue('MAIN-20261013-00042')
+    sales.create.mockImplementation(async (sale, receiptNo) =>
+      makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
+    )
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments), unitOfWork)
+  })
+
+  test('a promptpay payment backed by a QR is checked for this branch and amount, then used by the sale', async () => {
+    qrPayments.isRequired.mockReturnValue(true)
+
+    const sale = await sellWith([{ method: 'promptpay', amountSatang: 10000, qrPaymentId: 9 }])
+
+    expect(qrPayments.assertClaimable).toHaveBeenCalledWith(9, { branchId: 1, amountSatang: 10000 })
+    expect(qrPayments.consume).toHaveBeenCalledWith(9, 15)
+    expect(sale.payments).toEqual([{ method: 'promptpay', amountSatang: 10000 }])
+  })
+
+  test('when QR payment is configured, promptpay without a confirmed QR is refused and nothing is stored', async () => {
+    qrPayments.isRequired.mockReturnValue(true)
+
+    await expect(sellWith([{ method: 'promptpay', amountSatang: 10000 }])).rejects.toMatchObject({
+      code: 'QR_PAYMENT_REQUIRED',
+    })
+    expect(sales.create).not.toHaveBeenCalled()
+    expect(ledger.record).not.toHaveBeenCalled()
+  })
+
+  test('without QR payment configured, promptpay is taken on trust as before', async () => {
+    qrPayments.isRequired.mockReturnValue(false)
+
+    await sellWith([{ method: 'promptpay', amountSatang: 10000 }])
+
+    expect(qrPayments.assertClaimable).not.toHaveBeenCalled()
+    expect(sales.create).toHaveBeenCalled()
+  })
+
+  test('a QR that cannot be used stops the sale before anything is stored', async () => {
+    const refused = new DomainConflictError('ถูกใช้แล้ว', 'QR_ALREADY_USED')
+    qrPayments.assertClaimable.mockRejectedValue(refused)
+
+    await expect(sellWith([{ method: 'promptpay', amountSatang: 10000, qrPaymentId: 9 }])).rejects.toBe(refused)
+    expect(sales.create).not.toHaveBeenCalled()
+    expect(qrPayments.consume).not.toHaveBeenCalled()
+  })
+
+  test('a QR id on a cash payment is refused', async () => {
+    await expect(sellWith([{ method: 'cash', amountSatang: 10000, qrPaymentId: 9 }])).rejects.toMatchObject({
+      code: 'QR_PAYMENT_REQUIRED',
+    })
+  })
+
+  test('the same QR cannot back two payments of one sale', async () => {
+    await expect(
+      sellWith([
+        { method: 'promptpay', amountSatang: 5000, qrPaymentId: 9 },
+        { method: 'promptpay', amountSatang: 5000, qrPaymentId: 9 },
+      ]),
+    ).rejects.toMatchObject({ code: 'QR_ALREADY_USED' })
   })
 })
 

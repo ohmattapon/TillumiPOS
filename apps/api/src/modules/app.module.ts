@@ -6,6 +6,7 @@ import { CategoryElysiaController } from './categories/adapters/controllers/cate
 import './di-registrations'
 import { InventoryElysiaController } from './inventory/adapters/controllers/inventory.controller'
 import { OrderElysiaController } from './orders/adapters/controllers/order.controller'
+import { QrPaymentElysiaController } from './qr-payments/adapters/controllers/qr-payment.controller'
 import { ProductElysiaController } from './products/adapters/controllers/product.controller'
 import { SaleElysiaController } from './sales/adapters/controllers/sale.controller'
 import { SettingsElysiaController } from './settings/adapters/controllers/settings.controller'
@@ -19,6 +20,7 @@ const productController = container.resolve(ProductElysiaController)
 const inventoryController = container.resolve(InventoryElysiaController)
 const saleController = container.resolve(SaleElysiaController)
 const orderController = container.resolve(OrderElysiaController)
+const qrPaymentController = container.resolve(QrPaymentElysiaController)
 const settingsController = container.resolve(SettingsElysiaController)
 
 // Categories and products are separate modules that share the /catalog namespace.
@@ -36,4 +38,5 @@ export const appModule = new Elysia({ name: 'api', prefix: '/api/v1' })
   .use(inventoryController.getRoutes())
   .use(saleController.getRoutes())
   .use(orderController.getRoutes())
+  .use(qrPaymentController.getRoutes())
   .use(settingsController.getRoutes())

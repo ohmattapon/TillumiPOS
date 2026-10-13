@@ -13,7 +13,8 @@ export interface CheckoutLine {
 export interface CheckoutRequest {
   lines: CheckoutLine[]
   discountSatang: number
-  payments: SalePayment[]
+  /** A `promptpay` payment may name the confirmed QR payment that backs it. */
+  payments: (SalePayment & { qrPaymentId?: number })[]
   cashier: { id: number; displayName: string }
   branch: { id: number; code: string }
 }

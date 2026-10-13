@@ -45,7 +45,15 @@ export const orderSchemas = {
   cancel: t.Object({ reason: t.String({ minLength: 1, maxLength: 500 }) }),
   pay: t.Object({
     discountSatang: t.Optional(satang()),
-    payments: t.Array(t.Object({ method, amountSatang: satang({ minimum: 1 }) }), { minItems: 1 }),
+    payments: t.Array(
+      t.Object({
+        method,
+        amountSatang: satang({ minimum: 1 }),
+        // The confirmed QR payment backing a `promptpay` payment.
+        qrPaymentId: t.Optional(t.Integer({ minimum: 1 })),
+      }),
+      { minItems: 1 },
+    ),
   }),
   listQuery: t.Object({
     status: t.Optional(status),
