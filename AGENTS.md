@@ -108,6 +108,14 @@ apps/api/src/
 - คำตอบที่เป็นข้อผิดพลาดทุกตัวเป็น RFC 9457 Problem Details (`application/problem+json`): `type`, `title`, `status`, `detail`, `code` และ `errors` เฉพาะข้อผิดพลาดการตรวจข้อมูล ข้อความสำหรับผู้ใช้อยู่ใน `detail` ห้ามเพิ่มช่อง `message`
 - repository แปลงข้อผิดพลาดของฐานข้อมูล (ค่าซ้ำ, foreign key) เป็น domain error ก่อนออกจาก adapter
 
+### สาขา
+
+- สต็อก บิลขาย รายการเคลื่อนไหวของสต็อก และตัวนับเลขใบเสร็จผูกกับสาขา รายการสินค้า หมวดหมู่ ราคา และการตั้งค่าร้านใช้ร่วมกันทุกสาขา
+- สาขาที่ทำงานอยู่มาจาก header `X-Branch-Id` (ไม่ส่ง = สาขาของผู้ใช้เอง) เฉพาะเจ้าของร้านเลือกสาขาอื่นได้ controller อ่านจาก `await branch()` ใน context ของ `auth` ซึ่งตรวจสิทธิ์และสถานะสาขาให้ ห้ามอ่าน header เอง
+- use case ที่แตะสต็อกหรือบิลรับ `branchId` เป็นพารามิเตอร์ตรง ๆ และ port ของ repository ที่เกี่ยวกับสต็อกหรือบิลรับ `branchId` ด้วย ห้ามใช้ค่ากลางที่ซ่อนอยู่ (เช่น AsyncLocalStorage) บิลของสาขาอื่นต้องตอบว่าไม่พบ
+- ยอดสต็อกอยู่ที่ตาราง `branch_stock` ไม่มีคอลัมน์ `products.stock_qty` สินค้าที่ไม่มีแถวคือไม่มีของในสาขานั้น และต้องล็อกแถว `products` ก่อนแล้วค่อยอ่านยอด (อ่านใน statement ถัดไป) ถ้าล็อกพร้อม join จะได้ยอดเก่าและขายเกินสต็อก
+- สาขาปิดได้แต่ลบไม่ได้ และรหัสสาขาแก้ไม่ได้เพราะเป็นตัวนำหน้าเลขใบเสร็จ
+
 ### สัญญาของ API
 
 - ทุกเส้นทางอยู่ใต้ `/api/v1` การเปลี่ยนที่ทำให้ผู้ใช้ API เดิมพังต้องขึ้นรุ่นใหม่ ไม่แก้ใน `v1`
@@ -130,7 +138,7 @@ apps/api/src/
 apps/web/src/
 ├── app/                  ประกอบแอป: App.tsx (เส้นทาง), AppSidebar.tsx, i18n.ts (รวมไฟล์ภาษาของทุก feature)
 ├── features/
-│   └── <feature>/        auth, categories, products, sales, pos, settings
+│   └── <feature>/        auth, branches, categories, products, sales, pos, settings
 │       ├── index.ts      ทางเข้าสาธารณะของ feature: ส่งออกเฉพาะที่ feature อื่นใช้
 │       ├── api.ts        query key, queryOptions และ mutation hook ของ feature (TanStack Query)
 │       ├── components/   หน้าและคอมโพเนนต์ของ feature
@@ -209,5 +217,5 @@ apps/web/src/
 
 - จำนวนเงินเป็นจำนวนเต็มหน่วยสตางค์เสมอ ห้ามใช้ทศนิยม
 - บิลขายห้ามแก้หรือลบ ข้อผิดพลาดแก้ด้วยการยกเลิกบิล
-- สต็อกเปลี่ยนผ่าน port `IStockLedger` ของโมดูล `inventory` เท่านั้น และทุกการเปลี่ยนต้องมีรายการเคลื่อนไหว
+- สต็อกเปลี่ยนผ่าน port `IStockLedger` ของโมดูล `inventory` เท่านั้น และทุกการเปลี่ยนต้องมีรายการเคลื่อนไหวพร้อมสาขา
 - ก่อนบอกว่างานเสร็จ ต้องรัน `bun run typecheck` และ `bun run test` ให้ผ่าน
