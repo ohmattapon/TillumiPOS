@@ -1,12 +1,11 @@
 import type { Product } from '@pos/api/types'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { api, unwrap } from '@/lib/api'
+import { useChangeStock, type StockChange } from '../api'
 
 export type StockMode = 'receive' | 'adjust'
 
@@ -22,7 +21,6 @@ interface Props {
 }
 
 export function StockDialog({ product, mode, onClose }: Props) {
-  const queryClient = useQueryClient()
   const [quantity, setQuantity] = useState('')
   const [note, setNote] = useState('')
 
@@ -30,25 +28,22 @@ export function StockDialog({ product, mode, onClose }: Props) {
   const isValid = value !== null && (mode === 'receive' ? value >= 1 : value !== product.stockQty)
   const balanceAfter = value === null ? null : mode === 'receive' ? product.stockQty + value : value
 
-  const save = useMutation({
-    mutationFn: () => {
-      const shared = { productId: product.id, note: note.trim() || undefined }
-      return unwrap(
-        mode === 'receive'
-          ? api.inventory.receive.post({ ...shared, quantity: value! })
-          : api.inventory.adjust.post({ ...shared, countedQty: value! }),
-      )
-    },
-    onSuccess: (movement) => {
-      toast.success(`"${product.name}" คงเหลือ ${movement.balanceAfter} ชิ้น`)
-      queryClient.invalidateQueries({ queryKey: ['products'] })
-      onClose()
-    },
-  })
+  const save = useChangeStock()
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    if (isValid) save.mutate()
+    if (!isValid || value === null) return
+    const trimmedNote = note.trim() || undefined
+    const change: StockChange =
+      mode === 'receive'
+        ? { mode, productId: product.id, quantity: value, note: trimmedNote }
+        : { mode, productId: product.id, countedQty: value, note: trimmedNote }
+    save.mutate(change, {
+      onSuccess: (movement) => {
+        toast.success(`"${product.name}" คงเหลือ ${movement.balanceAfter} ชิ้น`)
+        onClose()
+      },
+    })
   }
 
   return (

@@ -1,26 +1,20 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Store } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { api, unwrap } from '@/lib/api'
-import { meQuery } from '@/lib/queries'
+import { useLogin } from '../api'
 
 export function LoginPage() {
-  const queryClient = useQueryClient()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
 
-  const login = useMutation({
-    mutationFn: () => unwrap(api.auth.login.post({ username, password })),
-    onSuccess: (user) => queryClient.setQueryData(meQuery.queryKey, user),
-  })
+  const login = useLogin()
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    login.mutate()
+    login.mutate({ username, password })
   }
 
   return (

@@ -4,14 +4,15 @@ import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel, tableCell, tableHead } from '@/components/Panel'
-import { SaleDetailDialog } from '@/components/SaleDetailDialog'
+import { SaleDetailDialog } from './SaleDetailDialog'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatBaht, formatLongDate, formatTime, paymentMethodLabel } from '@/lib/money'
-import { LOW_STOCK_THRESHOLD, productsQuery, salesTodayQuery, summaryTodayQuery } from '@/lib/queries'
+import { isLowStock, LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
+import { salesTodayQuery, summaryTodayQuery } from '../api'
 
 type StatusFilter = 'all' | 'completed' | 'voided'
 
@@ -54,7 +55,7 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
   const voidedCount = allSales.filter((sale) => sale.status === 'voided').length
   const visibleSales = filter === 'all' ? allSales : allSales.filter((sale) => sale.status === filter)
   const lowStock = (products.data ?? [])
-    .filter((product) => product.trackStock && product.stockQty <= LOW_STOCK_THRESHOLD)
+    .filter(isLowStock)
     .sort((a, b) => a.stockQty - b.stockQty)
 
   const stats = summary.data

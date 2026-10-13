@@ -3,10 +3,8 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { formatBaht, parseBaht, paymentMethodLabel } from '@/lib/money'
+import { formatBaht, parseBaht, paymentMethodLabel, type PaymentMethod } from '@/lib/money'
 import { cn } from '@/lib/utils'
-
-export type PaymentMethod = keyof typeof paymentMethodLabel
 
 const methods: { value: PaymentMethod; icon: LucideIcon }[] = [
   { value: 'cash', icon: Banknote },
