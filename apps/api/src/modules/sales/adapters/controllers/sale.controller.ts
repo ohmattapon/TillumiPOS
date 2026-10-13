@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia'
 import { inject, injectable } from 'tsyringe'
 import type { SaleEntity } from '../../../../domains/sale.domain'
-import { idParams } from '../../../../shared/models'
+import { idParams } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import { CompleteSaleUseCase } from '../../applications/usecases/complete-sale.usecase'
 import { GetSaleUseCase } from '../../applications/usecases/get-sale.usecase'

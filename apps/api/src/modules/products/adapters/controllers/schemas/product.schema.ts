@@ -1,5 +1,5 @@
 import { t } from 'elysia'
-import { satang } from '../../../../../shared/models'
+import { satang } from '../../../../../libs/http-schemas'
 
 const fields = {
   sku: t.String({ minLength: 1, maxLength: 64 }),

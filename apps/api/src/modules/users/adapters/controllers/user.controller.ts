@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia'
 import { inject, injectable } from 'tsyringe'
 import type { UserEntity } from '../../../../domains/user.domain'
-import { idParams } from '../../../../shared/models'
+import { idParams } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import { CreateUserUseCase } from '../../applications/usecases/create-user.usecase'
 import { ListUsersUseCase } from '../../applications/usecases/list-users.usecase'
