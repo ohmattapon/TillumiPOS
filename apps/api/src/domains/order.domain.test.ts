@@ -1,0 +1,172 @@
+import { describe, expect, test } from 'bun:test'
+import { makeOrder } from '../__tests__/factories'
+import { DomainError } from './errors/domain-error'
+import { MAX_LINE_QUANTITY, MAX_ORDER_LINES, OrderEntity, type OrderItem } from './order.domain'
+
+const tea = { productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500 }
+const cake = { productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700 }
+const item = (overrides: Partial<OrderItem> = {}): OrderItem => ({ ...tea, quantity: 1, ...overrides })
+
+const codeOf = (run: () => unknown) => {
+  try {
+    run()
+  } catch (error) {
+    return (error as DomainError).code
+  }
+  return undefined
+}
+
+describe('OrderEntity.open', () => {
+  const base = { branchId: 1, label: null, openedById: 3, openedByName: 'สมชาย', items: [] }
+
+  test('keeps a valid order as given', () => {
+    expect(OrderEntity.open({ ...base, label: 'โต๊ะ 4', items: [item({ quantity: 2 })] })).toEqual({
+      ...base,
+      label: 'โต๊ะ 4',
+      items: [item({ quantity: 2 })],
+    })
+  })
+
+  test('a blank label means none, and surrounding spaces are dropped', () => {
+    expect(OrderEntity.open({ ...base, label: '   ' }).label).toBeNull()
+    expect(OrderEntity.open({ ...base, label: ' โต๊ะ 4 ' }).label).toBe('โต๊ะ 4')
+  })
+
+  test('merges repeated products into the first line, keeping its price', () => {
+    const opened = OrderEntity.open({
+      ...base,
+      items: [item({ quantity: 1 }), item({ productId: 2, productName: 'เค้ก', unitPriceSatang: 5700 }), item({ quantity: 2, unitPriceSatang: 9999 })],
+    })
+
+    expect(opened.items.map((line) => [line.productId, line.quantity, line.unitPriceSatang])).toEqual([
+      [1, 3, 2500],
+      [2, 1, 5700],
+    ])
+  })
+
+  test.each([0, -1, 1.5, MAX_LINE_QUANTITY + 1])('rejects a quantity of %p', (quantity) => {
+    expect(codeOf(() => OrderEntity.open({ ...base, items: [item({ quantity })] }))).toBe('INVALID_ORDER')
+  })
+
+  test('rejects a label over 100 characters and more lines than allowed', () => {
+    expect(codeOf(() => OrderEntity.open({ ...base, label: 'x'.repeat(101) }))).toBe('INVALID_ORDER')
+
+    const many = Array.from({ length: MAX_ORDER_LINES + 1 }, (_, index) => item({ productId: index + 1 }))
+    expect(codeOf(() => OrderEntity.open({ ...base, items: many }))).toBe('INVALID_ORDER')
+  })
+})
+
+describe('OrderEntity', () => {
+  test('adds up what has been ordered', () => {
+    const order = makeOrder({ items: [item({ quantity: 2 }), item({ ...cake, quantity: 1 })] })
+
+    expect(order.subtotalSatang).toBe(2 * 2500 + 5700)
+    expect(order.itemCount).toBe(3)
+  })
+
+  test('an order with nothing on it has a zero total', () => {
+    expect(makeOrder({ items: [] }).subtotalSatang).toBe(0)
+  })
+
+  describe('addItem', () => {
+    test('puts a new product on the order', () => {
+      const order = makeOrder({ items: [] }).addItem(tea, 2)
+
+      expect(order.items).toEqual([item({ quantity: 2 })])
+    })
+
+    test('a product already there gains the quantity and keeps the price it was quoted at', () => {
+      const order = makeOrder({ items: [item({ quantity: 1 })] }).addItem({ ...tea, unitPriceSatang: 3000 }, 2)
+
+      expect(order.items).toEqual([item({ quantity: 3, unitPriceSatang: 2500 })])
+    })
+
+    test('refuses a quantity that would pass the limit', () => {
+      const order = makeOrder({ items: [item({ quantity: MAX_LINE_QUANTITY })] })
+
+      expect(codeOf(() => order.addItem(tea, 1))).toBe('INVALID_ORDER')
+    })
+
+    test('refuses a quantity that is not a whole number of at least 1', () => {
+      expect(codeOf(() => makeOrder().addItem(tea, 0))).toBe('INVALID_ORDER')
+      expect(codeOf(() => makeOrder().addItem(tea, 1.5))).toBe('INVALID_ORDER')
+    })
+  })
+
+  describe('setQuantity and removeItem', () => {
+    const order = makeOrder({ items: [item({ quantity: 2 }), item({ ...cake, quantity: 1 })] })
+
+    test('sets the quantity of one line only', () => {
+      expect(order.setQuantity(1, 5).items.map((line) => line.quantity)).toEqual([5, 1])
+    })
+
+    test('removes a line', () => {
+      expect(order.removeItem(1).items.map((line) => line.productId)).toEqual([2])
+    })
+
+    test('a product that is not on the order is not found', () => {
+      expect(codeOf(() => order.setQuantity(99, 1))).toBe('ORDER_ITEM_NOT_FOUND')
+      expect(codeOf(() => order.removeItem(99))).toBe('ORDER_ITEM_NOT_FOUND')
+    })
+
+    test('setting a quantity of zero is refused: removing is its own action', () => {
+      expect(codeOf(() => order.setQuantity(1, 0))).toBe('INVALID_ORDER')
+    })
+  })
+
+  test('rename sets, trims and clears the label', () => {
+    const order = makeOrder({ label: 'โต๊ะ 1' })
+
+    expect(order.rename(' โต๊ะ 2 ').label).toBe('โต๊ะ 2')
+    expect(order.rename('  ').label).toBeNull()
+    expect(codeOf(() => order.rename('x'.repeat(101)))).toBe('INVALID_ORDER')
+  })
+
+  describe('closing', () => {
+    test('cancel records the reason and closes the order', () => {
+      const cancelled = makeOrder().cancel('ลูกค้าไม่รอ', 9)
+
+      expect(cancelled).toMatchObject({ status: 'cancelled', cancelReason: 'ลูกค้าไม่รอ', cancelledById: 9 })
+    })
+
+    test('cancel needs a reason of at most 500 characters', () => {
+      expect(codeOf(() => makeOrder().cancel('', 9))).toBe('INVALID_ORDER')
+      expect(codeOf(() => makeOrder().cancel('x'.repeat(501), 9))).toBe('INVALID_ORDER')
+    })
+
+    test('markPaid closes the order and points it at its sale', () => {
+      expect(makeOrder().markPaid(77)).toMatchObject({ status: 'paid', saleId: 77 })
+    })
+
+    test('an empty order cannot be paid', () => {
+      expect(codeOf(() => makeOrder({ items: [] }).markPaid(77))).toBe('ORDER_EMPTY')
+    })
+
+    test.each([
+      ['paid', () => makeOrder().markPaid(1)],
+      ['cancelled', () => makeOrder().cancel('x', 9)],
+    ])('a %s order cannot be changed any more', (_status, closed) => {
+      const order = closed()
+
+      expect(codeOf(() => order.addItem(tea, 1))).toBe('ORDER_NOT_OPEN')
+      expect(codeOf(() => order.setQuantity(1, 2))).toBe('ORDER_NOT_OPEN')
+      expect(codeOf(() => order.removeItem(1))).toBe('ORDER_NOT_OPEN')
+      expect(codeOf(() => order.rename('x'))).toBe('ORDER_NOT_OPEN')
+      expect(codeOf(() => order.cancel('x', 9))).toBe('ORDER_NOT_OPEN')
+      expect(codeOf(() => order.markPaid(2))).toBe('ORDER_NOT_OPEN')
+    })
+  })
+
+  test('changes return a new entity and leave the original untouched', () => {
+    const original = makeOrder({ items: [item({ quantity: 1 })] })
+
+    const changed = original.addItem(tea, 4)
+
+    expect(original.items[0]!.quantity).toBe(1)
+    expect(changed.items[0]!.quantity).toBe(5)
+  })
+
+  test('a paid order must have a sale', () => {
+    expect(() => makeOrder({ status: 'paid', saleId: null })).toThrow(DomainError)
+  })
+})

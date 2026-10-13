@@ -1,0 +1,41 @@
+import type { IOrderRepository } from '../ports/order.repository'
+import type { IProductRepository } from '../../../products/applications/ports/product.repository'
+import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
+import type { OrderActor } from '../services/order-access'
+import { OrderEntity } from '../../../../domains/order.domain'
+import { TOKENS } from '../../../tokens'
+import { findOrderedProduct } from '../services/ordered-product'
+import { inject, injectable } from 'tsyringe'
+import { openOrderSchema } from '../schemas/order-schemas'
+import { orderRepositoryToken } from '../ports/order.repository'
+import { productRepositoryToken } from '../../../products/applications/ports/product.repository'
+
+/** Command: opens an order, optionally with its first lines. */
+@injectable()
+export class OpenOrderUseCase {
+  constructor(
+    @inject(orderRepositoryToken) private readonly orders: IOrderRepository,
+    @inject(productRepositoryToken) private readonly products: IProductRepository,
+    @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
+  ) {}
+
+  async execute(input: unknown, actor: OrderActor) {
+    const dto = openOrderSchema.parse(input)
+
+    return this.unitOfWork.run(async () => {
+      const items = []
+      for (const line of dto.items ?? [])
+        items.push({ ...(await findOrderedProduct(this.products, line.productId, actor.branch.id)), quantity: line.quantity })
+
+      return this.orders.create(
+        OrderEntity.open({
+          branchId: actor.branch.id,
+          label: dto.label ?? null,
+          openedById: actor.user.id,
+          openedByName: actor.user.displayName,
+          items,
+        }),
+      )
+    })
+  }
+}

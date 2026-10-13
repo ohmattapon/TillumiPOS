@@ -12,6 +12,7 @@ import { DomainConflictError } from '../../../../domains/errors/domain-conflict.
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import type { IClock } from '../../../shared/ports/clock.port'
 import { DEFAULT_SHOP_SETTINGS, ShopSettingsEntity } from '../../../../domains/shop-settings.domain'
+import { SaleCheckout } from '../services/sale-checkout'
 import { CompleteSaleUseCase } from './complete-sale.usecase'
 import { GetSaleUseCase } from './get-sale.usecase'
 import { GetSalesSummaryUseCase } from './get-sales-summary.usecase'
@@ -48,7 +49,7 @@ describe('CompleteSaleUseCase', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(sales, products, ledger, unitOfWork, settings)
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings), unitOfWork)
   })
 
   const sell = (overrides: Record<string, unknown> = {}) =>
