@@ -8,6 +8,8 @@ const apiTarget = 'http://localhost:3000'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // One .env for the whole repo, at the root. Only VITE_-prefixed names reach the browser.
+  envDir: '../..',
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   server: {
     // Listen on the LAN so tablets and other tills can open the app.
