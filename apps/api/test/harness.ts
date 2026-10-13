@@ -3,8 +3,15 @@ import { container } from 'tsyringe'
 import { app, type App } from '../src/app'
 import { migrate } from 'drizzle-orm/bun-sql/migrator'
 import { client as sqlClient, db } from '../src/libs/db'
-import type { CreateProduct, Product } from '../src/modules/catalog/products/model'
-import { ProductsService } from '../src/modules/catalog/products/service'
+import { toProductResponse } from '../src/modules/products/adapters/controllers/product.presenter'
+import type {
+  CreateProductBody as CreateProduct,
+  ProductResponse as Product,
+} from '../src/modules/products/adapters/controllers/schemas/product.schema'
+import { CreateProductUseCase } from '../src/modules/products/applications/usecases/create-product.usecase'
+import { GetProductUseCase } from '../src/modules/products/applications/usecases/get-product.usecase'
+import type { IMediaStorage } from '../src/modules/shared/ports/media-storage.port'
+import { TOKENS } from '../src/modules/tokens'
 import { InventoryService } from '../src/modules/inventory/service'
 import type { UserResponse as User } from '../src/modules/users/adapters/controllers/schemas/user.schema'
 import { CreateUserUseCase } from '../src/modules/users/applications/usecases/create-user.usecase'
@@ -66,7 +73,7 @@ export async function seedProduct(
   { stock = 0, ...input }: Partial<CreateProduct> & { stock?: number } = {},
 ): Promise<Product> {
   const n = ++productCounter
-  const product = await ProductsService.create({
+  const product = await container.resolve(CreateProductUseCase).execute({
     sku: `SKU-${n}`,
     name: `Product ${n}`,
     priceSatang: 1000,
@@ -74,7 +81,10 @@ export async function seedProduct(
     ...input,
   })
   if (stock > 0) await InventoryService.receive({ productId: product.id, quantity: stock }, by.user.id)
-  return ProductsService.getById(product.id)
+  return toProductResponse(
+    await container.resolve(GetProductUseCase).execute(product.id),
+    container.resolve<IMediaStorage>(TOKENS.MediaStorage),
+  )
 }
 
 interface EdenResult<T> {

@@ -3,7 +3,7 @@ import { count } from 'drizzle-orm'
 import { container } from 'tsyringe'
 import { CreateCategoryUseCase } from '../../modules/categories/applications/usecases/create-category.usecase'
 import '../../modules/di-registrations'
-import { ProductsService } from '../../modules/catalog/products/service'
+import { CreateProductUseCase } from '../../modules/products/applications/usecases/create-product.usecase'
 import { InventoryService } from '../../modules/inventory/service'
 import { CreateUserUseCase } from '../../modules/users/applications/usecases/create-user.usecase'
 import { users } from './schema/users'
@@ -27,7 +27,7 @@ if (existing!.total > 0) {
     { sku: 'SNK-002', barcode: '8850000000042', name: 'ช็อกโกแลตแท่ง', categoryId: snacks.id, priceSatang: 2500, costSatang: 1800 },
   ]
   for (const sample of samples) {
-    const product = await ProductsService.create(sample)
+    const product = await container.resolve(CreateProductUseCase).execute(sample)
     await InventoryService.receive({ productId: product.id, quantity: 50, note: 'ยอดยกมา' }, owner.id)
   }
 

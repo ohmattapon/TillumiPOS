@@ -1,6 +1,6 @@
 import { index, integer, pgEnum, pgTable, text } from 'drizzle-orm/pg-core'
 import { createdAt, id } from '../../infrastructure/database/columns'
-import { products } from '../catalog/products/schema'
+import { products } from '../../infrastructure/database/schema/products'
 import { users } from '../../infrastructure/database/schema/users'
 
 export const stockMovementType = pgEnum('stock_movement_type', ['receive', 'sale', 'void', 'adjust'])

@@ -1,9 +1,15 @@
 import { desc, eq } from 'drizzle-orm'
 import { db, type Tx } from '../../libs/db'
 import { badRequest, notFound } from '../../shared/errors'
-import { ProductsService } from '../catalog/products/service'
+import { container } from 'tsyringe'
+import { currentExecutor, runInTransaction } from '../../libs/transaction-context'
+import { productRepositoryToken } from '../products/applications/ports/product.repository'
+import type { IProductRepository } from '../products/applications/ports/product.repository'
 import type { AdjustStock, MovementsQuery, ReceiveStock, StockMovement } from './model'
 import { stockMovements, type StockMovementType } from './schema'
+
+// Bridge until this module is migrated: the products repository reads the ambient transaction.
+const productRepository = () => container.resolve<IProductRepository>(productRepositoryToken)
 
 interface RecordMovement {
   productId: number
@@ -20,7 +26,7 @@ export abstract class InventoryService {
    * Returns null for products that do not track stock.
    */
   static async record(tx: Tx, input: RecordMovement): Promise<StockMovement | null> {
-    const balanceAfter = await ProductsService.adjustStock(tx, input.productId, input.quantity)
+    const balanceAfter = await productRepository().adjustStock(input.productId, input.quantity)
     if (balanceAfter === null) return null
 
     const [movement] = await tx
@@ -31,8 +37,9 @@ export abstract class InventoryService {
   }
 
   static receive(input: ReceiveStock, userId: number): Promise<StockMovement> {
-    return db.transaction(async (tx) => {
-      const [product] = await ProductsService.lockByIds(tx, [input.productId])
+    return runInTransaction(async () => {
+      const tx = currentExecutor() as Tx
+      const [product] = await productRepository().findManyForUpdate([input.productId])
       if (!product) throw notFound('ไม่พบสินค้า')
       if (!product.trackStock) throw badRequest('สินค้านี้ไม่ได้ตั้งให้นับสต็อก', 'STOCK_NOT_TRACKED')
 
@@ -42,8 +49,9 @@ export abstract class InventoryService {
   }
 
   static adjust(input: AdjustStock, userId: number): Promise<StockMovement> {
-    return db.transaction(async (tx) => {
-      const [product] = await ProductsService.lockByIds(tx, [input.productId])
+    return runInTransaction(async () => {
+      const tx = currentExecutor() as Tx
+      const [product] = await productRepository().findManyForUpdate([input.productId])
       if (!product) throw notFound('ไม่พบสินค้า')
       if (!product.trackStock) throw badRequest('สินค้านี้ไม่ได้ตั้งให้นับสต็อก', 'STOCK_NOT_TRACKED')
 

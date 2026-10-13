@@ -2,7 +2,10 @@ import { and, count, desc, eq, gte, lt, sql, type SQL } from 'drizzle-orm'
 import { env } from '../../libs/env'
 import { db, type Executor, type Tx } from '../../libs/db'
 import { badRequest, conflict, notFound } from '../../shared/errors'
-import { ProductsService } from '../catalog/products/service'
+import { container } from 'tsyringe'
+import { currentExecutor, runInTransaction } from '../../libs/transaction-context'
+import { productRepositoryToken } from '../products/applications/ports/product.repository'
+import type { IProductRepository } from '../products/applications/ports/product.repository'
 import { InventoryService } from '../inventory/service'
 import type { UserResponse as User } from '../users/adapters/controllers/schemas/user.schema'
 import type { CreateSale, Sale, SaleHeader, SaleListQuery, SaleSummary, SaleSummaryQuery } from './model'
@@ -26,17 +29,21 @@ const headerColumns = {
   createdAt: sales.createdAt,
 }
 
+// Bridge until this module is migrated: the products repository reads the ambient transaction.
+const productRepository = () => container.resolve<IProductRepository>(productRepositoryToken)
+
 const total = (expression: SQL) => sql<number>`coalesce(sum(${expression}), 0)`.mapWith(Number)
 
 export abstract class SalesService {
   static create(input: CreateSale, cashier: User): Promise<Sale> {
-    return db.transaction(async (tx) => {
+    return runInTransaction(async () => {
+      const tx = currentExecutor() as Tx
       // Merge repeated products; Map keeps the order they were added to the cart.
       const quantities = new Map<number, number>()
       for (const item of input.items)
         quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity)
 
-      const locked = await ProductsService.lockByIds(tx, [...quantities.keys()])
+      const locked = await productRepository().findManyForUpdate([...quantities.keys()])
       const productsById = new Map(locked.map((product) => [product.id, product]))
 
       const lines = [...quantities].map(([productId, quantity]) => {
@@ -84,7 +91,8 @@ export abstract class SalesService {
   }
 
   static void(id: number, reason: string, user: User): Promise<Sale> {
-    return db.transaction(async (tx) => {
+    return runInTransaction(async () => {
+      const tx = currentExecutor() as Tx
       const [sale] = await tx
         .select({ status: sales.status, receiptNo: sales.receiptNo })
         .from(sales)
