@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia'
+import { toErrorResponse } from '../../libs/http-error.factory'
 import { AppError } from '../errors'
 
 const PG_UNIQUE_VIOLATION = '23505'
@@ -15,6 +16,8 @@ export const errorHandler = new Elysia({ name: 'error-handler' })
   .onError({ as: 'global' }, ({ code, error, status }) => {
     // Checked by class: Elysia derives `code` from the error's own `code` field.
     if (error instanceof AppError) return status(error.status, { code: error.code, message: error.message })
+    const domainFailure = toErrorResponse(error)
+    if (domainFailure) return status(domainFailure.status, domainFailure.body)
     if (code === 'VALIDATION')
       return status(422, { code: 'VALIDATION', message: 'ข้อมูลไม่ถูกต้อง', errors: error.all })
     // Thrown when an upload's actual bytes do not match the allowed file types.
