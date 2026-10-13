@@ -1,5 +1,8 @@
+import 'reflect-metadata'
 import { count } from 'drizzle-orm'
-import { CategoriesService } from '../../modules/catalog/categories/service'
+import { container } from 'tsyringe'
+import { CreateCategoryUseCase } from '../../modules/categories/applications/usecases/create-category.usecase'
+import '../../modules/di-registrations'
 import { ProductsService } from '../../modules/catalog/products/service'
 import { InventoryService } from '../../modules/inventory/service'
 import { users } from '../../modules/users/schema'
@@ -13,8 +16,9 @@ if (existing!.total > 0) {
   const password = Bun.env.SEED_OWNER_PASSWORD ?? 'admin1234'
   const owner = await UsersService.create({ username: 'admin', password, displayName: 'เจ้าของร้าน', role: 'owner' })
 
-  const drinks = await CategoriesService.create({ name: 'เครื่องดื่ม', sortOrder: 1 })
-  const snacks = await CategoriesService.create({ name: 'ขนม', sortOrder: 2 })
+  const createCategory = container.resolve(CreateCategoryUseCase)
+  const drinks = await createCategory.execute({ name: 'เครื่องดื่ม', sortOrder: 1 })
+  const snacks = await createCategory.execute({ name: 'ขนม', sortOrder: 2 })
 
   const samples = [
     { sku: 'DRK-001', barcode: '8850000000011', name: 'น้ำดื่ม 600 มล.', categoryId: drinks.id, priceSatang: 1000, costSatang: 600 },
