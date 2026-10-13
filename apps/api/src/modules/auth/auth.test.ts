@@ -35,6 +35,12 @@ describe('login', () => {
     expect(result.error?.value).toMatchObject({ code: 'UNAUTHORIZED' })
   })
 
+  test('a garbage session cookie is refused, not an internal error', async () => {
+    const result = await client('session=not-a-jwt').auth.me.get()
+
+    expect(result.status).toBe(401)
+  })
+
   test('a tampered session cookie is refused, not an internal error', async () => {
     await signIn('owner', 'boss')
     const response = await fetch(`http://localhost:${app.server!.port}/api/auth/login`, {
