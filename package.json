@@ -14,7 +14,7 @@
     "db:seed": "bun run --filter @pos/api db:seed",
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "bun run --filter @pos/web lint",
-    "test": "bun run --filter @pos/api test",
+    "test": "bun run --filter @pos/api test && bun run --filter @pos/web test",
     "test:unit": "bun run --filter @pos/api test:unit"
   }
 }
