@@ -25,7 +25,7 @@ const png = () => new Blob(['image bytes'], { type: 'image/png' })
 
 describe('ListProductsUseCase', () => {
   test('passes the validated query to the repository', async () => {
-    const stored = [makeProduct()]
+    const stored = { items: [makeProduct()], total: 1 }
     repo.findAll.mockResolvedValue(stored)
 
     const result = await new ListProductsUseCase(repo).execute({ q: 'น้ำ', limit: 10, unknown: true })
@@ -35,7 +35,7 @@ describe('ListProductsUseCase', () => {
   })
 
   test('an omitted query lists with defaults', async () => {
-    repo.findAll.mockResolvedValue([])
+    repo.findAll.mockResolvedValue({ items: [], total: 0 })
 
     await new ListProductsUseCase(repo).execute()
 

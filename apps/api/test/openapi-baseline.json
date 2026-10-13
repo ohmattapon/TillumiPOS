@@ -9,9 +9,9 @@
   },
   "openapi": "3.1.2",
   "paths": {
-    "/api/auth/login": {
+    "/api/v1/auth/login": {
       "post": {
-        "operationId": "postApiAuthLogin",
+        "operationId": "postApiV1AuthLogin",
         "requestBody": {
           "content": {
             "application/json": {
@@ -129,9 +129,9 @@
         ]
       }
     },
-    "/api/auth/logout": {
+    "/api/v1/auth/logout": {
       "post": {
-        "operationId": "postApiAuthLogout",
+        "operationId": "postApiV1AuthLogout",
         "responses": {
           "200": {
             "content": {
@@ -158,9 +158,9 @@
         ]
       }
     },
-    "/api/auth/me": {
+    "/api/v1/auth/me": {
       "get": {
-        "operationId": "getApiAuthMe",
+        "operationId": "getApiV1AuthMe",
         "responses": {
           "200": {
             "content": {
@@ -216,58 +216,79 @@
         ]
       }
     },
-    "/api/catalog/categories/": {
+    "/api/v1/catalog/categories/": {
       "get": {
-        "operationId": "getApiCatalogCategories",
+        "operationId": "getApiV1CatalogCategories",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "properties": {
-                      "id": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "name": {
+                            "maxLength": 100,
+                            "minLength": 1,
                             "type": "string"
                           },
-                          {
-                            "type": "integer"
+                          "sortOrder": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
                           }
-                        ]
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "sortOrder",
+                          "isActive"
+                        ],
+                        "type": "object"
                       },
-                      "isActive": {
-                        "type": "boolean"
-                      },
-                      "name": {
-                        "maxLength": 100,
-                        "minLength": 1,
-                        "type": "string"
-                      },
-                      "sortOrder": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      }
+                      "type": "array"
                     },
-                    "required": [
-                      "id",
-                      "name",
-                      "sortOrder",
-                      "isActive"
-                    ],
-                    "type": "object"
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
                   },
-                  "type": "array"
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
                 }
               }
             },
@@ -280,7 +301,7 @@
         ]
       },
       "post": {
-        "operationId": "postApiCatalogCategories",
+        "operationId": "postApiV1CatalogCategories",
         "requestBody": {
           "content": {
             "application/json": {
@@ -425,9 +446,9 @@
         ]
       }
     },
-    "/api/catalog/categories/{id}": {
+    "/api/v1/catalog/categories/{id}": {
       "patch": {
-        "operationId": "patchApiCatalogCategoriesById",
+        "operationId": "patchApiV1CatalogCategoriesById",
         "parameters": [
           {
             "in": "path",
@@ -593,9 +614,9 @@
         ]
       }
     },
-    "/api/catalog/products/": {
+    "/api/v1/catalog/products/": {
       "get": {
-        "operationId": "getApiCatalogProducts",
+        "operationId": "getApiV1CatalogProducts",
         "parameters": [
           {
             "in": "query",
@@ -685,20 +706,54 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "properties": {
-                      "barcode": {
-                        "maxLength": 64,
-                        "minLength": 1,
-                        "nullable": true,
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "categoryId": {
-                        "anyOf": [
-                          {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "barcode": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "categoryId": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "costSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 0
+                          },
+                          "id": {
                             "anyOf": [
                               {
                                 "default": 0,
@@ -710,104 +765,91 @@
                               }
                             ]
                           },
-                          {
-                            "type": "null"
+                          "imageUrl": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "name": {
+                            "maxLength": 200,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "priceSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 0
+                          },
+                          "sku": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "stockQty": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "trackStock": {
+                            "type": "boolean"
                           }
+                        },
+                        "required": [
+                          "id",
+                          "sku",
+                          "barcode",
+                          "name",
+                          "categoryId",
+                          "priceSatang",
+                          "costSatang",
+                          "trackStock",
+                          "isActive",
+                          "stockQty",
+                          "imageUrl"
                         ],
-                        "nullable": true
+                        "type": "object"
                       },
-                      "costSatang": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "minimum": 0,
-                            "type": "integer"
-                          }
-                        ],
-                        "minimum": 0
-                      },
-                      "id": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      },
-                      "imageUrl": {
-                        "nullable": true,
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "isActive": {
-                        "type": "boolean"
-                      },
-                      "name": {
-                        "maxLength": 200,
-                        "minLength": 1,
-                        "type": "string"
-                      },
-                      "priceSatang": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "minimum": 0,
-                            "type": "integer"
-                          }
-                        ],
-                        "minimum": 0
-                      },
-                      "sku": {
-                        "maxLength": 64,
-                        "minLength": 1,
-                        "type": "string"
-                      },
-                      "stockQty": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      },
-                      "trackStock": {
-                        "type": "boolean"
-                      }
+                      "type": "array"
                     },
-                    "required": [
-                      "id",
-                      "sku",
-                      "barcode",
-                      "name",
-                      "categoryId",
-                      "priceSatang",
-                      "costSatang",
-                      "trackStock",
-                      "isActive",
-                      "stockQty",
-                      "imageUrl"
-                    ],
-                    "type": "object"
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
                   },
-                  "type": "array"
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
                 }
               }
             },
@@ -820,7 +862,7 @@
         ]
       },
       "post": {
-        "operationId": "postApiCatalogProducts",
+        "operationId": "postApiV1CatalogProducts",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1209,9 +1251,9 @@
         ]
       }
     },
-    "/api/catalog/products/{id}": {
+    "/api/v1/catalog/products/{id}": {
       "get": {
-        "operationId": "getApiCatalogProductsById",
+        "operationId": "getApiV1CatalogProductsById",
         "parameters": [
           {
             "in": "path",
@@ -1370,7 +1412,7 @@
         ]
       },
       "patch": {
-        "operationId": "patchApiCatalogProductsById",
+        "operationId": "patchApiV1CatalogProductsById",
         "parameters": [
           {
             "in": "path",
@@ -1774,9 +1816,9 @@
         ]
       }
     },
-    "/api/catalog/products/{id}/image": {
+    "/api/v1/catalog/products/{id}/image": {
       "delete": {
-        "operationId": "deleteApiCatalogProductsByIdImage",
+        "operationId": "deleteApiV1CatalogProductsByIdImage",
         "parameters": [
           {
             "in": "path",
@@ -1935,7 +1977,7 @@
         ]
       },
       "put": {
-        "operationId": "putApiCatalogProductsByIdImage",
+        "operationId": "putApiV1CatalogProductsByIdImage",
         "parameters": [
           {
             "in": "path",
@@ -2162,18 +2204,18 @@
         ]
       }
     },
-    "/api/health": {
+    "/api/v1/health": {
       "get": {
-        "operationId": "getApiHealth",
+        "operationId": "getApiV1Health",
         "summary": "ตรวจสอบสถานะระบบ",
         "tags": [
           "System"
         ]
       }
     },
-    "/api/inventory/adjust": {
+    "/api/v1/inventory/adjust": {
       "post": {
-        "operationId": "postApiInventoryAdjust",
+        "operationId": "postApiV1InventoryAdjust",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2431,9 +2473,9 @@
         ]
       }
     },
-    "/api/inventory/movements": {
+    "/api/v1/inventory/movements": {
       "get": {
-        "operationId": "getApiInventoryMovements",
+        "operationId": "getApiV1InventoryMovements",
         "parameters": [
           {
             "in": "query",
@@ -2472,6 +2514,25 @@
               "maximum": 500,
               "minimum": 1
             }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "minimum": 0
+            }
           }
         ],
         "responses": {
@@ -2479,121 +2540,142 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "properties": {
-                      "balanceAfter": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "balanceAfter": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "anyOf": [
+                              {
+                                "format": "date-time",
+                                "type": "string"
+                              },
+                              {
+                                "format": "date",
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              }
+                            ]
+                          },
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "note": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "productId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "quantity": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "reference": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "type": {
+                            "enum": [
+                              "receive",
+                              "sale",
+                              "void",
+                              "adjust"
+                            ],
                             "type": "string"
                           },
-                          {
-                            "type": "integer"
+                          "userId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
                           }
-                        ]
-                      },
-                      "createdAt": {
-                        "anyOf": [
-                          {
-                            "format": "date-time",
-                            "type": "string"
-                          },
-                          {
-                            "format": "date",
-                            "type": "string"
-                          },
-                          {
-                            "type": "number"
-                          }
-                        ]
-                      },
-                      "id": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      },
-                      "note": {
-                        "nullable": true,
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "productId": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      },
-                      "quantity": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      },
-                      "reference": {
-                        "nullable": true,
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "type": {
-                        "enum": [
-                          "receive",
-                          "sale",
-                          "void",
-                          "adjust"
+                        },
+                        "required": [
+                          "id",
+                          "productId",
+                          "type",
+                          "quantity",
+                          "balanceAfter",
+                          "reference",
+                          "note",
+                          "userId",
+                          "createdAt"
                         ],
-                        "type": "string"
+                        "type": "object"
                       },
-                      "userId": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      }
+                      "type": "array"
                     },
-                    "required": [
-                      "id",
-                      "productId",
-                      "type",
-                      "quantity",
-                      "balanceAfter",
-                      "reference",
-                      "note",
-                      "userId",
-                      "createdAt"
-                    ],
-                    "type": "object"
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
                   },
-                  "type": "array"
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
                 }
               }
             },
@@ -2606,9 +2688,9 @@
         ]
       }
     },
-    "/api/inventory/receive": {
+    "/api/v1/inventory/receive": {
       "post": {
-        "operationId": "postApiInventoryReceive",
+        "operationId": "postApiV1InventoryReceive",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2866,9 +2948,9 @@
         ]
       }
     },
-    "/api/sales/": {
+    "/api/v1/sales/": {
       "get": {
-        "operationId": "getApiSales",
+        "operationId": "getApiV1Sales",
         "parameters": [
           {
             "in": "query",
@@ -2930,6 +3012,25 @@
               "maximum": 500,
               "minimum": 1
             }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "minimum": 0
+            }
           }
         ],
         "responses": {
@@ -2937,135 +3038,38 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "properties": {
-                      "cashierId": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "cashierId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "cashierName": {
                             "type": "string"
                           },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      },
-                      "cashierName": {
-                        "type": "string"
-                      },
-                      "changeSatang": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
+                          "changeSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
                           },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      },
-                      "createdAt": {
-                        "anyOf": [
-                          {
-                            "format": "date-time",
-                            "type": "string"
-                          },
-                          {
-                            "format": "date",
-                            "type": "string"
-                          },
-                          {
-                            "type": "number"
-                          }
-                        ]
-                      },
-                      "discountSatang": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      },
-                      "id": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      },
-                      "paidSatang": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      },
-                      "receiptNo": {
-                        "type": "string"
-                      },
-                      "status": {
-                        "enum": [
-                          "completed",
-                          "voided"
-                        ],
-                        "type": "string"
-                      },
-                      "subtotalSatang": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      },
-                      "totalSatang": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      },
-                      "vatSatang": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      },
-                      "voidedAt": {
-                        "anyOf": [
-                          {
+                          "createdAt": {
                             "anyOf": [
                               {
                                 "format": "date-time",
@@ -3080,39 +3084,157 @@
                               }
                             ]
                           },
-                          {
-                            "type": "null"
+                          "discountSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "paidSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "receiptNo": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "enum": [
+                              "completed",
+                              "voided"
+                            ],
+                            "type": "string"
+                          },
+                          "subtotalSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "totalSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "vatSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "voidedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "format": "date-time",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "format": "date",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "voidReason": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
                           }
+                        },
+                        "required": [
+                          "id",
+                          "receiptNo",
+                          "status",
+                          "subtotalSatang",
+                          "discountSatang",
+                          "totalSatang",
+                          "vatSatang",
+                          "paidSatang",
+                          "changeSatang",
+                          "cashierId",
+                          "cashierName",
+                          "voidedAt",
+                          "voidReason",
+                          "createdAt"
                         ],
-                        "nullable": true
+                        "type": "object"
                       },
-                      "voidReason": {
-                        "nullable": true,
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      }
+                      "type": "array"
                     },
-                    "required": [
-                      "id",
-                      "receiptNo",
-                      "status",
-                      "subtotalSatang",
-                      "discountSatang",
-                      "totalSatang",
-                      "vatSatang",
-                      "paidSatang",
-                      "changeSatang",
-                      "cashierId",
-                      "cashierName",
-                      "voidedAt",
-                      "voidReason",
-                      "createdAt"
-                    ],
-                    "type": "object"
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
                   },
-                  "type": "array"
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
                 }
               }
             },
@@ -3125,7 +3247,7 @@
         ]
       },
       "post": {
-        "operationId": "postApiSales",
+        "operationId": "postApiV1Sales",
         "requestBody": {
           "content": {
             "application/json": {
@@ -3724,9 +3846,9 @@
         ]
       }
     },
-    "/api/sales/{id}": {
+    "/api/v1/sales/{id}": {
       "get": {
-        "operationId": "getApiSalesById",
+        "operationId": "getApiV1SalesById",
         "parameters": [
           {
             "in": "path",
@@ -4044,9 +4166,9 @@
         ]
       }
     },
-    "/api/sales/{id}/void": {
+    "/api/v1/sales/{id}/void": {
       "post": {
-        "operationId": "postApiSalesByIdVoid",
+        "operationId": "postApiV1SalesByIdVoid",
         "parameters": [
           {
             "in": "path",
@@ -4414,9 +4536,9 @@
         ]
       }
     },
-    "/api/sales/summary": {
+    "/api/v1/sales/summary": {
       "get": {
-        "operationId": "getApiSalesSummary",
+        "operationId": "getApiV1SalesSummary",
         "parameters": [
           {
             "in": "query",
@@ -4579,55 +4701,76 @@
         ]
       }
     },
-    "/api/users/": {
+    "/api/v1/users/": {
       "get": {
-        "operationId": "getApiUsers",
+        "operationId": "getApiV1Users",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "properties": {
-                      "displayName": {
-                        "type": "string"
-                      },
-                      "id": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "displayName": {
                             "type": "string"
                           },
-                          {
-                            "type": "integer"
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "role": {
+                            "enum": [
+                              "owner",
+                              "cashier"
+                            ],
+                            "type": "string"
+                          },
+                          "username": {
+                            "type": "string"
                           }
-                        ]
-                      },
-                      "isActive": {
-                        "type": "boolean"
-                      },
-                      "role": {
-                        "enum": [
-                          "owner",
-                          "cashier"
+                        },
+                        "required": [
+                          "id",
+                          "username",
+                          "displayName",
+                          "role",
+                          "isActive"
                         ],
-                        "type": "string"
+                        "type": "object"
                       },
-                      "username": {
-                        "type": "string"
-                      }
+                      "type": "array"
                     },
-                    "required": [
-                      "id",
-                      "username",
-                      "displayName",
-                      "role",
-                      "isActive"
-                    ],
-                    "type": "object"
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
                   },
-                  "type": "array"
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
                 }
               }
             },
@@ -4640,7 +4783,7 @@
         ]
       },
       "post": {
-        "operationId": "postApiUsers",
+        "operationId": "postApiV1Users",
         "requestBody": {
           "content": {
             "application/json": {
@@ -4809,9 +4952,9 @@
         ]
       }
     },
-    "/api/users/{id}": {
+    "/api/v1/users/{id}": {
       "patch": {
-        "operationId": "patchApiUsersById",
+        "operationId": "patchApiV1UsersById",
         "parameters": [
           {
             "in": "path",

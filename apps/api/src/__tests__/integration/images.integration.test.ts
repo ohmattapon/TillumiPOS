@@ -22,7 +22,7 @@ describe('product images', () => {
     expect(fakeMedia.objects.has(keyOf(updated.imageUrl))).toBe(true)
     expect((await fetch(updated.imageUrl!)).status).toBe(200)
     // The list endpoint must expose the same URL the POS screen renders.
-    expect(ok(await owner.api.catalog.products.get({ query: {} }))[0]!.imageUrl).toBe(updated.imageUrl)
+    expect(ok(await owner.api.catalog.products.get({ query: {} })).items[0]!.imageUrl).toBe(updated.imageUrl)
   })
 
   test('replacing an image uses a new key and removes the old object', async () => {

@@ -1,3 +1,4 @@
+import type { Page } from '../../../../domains/page'
 import type { NewSale, PaymentMethod, SaleEntity, SaleEntityProps } from '../../../../domains/sale.domain'
 
 /** A sale without its lines and payments, for lists. */
@@ -9,6 +10,7 @@ export interface IFindSalesQuery {
   /** Exclusive. */
   to?: Date
   limit?: number
+  offset?: number
 }
 
 /** Raw sums over completed sales in a period; the use case turns them into the summary. */
@@ -36,8 +38,8 @@ export interface ISaleRepository {
   findByIdForUpdate(id: number): Promise<SaleEntity | null>
   /** Persists the status, void time, reason and user of an already voided entity. */
   saveVoid(sale: SaleEntity): Promise<void>
-  /** Newest first. */
-  findHeaders(query: IFindSalesQuery): Promise<ISaleHeader[]>
+  /** One page, newest first, with the total that match. */
+  findHeaders(query: IFindSalesQuery): Promise<Page<ISaleHeader>>
   /** Sums over completed sales created in [from, to). Voided sales are excluded. */
   sumCompleted(period: { from: Date; to: Date }): Promise<ISalesTotals>
 }

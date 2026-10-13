@@ -29,9 +29,12 @@ await migrate(db, { migrationsFolder: './drizzle' })
 app.listen(0)
 const origin = `http://localhost:${app.server!.port}`
 
+/** Root of the versioned API, for the few tests that need raw HTTP rather than the typed client. */
+export const baseUrl = `${origin}/api/v1`
+
 /** Typed client for the API, optionally carrying a session cookie. */
 export const client = (cookie?: string) => {
-  const api = treaty<App>(origin, cookie ? { headers: { cookie } } : {}).api
+  const api = treaty<App>(origin, cookie ? { headers: { cookie } } : {}).api.v1
   // Eden's dynamic route proxy exposes a `then` property. Hide it so returning
   // this client from an async helper does not trigger Promise assimilation.
   return new Proxy(api, { get: (target, key) => key === 'then' ? undefined : Reflect.get(target, key) })
@@ -48,7 +51,7 @@ export const PASSWORD = 'test-password-1'
 
 /** Logs in over HTTP and returns a client holding the session cookie. */
 export async function login(username: string, password = PASSWORD): Promise<Api> {
-  const response = await fetch(`${origin}/api/auth/login`, {
+  const response = await fetch(`${baseUrl}/auth/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ username, password }),

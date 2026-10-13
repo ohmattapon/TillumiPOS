@@ -31,7 +31,7 @@ describe('voiding a sale', () => {
     expect(voided.voidedAt).toBeInstanceOf(Date)
     expect(voided.items).toEqual(sale.items)
     expect(await stockOf(tea.id)).toBe(10)
-    const [latest] = ok(await owner.api.inventory.movements.get({ query: { productId: tea.id } }))
+    const [latest] = ok(await owner.api.inventory.movements.get({ query: { productId: tea.id } })).items
     expect(latest).toMatchObject({ type: 'void', quantity: 3, balanceAfter: 10, reference: sale.receiptNo })
   })
 

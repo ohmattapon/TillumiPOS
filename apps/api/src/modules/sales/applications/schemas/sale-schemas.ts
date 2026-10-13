@@ -18,6 +18,7 @@ export const listSalesSchema = z.object({
   from: z.date().optional(),
   to: z.date().optional(),
   limit: z.number().int().min(1).max(500).optional(),
+  offset: z.number().int().min(0).optional(),
 })
 
 export const salesSummarySchema = z.object({ from: z.date(), to: z.date() })

@@ -272,7 +272,7 @@ describe('GetSaleUseCase', () => {
 
 describe('ListSalesUseCase', () => {
   test('passes the validated query to the repository', async () => {
-    sales.findHeaders.mockResolvedValue([])
+    sales.findHeaders.mockResolvedValue({ items: [], total: 0 })
     const from = new Date('2026-10-13T00:00:00Z')
 
     await new ListSalesUseCase(sales).execute({ from, limit: 20, extra: true })

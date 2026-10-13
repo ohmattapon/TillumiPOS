@@ -38,14 +38,14 @@ describe('users', () => {
     const again = await createCashier('Somchai')
 
     expect(again.status).toBe(409)
-    expect(again.error?.value).toMatchObject({ code: 'DUPLICATE', message: 'ข้อมูลซ้ำกับที่มีอยู่แล้ว' })
+    expect(again.error?.value).toMatchObject({ code: 'DUPLICATE', detail: 'ข้อมูลซ้ำกับที่มีอยู่แล้ว' })
   })
 
   test('the list is ordered by id', async () => {
     ok(await createCashier('zed'))
     ok(await createCashier('abe'))
 
-    const listed = ok(await owner.api.users.get())
+    const listed = ok(await owner.api.users.get()).items
 
     expect(listed.map((user) => user.username)).toEqual(['owner', 'zed', 'abe'])
   })
@@ -73,7 +73,7 @@ describe('users', () => {
     const result = await owner.api.users({ id: 9999 }).patch({ displayName: 'ผี' })
 
     expect(result.status).toBe(404)
-    expect(result.error?.value).toMatchObject({ code: 'NOT_FOUND', message: 'ไม่พบผู้ใช้' })
+    expect(result.error?.value).toMatchObject({ code: 'NOT_FOUND', detail: 'ไม่พบผู้ใช้' })
   })
 
   test('a short password or an invalid username is a validation error', async () => {
@@ -92,7 +92,7 @@ describe('users', () => {
 
     expect(shortPassword.status).toBe(422)
     expect(badUsername.status).toBe(422)
-    expect(ok(await owner.api.users.get())).toHaveLength(1)
+    expect(ok(await owner.api.users.get()).items).toHaveLength(1)
   })
 
   test('an update with no fields returns the user unchanged', async () => {

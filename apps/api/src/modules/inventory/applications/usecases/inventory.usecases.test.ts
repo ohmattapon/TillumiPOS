@@ -169,7 +169,7 @@ describe('stock commands', () => {
 describe('ListStockMovementsUseCase', () => {
   test('passes the validated query to the repository', async () => {
     const movements = mockStockMovementRepository()
-    const stored = [makeStockMovement()]
+    const stored = { items: [makeStockMovement()], total: 1 }
     movements.findAll.mockResolvedValue(stored)
 
     const result = await new ListStockMovementsUseCase(movements).execute({ productId: 2, limit: 50, extra: 1 })

@@ -21,7 +21,7 @@ describe('categories', () => {
     ok(await owner.api.catalog.categories.post({ name: 'Bakery', sortOrder: 2 }))
     ok(await owner.api.catalog.categories({ id: snacks.id }).patch({ isActive: false }))
 
-    const listed = ok(await owner.api.catalog.categories.get())
+    const listed = ok(await owner.api.catalog.categories.get()).items
 
     expect(listed.map((category) => [category.name, category.isActive])).toEqual([
       ['Drinks', true],
@@ -55,17 +55,17 @@ describe('categories', () => {
     const renamed = await owner.api.catalog.categories({ id: snacks.id }).patch({ name: 'Drinks' })
 
     expect(created.status).toBe(409)
-    expect(created.error?.value).toMatchObject({ code: 'DUPLICATE', message: 'ข้อมูลซ้ำกับที่มีอยู่แล้ว' })
+    expect(created.error?.value).toMatchObject({ code: 'DUPLICATE', detail: 'ข้อมูลซ้ำกับที่มีอยู่แล้ว' })
     expect(renamed.status).toBe(409)
-    expect(renamed.error?.value).toMatchObject({ code: 'DUPLICATE', message: 'ข้อมูลซ้ำกับที่มีอยู่แล้ว' })
-    expect(ok(await owner.api.catalog.categories.get()).map((category) => category.name)).toEqual(['Drinks', 'Snacks'])
+    expect(renamed.error?.value).toMatchObject({ code: 'DUPLICATE', detail: 'ข้อมูลซ้ำกับที่มีอยู่แล้ว' })
+    expect(ok(await owner.api.catalog.categories.get()).items.map((category) => category.name)).toEqual(['Drinks', 'Snacks'])
   })
 
   test('updating an unknown category is not found', async () => {
     const result = await owner.api.catalog.categories({ id: 9999 }).patch({ name: 'Ghost' })
 
     expect(result.status).toBe(404)
-    expect(result.error?.value).toMatchObject({ code: 'NOT_FOUND', message: 'ไม่พบหมวดหมู่' })
+    expect(result.error?.value).toMatchObject({ code: 'NOT_FOUND', detail: 'ไม่พบหมวดหมู่' })
   })
 
   test('an empty or over-long name is a validation error', async () => {
@@ -75,7 +75,7 @@ describe('categories', () => {
     expect(empty.status).toBe(422)
     expect(empty.error?.value).toMatchObject({ code: 'VALIDATION' })
     expect(tooLong.status).toBe(422)
-    expect(ok(await owner.api.catalog.categories.get())).toHaveLength(0)
+    expect(ok(await owner.api.catalog.categories.get()).items).toHaveLength(0)
   })
 
   test('a name of exactly 100 characters is accepted', async () => {

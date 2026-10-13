@@ -62,6 +62,10 @@ export interface CompleteSaleInput {
 }
 
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
+
+/** Largest amount the system stores: the ceiling of a 32-bit integer of satang, about 21.4 million baht. */
+export const MAX_AMOUNT_SATANG = 2_147_483_647
+const tooLarge = () => new DomainError('ยอดเงินเกินกว่าที่ระบบรองรับ', 'AMOUNT_TOO_LARGE')
 const isWholeAmount = (value: number) => Number.isInteger(value) && value >= 0
 
 /**
@@ -134,11 +138,13 @@ export class SaleEntity {
     }))
 
     const subtotalSatang = sum(items.map((item) => item.lineTotalSatang))
+    if (subtotalSatang > MAX_AMOUNT_SATANG) throw tooLarge()
     if (discountSatang > subtotalSatang) throw new DomainError('ส่วนลดมากกว่ายอดรวมสินค้า', 'DISCOUNT_TOO_LARGE')
     const totalSatang = subtotalSatang - discountSatang
     const vatSatang = Math.round((totalSatang * vatRateBp) / (10_000 + vatRateBp))
 
     const paidSatang = sum(payments.map((payment) => payment.amountSatang))
+    if (paidSatang > MAX_AMOUNT_SATANG) throw tooLarge()
     if (paidSatang < totalSatang) throw new DomainError('ยอดชำระไม่ครบ', 'UNDERPAID')
     const changeSatang = paidSatang - totalSatang
     const cashSatang = sum(payments.filter((payment) => payment.method === 'cash').map((payment) => payment.amountSatang))

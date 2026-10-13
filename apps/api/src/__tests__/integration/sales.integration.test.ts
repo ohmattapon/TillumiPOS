@@ -12,7 +12,7 @@ beforeEach(async () => {
 
 const cash = (amountSatang: number) => [{ method: 'cash' as const, amountSatang }]
 const stockOf = async (id: number) => ok(await owner.api.catalog.products({ id }).get()).stockQty
-const allSales = async () => ok(await owner.api.sales.get({ query: {} }))
+const allSales = async () => ok(await owner.api.sales.get({ query: {} })).items
 
 describe('completing a sale', () => {
   test('computes totals, VAT and change, deducts stock and records the movements', async () => {
@@ -50,7 +50,7 @@ describe('completing a sale', () => {
 
     expect(await stockOf(tea.id)).toBe(8)
     expect(await stockOf(cake.id)).toBe(4)
-    const [latest] = ok(await owner.api.inventory.movements.get({ query: { productId: tea.id } }))
+    const [latest] = ok(await owner.api.inventory.movements.get({ query: { productId: tea.id } })).items
     expect(latest).toMatchObject({ type: 'sale', quantity: -2, balanceAfter: 8, reference: sale.receiptNo })
   })
 
@@ -128,7 +128,7 @@ describe('completing a sale', () => {
     ok(await cashier.api.sales.post({ items: [{ productId: service.id, quantity: 999 }], payments: cash(99900) }))
 
     expect(await stockOf(service.id)).toBe(0)
-    expect(ok(await owner.api.inventory.movements.get({ query: { productId: service.id } }))).toHaveLength(0)
+    expect(ok(await owner.api.inventory.movements.get({ query: { productId: service.id } })).items).toHaveLength(0)
   })
 })
 
@@ -240,9 +240,7 @@ describe('rejecting a sale', () => {
     expect(noPayment.status).toBe(422)
   })
 
-  // Known bug, see "บั๊กที่พบ" at the end of the plan: the line total overflows the
-  // integer column and surfaces as a 500. Remove `.failing` once it is fixed.
-  test.failing('a line total beyond the integer range is a client error, not a crash', async () => {
+  test('a line total beyond the integer range is a client error, not a crash', async () => {
     const jet = await seedProduct(owner, { priceSatang: 2_000_000_000, trackStock: false })
 
     const result = await cashier.api.sales.post({
@@ -252,6 +250,8 @@ describe('rejecting a sale', () => {
 
     expect(result.status).toBeGreaterThanOrEqual(400)
     expect(result.status).toBeLessThan(500)
+    expect(result.error?.value).toMatchObject({ code: 'AMOUNT_TOO_LARGE', detail: 'ยอดเงินเกินกว่าที่ระบบรองรับ' })
+    expect(await allSales()).toHaveLength(0)
   })
 })
 

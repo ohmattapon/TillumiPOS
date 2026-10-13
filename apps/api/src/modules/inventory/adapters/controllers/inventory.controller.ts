@@ -1,6 +1,7 @@
-import { Elysia, t } from 'elysia'
+import { Elysia } from 'elysia'
 import { inject, injectable } from 'tsyringe'
 import type { StockMovementEntity } from '../../../../domains/stock-movement.domain'
+import { page } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import { AdjustStockUseCase } from '../../applications/usecases/adjust-stock.usecase'
 import { ListStockMovementsUseCase } from '../../applications/usecases/list-stock-movements.usecase'
@@ -20,12 +21,19 @@ export class InventoryElysiaController {
   getRoutes() {
     return new Elysia({ name: 'inventory', prefix: '/inventory', detail: { tags: ['Inventory'] } })
       .use(auth)
-      .get('/movements', async ({ query }) => (await this.listStockMovements.execute(query)).map(toResponse), {
-        auth: true,
-        query: inventorySchemas.movementsQuery,
-        response: t.Array(inventorySchemas.movement),
-        detail: { summary: 'ประวัติการเคลื่อนไหวสต็อก ล่าสุดก่อน' },
-      })
+      .get(
+        '/movements',
+        async ({ query }) => {
+          const { items, total } = await this.listStockMovements.execute(query)
+          return { items: items.map(toResponse), total }
+        },
+        {
+          auth: true,
+          query: inventorySchemas.movementsQuery,
+          response: page(inventorySchemas.movement),
+          detail: { summary: 'ประวัติการเคลื่อนไหวสต็อก ล่าสุดก่อน' },
+        },
+      )
       .post('/receive', async ({ body, user }) => toResponse(await this.receiveStock.execute(body, user.id)), {
         auth: ['owner'],
         body: inventorySchemas.receive,

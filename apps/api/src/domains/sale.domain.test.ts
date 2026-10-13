@@ -104,6 +104,33 @@ describe('SaleEntity.complete: payment', () => {
   })
 })
 
+describe('SaleEntity.complete: amount ceiling', () => {
+  test('refuses a subtotal beyond what the system can store', () => {
+    const attempt = () => complete({ lines: [line(2_000_000_000, 2)], payments: cash(2_000_000_000) })
+
+    expect(attempt).toThrow('ยอดเงินเกินกว่าที่ระบบรองรับ')
+    expect(codeOf(attempt)).toBe('AMOUNT_TOO_LARGE')
+  })
+
+  test('refuses a tendered amount beyond the ceiling even when the total is small', () => {
+    const attempt = () =>
+      complete({
+        payments: [
+          { method: 'cash', amountSatang: 2_000_000_000 },
+          { method: 'cash', amountSatang: 2_000_000_000 },
+        ],
+      })
+
+    expect(codeOf(attempt)).toBe('AMOUNT_TOO_LARGE')
+  })
+
+  test('accepts a sale exactly at the ceiling', () => {
+    const sale = complete({ lines: [line(2_147_483_647, 1)], payments: cash(2_147_483_647) })
+
+    expect(sale.totalSatang).toBe(2_147_483_647)
+  })
+})
+
 describe('SaleEntity.complete: lines', () => {
   test('snapshots name, SKU, price and cost of each product, and records the cashier', () => {
     const sale = complete({ lines: [line(2500, 2, 4)], payments: cash(5000) })

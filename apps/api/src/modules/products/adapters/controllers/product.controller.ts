@@ -1,7 +1,7 @@
-import { Elysia, t } from 'elysia'
+import { Elysia } from 'elysia'
 import { inject, injectable } from 'tsyringe'
 import type { ProductEntity } from '../../../../domains/product.domain'
-import { idParams } from '../../../../libs/http-schemas'
+import { idParams, page } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import type { IMediaStorage } from '../../../shared/ports/media-storage.port'
 import { TOKENS } from '../../../tokens'
@@ -31,12 +31,19 @@ export class ProductElysiaController {
 
     return new Elysia({ name: 'catalog.products', prefix: '/products' })
       .use(auth)
-      .get('/', async ({ query }) => (await this.listProducts.execute(query)).map(toResponse), {
-        auth: true,
-        query: productSchemas.listQuery,
-        response: t.Array(productSchemas.product),
-        detail: { summary: 'ค้นหาสินค้าด้วยชื่อ SKU หรือบาร์โค้ด' },
-      })
+      .get(
+        '/',
+        async ({ query }) => {
+          const { items, total } = await this.listProducts.execute(query)
+          return { items: items.map(toResponse), total }
+        },
+        {
+          auth: true,
+          query: productSchemas.listQuery,
+          response: page(productSchemas.product),
+          detail: { summary: 'ค้นหาสินค้าด้วยชื่อ SKU หรือบาร์โค้ด' },
+        },
+      )
       .get('/:id', async ({ params }) => toResponse(await this.getProduct.execute(params.id)), {
         auth: true,
         params: idParams,

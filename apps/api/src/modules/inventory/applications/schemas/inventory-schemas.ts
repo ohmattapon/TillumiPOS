@@ -18,4 +18,5 @@ export const adjustStockSchema = z.object({
 export const listStockMovementsSchema = z.object({
   productId: z.number().int().optional(),
   limit: z.number().int().min(1).max(500).optional(),
+  offset: z.number().int().min(0).optional(),
 })

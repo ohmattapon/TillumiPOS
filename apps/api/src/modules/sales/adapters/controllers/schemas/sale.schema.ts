@@ -48,6 +48,7 @@ export const saleSchemas = {
     from: t.Optional(t.Date()),
     to: t.Optional(t.Date()),
     limit: t.Optional(t.Numeric({ minimum: 1, maximum: 500 })),
+    offset: t.Optional(t.Numeric({ minimum: 0 })),
   }),
   summaryQuery: t.Object({ from: t.Date(), to: t.Date() }),
   summary: t.Object({

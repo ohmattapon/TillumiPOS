@@ -9,7 +9,7 @@ beforeEach(async () => {
 })
 
 const stockOf = async (id: number) => ok(await owner.api.catalog.products({ id }).get()).stockQty
-const movementsOf = async (productId: number) => ok(await owner.api.inventory.movements.get({ query: { productId } }))
+const movementsOf = async (productId: number) => ok(await owner.api.inventory.movements.get({ query: { productId } })).items
 
 describe('inventory', () => {
   test('receiving adds stock and records the movement with its running balance', async () => {
