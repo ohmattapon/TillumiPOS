@@ -641,7 +641,7 @@ Expected: ผ่านทั้งหมด ถ้า `@pos/web typecheck` ล�
 
 ```bash
 git add -A apps/api apps/web/tsconfig.app.json bun.lock
-gitcz --non-interactive --type=build --scope=api --subject="add tsyringe, decorators and database-free unit test runs" --body="Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+gitcz --non-interactive --type=chore --scope=api --subject="add tsyringe, decorators and database-free unit test runs" --body="Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
 ---
