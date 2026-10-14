@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
-import { makeOrder, makeProduct, makeSale } from '../../../../__tests__/factories'
+import { makeOrder, makeProduct, makeSale, makeTable } from '../../../../__tests__/factories'
 import {
   mockLineOptionsResolver,
   mockOrderRepository,
   mockProductRepository,
   mockSaleCheckout,
+  mockTableRepository,
   mockUnitOfWork,
 } from '../../../../__tests__/mocks'
 import { OrderEntity } from '../../../../domains/order.domain'
@@ -15,10 +16,13 @@ import { GetOrderUseCase } from './get-order.usecase'
 import { ListOrdersUseCase } from './list-orders.usecase'
 import { OpenOrderUseCase } from './open-order.usecase'
 import { PayOrderUseCase } from './pay-order.usecase'
+import { MergeOrdersUseCase } from './merge-orders.usecase'
+import { MoveOrderToTableUseCase } from './move-order-to-table.usecase'
 import { RemoveOrderItemUseCase } from './remove-order-item.usecase'
 import { RemoveOrderLineUseCase } from './remove-order-line.usecase'
 import { RenameOrderUseCase } from './rename-order.usecase'
 import { SetOrderItemQuantityUseCase } from './set-order-item-quantity.usecase'
+import { SplitOrderUseCase } from './split-order.usecase'
 import { SetOrderLineQuantityUseCase } from './set-order-line-quantity.usecase'
 
 let orders: ReturnType<typeof mockOrderRepository>
@@ -26,6 +30,7 @@ let products: ReturnType<typeof mockProductRepository>
 let checkout: ReturnType<typeof mockSaleCheckout>
 let unitOfWork: ReturnType<typeof mockUnitOfWork>
 let lineOptions: ReturnType<typeof mockLineOptionsResolver>
+let tables: ReturnType<typeof mockTableRepository>
 
 const actor = { user: { id: 7, displayName: 'สมชาย' }, branch: { id: 1, code: 'MAIN' } }
 const tea = makeProduct({ id: 1, name: 'ชา', sku: 'TEA', priceSatang: 2500 })
@@ -37,6 +42,8 @@ beforeEach(() => {
   checkout = mockSaleCheckout()
   unitOfWork = mockUnitOfWork()
   lineOptions = mockLineOptionsResolver()
+  tables = mockTableRepository()
+  tables.findById.mockResolvedValue(makeTable({ id: 3, branchId: 1 }))
   products.findById.mockImplementation(async (id) => [tea, cake].find((product) => product.id === id) ?? null)
   orders.save.mockImplementation(async (order) => order)
 })
@@ -82,7 +89,7 @@ describe('OpenOrderUseCase', () => {
 
   beforeEach(() => {
     orders.create.mockImplementation(async (order) => new OrderEntity({ ...order, id: 5, status: 'open', saleId: null, cancelReason: null, cancelledById: null, mergedIntoId: null, createdAt: new Date(), updatedAt: new Date() }))
-    useCase = new OpenOrderUseCase(orders, products, unitOfWork, lineOptions)
+    useCase = new OpenOrderUseCase(orders, products, unitOfWork, lineOptions, tables)
   })
 
   test('opens an empty order for the branch and the person who opened it', async () => {
@@ -363,7 +370,7 @@ describe('options on order lines', () => {
         }),
     )
 
-    const opened = await new OpenOrderUseCase(orders, products, unitOfWork, lineOptions).execute(
+    const opened = await new OpenOrderUseCase(orders, products, unitOfWork, lineOptions, tables).execute(
       { items: [{ productId: 1, quantity: 1, options: [20] }] },
       actor,
     )
@@ -398,5 +405,106 @@ describe('options on order lines', () => {
     expect(checkout.checkout.mock.calls[0]![0].lines).toEqual([
       { productId: 1, quantity: 2, unitPriceSatang: 3500, options: [pearls] },
     ])
+  })
+})
+
+describe('tables on orders', () => {
+  const spoken = { user: { id: 7, displayName: 'สมชาย' }, branch: { id: 1, code: 'MAIN' } }
+  const stored = (order: Parameters<typeof orders.create>[0]) =>
+    new OrderEntity({
+      ...order,
+      id: 5,
+      status: 'open',
+      saleId: null,
+      cancelReason: null,
+      cancelledById: null,
+      mergedIntoId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+
+  test('an order is opened on a usable table of the branch', async () => {
+    orders.create.mockImplementation(async (order) => stored(order))
+
+    const opened = await new OpenOrderUseCase(orders, products, unitOfWork, lineOptions, tables).execute(
+      { tableId: 3 },
+      spoken,
+    )
+
+    expect(opened.tableId).toBe(3)
+  })
+
+  test("another branch's table, a closed table and an unknown table all stop the order", async () => {
+    const useCase = new OpenOrderUseCase(orders, products, unitOfWork, lineOptions, tables)
+    tables.findById
+      .mockResolvedValueOnce(makeTable({ id: 3, branchId: 2 }))
+      .mockResolvedValueOnce(makeTable({ id: 3, branchId: 1, isActive: false }))
+      .mockResolvedValueOnce(null)
+
+    await expect(useCase.execute({ tableId: 3 }, spoken)).rejects.toMatchObject({ code: 'TABLE_NOT_FOUND' })
+    await expect(useCase.execute({ tableId: 3 }, spoken)).rejects.toMatchObject({ code: 'TABLE_INACTIVE' })
+    await expect(useCase.execute({ tableId: 9 }, spoken)).rejects.toMatchObject({ code: 'TABLE_NOT_FOUND' })
+    expect(orders.create).not.toHaveBeenCalled()
+  })
+
+  test('moving an order checks the table and saves; moving to none needs no table', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1, tableId: 3 }))
+    const useCase = new MoveOrderToTableUseCase(orders, tables, unitOfWork)
+
+    expect((await useCase.execute(1, { tableId: 3 }, 1)).tableId).toBe(3)
+    tables.findById.mockClear()
+    expect((await useCase.execute(1, { tableId: null }, 1)).tableId).toBeNull()
+    expect(tables.findById).not.toHaveBeenCalled()
+  })
+
+  test('merging locks the lower id first, closes the source as merged and saves both', async () => {
+    const low = makeOrder({ id: 1 })
+    const high = makeOrder({
+      id: 2,
+      items: [{ lineId: 9, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [] }],
+    })
+    orders.findByIdForUpdate.mockImplementation(async (id) => (id === 1 ? low : high))
+    const useCase = new MergeOrdersUseCase(orders, unitOfWork)
+
+    // Into the higher id: the lock order must still be 1 then 2.
+    const merged = await useCase.execute(2, { sourceOrderId: 1 }, 1)
+
+    expect(orders.findByIdForUpdate.mock.calls.map(([id]) => id)).toEqual([1, 2])
+    expect(merged.id).toBe(2)
+    expect(merged.items.map((line) => line.productId)).toEqual([2, 1])
+    expect(orders.save.mock.calls.map(([order]) => [order.id, order.status])).toEqual([
+      [1, 'merged'],
+      [2, 'open'],
+    ])
+  })
+
+  test("merging an order into itself, or another branch's order, is refused", async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1, branchId: 2 }))
+    const useCase = new MergeOrdersUseCase(orders, unitOfWork)
+
+    await expect(useCase.execute(1, { sourceOrderId: 1 }, 1)).rejects.toMatchObject({ code: 'ORDER_MERGE_SAME' })
+    await expect(useCase.execute(1, { sourceOrderId: 2 }, 1)).rejects.toMatchObject({ code: 'ORDER_NOT_FOUND' })
+    expect(orders.save).not.toHaveBeenCalled()
+  })
+
+  test('splitting saves what remains and creates the new order', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(
+      makeOrder({
+        id: 1,
+        tableId: 3,
+        items: [{ lineId: 4, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 3, options: [] }],
+      }),
+    )
+    orders.create.mockImplementation(async (order) => stored(order))
+
+    const created = await new SplitOrderUseCase(orders, unitOfWork).execute(
+      1,
+      { lines: [{ lineId: 4, quantity: 1 }] },
+      spoken,
+    )
+
+    expect(orders.save.mock.calls[0]![0].items.map((line) => line.quantity)).toEqual([2])
+    expect(created).toMatchObject({ tableId: 3, openedById: 7 })
+    expect(created.items.map((line) => line.quantity)).toEqual([1])
   })
 })

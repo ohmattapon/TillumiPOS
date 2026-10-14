@@ -63,6 +63,7 @@ export const orderSchemas = {
   }),
   open: t.Object({
     label: t.Optional(t.Nullable(t.String({ maxLength: 100 }))),
+    tableId: t.Optional(t.Nullable(t.Integer({ minimum: 1 }))),
     items: t.Optional(
       t.Array(
         t.Object({ productId: t.Integer({ minimum: 1 }), quantity: t.Integer({ minimum: 1 }), options: optionIds }),
@@ -82,6 +83,15 @@ export const orderSchemas = {
     offset: t.Optional(t.Numeric({ minimum: 0 })),
   }),
   itemParams: t.Object({ id: t.Numeric({ minimum: 1 }), productId: t.Numeric({ minimum: 1 }) }),
+  move: t.Object({ tableId: t.Nullable(t.Integer({ minimum: 1 })) }),
+  merge: t.Object({ sourceOrderId: t.Integer({ minimum: 1 }) }),
+  split: t.Object({
+    lines: t.Array(t.Object({ lineId: t.Integer({ minimum: 1 }), quantity: t.Integer({ minimum: 1 }) }), {
+      minItems: 1,
+      maxItems: 100,
+    }),
+    label: t.Optional(t.Nullable(t.String({ maxLength: 100 }))),
+  }),
   lineParams: t.Object({ id: t.Numeric({ minimum: 1 }), lineId: t.Numeric({ minimum: 1 }) }),
 }
 
