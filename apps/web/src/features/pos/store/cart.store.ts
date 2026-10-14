@@ -1,13 +1,20 @@
 import { create } from 'zustand'
 
 /**
- * A cart line holds only the product id and quantity. Names, prices and stock are read from the
- * products query when the cart is priced, so the cart can never show a stale price.
+ * A cart line holds only the product id, the option ids chosen and the quantity. Names, prices and
+ * stock are read from the products and modifier queries when the cart is priced, so the cart can
+ * never show a stale price.
  */
 export interface CartLine {
+  /** `productId:optionIds`: the same product with the same options is one line. */
+  key: string
   productId: number
+  optionIds: number[]
   quantity: number
 }
+
+export const cartLineKey = (productId: number, optionIds: readonly number[]) =>
+  `${productId}:${[...optionIds].sort((a, b) => a - b).join('-')}`
 
 interface CartState {
   lines: CartLine[]
@@ -18,9 +25,9 @@ interface CartState {
    * server (they are read through TanStack Query); only which order is chosen is kept here.
    */
   orderId: number | null
-  add: (productId: number) => void
+  add: (productId: number, optionIds?: readonly number[]) => void
   /** A quantity of 0 or less removes the line. */
-  setQuantity: (productId: number, quantity: number) => void
+  setQuantity: (key: string, quantity: number) => void
   setDiscount: (discount: string) => void
   /** Works on an open order instead of the local cart. */
   workOnOrder: (orderId: number) => void
@@ -33,16 +40,19 @@ export const useCartStore = create<CartState>()((set) => ({
   lines: [],
   discount: '',
   orderId: null,
-  add: (productId) =>
-    set((state) => ({
-      lines: state.lines.some((line) => line.productId === productId)
-        ? state.lines.map((line) => (line.productId === productId ? { ...line, quantity: line.quantity + 1 } : line))
-        : [...state.lines, { productId, quantity: 1 }],
-    })),
-  setQuantity: (productId, quantity) =>
+  add: (productId, optionIds = []) =>
+    set((state) => {
+      const key = cartLineKey(productId, optionIds)
+      return {
+        lines: state.lines.some((line) => line.key === key)
+          ? state.lines.map((line) => (line.key === key ? { ...line, quantity: line.quantity + 1 } : line))
+          : [...state.lines, { key, productId, optionIds: [...optionIds].sort((a, b) => a - b), quantity: 1 }],
+      }
+    }),
+  setQuantity: (key, quantity) =>
     set((state) => ({
       lines: state.lines
-        .map((line) => (line.productId === productId ? { ...line, quantity } : line))
+        .map((line) => (line.key === key ? { ...line, quantity } : line))
         .filter((line) => line.quantity > 0),
     })),
   setDiscount: (discount) => set({ discount }),

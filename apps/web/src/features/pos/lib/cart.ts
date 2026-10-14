@@ -3,15 +3,25 @@ import { calculateTotals, type VatMode } from '@pos/api/pricing'
 import type { CartLine } from '../store/cart.store'
 
 export interface PricedLine {
+  /** Names the line to the cart actions: the cart's own key, or the order line's id. */
+  lineKey: string
+  /** The id of the order line; null for a line in the local cart. */
+  lineId: number | null
   productId: number
   name: string
+  /** One unit, the options included. */
   unitPriceSatang: number
   quantity: number
   lineTotalSatang: number
-  /** More than the shop has: the sale would be refused. */
+  options: { name: string; priceSatang: number }[]
+  /** The ids of the options chosen; what a sale or an order is sent. */
+  optionIds: number[]
+  /** More than the shop has: the sale would be refused. The stock is the product's, shared by its lines. */
   exceedsStock: boolean
   /** What is on the shelf, for the message shown when the line asks for more. */
   stockQty: number
+  /** An option on the line cannot be chosen any more, so the line cannot be sold as it is. */
+  unavailable: boolean
 }
 
 export interface PricedCart {
@@ -35,32 +45,56 @@ export interface PricingOptions {
   parseAmount: (input: string) => number | null
 }
 
+/** What the till needs to know about an option to price it. */
+export interface CartOption {
+  id: number
+  name: string
+  priceSatang: number
+}
+
 const exceeds = (product: Product | undefined, quantity: number) =>
   product !== undefined && product.trackStock && quantity > product.stockQty
+
+/** How many of each product the lines ask for in all: stock is shared by a product's lines. */
+function demandByProduct(lines: readonly { productId: number; quantity: number }[]) {
+  const demand = new Map<number, number>()
+  for (const { productId, quantity } of lines) demand.set(productId, (demand.get(productId) ?? 0) + quantity)
+  return demand
+}
 
 /**
  * Prices a cart from the current product data. All amounts are integers in the minor unit, and the
  * totals come from the same function the server uses, so the screen never disagrees with the receipt.
- * Lines whose product is no longer sellable are left out rather than charged at a stale price.
+ * Lines whose product is no longer sellable are left out rather than charged at a stale price; a line
+ * whose option is no longer offered is kept but blocks payment.
  */
 export function priceCart(
   lines: readonly CartLine[],
   products: ReadonlyMap<number, Product>,
   discountInput: string,
   options: PricingOptions,
+  optionsById: ReadonlyMap<number, CartOption> = new Map(),
 ): PricedCart {
+  const demand = demandByProduct(lines)
   const priced: PricedLine[] = []
-  for (const { productId, quantity } of lines) {
+  for (const { key, productId, optionIds, quantity } of lines) {
     const product = products.get(productId)
     if (!product) continue
+    const chosen = optionIds.flatMap((id) => optionsById.get(id) ?? [])
+    const unitPriceSatang = product.priceSatang + chosen.reduce((total, option) => total + option.priceSatang, 0)
     priced.push({
+      lineKey: key,
+      lineId: null,
       productId,
       name: product.name,
-      unitPriceSatang: product.priceSatang,
+      unitPriceSatang,
       quantity,
-      lineTotalSatang: product.priceSatang * quantity,
-      exceedsStock: exceeds(product, quantity),
+      lineTotalSatang: unitPriceSatang * quantity,
+      options: chosen.map(({ name, priceSatang }) => ({ name, priceSatang })),
+      optionIds: [...optionIds],
+      exceedsStock: exceeds(product, demand.get(productId) ?? quantity),
       stockQty: product.stockQty,
+      unavailable: chosen.length !== optionIds.length,
     })
   }
   return summarize(priced, discountInput, options)
@@ -76,16 +110,22 @@ export function priceOrder(
   discountInput: string,
   options: PricingOptions,
 ): PricedCart {
+  const demand = demandByProduct(items)
   const priced: PricedLine[] = items.map((item) => {
     const product = products.get(item.productId)
     return {
+      lineKey: String(item.lineId),
+      lineId: item.lineId,
       productId: item.productId,
       name: item.productName,
       unitPriceSatang: item.unitPriceSatang,
       quantity: item.quantity,
       lineTotalSatang: item.unitPriceSatang * item.quantity,
-      exceedsStock: exceeds(product, item.quantity),
+      options: item.options.map(({ name, priceSatang }) => ({ name, priceSatang })),
+      optionIds: item.options.map((option) => option.optionId),
+      exceedsStock: exceeds(product, demand.get(item.productId) ?? item.quantity),
       stockQty: product?.stockQty ?? 0,
+      unavailable: false,
     }
   })
   return summarize(priced, discountInput, options)
@@ -112,6 +152,10 @@ function summarize(
     isDiscountValid,
     vatSatang,
     totalSatang,
-    canPay: priced.length > 0 && isDiscountValid && totalSatang > 0 && !priced.some((line) => line.exceedsStock),
+    canPay:
+      priced.length > 0 &&
+      isDiscountValid &&
+      totalSatang > 0 &&
+      !priced.some((line) => line.exceedsStock || line.unavailable),
   }
 }
