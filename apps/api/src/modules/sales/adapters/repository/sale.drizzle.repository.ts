@@ -42,6 +42,7 @@ const itemColumns = {
   unitCostSatang: saleItems.unitCostSatang,
   quantity: saleItems.quantity,
   lineTotalSatang: saleItems.lineTotalSatang,
+  options: saleItems.options,
 }
 
 const total = (expression: SQL) => sql<number>`coalesce(sum(${expression}), 0)`.mapWith(Number)
@@ -74,7 +75,7 @@ export class DrizzleSaleRepository implements ISaleRepository {
       .returning({ id: sales.id })
     const saleId = stored!.id
 
-    await executor.insert(saleItems).values(items.map((item) => ({ ...item, saleId })))
+    await executor.insert(saleItems).values(items.map((item) => ({ ...item, options: [...item.options], saleId })))
     await executor.insert(payments).values(paid.map((payment) => ({ ...payment, saleId })))
 
     // Read back rather than assembled here, so defaults (status, created_at) come from the database.

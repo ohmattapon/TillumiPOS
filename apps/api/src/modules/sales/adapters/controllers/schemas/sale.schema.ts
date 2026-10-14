@@ -30,6 +30,32 @@ const header = {
   createdAt: t.Date(),
 }
 
+// What was chosen, as it was when sold. The cost of an option is internal, like the cost of a line.
+const lineOption = t.Object({
+  groupId: t.Integer(),
+  groupName: t.String(),
+  optionId: t.Integer(),
+  name: t.String(),
+  priceSatang: t.Integer(),
+})
+
+const saleItem = t.Object({
+  productId: t.Integer(),
+  productName: t.String(),
+  sku: t.String(),
+  // One unit: the product's price plus the options chosen.
+  unitPriceSatang: t.Integer(),
+  quantity: t.Integer(),
+  lineTotalSatang: t.Integer(),
+  options: t.Array(lineOption),
+})
+
+const itemRequest = t.Object({
+  productId: t.Integer(),
+  quantity: t.Integer({ minimum: 1 }),
+  options: t.Optional(t.Array(t.Integer({ minimum: 1 }), { maxItems: 40 })),
+})
+
 const payment = t.Object({ method, amountSatang: satang({ minimum: 1 }) })
 // What a request may carry for a payment: a `promptpay` one is backed by a confirmed QR payment.
 const paymentRequest = t.Object({
@@ -42,37 +68,25 @@ export const saleSchemas = {
   saleHeader: t.Object(header),
   sale: t.Object({
     ...header,
-    items: t.Array(
-      t.Object({
-        productId: t.Integer(),
-        productName: t.String(),
-        sku: t.String(),
-        unitPriceSatang: t.Integer(),
-        quantity: t.Integer(),
-        lineTotalSatang: t.Integer(),
-      }),
-    ),
+    items: t.Array(saleItem),
     payments: t.Array(payment),
   }),
   saleV2: t.Composite([
     t.Object({ ...header, shiftId: t.Integer() }),
     t.Object({
-      items: t.Array(t.Object({
-        productId: t.Integer(), productName: t.String(), sku: t.String(), unitPriceSatang: t.Integer(),
-        quantity: t.Integer(), lineTotalSatang: t.Integer(),
-      })),
+      items: t.Array(saleItem),
       payments: t.Array(payment),
     }),
   ]),
   create: t.Object({
-    items: t.Array(t.Object({ productId: t.Integer(), quantity: t.Integer({ minimum: 1 }) }), { minItems: 1 }),
+    items: t.Array(itemRequest, { minItems: 1 }),
     discountSatang: t.Optional(satang()),
     payments: t.Array(paymentRequest, { minItems: 1 }),
   }),
   createV2: t.Object({
     shiftId: t.Integer({ minimum: 1 }),
     ...t.Object({
-      items: t.Array(t.Object({ productId: t.Integer(), quantity: t.Integer({ minimum: 1 }) }), { minItems: 1 }),
+      items: t.Array(itemRequest, { minItems: 1 }),
       discountSatang: t.Optional(satang()),
       payments: t.Array(paymentRequest, { minItems: 1 }),
     }).properties,
