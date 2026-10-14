@@ -1,12 +1,15 @@
 import { lineOptionsResolverToken } from '../../../modifiers/applications/ports/line-options-resolver.port'
 import type { ILineOptionsResolver } from '../../../modifiers/applications/ports/line-options-resolver.port'
 import type { IOrderRepository } from '../ports/order.repository'
+import { tableRepositoryToken } from '../../../tables/applications/ports/table.repository'
+import type { ITableRepository } from '../../../tables/applications/ports/table.repository'
 import type { IProductRepository } from '../../../products/applications/ports/product.repository'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import type { OrderActor } from '../services/order-access'
 import { OrderEntity } from '../../../../domains/order.domain'
 import { TOKENS } from '../../../tokens'
 import { findOrderedProduct } from '../services/ordered-product'
+import { findUsableTable } from '../services/order-table'
 import { inject, injectable } from 'tsyringe'
 import { openOrderSchema } from '../schemas/order-schemas'
 import { orderRepositoryToken } from '../ports/order.repository'
@@ -20,12 +23,15 @@ export class OpenOrderUseCase {
     @inject(productRepositoryToken) private readonly products: IProductRepository,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
     @inject(lineOptionsResolverToken) private readonly lineOptions: ILineOptionsResolver,
+    @inject(tableRepositoryToken) private readonly tables: ITableRepository,
   ) {}
 
   async execute(input: unknown, actor: OrderActor) {
     const dto = openOrderSchema.parse(input)
 
     return this.unitOfWork.run(async () => {
+      if (dto.tableId) await findUsableTable(this.tables, dto.tableId, actor.branch.id)
+
       const items = []
       for (const line of dto.items ?? []) {
         const product = await findOrderedProduct(this.products, line.productId, actor.branch.id)
@@ -43,7 +49,7 @@ export class OpenOrderUseCase {
         OrderEntity.open({
           branchId: actor.branch.id,
           label: dto.label ?? null,
-          tableId: null,
+          tableId: dto.tableId ?? null,
           openedById: actor.user.id,
           openedByName: actor.user.displayName,
           items,

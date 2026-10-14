@@ -9,6 +9,8 @@ import { AddOrderItemUseCase } from '../../applications/usecases/add-order-item.
 import { CancelOrderUseCase } from '../../applications/usecases/cancel-order.usecase'
 import { GetOrderUseCase } from '../../applications/usecases/get-order.usecase'
 import { ListOrdersUseCase } from '../../applications/usecases/list-orders.usecase'
+import { MergeOrdersUseCase } from '../../applications/usecases/merge-orders.usecase'
+import { MoveOrderToTableUseCase } from '../../applications/usecases/move-order-to-table.usecase'
 import { OpenOrderUseCase } from '../../applications/usecases/open-order.usecase'
 import { PayOrderUseCase } from '../../applications/usecases/pay-order.usecase'
 import { RemoveOrderItemUseCase } from '../../applications/usecases/remove-order-item.usecase'
@@ -16,6 +18,7 @@ import { RemoveOrderLineUseCase } from '../../applications/usecases/remove-order
 import { RenameOrderUseCase } from '../../applications/usecases/rename-order.usecase'
 import { SetOrderItemQuantityUseCase } from '../../applications/usecases/set-order-item-quantity.usecase'
 import { SetOrderLineQuantityUseCase } from '../../applications/usecases/set-order-line-quantity.usecase'
+import { SplitOrderUseCase } from '../../applications/usecases/split-order.usecase'
 import { orderSchemas, type OrderResponse } from './schemas/order.schema'
 
 function toResponse(order: OrderEntity): OrderResponse {
@@ -47,6 +50,9 @@ export class OrderElysiaController {
     @inject(PayOrderUseCase) private readonly payOrder: PayOrderUseCase,
     @inject(SetOrderLineQuantityUseCase) private readonly setLineQuantity: SetOrderLineQuantityUseCase,
     @inject(RemoveOrderLineUseCase) private readonly removeLine: RemoveOrderLineUseCase,
+    @inject(MoveOrderToTableUseCase) private readonly moveToTable: MoveOrderToTableUseCase,
+    @inject(MergeOrdersUseCase) private readonly mergeOrders: MergeOrdersUseCase,
+    @inject(SplitOrderUseCase) private readonly splitOrder: SplitOrderUseCase,
   ) {}
 
   getRoutes() {
@@ -130,6 +136,44 @@ export class OrderElysiaController {
           params: orderSchemas.lineParams,
           response: orderSchemas.order,
           detail: { summary: 'เอาบรรทัดออกจากออเดอร์ (ระบุด้วยรหัสบรรทัด)' },
+        },
+      )
+      .post(
+        '/:id/move',
+        async ({ params, body, branch }) =>
+          toResponse(await this.moveToTable.execute(params.id, body, (await branch()).id)),
+        {
+          params: idParams,
+          body: orderSchemas.move,
+          response: orderSchemas.order,
+          detail: { summary: 'ย้ายออเดอร์ไปโต๊ะอื่น (หรือไม่มีโต๊ะ)' },
+        },
+      )
+      .post(
+        '/:id/merge',
+        async ({ params, body, branch }) =>
+          toResponse(await this.mergeOrders.execute(params.id, body, (await branch()).id)),
+        {
+          params: idParams,
+          body: orderSchemas.merge,
+          response: orderSchemas.order,
+          detail: { summary: 'รวมออเดอร์อื่นเข้ากับออเดอร์นี้ (ต้นทางปิดเป็น "รวมแล้ว")' },
+        },
+      )
+      .post(
+        '/:id/split',
+        async ({ params, body, user, branch }) =>
+          toResponse(
+            await this.splitOrder.execute(params.id, body, {
+              user: { id: user.id, displayName: user.displayName },
+              branch: await branch(),
+            }),
+          ),
+        {
+          params: idParams,
+          body: orderSchemas.split,
+          response: orderSchemas.order,
+          detail: { summary: 'แยกบางรายการออกเป็นออเดอร์ใหม่ที่โต๊ะเดียวกัน' },
         },
       )
       .post(

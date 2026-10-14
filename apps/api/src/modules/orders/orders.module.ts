@@ -12,10 +12,13 @@ import { OpenOrderUseCase } from './applications/usecases/open-order.usecase'
 import { PayOrderUseCase } from './applications/usecases/pay-order.usecase'
 import { PayOrderV2UseCase } from './applications/usecases/pay-order-v2.usecase'
 import { PayOrderV2ElysiaController } from './adapters/controllers/pay-order-v2.controller'
+import { MergeOrdersUseCase } from './applications/usecases/merge-orders.usecase'
+import { MoveOrderToTableUseCase } from './applications/usecases/move-order-to-table.usecase'
 import { RemoveOrderItemUseCase } from './applications/usecases/remove-order-item.usecase'
 import { RemoveOrderLineUseCase } from './applications/usecases/remove-order-line.usecase'
 import { RenameOrderUseCase } from './applications/usecases/rename-order.usecase'
 import { SetOrderItemQuantityUseCase } from './applications/usecases/set-order-item-quantity.usecase'
+import { SplitOrderUseCase } from './applications/usecases/split-order.usecase'
 import { SetOrderLineQuantityUseCase } from './applications/usecases/set-order-line-quantity.usecase'
 
 container.register(orderRepositoryToken, { useClass: DrizzleOrderRepository })
@@ -27,6 +30,9 @@ container.registerSingleton(RenameOrderUseCase)
 container.registerSingleton(AddOrderItemUseCase)
 container.registerSingleton(SetOrderItemQuantityUseCase)
 container.registerSingleton(RemoveOrderItemUseCase)
+container.registerSingleton(MoveOrderToTableUseCase)
+container.registerSingleton(MergeOrdersUseCase)
+container.registerSingleton(SplitOrderUseCase)
 container.registerSingleton(SetOrderLineQuantityUseCase)
 container.registerSingleton(RemoveOrderLineUseCase)
 container.registerSingleton(CancelOrderUseCase)
