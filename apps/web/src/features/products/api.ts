@@ -1,5 +1,6 @@
 import type { Product } from '@pos/api/types'
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
+import { modifierKeys } from '@/features/modifiers'
 import { api, unwrap } from '@/lib/api'
 import { prepareImage } from './lib/image'
 
@@ -32,6 +33,8 @@ export interface SaveProductVariables {
   input: ProductInput
   /** undefined keeps the current image, null removes it, a File replaces it. */
   image: File | null | undefined
+  /** The option groups offered on the product; undefined leaves them as they are. */
+  modifierGroupIds?: number[]
 }
 
 /** Creates or updates a product, then applies the image change, which needs the product's id. */
@@ -39,16 +42,22 @@ export function useSaveProduct() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, input, image }: SaveProductVariables): Promise<Product> => {
+    mutationFn: async ({ id, input, image, modifierGroupIds }: SaveProductVariables): Promise<Product> => {
       const saved = await unwrap(
         id === undefined ? api.catalog.products.post(input) : api.catalog.products({ id }).patch(input),
       )
+      if (modifierGroupIds !== undefined)
+        await unwrap(api.catalog.products({ id: saved.id })['modifier-groups'].put({ groupIds: modifierGroupIds }))
       if (image) return unwrap(api.catalog.products({ id: saved.id }).image.put({ file: await prepareImage(image) }))
       if (image === null && saved.imageUrl) return unwrap(api.catalog.products({ id: saved.id }).image.delete())
       return saved
     },
     // Even when the image step fails the product itself was saved, so the list must refresh either way.
-    onSettled: () => queryClient.invalidateQueries({ queryKey: productKeys.all }),
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: productKeys.all }),
+        queryClient.invalidateQueries({ queryKey: modifierKeys.all }),
+      ]),
   })
 }
 
