@@ -165,7 +165,7 @@ export function PosPage() {
         </DropdownMenu>
       </PageHeader>
 
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row print:hidden">
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <ProductPicker searchRef={searchRef} />
         <CartPanel
           onPay={() => setIsPaying(true)}
