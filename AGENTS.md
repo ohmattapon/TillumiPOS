@@ -158,7 +158,7 @@ apps/api/src/
 apps/web/src/
 ├── app/                  ประกอบแอป: App.tsx (เส้นทาง), AppSidebar.tsx, i18n.ts (รวมไฟล์ภาษาของทุก feature)
 ├── features/
-│   └── <feature>/        auth, branches, categories, orders, products, sales, pos, settings
+│   └── <feature>/        auth, branches, categories, orders, products, sales, pos, settings, shifts, users
 │       ├── index.ts      ทางเข้าสาธารณะของ feature: ส่งออกเฉพาะที่ feature อื่นใช้
 │       ├── api.ts        query key, queryOptions และ mutation hook ของ feature (TanStack Query)
 │       ├── components/   หน้าและคอมโพเนนต์ของ feature
@@ -239,5 +239,6 @@ apps/web/src/
 
 - จำนวนเงินเป็นจำนวนเต็มหน่วยสตางค์เสมอ ห้ามใช้ทศนิยม
 - บิลขายห้ามแก้หรือลบ ข้อผิดพลาดแก้ด้วยการยกเลิกบิล
+- หัวใบเสร็จ (ชื่อร้าน เลขผู้เสียภาษี ชื่อสาขา ที่อยู่ เบอร์โทร) ถูกเก็บลงบิลตอนขายใน `SaleCheckout` ใบเสร็จต้องแสดงจากค่าบนบิล และใช้ข้อมูลปัจจุบันเฉพาะบิลเก่าที่ค่าเป็น null (ดู `receiptHeading` ใน `apps/web/src/features/sales/lib`)
 - สต็อกเปลี่ยนผ่าน port `IStockLedger` ของโมดูล `inventory` เท่านั้น และทุกการเปลี่ยนต้องมีรายการเคลื่อนไหวพร้อมสาขา
 - ก่อนบอกว่างานเสร็จ ต้องรัน `bun run typecheck` และ `bun run test` ให้ผ่าน
