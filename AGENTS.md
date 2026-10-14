@@ -263,6 +263,7 @@ apps/web/src/
 | `scripts/backup.sh` (`backup.ps1`) | สำรองฐานข้อมูลเป็นไฟล์ `backups/easypos-<วันที่>-<เวลา>.sql.gz` |
 | `scripts/restore.sh <ไฟล์> [--yes]` (`restore.ps1 <ไฟล์> [-Yes]`) | กู้คืนจากไฟล์สำรอง แทนที่ข้อมูลทั้งหมด |
 | `bun run db:migrate` | รัน migration |
+| `bun run db:seed:demo` | ใส่ข้อมูลสาธิตย้อนหลัง 3 สัปดาห์ถึงปัจจุบัน (บิล กะ ลิ้นชัก สต็อก ออเดอร์โต๊ะ QR) ลงฐานข้อมูลใน `.env` ใช้กับฐาน demo เท่านั้น: หยุดเองถ้าฐานมีบิลอยู่แล้ว และต้องรัน `db:seed` ก่อน |
 | `bun run scb:inquiry <ref1>` | ถาม SCB ว่ารู้จักรายการ QR นี้หรือไม่ และพิมพ์คำตอบดิบ (อ่านอย่างเดียว ใช้ `.env` ของคุณ) |
 | `bun run dev` | เปิด API (3000, เส้นทางอยู่ใต้ `/api/v1`), เว็บ (5173) และ Worker ในเครื่อง (8787) |
 | `bun run typecheck` | ตรวจ type ทุกแพ็กเกจ |
