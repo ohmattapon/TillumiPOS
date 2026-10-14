@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { categoriesQuery, useCreateCategory, useUpdateCategory } from '../api'
+import { CategoryDot } from './CategoryDot'
 
 type OpenDialog = { category?: Category } | null
 
@@ -137,7 +138,12 @@ export function CategoriesPage() {
             empty={t('list.empty')}
             muted={(category) => !category.isActive}
             columns={[
-              { id: 'name', header: t('columns.name'), priority: 'primary', className: 'font-medium', cell: (category) => category.name },
+              { id: 'name', header: t('columns.name'), priority: 'primary', className: 'font-medium', cell: (category) => (
+                <span className="inline-flex items-center gap-2">
+                  <CategoryDot categoryId={category.id} />
+                  {category.name}
+                </span>
+              ) },
               { id: 'sortOrder', header: t('columns.sortOrder'), priority: 'wide-only', align: 'right', cell: (category) => category.sortOrder },
               {
                 id: 'status',

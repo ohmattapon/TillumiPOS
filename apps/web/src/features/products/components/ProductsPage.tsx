@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { categoriesQuery } from '@/features/categories'
+import { categoriesQuery, CategoryDot } from '@/features/categories'
 import { useFormat, useSettings } from '@/features/settings'
 import { productsQuery, useSetProductActive } from '../api'
 import { isLowStock } from '../lib/stock'
@@ -130,7 +130,17 @@ export function ProductsPage() {
                 id: 'category',
                 header: t('columns.category'),
                 priority: 'wide-only',
-                cell: (product) => (product.categoryId && categoryName.get(product.categoryId)) || '—',
+                cell: (product) => {
+                  const name = product.categoryId && categoryName.get(product.categoryId)
+                  return name ? (
+                    <span className="inline-flex items-center gap-2">
+                      <CategoryDot categoryId={product.categoryId!} />
+                      {name}
+                    </span>
+                  ) : (
+                    '—'
+                  )
+                },
               },
               { id: 'barcode', header: t('columns.barcode'), priority: 'wide-only', className: 'tabular-nums', cell: (product) => product.barcode ?? '—' },
               { id: 'price', header: t('columns.price'), priority: 'secondary', align: 'right', cell: (product) => money.plain(product.priceSatang) },

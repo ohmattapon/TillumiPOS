@@ -39,7 +39,7 @@ function Shell({ user }: { user: User }) {
       {/* The cart belongs to the till, not the account: a new user must not inherit the last one's. */}
       <AppSidebar user={user} onLogout={() => logout.mutate(undefined, { onSuccess: () => { clearCart(); clearRegisterSelection() } })} />
       {/* Room at the bottom for the phone menu, which takes the place of the sidebar there. */}
-      <SidebarInset className="h-svh min-w-0 overflow-hidden pb-16 sm:pb-0">
+      <SidebarInset className="h-svh bg-canvas min-w-0 overflow-hidden pb-16 sm:pb-0">
         <Routes>
           <Route index element={<PosPage />} />
           <Route path="today" element={<TodayPage isOwner={isOwner} />} />
