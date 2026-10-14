@@ -22,6 +22,8 @@ const LANGUAGES: { value: Locale; label: string }[] = [
   { value: 'en', label: 'English' },
 ]
 
+const PAPER_WIDTHS: ShopSettings['receiptPaperMm'][] = [80, 58]
+
 const percentFromBp = (bp: number) => String(bp / 100)
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -57,6 +59,8 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     vatRate: percentFromBp(settings.vatRateBp),
     timeZone: settings.timeZone,
     locale: settings.locale,
+    receiptPaperMm: settings.receiptPaperMm,
+    receiptFooter: settings.receiptFooter ?? '',
   })
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm({ ...form, [key]: value })
 
@@ -80,6 +84,8 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     vatRateBp: isRateValid ? Math.round(rate * 100) : settings.vatRateBp,
     timeZone: form.timeZone,
     locale: form.locale,
+    receiptPaperMm: form.receiptPaperMm,
+    receiptFooter: form.receiptFooter.trim() || null,
   }
   const isDirty = JSON.stringify(changes) !== JSON.stringify(settings)
   const canSave = isDirty && isRateValid && changes.shopName !== '' && !save.isPending
@@ -204,6 +210,34 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
               ))}
             </SelectContent>
           </Select>
+        </Field>
+      </Section>
+
+      <Section title={t('receipt.title')}>
+        <Field label={t('receipt.paper')} hint={t('receipt.paperHint')}>
+          <Select
+            value={String(form.receiptPaperMm)}
+            onValueChange={(value) => set('receiptPaperMm', Number(value) as ShopSettings['receiptPaperMm'])}
+          >
+            <SelectTrigger className="h-10! w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAPER_WIDTHS.map((width) => (
+                <SelectItem key={width} value={String(width)}>
+                  {t('receipt.paperWidth', { width })}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label={t('receipt.footer')} hint={t('receipt.footerHint')} wide>
+          <Textarea
+            value={form.receiptFooter}
+            maxLength={200}
+            placeholder={t('receipt.footerPlaceholder')}
+            onChange={(event) => set('receiptFooter', event.target.value)}
+          />
         </Field>
       </Section>
 

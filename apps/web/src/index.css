@@ -105,8 +105,9 @@
 }
 
 /*
- * Print only the receipt, sized for an 80 mm thermal printer. Dialogs are portaled
- * outside #root, so hiding the app leaves just the open dialog on the page.
+ * Print only the receipt, sized for the shop's thermal paper: 72 mm of print on 80 mm paper, or
+ * 48 mm on 58 mm paper. Dialogs are portaled outside #root, so hiding the app leaves just the
+ * open dialog on the page.
  */
 @media print {
   #root,
@@ -122,6 +123,15 @@
     padding: 0 !important;
     border: 0 !important;
     box-shadow: none !important;
+    /* The dialog animates its size on screen; paper gets the final width at once. */
+    transition: none !important;
+    animation: none !important;
+  }
+  [data-slot='dialog-content']:has([data-receipt-paper='58']) {
+    width: 48mm !important;
+  }
+  [data-receipt-paper='58'] {
+    font-size: 11px;
   }
   @page {
     margin: 4mm;
