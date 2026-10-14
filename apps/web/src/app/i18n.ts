@@ -7,6 +7,7 @@ import { modifiersLocales } from '@/features/modifiers'
 import { posLocales } from '@/features/pos'
 import { productsLocales } from '@/features/products'
 import { salesLocales } from '@/features/sales'
+import { reportsLocales } from '@/features/reports'
 import { settingsLocales } from '@/features/settings'
 import { setupLocales } from '@/features/setup'
 import { tablesLocales } from '@/features/tables'
@@ -34,6 +35,7 @@ export const resources = {
     pos: posLocales.th,
     products: productsLocales.th,
     sales: salesLocales.th,
+    reports: reportsLocales.th,
     settings: settingsLocales.th,
     setup: setupLocales.th,
     shifts: shiftsLocales.th,
@@ -50,6 +52,7 @@ export const resources = {
     pos: posLocales.en,
     products: productsLocales.en,
     sales: salesLocales.en,
+    reports: reportsLocales.en,
     settings: settingsLocales.en,
     setup: setupLocales.en,
     shifts: shiftsLocales.en,
