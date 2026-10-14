@@ -24,10 +24,18 @@
                         "shifts"
                       ],
                       "type": "string"
+                    },
+                    "imageStorage": {
+                      "enum": [
+                        "enabled",
+                        "disabled"
+                      ],
+                      "type": "string"
                     }
                   },
                   "required": [
-                    "checkoutMode"
+                    "checkoutMode",
+                    "imageStorage"
                   ],
                   "type": "object"
                 }
