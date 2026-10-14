@@ -1,7 +1,7 @@
 import { t } from 'elysia'
 import { satang } from '../../../../../libs/http-schemas'
 
-const status = t.Union([t.Literal('open'), t.Literal('paid'), t.Literal('cancelled')])
+const status = t.Union([t.Literal('open'), t.Literal('paid'), t.Literal('cancelled'), t.Literal('merged')])
 const method = t.Union([t.Literal('cash'), t.Literal('promptpay'), t.Literal('card')])
 
 // What was chosen, as it was when chosen. The option's cost is internal and not part of the response.
@@ -45,12 +45,16 @@ export const orderSchemas = {
     id: t.Integer(),
     branchId: t.Integer(),
     label: t.Nullable(t.String()),
+    // The table the order is on; null for an order without one.
+    tableId: t.Nullable(t.Integer()),
     status,
     openedById: t.Integer(),
     openedByName: t.String(),
     // The sale this order became, once it is paid.
     saleId: t.Nullable(t.Integer()),
     cancelReason: t.Nullable(t.String()),
+    // The order this one was merged into, when it was merged.
+    mergedIntoId: t.Nullable(t.Integer()),
     createdAt: t.Date(),
     updatedAt: t.Date(),
     items: t.Array(item),

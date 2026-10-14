@@ -43,6 +43,7 @@ export class OpenOrderUseCase {
         OrderEntity.open({
           branchId: actor.branch.id,
           label: dto.label ?? null,
+          tableId: null,
           openedById: actor.user.id,
           openedByName: actor.user.displayName,
           items,
