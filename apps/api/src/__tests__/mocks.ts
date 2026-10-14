@@ -6,6 +6,8 @@ import type { IStockMovementRepository } from '../modules/inventory/applications
 import type { ILineOptionsResolver } from '../modules/modifiers/applications/ports/line-options-resolver.port'
 import type { IModifierRepository } from '../modules/modifiers/applications/ports/modifier.repository'
 import type { IOrderRepository } from '../modules/orders/applications/ports/order.repository'
+import type { ITableOccupancy } from '../modules/tables/applications/ports/table-occupancy.port'
+import type { ITableRepository } from '../modules/tables/applications/ports/table.repository'
 import type { IQrPaymentGateway } from '../modules/qr-payments/applications/ports/qr-payment-gateway.port'
 import type { IQrPaymentRepository } from '../modules/qr-payments/applications/ports/qr-payment.repository'
 import type { IQrPaymentClaims } from '../modules/qr-payments/applications/ports/qr-payment-claims.port'
@@ -185,4 +187,16 @@ export const mockModifierRepository = (): Mocked<IModifierRepository> => ({
 /** Resolves every choice to nothing by default: a product without option groups. */
 export const mockLineOptionsResolver = (): Mocked<ILineOptionsResolver> => ({
   resolve: mock<ILineOptionsResolver['resolve']>(async () => ({ options: [], priceSatang: 0, costSatang: 0, key: '' })),
+})
+
+export const mockTableRepository = (): Mocked<ITableRepository> => ({
+  findAll: mock<ITableRepository['findAll']>(),
+  findById: mock<ITableRepository['findById']>(),
+  create: mock<ITableRepository['create']>(),
+  update: mock<ITableRepository['update']>(),
+})
+
+export const mockTableOccupancy = (): Mocked<ITableOccupancy> => ({
+  byTable: mock<ITableOccupancy['byTable']>(async () => new Map()),
+  openOrderCount: mock<ITableOccupancy['openOrderCount']>(async () => 0),
 })

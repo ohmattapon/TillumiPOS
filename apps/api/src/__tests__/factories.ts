@@ -1,4 +1,5 @@
 import { BranchEntity, type BranchEntityProps } from '../domains/branch.domain'
+import { DiningTableEntity, type DiningTableProps } from '../domains/dining-table.domain'
 import {
   ModifierGroupEntity,
   ModifierOptionEntity,
@@ -152,3 +153,19 @@ export const makeModifierGroup = (overrides: Partial<ModifierGroupProps> = {}) =
 
 export const makeModifierOption = (overrides: Partial<ModifierOptionProps> = {}) =>
   new ModifierOptionEntity({ id: 10, groupId: 1, name: 'หวานน้อย', priceSatang: 0, costSatang: 0, sortOrder: 0, isActive: true, ...overrides })
+
+export const makeTable = (overrides: Partial<DiningTableProps> = {}) =>
+  new DiningTableEntity({
+    id: 1,
+    branchId: 1,
+    name: 'T1',
+    zone: null,
+    seats: 4,
+    x: 20,
+    y: 20,
+    width: 120,
+    height: 80,
+    sortOrder: 0,
+    isActive: true,
+    ...overrides,
+  })

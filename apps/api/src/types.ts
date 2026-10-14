@@ -15,3 +15,4 @@ export type {
   ModifierGroupResponse as ModifierGroup,
   ModifierOptionResponse as ModifierOption,
 } from './modules/modifiers/adapters/controllers/schemas/modifier.schema'
+export type { TableResponse as DiningTable } from './modules/tables/adapters/controllers/schemas/table.schema'
