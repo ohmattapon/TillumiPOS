@@ -28,7 +28,8 @@ export function ReceiptPdfButton({ receiptNo, receiptRef, className, disabled = 
       const safeReceiptNo = receiptNo.replace(/[<>:"/\\|?*]/g, '-').trim()
       await downloadReceiptPdf(element, `receipt-${safeReceiptNo || 'sale'}.pdf`, shop.receiptPaperMm)
       toast.success(t('receipt.pdfSaved'))
-    } catch {
+    } catch (error) {
+      console.error('Receipt PDF export failed:', error)
       toast.error(t('receipt.pdfFailed'))
     } finally {
       setIsSaving(false)
