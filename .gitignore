@@ -9,3 +9,4 @@ worker-configuration.d.ts
 apps/api/test/openapi-current.json
 backups/
 apps/api/data/
+screenshots/
