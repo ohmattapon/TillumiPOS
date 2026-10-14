@@ -5,6 +5,8 @@ import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { Panel, tableCell, tableHead } from '@/components/Panel'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
@@ -107,6 +109,7 @@ export function CategoriesPage() {
   const update = useUpdateCategory()
   const [dialog, setDialog] = useState<OpenDialog>(null)
 
+  const paging = useListPagination('categories')
   const all = categories.data ?? []
 
   const setActive = (category: Category, isActive: boolean) =>
@@ -142,7 +145,7 @@ export function CategoriesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {all.map((category) => (
+              {all.slice(paging.offset, paging.offset + paging.pageSize).map((category) => (
                 <TableRow key={category.id} className={category.isActive ? '' : 'text-muted-foreground'}>
                   <TableCell className={`${tableCell} font-medium`}>{category.name}</TableCell>
                   <TableCell className={`${tableCell} text-right tabular-nums`}>{category.sortOrder}</TableCell>
@@ -177,6 +180,7 @@ export function CategoriesPage() {
               )}
             </TableBody>
           </Table>
+          <PaginationBar {...paging} total={all.length} isLoading={categories.isFetching} onPageChange={paging.setPage} />
         </Panel>
       </div>
 

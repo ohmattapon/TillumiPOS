@@ -5,6 +5,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { Panel, tableCell, tableHead } from '@/components/Panel'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
@@ -33,6 +35,7 @@ export function UsersPage() {
   const update = useUpdateUser()
   const [dialog, setDialog] = useState<OpenDialog>(null)
 
+  const paging = useListPagination('users')
   const all = users.data ?? []
   const branchName = new Map((branches.data ?? []).map((branch) => [branch.id, branch.name]))
   const openBranches = (branches.data ?? []).filter((branch) => branch.isActive)
@@ -73,7 +76,7 @@ export function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {all.map((user) => (
+              {all.slice(paging.offset, paging.offset + paging.pageSize).map((user) => (
                 <TableRow key={user.id} className={user.isActive ? '' : 'text-muted-foreground'}>
                   <TableCell className={`${tableCell} font-medium`}>
                     {user.displayName}
@@ -113,6 +116,7 @@ export function UsersPage() {
               )}
             </TableBody>
           </Table>
+          <PaginationBar {...paging} total={all.length} isLoading={users.isFetching} onPageChange={paging.setPage} />
         </Panel>
       </div>
 

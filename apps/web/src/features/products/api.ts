@@ -7,15 +7,33 @@ import { prepareImage } from './lib/image'
 export const productKeys = {
   /** Prefix of every product query: invalidate this after anything that changes products or stock. */
   all: ['products'] as const,
-  list: (includeInactive: boolean) => [...productKeys.all, 'list', { includeInactive }] as const,
+  list: (filters: ProductListFilters) => [...productKeys.all, 'list', filters] as const,
+  detail: (id: number) => [...productKeys.all, 'detail', id] as const,
 }
 
-/** Every product in one request: a shop's catalogue is small enough to search and filter in the browser. */
-export const productsQuery = (includeInactive = false) =>
+export interface ProductListFilters {
+  q?: string
+  code?: string
+  categoryId?: number
+  includeInactive?: boolean
+  isActive?: boolean
+  stockAtMost?: number
+  sort?: 'name' | 'stock'
+  limit?: number
+  offset?: number
+}
+
+/** Filter on the server before applying the page boundary; no catalogue-size cap in the browser. */
+export const productsQuery = (filters: ProductListFilters = {}) =>
   queryOptions({
-    queryKey: productKeys.list(includeInactive),
-    queryFn: async () => (await unwrap(api.catalog.products.get({ query: { includeInactive, limit: 1000 } }))).items,
+    queryKey: productKeys.list(filters),
+    queryFn: () => unwrap(api.catalog.products.get({ query: { limit: 20, offset: 0, ...filters } })),
   })
+
+export const productQuery = (id: number) => queryOptions({
+  queryKey: productKeys.detail(id),
+  queryFn: () => unwrap(api.catalog.products({ id }).get()),
+})
 
 export interface ProductInput {
   sku: string

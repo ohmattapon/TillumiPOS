@@ -4,6 +4,8 @@ import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { Panel, tableCell, tableHead } from '@/components/Panel'
 import { SaleDetailDialog } from './SaleDetailDialog'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
@@ -11,7 +13,7 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { isLowStock, LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
+import { LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
 import { useFormat } from '@/features/settings'
 import { salesTodayQuery, summaryTodayQuery } from '../api'
 
@@ -47,20 +49,24 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
   const { t } = useTranslation('sales')
   const { t: tc } = useTranslation()
   const { money, date } = useFormat()
-  const sales = useQuery(salesTodayQuery)
   const summary = useQuery({ ...summaryTodayQuery, enabled: isOwner })
-  const products = useQuery(productsQuery())
 
   const [filter, setFilter] = useState<StatusFilter>('all')
+  const paging = useListPagination(filter)
+  const lowPaging = useListPagination('low-stock', 8)
+  const sales = useQuery(salesTodayQuery({
+    status: filter === 'all' ? undefined : filter, limit: paging.pageSize, offset: paging.offset,
+  }))
+  const saleCount = useQuery(salesTodayQuery({ limit: 1 }))
+  const voided = useQuery(salesTodayQuery({ status: 'voided', limit: 1 }))
+  const products = useQuery(productsQuery({ stockAtMost: LOW_STOCK_THRESHOLD, sort: 'stock', limit: lowPaging.pageSize, offset: lowPaging.offset }))
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [today] = useState(() => new Date())
 
-  const allSales = sales.data ?? []
-  const voidedCount = allSales.filter((sale) => sale.status === 'voided').length
-  const visibleSales = filter === 'all' ? allSales : allSales.filter((sale) => sale.status === filter)
-  const lowStock = (products.data ?? [])
-    .filter(isLowStock)
-    .sort((a, b) => a.stockQty - b.stockQty)
+  const voidedCount = voided.data?.total ?? 0
+  const visibleSales = sales.data?.items ?? []
+  const lowStock = products.data?.items ?? []
+  const lowStockCount = products.data?.total ?? 0
 
   const stats = summary.data
   const averageSatang = stats && stats.saleCount > 0 ? Math.round(stats.totalSatang / stats.saleCount) : 0
@@ -71,11 +77,11 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
       <PageHeader
         title={t('today.title')}
         highlight={date.longDate(today)}
-        description={t('today.summary', { count: allSales.length, voided: voidedCount })}
+        description={t('today.summary', { count: saleCount.data?.total ?? 0, voided: voidedCount })}
       >
-        {lowStock.length > 0 && (
+        {lowStockCount > 0 && (
           <StatusBadge tone="warning" className="hidden h-7 px-3 sm:inline-flex">
-            {t('today.lowStockBadge', { items: tc('items', { count: lowStock.length }) })}
+            {t('today.lowStockBadge', { items: tc('items', { count: lowStockCount }) })}
           </StatusBadge>
         )}
         <Button asChild className="h-9 px-3">
@@ -186,6 +192,7 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
                 )}
               </TableBody>
             </Table>
+            <PaginationBar {...paging} total={sales.data?.total} isLoading={sales.isFetching} onPageChange={paging.setPage} />
           </Panel>
 
           <div className="space-y-4">
@@ -193,11 +200,11 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
               title={t('attention.title')}
               description={t('attention.description', { count: LOW_STOCK_THRESHOLD })}
               action={
-                lowStock.length > 0 && <StatusBadge tone="warning">{tc('items', { count: lowStock.length })}</StatusBadge>
+                lowStockCount > 0 && <StatusBadge tone="warning">{tc('items', { count: lowStockCount })}</StatusBadge>
               }
             >
               <ul className="divide-y">
-                {lowStock.slice(0, 8).map((product) => (
+                {lowStock.map((product) => (
                   <li key={product.id} className="flex items-center gap-3 px-4 py-2.5">
                     <span className="flex size-8 shrink-0 items-center justify-center rounded-full border text-muted-foreground">
                       <PackageX className="size-4" />
@@ -211,10 +218,12 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
                     </StatusBadge>
                   </li>
                 ))}
-                {lowStock.length === 0 && (
+                {!products.isPending && !products.error && lowStockCount === 0 && (
                   <li className="px-4 py-6 text-center text-sm text-muted-foreground">{t('attention.allGood')}</li>
                 )}
               </ul>
+              {products.error && <p className="p-3 text-sm text-destructive">{products.error.message}</p>}
+              <PaginationBar {...lowPaging} total={products.data?.total} isLoading={products.isFetching} onPageChange={lowPaging.setPage} />
             </Panel>
 
             {stats && (

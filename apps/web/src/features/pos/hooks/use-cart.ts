@@ -1,8 +1,8 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import { modifierGroupsQuery } from '@/features/modifiers'
 import { orderQuery } from '@/features/orders'
-import { productsQuery } from '@/features/products'
+import { productQuery } from '@/features/products'
 import { useFormat, useSettings } from '@/features/settings'
 import { priceCart, priceOrder } from '../lib/cart'
 import { useCartStore } from '../store/cart.store'
@@ -16,8 +16,10 @@ export function useCart() {
   const discount = useCartStore((state) => state.discount)
   const orderId = useCartStore((state) => state.orderId)
   const clear = useCartStore((state) => state.clear)
-  const products = useQuery(productsQuery())
   const order = useQuery({ ...orderQuery(orderId ?? 0), enabled: orderId !== null })
+  const ids = [...new Set((orderId === null ? lines : order.data?.items ?? []).map((line) => line.productId))]
+  // The basket reads only its own products, independently of the page being browsed.
+  const products = useQueries({ queries: ids.map(productQuery) })
   const modifiers = useQuery(modifierGroupsQuery)
   const { vatMode, vatRateBp } = useSettings()
   const { money } = useFormat()
@@ -34,10 +36,9 @@ export function useCart() {
     [modifiers.data],
   )
 
-  const productsById = useMemo(
-    () => new Map((products.data ?? []).map((product) => [product.id, product])),
-    [products.data],
-  )
+  const productsById = new Map(products.flatMap((result) =>
+    result.data?.isActive ? [[result.data.id, result.data] as const] : [],
+  ))
 
   // The order was paid or cancelled elsewhere (another till, another tab), or no longer exists.
   const gone = orderId !== null && (order.isError || (order.data !== undefined && order.data.status !== 'open'))
@@ -45,11 +46,17 @@ export function useCart() {
     if (gone) clear()
   }, [gone, clear])
 
-  const priced = useMemo(() => {
-    const options = { vatMode, vatRateBp, parseAmount: money.parse }
-    if (orderId === null) return priceCart(lines, productsById, discount, options, optionsById)
-    return priceOrder(order.data?.items ?? [], productsById, discount, options)
-  }, [lines, productsById, optionsById, discount, orderId, order.data, vatMode, vatRateBp, money])
+  const options = { vatMode, vatRateBp, parseAmount: money.parse }
+  const priced = orderId === null
+    ? priceCart(lines, productsById, discount, options, optionsById)
+    : priceOrder(order.data?.items ?? [], productsById, discount, options)
 
-  return { ...priced, orderId, order: order.data }
+  const productsReady = products.every((result) => result.isSuccess && result.data.isActive)
+  return {
+    ...priced, canPay: priced.canPay && productsReady, productsReady,
+    isLoadingProducts: products.some((result) => result.isPending),
+    productError: products.find((result) => result.error)?.error,
+    hasUnavailableProducts: products.some((result) => result.data && !result.data.isActive),
+    orderId, order: order.data,
+  }
 }

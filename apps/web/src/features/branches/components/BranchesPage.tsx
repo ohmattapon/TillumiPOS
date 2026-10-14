@@ -5,6 +5,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { Panel, tableCell, tableHead } from '@/components/Panel'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
@@ -28,6 +30,7 @@ export function BranchesPage() {
   const update = useUpdateBranch()
   const [dialog, setDialog] = useState<OpenDialog>(null)
 
+  const paging = useListPagination('branches')
   const all = branches.data ?? []
 
   const setOpen = (branch: Branch, isActive: boolean) =>
@@ -68,7 +71,7 @@ export function BranchesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {all.map((branch) => (
+              {all.slice(paging.offset, paging.offset + paging.pageSize).map((branch) => (
                 <TableRow key={branch.id} className={branch.isActive ? '' : 'text-muted-foreground'}>
                   <TableCell className={`${tableCell} font-medium tabular-nums`}>{branch.code}</TableCell>
                   <TableCell className={tableCell}>{branch.name}</TableCell>
@@ -105,6 +108,7 @@ export function BranchesPage() {
               )}
             </TableBody>
           </Table>
+          <PaginationBar {...paging} total={all.length} isLoading={branches.isFetching} onPageChange={paging.setPage} />
         </Panel>
       </div>
 

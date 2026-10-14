@@ -6,7 +6,7 @@ import { checkoutModeQuery, shiftKeys } from '@/features/shifts'
 export const saleKeys = {
   /** Prefix of every sales query: invalidate this after a sale is made or voided. */
   all: ['sales'] as const,
-  today: () => [...saleKeys.all, 'today'] as const,
+  today: (filters: object = {}) => [...saleKeys.all, 'today', filters] as const,
   todaySummary: () => [...saleKeys.all, 'today', 'summary'] as const,
   detail: (id: number) => [...saleKeys.all, 'detail', id] as const,
 }
@@ -20,9 +20,9 @@ export function todayRange() {
   return { from, to }
 }
 
-export const salesTodayQuery = queryOptions({
-  queryKey: saleKeys.today(),
-  queryFn: async () => (await unwrap(api.sales.get({ query: { ...todayRange(), limit: 500 } }))).items,
+export const salesTodayQuery = (filters: { status?: 'completed' | 'voided'; limit?: number; offset?: number } = {}) => queryOptions({
+  queryKey: saleKeys.today(filters),
+  queryFn: () => unwrap(api.sales.get({ query: { ...todayRange(), limit: 20, offset: 0, ...filters } })),
 })
 
 /** Owner only: the API refuses cashiers, so enable this query conditionally. */
