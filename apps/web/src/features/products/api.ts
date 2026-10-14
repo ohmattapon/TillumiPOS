@@ -1,7 +1,7 @@
 import type { Product } from '@pos/api/types'
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { modifierKeys } from '@/features/modifiers'
-import { api, unwrap } from '@/lib/api'
+import { api, apiV2, unwrap } from '@/lib/api'
 import { prepareImage } from './lib/image'
 
 export const productKeys = {
@@ -16,6 +16,13 @@ export const productsQuery = (includeInactive = false) =>
     queryKey: productKeys.list(includeInactive),
     queryFn: async () => (await unwrap(api.catalog.products.get({ query: { includeInactive, limit: 1000 } }))).items,
   })
+
+/** Whether this shop has a place to keep product images: the upload is hidden when it has not. */
+export const imageStorageQuery = queryOptions({
+  queryKey: ['capabilities', 'image-storage'] as const,
+  queryFn: async () => (await unwrap(apiV2.capabilities.get())).imageStorage,
+  staleTime: Infinity,
+})
 
 export interface ProductInput {
   sku: string

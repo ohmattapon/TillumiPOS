@@ -73,6 +73,7 @@ export const mockProductRepository = (): Mocked<IProductRepository> => ({
 })
 
 export const mockMediaStorage = (): Mocked<IMediaStorage> => ({
+  isEnabled: mock<IMediaStorage['isEnabled']>(() => true),
   urlFor: mock<IMediaStorage['urlFor']>((key) => 'https://media.test/' + key),
   put: mock<IMediaStorage['put']>(async () => {}),
   delete: mock<IMediaStorage['delete']>(async () => {}),
