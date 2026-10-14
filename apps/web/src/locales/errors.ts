@@ -11,6 +11,7 @@ export const errors = {
     VALIDATION: 'Some of the information is not valid.',
     PARSE: 'The request could not be read.',
     INVALID_FILE_TYPE: 'The file must be a JPEG, PNG or WebP image.',
+    IMAGE_TOO_LARGE: 'The image must be 5 MB or smaller.',
     INTERNAL: 'Something went wrong on the server.',
     DUPLICATE: 'This already exists.',
     IN_USE: 'This is in use elsewhere, or refers to something that does not exist.',
