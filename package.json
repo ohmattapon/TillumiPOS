@@ -12,6 +12,7 @@
     "db:generate": "bun run --filter @pos/api db:generate",
     "db:migrate": "bun run --filter @pos/api db:migrate",
     "db:seed": "bun run --filter @pos/api db:seed",
+    "db:seed:catalog": "bun run --filter @pos/api db:seed:catalog",
     "e2e": "bun apps/web/e2e/run.ts",
     "scb:inquiry": "bun --env-file=.env apps/api/scripts/scb-inquiry.ts",
     "typecheck": "bun run --filter '*' typecheck",
