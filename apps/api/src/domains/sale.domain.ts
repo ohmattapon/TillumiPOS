@@ -1,5 +1,6 @@
 import { DomainConflictError } from './errors/domain-conflict.error'
 import { DomainError } from './errors/domain-error'
+import type { LineOption } from './modifier.domain'
 import { calculateTotals, type VatMode } from './pricing'
 import type { ProductEntity } from './product.domain'
 
@@ -14,10 +15,14 @@ export interface SaleItem {
   productId: number
   productName: string
   sku: string
+  /** What one unit was sold for: the product's price plus the options chosen. */
   unitPriceSatang: number
+  /** What one unit cost: the product's cost plus the cost of the options chosen. */
   unitCostSatang: number
   quantity: number
   lineTotalSatang: number
+  /** The options chosen, as they were. Their price and cost are already in the unit price and cost. */
+  options: LineOption[]
 }
 
 export interface SalePayment {
@@ -77,7 +82,7 @@ export interface SaleEntityProps extends NewSale {
 }
 
 export interface CompleteSaleInput {
-  lines: { product: ProductEntity; quantity: number }[]
+  lines: { product: ProductEntity; quantity: number; options?: readonly LineOption[] }[]
   discountSatang: number
   payments: SalePayment[]
   vatMode: VatMode
@@ -158,7 +163,8 @@ export class SaleEntity {
     this.voidedAt = props.voidedAt
     this.voidReason = props.voidReason
     this.createdAt = props.createdAt
-    this.items = props.items
+    // `?? []`: a sale restored from a snapshot stored before options were kept has none on its lines.
+    this.items = props.items.map((item) => ({ ...item, options: item.options ?? [] }))
     this.payments = props.payments
   }
 
@@ -174,15 +180,19 @@ export class SaleEntity {
     if (payments.some((payment) => !isWholeAmount(payment.amountSatang) || payment.amountSatang < 1))
       throw new DomainError('ยอดชำระแต่ละรายการต้องเป็นจำนวนเต็มสตางค์ตั้งแต่ 1 ขึ้นไป', 'INVALID_PAYMENT')
 
-    const items: SaleItem[] = lines.map(({ product, quantity }) => ({
-      productId: product.id,
-      productName: product.name,
-      sku: product.sku,
-      unitPriceSatang: product.priceSatang,
-      unitCostSatang: product.costSatang,
-      quantity,
-      lineTotalSatang: product.priceSatang * quantity,
-    }))
+    const items: SaleItem[] = lines.map(({ product, quantity, options = [] }) => {
+      const unitPriceSatang = product.priceSatang + sum(options.map((option) => option.priceSatang))
+      return {
+        productId: product.id,
+        productName: product.name,
+        sku: product.sku,
+        unitPriceSatang,
+        unitCostSatang: product.costSatang + sum(options.map((option) => option.costSatang)),
+        quantity,
+        lineTotalSatang: unitPriceSatang * quantity,
+        options: [...options],
+      }
+    })
 
     const subtotalSatang = sum(items.map((item) => item.lineTotalSatang))
     if (subtotalSatang > MAX_AMOUNT_SATANG) throw tooLarge()

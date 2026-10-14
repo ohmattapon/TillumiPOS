@@ -3,6 +3,7 @@ import { ZodError } from 'zod'
 import { makeBranch, makeProduct, makeSale, makeStockMovement } from '../../../../__tests__/factories'
 import {
   mockBranchRepository,
+  mockLineOptionsResolver,
   mockProductRepository,
   mockSaleRepository,
   mockQrPaymentClaims,
@@ -35,6 +36,7 @@ let qrPayments: ReturnType<typeof mockQrPaymentClaims>
 let checkoutPolicy: ReturnType<typeof mockCheckoutPolicy>
 let shiftLedger: ReturnType<typeof mockShiftLedger>
 let branches: ReturnType<typeof mockBranchRepository>
+let lineOptions: ReturnType<typeof mockLineOptionsResolver>
 
 beforeEach(() => {
   sales = mockSaleRepository()
@@ -46,6 +48,7 @@ beforeEach(() => {
   checkoutPolicy = mockCheckoutPolicy()
   shiftLedger = mockShiftLedger()
   branches = mockBranchRepository()
+  lineOptions = mockLineOptionsResolver()
   branches.findById.mockResolvedValue(makeBranch())
   settings.get.mockResolvedValue(new ShopSettingsEntity(DEFAULT_SHOP_SETTINGS))
   ledger.record.mockResolvedValue(makeStockMovement())
@@ -62,7 +65,7 @@ describe('CompleteSaleUseCase', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches), unitOfWork)
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches, lineOptions), unitOfWork)
   })
 
   const sell = (overrides: Record<string, unknown> = {}) =>
@@ -284,7 +287,7 @@ describe('QR payments in a sale', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches), unitOfWork)
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches, lineOptions), unitOfWork)
   })
 
   test('a promptpay payment backed by a QR is checked for this branch and amount, then used by the sale', async () => {
@@ -513,5 +516,93 @@ describe('GetSalesSummaryUseCase', () => {
 
   test('requires both ends of the period', async () => {
     await expect(new GetSalesSummaryUseCase(sales).execute({ from: period.from }, 1)).rejects.toBeInstanceOf(ZodError)
+  })
+})
+
+describe('SaleCheckout with options', () => {
+  const pearls = { groupId: 2, groupName: 'ท็อปปิง', optionId: 20, name: 'ไข่มุก', priceSatang: 1000, costSatang: 400 }
+  const tea = makeProduct({ id: 1, name: 'ชา', sku: 'TEA', priceSatang: 5000, costSatang: 2000, stockQty: 3 })
+  let checkout: SaleCheckout
+  const branch = { id: 1, code: 'MAIN' }
+
+  beforeEach(() => {
+    products.findManyForUpdate.mockResolvedValue([tea])
+    sales.nextReceiptNo.mockResolvedValue('MAIN-20261013-00001')
+    sales.create.mockImplementation(async (sale, receiptNo) =>
+      makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
+    )
+    checkout = new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches, lineOptions)
+  })
+
+  test('a one-step line with option ids is resolved and sold at product plus options', async () => {
+    lineOptions.resolve.mockResolvedValue({ options: [pearls], priceSatang: 1000, costSatang: 400, key: '20' })
+
+    const sale = await checkout.checkout({
+      lines: [{ productId: 1, quantity: 2, optionIds: [20] }],
+      discountSatang: 0,
+      payments: cash(12000),
+      cashier,
+      branch,
+    })
+
+    expect(lineOptions.resolve).toHaveBeenCalledWith(1, [20])
+    expect(sale.items[0]).toMatchObject({ unitPriceSatang: 6000, unitCostSatang: 2400, options: [pearls] })
+  })
+
+  test('an order line is sold at the quoted unit price whatever the options cost now', async () => {
+    const sale = await checkout.checkout({
+      lines: [{ productId: 1, quantity: 1, unitPriceSatang: 5500, options: [pearls] }],
+      discountSatang: 0,
+      payments: cash(5500),
+      cashier,
+      branch,
+    })
+
+    expect(lineOptions.resolve).not.toHaveBeenCalled()
+    expect(sale.items[0]).toMatchObject({ unitPriceSatang: 5500, options: [pearls] })
+  })
+
+  test('the same product with different options is two lines, but its stock is checked for the total', async () => {
+    lineOptions.resolve
+      .mockResolvedValueOnce({ options: [pearls], priceSatang: 1000, costSatang: 400, key: '20' })
+      .mockResolvedValueOnce({ options: [], priceSatang: 0, costSatang: 0, key: '' })
+
+    await expect(
+      checkout.checkout({
+        lines: [
+          { productId: 1, quantity: 2, optionIds: [20] },
+          { productId: 1, quantity: 2 },
+        ],
+        discountSatang: 0,
+        payments: cash(30000),
+        cashier,
+        branch,
+      }),
+    ).rejects.toMatchObject({ code: 'INSUFFICIENT_STOCK' })
+    expect(sales.create).not.toHaveBeenCalled()
+  })
+
+  test('repeating the same choice merges the lines, and different choices stay apart', async () => {
+    lineOptions.resolve
+      .mockResolvedValueOnce({ options: [pearls], priceSatang: 1000, costSatang: 400, key: '20' })
+      .mockResolvedValueOnce({ options: [pearls], priceSatang: 1000, costSatang: 400, key: '20' })
+      .mockResolvedValueOnce({ options: [], priceSatang: 0, costSatang: 0, key: '' })
+
+    const sale = await checkout.checkout({
+      lines: [
+        { productId: 1, quantity: 1, optionIds: [20] },
+        { productId: 1, quantity: 1, optionIds: [20] },
+        { productId: 1, quantity: 1 },
+      ],
+      discountSatang: 0,
+      payments: cash(17000),
+      cashier,
+      branch,
+    })
+
+    expect(sale.items.map((item) => [item.options.length, item.quantity])).toEqual([
+      [1, 2],
+      [0, 1],
+    ])
   })
 })
