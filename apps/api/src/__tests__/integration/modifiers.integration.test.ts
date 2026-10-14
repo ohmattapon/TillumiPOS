@@ -223,3 +223,105 @@ describe('orders with options', () => {
     expect(ok(await owner.api.orders({ id: order.id }).get()).items[0]!.quantity).toBe(1)
   })
 })
+
+describe('selling with options', () => {
+  const cash = (amountSatang: number) => [{ method: 'cash' as const, amountSatang }]
+
+  test('a one-step sale is priced with the options and its profit counts their cost', async () => {
+    const { tea, less, pearls } = await setup()
+
+    const sale = ok(
+      await owner.api.sales.post({
+        items: [{ productId: tea.id, quantity: 2, options: [less.id, pearls.id] }],
+        payments: cash(12000),
+      }),
+    )
+
+    expect(sale).toMatchObject({ subtotalSatang: 12000, totalSatang: 12000 })
+    expect(sale.items[0]).toMatchObject({ unitPriceSatang: 6000, quantity: 2, lineTotalSatang: 12000 })
+    expect(sale.items[0]!.options.map((option) => option.name)).toEqual(['หวานน้อย', 'ไข่มุก'])
+    expect(JSON.stringify(sale)).not.toContain('costSatang')
+    const HOUR = 60 * 60 * 1000
+    const summary = ok(
+      await owner.api.sales.summary.get({ query: { from: new Date(Date.now() - HOUR), to: new Date(Date.now() + HOUR) } }),
+    )
+    // 2 x (60.00 - (20.00 + 4.00)) = 72.00
+    expect(summary.profitSatang).toBe(12000 - 2 * 2400)
+  })
+
+  test('paying an order sells each line with its options, at the price quoted', async () => {
+    const { tea, less, more, pearls, order } = await setup()
+    ok(await owner.api.orders({ id: order.id }).items.post({ productId: tea.id, quantity: 1, options: [less.id, pearls.id] }))
+    ok(await owner.api.orders({ id: order.id }).items.post({ productId: tea.id, quantity: 2, options: [more.id] }))
+    // The price of the topping changes after it was ordered: the order is charged what it was quoted.
+    ok(await owner.api.catalog['modifier-options']({ id: pearls.id }).patch({ priceSatang: 9000 }))
+
+    const sale = ok(await owner.api.orders({ id: order.id }).pay.post({ payments: cash(16000) }))
+
+    expect(sale.items.map((item) => [item.options.map((option) => option.name), item.unitPriceSatang, item.quantity])).toEqual([
+      [['หวานน้อย', 'ไข่มุก'], 6000, 1],
+      [['หวานมาก'], 5000, 2],
+    ])
+    expect(sale.totalSatang).toBe(16000)
+  })
+
+  test('selling the same product in two lines cannot get past the stock', async () => {
+    const { less, more, sweetness } = await setup()
+    const scarce = await seedProduct(owner, { name: 'หายาก', priceSatang: 1000, stock: 3 })
+    ok(await owner.api.catalog.products({ id: scarce.id })['modifier-groups'].put({ groupIds: [sweetness.id] }))
+
+    const refused = await owner.api.sales.post({
+      items: [
+        { productId: scarce.id, quantity: 2, options: [less.id] },
+        { productId: scarce.id, quantity: 2, options: [more.id] },
+      ],
+      payments: cash(4000),
+    })
+
+    expect(refused.status).toBe(409)
+    expect(refused.error?.value).toMatchObject({ code: 'INSUFFICIENT_STOCK' })
+  })
+
+  test('a v1 sale without options for a product with a required group is refused, naming the group', async () => {
+    const { tea } = await setup()
+
+    const refused = await owner.api.sales.post({ items: [{ productId: tea.id, quantity: 1 }], payments: cash(5000) })
+
+    expect(refused.error?.value).toMatchObject({ code: 'MODIFIER_REQUIRED', detail: 'กรุณาเลือก "ความหวาน"' })
+  })
+
+  test('a sale already made does not change when the option is renamed or its price changes', async () => {
+    const { tea, less, pearls } = await setup()
+    const sale = ok(
+      await owner.api.sales.post({ items: [{ productId: tea.id, quantity: 1, options: [less.id, pearls.id] }], payments: cash(6000) }),
+    )
+    ok(await owner.api.catalog['modifier-options']({ id: pearls.id }).patch({ name: 'ไข่มุกใหม่', priceSatang: 9999, isActive: false }))
+
+    const again = ok(await owner.api.sales({ id: sale.id }).get())
+
+    expect(again.items[0]!.options.map((option) => [option.name, option.priceSatang])).toEqual([
+      ['หวานน้อย', 0],
+      ['ไข่มุก', 1000],
+    ])
+    expect(again.items[0]!.unitPriceSatang).toBe(6000)
+  })
+
+  test('voiding a sale with two lines of one product puts back all of its stock', async () => {
+    const { tea, less, more } = await setup()
+    const stockBefore = ok(await owner.api.catalog.products({ id: tea.id }).get()).stockQty
+    const sale = ok(
+      await owner.api.sales.post({
+        items: [
+          { productId: tea.id, quantity: 1, options: [less.id] },
+          { productId: tea.id, quantity: 2, options: [more.id] },
+        ],
+        payments: cash(15000),
+      }),
+    )
+    expect(ok(await owner.api.catalog.products({ id: tea.id }).get()).stockQty).toBe(stockBefore - 3)
+
+    ok(await owner.api.sales({ id: sale.id }).void.post({ reason: 'ทดสอบ' }))
+
+    expect(ok(await owner.api.catalog.products({ id: tea.id }).get()).stockQty).toBe(stockBefore)
+  })
+})

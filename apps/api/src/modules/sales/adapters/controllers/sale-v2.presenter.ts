@@ -6,7 +6,10 @@ export function toSaleV2Response(sale: SaleEntity) {
   return {
     ...header,
     shiftId: sale.shiftId,
-    items: items.map(({ unitCostSatang: _cost, ...item }) => item),
+    items: items.map(({ unitCostSatang: _cost, options, ...item }) => ({
+      ...item,
+      options: options.map(({ costSatang: _optionCost, ...option }) => option),
+    })),
     payments,
   }
 }

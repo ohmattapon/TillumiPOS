@@ -6,7 +6,10 @@ export function toSaleResponse(sale: SaleEntity): SaleResponse {
   const { voidedById: _internal, shiftId: _shift, items, payments, ...header } = sale.toSnapshot()
   return {
     ...header,
-    items: items.map(({ unitCostSatang: _cost, ...item }) => item),
+    items: items.map(({ unitCostSatang: _cost, options, ...item }) => ({
+      ...item,
+      options: options.map(({ costSatang: _optionCost, ...option }) => option),
+    })),
     payments,
   }
 }

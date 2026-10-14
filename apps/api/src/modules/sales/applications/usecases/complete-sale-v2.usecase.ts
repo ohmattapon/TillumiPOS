@@ -21,7 +21,7 @@ export class CompleteSaleV2UseCase {
       { actorId: cashier.id, branchId: branch.id, action: 'sales.checkout', key: idempotencyKey },
       dto,
       () => this.checkout.checkout({
-        lines: dto.items,
+        lines: dto.items.map(({ productId, quantity, options }) => ({ productId, quantity, optionIds: options })),
         discountSatang: dto.discountSatang ?? 0,
         payments: dto.payments,
         cashier,
