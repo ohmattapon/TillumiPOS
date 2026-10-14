@@ -5,6 +5,8 @@ import { appModule } from './modules/app.module'
 import { v2Module } from './modules/v2.module'
 import { errorHandler } from './modules/error-handler.plugin'
 import { legacyMoneyPolicy } from './modules/legacy-money-policy.plugin'
+import { env } from './libs/env'
+import { mediaPlugin } from './modules/media.plugin'
 import { webPlugin } from './modules/web.plugin'
 
 export const app = new Elysia()
@@ -19,6 +21,8 @@ export const app = new Elysia()
   )
   .use(appModule)
   .use(v2Module)
+  // Before the web app, so /media is answered here and not by its fallback page.
+  .use(mediaPlugin(env.mediaStorage === 'local' ? env.mediaDir : null))
   // Last, so a path no API route answers falls through to the web app (when WEB_DIST is set).
   .use(webPlugin(Bun.env.WEB_DIST))
 
