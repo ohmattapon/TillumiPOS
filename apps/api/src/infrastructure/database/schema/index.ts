@@ -1,6 +1,7 @@
 // Every table, aggregated for Drizzle and drizzle-kit.
 export * from './branches'
 export * from './categories'
+export * from './modifiers'
 export * from './orders'
 export * from './products'
 export * from './qr-payments'

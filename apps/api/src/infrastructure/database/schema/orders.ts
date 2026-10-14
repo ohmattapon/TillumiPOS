@@ -1,6 +1,7 @@
-import { index, integer, pgEnum, pgTable, text, unique } from 'drizzle-orm/pg-core'
+import { index, integer, jsonb, pgEnum, pgTable, text, unique } from 'drizzle-orm/pg-core'
 import { id, timestamps } from '../columns'
 import { branches } from './branches'
+import type { StoredLineOption } from './modifiers'
 import { products } from './products'
 import { sales } from './sales'
 import { users } from './users'
@@ -45,6 +46,10 @@ export const orderItems = pgTable(
     sku: text().notNull(),
     unitPriceSatang: integer().notNull(),
     quantity: integer().notNull(),
+    // The options chosen, as they were when the item was ordered. Existing rows have none.
+    options: jsonb().$type<StoredLineOption[]>().notNull().default([]),
+    // The chosen option ids, sorted and joined: the same product with different options is a different line.
+    optionsKey: text().notNull().default(''),
   },
-  (table) => [unique().on(table.orderId, table.productId)],
+  (table) => [unique().on(table.orderId, table.productId, table.optionsKey)],
 )

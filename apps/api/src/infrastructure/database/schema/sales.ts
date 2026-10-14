@@ -1,6 +1,7 @@
-import { date, index, integer, pgEnum, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core'
+import { date, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core'
 import { createdAt, id } from '../columns'
 import { branches } from './branches'
+import type { StoredLineOption } from './modifiers'
 import { products } from './products'
 import { vatMode } from './shop-settings'
 import { users } from './users'
@@ -79,6 +80,8 @@ export const saleItems = pgTable(
     unitCostSatang: integer().notNull(),
     quantity: integer().notNull(),
     lineTotalSatang: integer().notNull(),
+    // The options chosen, as they were when sold. Their price and cost are already in the unit price and cost.
+    options: jsonb().$type<StoredLineOption[]>().notNull().default([]),
   },
   (table) => [index().on(table.saleId), index().on(table.productId)],
 )
