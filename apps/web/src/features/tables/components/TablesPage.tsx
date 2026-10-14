@@ -197,7 +197,7 @@ export function TablesPage() {
         </Button>
       </PageHeader>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto p-4 lg:grid-cols-[1fr_20rem]">
+      <div className="grid min-h-0 flex-1 content-start grid-cols-1 gap-4 overflow-y-auto p-4 lg:grid-cols-[1fr_20rem]">
         <div>
           {tables.error && <p className="mb-2 text-sm text-destructive">{tables.error.message}</p>}
           {/* Phones list the tables; dragging them into place needs a screen that is big enough to drag on. */}
