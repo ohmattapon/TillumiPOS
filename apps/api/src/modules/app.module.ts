@@ -11,6 +11,7 @@ import { QrPaymentElysiaController } from './qr-payments/adapters/controllers/qr
 import { ProductElysiaController } from './products/adapters/controllers/product.controller'
 import { SaleElysiaController } from './sales/adapters/controllers/sale.controller'
 import { SettingsElysiaController } from './settings/adapters/controllers/settings.controller'
+import { TableElysiaController } from './tables/adapters/controllers/table.controller'
 import { UserElysiaController } from './users/adapters/controllers/user.controller'
 
 const authController = container.resolve(AuthElysiaController)
@@ -19,6 +20,7 @@ const branchController = container.resolve(BranchElysiaController)
 const categoryController = container.resolve(CategoryElysiaController)
 const productController = container.resolve(ProductElysiaController)
 const modifierController = container.resolve(ModifierElysiaController)
+const tableController = container.resolve(TableElysiaController)
 const inventoryController = container.resolve(InventoryElysiaController)
 const saleController = container.resolve(SaleElysiaController)
 const orderController = container.resolve(OrderElysiaController)
@@ -30,6 +32,7 @@ const catalog = new Elysia({ name: 'catalog', prefix: '/catalog', detail: { tags
   .use(categoryController.getRoutes())
   .use(productController.getRoutes())
   .use(modifierController.getRoutes())
+  .use(tableController.getRoutes())
 
 // Chained in one expression on purpose: the Eden client's types come from the type of this value.
 export const appModule = new Elysia({ name: 'api', prefix: '/api/v1' })

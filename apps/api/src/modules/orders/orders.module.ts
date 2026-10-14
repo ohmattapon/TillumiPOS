@@ -1,7 +1,9 @@
 import { container } from 'tsyringe'
 import { OrderElysiaController } from './adapters/controllers/order.controller'
 import { DrizzleOrderRepository } from './adapters/repository/order.drizzle.repository'
+import { DrizzleTableOccupancy } from './adapters/repository/table-occupancy.drizzle.adapter'
 import { orderRepositoryToken } from './applications/ports/order.repository'
+import { tableOccupancyToken } from '../tables/applications/ports/table-occupancy.port'
 import { AddOrderItemUseCase } from './applications/usecases/add-order-item.usecase'
 import { CancelOrderUseCase } from './applications/usecases/cancel-order.usecase'
 import { GetOrderUseCase } from './applications/usecases/get-order.usecase'
@@ -17,6 +19,7 @@ import { SetOrderItemQuantityUseCase } from './applications/usecases/set-order-i
 import { SetOrderLineQuantityUseCase } from './applications/usecases/set-order-line-quantity.usecase'
 
 container.register(orderRepositoryToken, { useClass: DrizzleOrderRepository })
+container.register(tableOccupancyToken, { useClass: DrizzleTableOccupancy })
 container.registerSingleton(ListOrdersUseCase)
 container.registerSingleton(GetOrderUseCase)
 container.registerSingleton(OpenOrderUseCase)
