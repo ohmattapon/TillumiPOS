@@ -11,7 +11,7 @@ import { CommandIdempotency } from './applications/command-idempotency'
 
 container.register(TOKENS.UnitOfWork, { useClass: DrizzleUnitOfWork })
 container.register(TOKENS.PasswordHasher, { useClass: BunPasswordHasher })
-container.register(TOKENS.MediaStorage, { useClass: WorkerMediaStorage })
+container.register(TOKENS.MediaStorage, { useFactory: () => new WorkerMediaStorage() })
 container.register(TOKENS.Clock, { useClass: SystemClock })
 container.register(TOKENS.CheckoutPolicy, { useClass: EnvCheckoutPolicy })
 container.register(commandReceiptsToken, { useClass: DrizzleCommandReceiptsRepository })
