@@ -232,6 +232,47 @@ async function main() {
       await owner.getByRole('button', { name: 'ขายรายการต่อไป' }).click()
     })
 
+    console.log('\nTables:')
+
+    await check('the owner adds a table, drags it, and its place survives a reload', async () => {
+      await owner.goto(`${WEB}/tables`)
+      await owner.getByRole('button', { name: 'เพิ่มโต๊ะ' }).click()
+      await owner.getByRole('dialog').getByLabel('ชื่อโต๊ะ').fill('A1')
+      await owner.getByRole('dialog').getByRole('button', { name: 'บันทึก' }).click()
+      const table = owner.getByRole('button', { name: 'A1' })
+      await table.waitFor()
+
+      const box = (await table.boundingBox())!
+      await owner.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+      await owner.mouse.down()
+      await owner.mouse.move(box.x + box.width / 2 + 200, box.y + box.height / 2 + 120, { steps: 8 })
+      await owner.mouse.up()
+
+      await owner.reload()
+      const moved = (await owner.getByRole('button', { name: 'A1' }).boundingBox())!
+      if (moved.x < box.x + 100 || moved.y < box.y + 60) throw new Error('The table did not keep its new place')
+    })
+
+    await check('the cashier opens an order on the table, splits it, and the floor shows two orders', async () => {
+      await cashier.goto(WEB)
+      await cashier.getByRole('button', { name: 'โต๊ะ', exact: true }).click()
+      await cashier.getByRole('dialog').getByRole('button', { name: 'A1' }).click()
+      await cashier.getByRole('button', { name: /เปิดออเดอร์ใหม่ที่ A1/ }).click()
+
+      // The product has an optional option group, so it asks before it goes on the order.
+      for (let time = 0; time < 2; time++) {
+        await cashier.getByRole('button', { name: /น้ำดื่ม 600 มล\./ }).first().click()
+        await cashier.getByRole('button', { name: 'เพิ่มลงตะกร้า' }).click()
+      }
+
+      await cashier.getByRole('button', { name: 'แยกบิล', exact: true }).click()
+      await cashier.getByRole('button', { name: /เพิ่มจำนวนที่แยก/ }).first().click()
+      await cashier.getByRole('dialog').getByRole('button', { name: 'แยกบิล', exact: true }).click()
+
+      await cashier.getByRole('button', { name: 'โต๊ะ', exact: true }).click()
+      await cashier.getByText('2 ออเดอร์').first().waitFor()
+    })
+
     await check('a reload keeps the shift: the till is still ready to sell', async () => {
       await cashier.reload()
       await cashier.getByRole('button', { name: 'กะเปิดอยู่' }).waitFor()
