@@ -7,6 +7,9 @@ import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
 import { DataTable } from '@/components/DataTable'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
+import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { ProductFormDialog } from './ProductFormDialog'
 import { ProductImage } from './ProductImage'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
@@ -24,7 +27,7 @@ import { Input } from '@/components/ui/input'
 import { categoriesQuery, CategoryDot } from '@/features/categories'
 import { useFormat, useSettings } from '@/features/settings'
 import { productsQuery, useSetProductActive } from '../api'
-import { isLowStock } from '../lib/stock'
+import { isLowStock, LOW_STOCK_THRESHOLD } from '../lib/stock'
 
 type Filter = 'all' | 'low' | 'inactive'
 
@@ -35,12 +38,21 @@ export function ProductsPage() {
   const { t: tc } = useTranslation()
   const { money } = useFormat()
   const { vatMode } = useSettings()
-  const products = useQuery(productsQuery(true))
   const categories = useQuery(categoriesQuery)
 
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
   const [dialog, setDialog] = useState<OpenDialog>(null)
+  const term = useDebouncedValue(search.trim())
+  const paging = useListPagination(`${filter}:${search.trim()}`)
+  const products = useQuery(productsQuery({
+    includeInactive: true, q: term, limit: paging.pageSize, offset: paging.offset,
+    ...(filter === 'low' && { isActive: true, stockAtMost: LOW_STOCK_THRESHOLD }),
+    ...(filter === 'inactive' && { isActive: false }),
+  }))
+  const counts = useQuery(productsQuery({ includeInactive: true, limit: 1 }))
+  const lowCount = useQuery(productsQuery({ stockAtMost: LOW_STOCK_THRESHOLD, limit: 1 }))
+  const inactiveCount = useQuery(productsQuery({ includeInactive: true, isActive: false, limit: 1 }))
 
   const setActive = useSetProductActive()
   const toggleActive = (product: Product) =>
@@ -53,27 +65,19 @@ export function ProductsPage() {
       },
     )
 
-  const all = products.data ?? []
   const categoryName = new Map(categories.data?.map((category) => [category.id, category.name]))
-  const term = search.trim().toLowerCase()
-  const visible = all.filter(
-    (product) =>
-      (filter === 'all' || (filter === 'low' ? product.isActive && isLowStock(product) : !product.isActive)) &&
-      (term === '' ||
-        product.name.toLowerCase().includes(term) ||
-        product.sku.toLowerCase().includes(term) ||
-        product.barcode?.includes(term)),
-  )
+  const searching = term !== search.trim()
+  const visible = searching ? [] : products.data?.items ?? []
 
   return (
     <>
       <PageHeader
         title={t('title')}
         description={
-          products.isPending
+          counts.data === undefined
             ? undefined
             : t('pageDescription', {
-                items: tc('items', { count: all.length }),
+                items: tc('items', { count: counts.data.total }),
                 priceNote: t(`priceNote.${vatMode}`),
               })
         }
@@ -90,9 +94,9 @@ export function ProductsPage() {
             value={filter}
             onChange={setFilter}
             options={[
-              { value: 'all', label: t('filters.all'), count: products.isPending ? undefined : all.length },
-              { value: 'low', label: t('filters.low'), count: products.isPending ? undefined : all.filter((product) => product.isActive && isLowStock(product)).length },
-              { value: 'inactive', label: t('filters.inactive'), count: products.isPending ? undefined : all.filter((product) => !product.isActive).length },
+              { value: 'all', label: t('filters.all'), count: counts.data?.total },
+              { value: 'low', label: t('filters.low'), count: lowCount.data?.total },
+              { value: 'inactive', label: t('filters.inactive'), count: inactiveCount.data?.total },
             ]}
           />
           <div className="relative ml-auto w-full max-w-xs">
@@ -107,12 +111,12 @@ export function ProductsPage() {
           </div>
         </div>
 
-        <Panel title={t('list.title')} description={products.isPending ? undefined : t('list.description', { shown: visible.length, total: all.length })}>
+        <Panel title={t('list.title')} description={products.isPending ? undefined : t('list.description', { shown: visible.length, total: products.data?.total ?? 0 })}>
           {products.error && <p className="p-4 text-sm text-destructive">{products.error.message}</p>}
           <DataTable
             rows={visible}
             rowKey={(product) => product.id}
-            isPending={products.isPending}
+            isPending={products.isPending || searching}
             empty={t('list.empty')}
             muted={(product) => !product.isActive}
             columns={[
@@ -207,6 +211,7 @@ export function ProductsPage() {
               </>
             )}
           />
+          <PaginationBar {...paging} total={products.data?.total} isLoading={products.isFetching || searching} onPageChange={paging.setPage} />
         </Panel>
       </div>
 

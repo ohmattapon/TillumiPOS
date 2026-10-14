@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Banknote, CreditCard, QrCode, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -47,8 +49,9 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
 
   // Money that already arrived for exactly this total and has no sale yet (a late payment, or a sale that
   // failed after the customer paid). Using it means the customer does not pay twice.
-  const unclaimed = useQuery({ ...unclaimedQrQuery, enabled: usesQr && shiftId !== undefined })
-  const usable = (unclaimed.data?.items ?? []).filter((payment) => payment.amountSatang === totalSatang)
+  const qrPaging = useListPagination(`arrived:${totalSatang}`, 5)
+  const unclaimed = useQuery({ ...unclaimedQrQuery({ amountSatang: totalSatang, limit: qrPaging.pageSize, offset: qrPaging.offset }), enabled: usesQr && shiftId !== undefined })
+  const usable = unclaimed.data?.items ?? []
   const [confirmingId, setConfirmingId] = useState<number | null>(null)
 
   const payWithArrivedMoney = (qrPaymentId: number) => {
@@ -120,7 +123,7 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
           </div>
 
           {usesQr && <QrPaymentPanel qr={qr} isSaving={isSubmitting} />}
-          {usesQr && !qr.paid && usable.length > 0 && (
+          {usesQr && !qr.paid && ((unclaimed.data?.total ?? 0) > 0 || qrPaging.page > 0) && (
             <div className="space-y-2 rounded-lg border p-3">
               <p className="text-sm font-medium">{t('payment.qr.arrivedTitle')}</p>
               <ul className="space-y-2">
@@ -147,6 +150,7 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
                   </li>
                 ))}
               </ul>
+              <PaginationBar {...qrPaging} total={unclaimed.data?.total} isLoading={unclaimed.isFetching || isSubmitting} onPageChange={(page) => { setConfirmingId(null); qrPaging.setPage(page) }} />
               {confirmingId !== null && <p className="text-xs text-muted-foreground">{t('payment.qr.arrivedNote')}</p>}
             </div>
           )}

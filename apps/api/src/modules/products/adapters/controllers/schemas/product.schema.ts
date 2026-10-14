@@ -28,8 +28,12 @@ export const productSchemas = {
   image: t.Object({ file: t.File({ type: ['image/jpeg', 'image/png', 'image/webp'], maxSize: '5m' }) }),
   listQuery: t.Object({
     q: t.Optional(t.String()),
+    code: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
     categoryId: t.Optional(t.Numeric()),
     includeInactive: t.Optional(t.BooleanString()),
+    isActive: t.Optional(t.BooleanString()),
+    stockAtMost: t.Optional(t.Numeric()),
+    sort: t.Optional(t.Union([t.Literal('name'), t.Literal('stock')])),
     limit: t.Optional(t.Numeric({ minimum: 1, maximum: 1000 })),
     offset: t.Optional(t.Numeric({ minimum: 0 })),
   }),

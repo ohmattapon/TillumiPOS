@@ -5,6 +5,9 @@ import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
+import { PaginationBar } from '@/components/PaginationBar'
+import { PaginatedItems } from '@/components/PaginatedItems'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { Panel } from '@/components/Panel'
 import { SkeletonPanel } from '@/components/Skeletons'
 import { StatusBadge } from '@/components/StatusBadge'
@@ -250,6 +253,7 @@ export function ModifiersPage() {
   const [groupDialog, setGroupDialog] = useState<GroupDialog>(null)
   const [optionDialog, setOptionDialog] = useState<OptionDialog>(null)
 
+  const paging = useListPagination('modifier-groups', 5)
   const all = groups.data ?? []
   const onError = (error: Error) => toast.error(error.message)
 
@@ -269,7 +273,7 @@ export function ModifiersPage() {
           <p className="py-12 text-center text-muted-foreground">{t('empty')}</p>
         )}
 
-        {all.map((group) => (
+        {all.slice(paging.offset, paging.offset + paging.pageSize).map((group) => (
           <Panel
             key={group.id}
             title={group.name}
@@ -303,44 +307,49 @@ export function ModifiersPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <ul className="divide-y">
-              {group.options.length === 0 && (
-                <li className="px-4 py-6 text-center text-sm text-muted-foreground">{t('noOptions')}</li>
+            <PaginatedItems items={group.options} scope={`options:${group.id}`}>
+              {(options) => (
+                <ul className="divide-y">
+                  {group.options.length === 0 && (
+                    <li className="px-4 py-6 text-center text-sm text-muted-foreground">{t('noOptions')}</li>
+                  )}
+                  {options.map((option) => (
+                    <li
+                      key={option.id}
+                      className={`flex items-center gap-3 px-4 py-2 ${option.isActive ? '' : 'text-muted-foreground'}`}
+                    >
+                      <span className="min-w-0 flex-1 truncate font-medium">{option.name}</span>
+                      {!option.isActive && <StatusBadge tone="neutral">{t('option.inactive')}</StatusBadge>}
+                      <span className="text-sm tabular-nums">
+                        {option.priceSatang > 0 ? `+${money.plain(option.priceSatang)}` : t('option.free')}
+                      </span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="size-9" aria-label={t('option.actions', { name: option.name })}>
+                            <MoreHorizontal />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onSelect={() => setOptionDialog({ group, option })}>
+                            {t('option.edit')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() =>
+                              updateOption.mutate({ id: option.id, changes: { isActive: !option.isActive } }, { onError })
+                            }
+                          >
+                            {option.isActive ? t('option.deactivate') : t('option.activate')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </li>
+                  ))}
+                </ul>
               )}
-              {group.options.map((option) => (
-                <li
-                  key={option.id}
-                  className={`flex items-center gap-3 px-4 py-2 ${option.isActive ? '' : 'text-muted-foreground'}`}
-                >
-                  <span className="min-w-0 flex-1 truncate font-medium">{option.name}</span>
-                  {!option.isActive && <StatusBadge tone="neutral">{t('option.inactive')}</StatusBadge>}
-                  <span className="text-sm tabular-nums">
-                    {option.priceSatang > 0 ? `+${money.plain(option.priceSatang)}` : t('option.free')}
-                  </span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="size-9" aria-label={t('option.actions', { name: option.name })}>
-                        <MoreHorizontal />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => setOptionDialog({ group, option })}>
-                        {t('option.edit')}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={() =>
-                          updateOption.mutate({ id: option.id, changes: { isActive: !option.isActive } }, { onError })
-                        }
-                      >
-                        {option.isActive ? t('option.deactivate') : t('option.activate')}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </li>
-              ))}
-            </ul>
+            </PaginatedItems>
           </Panel>
         ))}
+        <PaginationBar {...paging} total={all.length} isLoading={groups.isFetching} onPageChange={paging.setPage} />
       </div>
 
       {groupDialog && <GroupFormDialog group={groupDialog.group} onClose={() => setGroupDialog(null)} />}

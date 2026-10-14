@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Kbd } from '@/components/Kbd'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useFormat, useSettings } from '@/features/settings'
 import { tablesQuery } from '@/features/tables'
 import { cn } from '@/lib/utils'
@@ -30,6 +31,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
   const discount = useCartStore((state) => state.discount)
   const setDiscount = useCartStore((state) => state.setDiscount)
   const clear = useCartStore((state) => state.clear)
+  const storedLines = useCartStore((state) => state.lines)
   const { setQuantity } = useCartActions()
   const isOrder = cart.orderId !== null
   const tables = useQuery(tablesQuery)
@@ -51,7 +53,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
         <Button
           variant="ghost"
           className="ml-auto h-9 text-muted-foreground"
-          disabled={cart.lines.length === 0 && !isOrder}
+          disabled={storedLines.length === 0 && !isOrder}
           onClick={clear}
         >
           <Trash2 />
@@ -62,7 +64,10 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
       {cart.order && cart.order.status === 'open' && <OrderTools order={cart.order} />}
 
       <ul className="min-h-0 flex-1 divide-y overflow-y-auto">
-        {cart.lines.length === 0 && (
+        {cart.isLoadingProducts && <li className="p-4"><Skeleton className="h-24 w-full" /></li>}
+        {cart.productError && <li role="alert" className="p-4 text-sm text-destructive">{cart.productError.message}</li>}
+        {cart.hasUnavailableProducts && <li role="alert" className="p-4 text-sm text-destructive">{t('cart.productUnavailable')}</li>}
+        {!cart.isLoadingProducts && !cart.productError && !cart.hasUnavailableProducts && cart.lines.length === 0 && (
           <li className="px-4 py-16 text-center text-sm text-muted-foreground">{t('cart.empty')}</li>
         )}
         {cart.lines.map((line) => {
@@ -158,7 +163,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
           <span className="text-3xl font-semibold tabular-nums">{money.format(cart.totalSatang)}</span>
         </p>
         {!isOrder && (
-          <Button variant="outline" className="h-11 w-full" disabled={cart.lines.length === 0} onClick={onSaveOrder}>
+          <Button variant="outline" className="h-11 w-full" disabled={cart.lines.length === 0 || !cart.productsReady} onClick={onSaveOrder}>
             <ClipboardList />
             {t('cart.saveOrder')}
           </Button>

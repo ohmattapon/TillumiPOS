@@ -48,6 +48,7 @@ const th = {
     add: 'เพิ่มลงตะกร้า',
   },
   cart: {
+    productUnavailable: 'สินค้าบางรายการปิดการขายแล้ว ล้างตะกร้าแล้วเลือกสินค้าใหม่',
     optionUnavailable: 'ตัวเลือกบางอย่างปิดใช้งานแล้ว ลบรายการนี้แล้วเลือกใหม่',
     title: 'ตะกร้า',
     itemCount: '{{count}} ชิ้น',
@@ -176,6 +177,7 @@ const en = {
     add: 'Add to cart',
   },
   cart: {
+    productUnavailable: 'Some products are no longer for sale. Clear the cart and choose again.',
     optionUnavailable: 'Some options are no longer offered. Remove this line and choose again.',
     title: 'Cart',
     itemCount: '{{count}} pcs',

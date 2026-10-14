@@ -40,8 +40,8 @@ export function PosPage() {
   const clearCart = useCartStore((state) => state.clear)
   const checkout = useCheckout()
   const payOrder = usePayOrder()
-  const openOrders = useQuery(openOrdersQuery)
-  const openCount = openOrders.data?.length ?? 0
+  const openOrders = useQuery(openOrdersQuery({ limit: 1 }))
+  const openCount = openOrders.data?.total ?? 0
   const checkoutMode = useQuery(checkoutModeQuery)
   const registers = useQuery(registersQuery)
   const me = useQuery(meQuery).data
