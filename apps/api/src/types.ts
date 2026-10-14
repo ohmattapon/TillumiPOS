@@ -11,3 +11,7 @@ export type {
   SaleResponse as Sale,
   SaleSummaryResponse as SaleSummary,
 } from './modules/sales/adapters/controllers/schemas/sale.schema'
+export type {
+  ModifierGroupResponse as ModifierGroup,
+  ModifierOptionResponse as ModifierOption,
+} from './modules/modifiers/adapters/controllers/schemas/modifier.schema'
