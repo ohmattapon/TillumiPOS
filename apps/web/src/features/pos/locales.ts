@@ -12,7 +12,16 @@ const th = {
     soldOut: 'หมด',
     left: 'เหลือ {{count}}',
   },
+  options: {
+    description: 'เลือกตัวเลือกของสินค้านี้',
+    required: 'บังคับเลือก',
+    optional: 'ไม่บังคับ',
+    pickOne: 'เลือก 1 อย่าง',
+    pickUpTo: 'เลือกได้ไม่เกิน {{count}} อย่าง',
+    add: 'เพิ่มลงตะกร้า',
+  },
   cart: {
+    optionUnavailable: 'ตัวเลือกบางอย่างปิดใช้งานแล้ว ลบรายการนี้แล้วเลือกใหม่',
     title: 'ตะกร้า',
     itemCount: '{{count}} ชิ้น',
     clear: 'ล้าง',
@@ -105,7 +114,16 @@ const en = {
     soldOut: 'Out',
     left: '{{count}} left',
   },
+  options: {
+    description: 'Choose the options for this product',
+    required: 'Required',
+    optional: 'Optional',
+    pickOne: 'Pick 1',
+    pickUpTo: 'Pick up to {{count}}',
+    add: 'Add to cart',
+  },
   cart: {
+    optionUnavailable: 'Some options are no longer offered. Remove this line and choose again.',
     title: 'Cart',
     itemCount: '{{count}} pcs',
     clear: 'Clear',

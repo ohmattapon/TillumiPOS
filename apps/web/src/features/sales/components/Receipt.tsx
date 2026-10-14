@@ -35,9 +35,15 @@ export function Receipt({ sale }: { sale: Sale }) {
         {sale.status === 'voided' && <p className="font-bold">{t('receipt.voided', { reason: sale.voidReason })}</p>}
       </div>
       <hr className="border-dashed border-foreground/40" />
-      {sale.items.map((item) => (
-        <div key={item.productId}>
+      {sale.items.map((item, index) => (
+        <div key={`${item.productId}-${index}`}>
           <p>{item.productName}</p>
+          {item.options.map((option) => (
+            <p key={option.optionId} className="pl-3 text-xs">
+              + {option.name}
+              {option.priceSatang > 0 && ` ${money.plain(option.priceSatang)}`}
+            </p>
+          ))}
           <p className={row}>
             <span>{t('receipt.item', { quantity: item.quantity, price: money.plain(item.unitPriceSatang) })}</span>
             <span>{money.plain(item.lineTotalSatang)}</span>
