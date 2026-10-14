@@ -1,13 +1,16 @@
 import { ClipboardList, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useQuery } from '@tanstack/react-query'
 import { Kbd } from '@/components/Kbd'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useFormat, useSettings } from '@/features/settings'
+import { tablesQuery } from '@/features/tables'
 import { cn } from '@/lib/utils'
 import { useCart } from '../hooks/use-cart'
 import { useCartActions } from '../hooks/use-cart-actions'
 import { useCartStore } from '../store/cart.store'
+import { OrderTools } from './OrderTools'
 
 /** The cart, its discount and the pay button. */
 interface Props {
@@ -27,13 +30,15 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true }: Props
   const clear = useCartStore((state) => state.clear)
   const { setQuantity } = useCartActions()
   const isOrder = cart.orderId !== null
+  const tables = useQuery(tablesQuery)
+  const tableName = tables.data?.find((table) => table.id === cart.order?.tableId)?.name
 
   return (
     <aside className="flex w-80 shrink-0 flex-col border-l bg-sidebar xl:w-96">
       <div className="flex items-center gap-2 border-b px-4 py-3">
         <ShoppingCart className="size-4 text-muted-foreground" />
         <h2 className="min-w-0 truncate text-sm font-semibold">
-          {isOrder ? (cart.order?.label ?? t('orders.untitled', { id: cart.orderId })) : t('cart.title')}
+          {isOrder ? (tableName ?? cart.order?.label ?? t('orders.untitled', { id: cart.orderId })) : t('cart.title')}
         </h2>
         <span className="text-xs text-muted-foreground tabular-nums">{t('cart.itemCount', { count: cart.itemCount })}</span>
         <Button
@@ -46,6 +51,8 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true }: Props
           {isOrder ? t('cart.leaveOrder') : t('cart.clear')}
         </Button>
       </div>
+
+      {cart.order && cart.order.status === 'open' && <OrderTools order={cart.order} />}
 
       <ul className="min-h-0 flex-1 divide-y overflow-y-auto">
         {cart.lines.length === 0 && (

@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input'
 import { openOrdersQuery, useCancelOrder, type Order } from '@/features/orders'
 import { useFormat } from '@/features/settings'
+import { tablesQuery } from '@/features/tables'
 import { useCartStore } from '../store/cart.store'
 
 /** The orders that are open in this branch: pick one to carry on with, or cancel it. */
@@ -14,6 +15,7 @@ export function OpenOrdersDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation('pos')
   const { money, date } = useFormat()
   const orders = useQuery(openOrdersQuery)
+  const tables = useQuery(tablesQuery)
   const cancelOrder = useCancelOrder()
   const workOnOrder = useCartStore((state) => state.workOnOrder)
   const current = useCartStore((state) => state.orderId)
@@ -59,7 +61,7 @@ export function OpenOrdersDialog({ onClose }: { onClose: () => void }) {
             <li key={order.id} className="space-y-3 px-4 py-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate font-medium">{order.label ?? t('orders.untitled', { id: order.id })}</p>
+                  <p className="truncate font-medium">{tables.data?.find((table) => table.id === order.tableId)?.name ?? order.label ?? t('orders.untitled', { id: order.id })}</p>
                   <p className="truncate text-xs text-muted-foreground">
                     {t('orders.openedBy', { name: order.openedByName, time: date.time(order.createdAt) })}
                   </p>

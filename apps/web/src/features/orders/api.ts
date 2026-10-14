@@ -2,6 +2,7 @@ import type { Order } from '@pos/api/types'
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productKeys } from '@/features/products'
 import { saleKeys } from '@/features/sales'
+import { tableKeys } from '@/features/tables'
 import { api, apiV2, unwrap } from '@/lib/api'
 import type { PaymentInput } from '@/lib/money'
 
@@ -32,11 +33,14 @@ function useOrderCache() {
   return (order: Order) => {
     queryClient.setQueryData(orderKeys.detail(order.id), order)
     void queryClient.invalidateQueries({ queryKey: orderKeys.open() })
+    // What is open on a table changes with every order.
+    void queryClient.invalidateQueries({ queryKey: tableKeys.all })
   }
 }
 
 export interface OpenOrderInput {
   label?: string | null
+  tableId?: number | null
   items?: { productId: number; quantity: number; options?: number[] }[]
 }
 
@@ -122,7 +126,55 @@ export function usePayOrder() {
         queryClient.invalidateQueries({ queryKey: orderKeys.all }),
         queryClient.invalidateQueries({ queryKey: productKeys.all }),
         queryClient.invalidateQueries({ queryKey: saleKeys.all }),
+        queryClient.invalidateQueries({ queryKey: tableKeys.all }),
       ]),
+  })
+}
+
+export function useMoveOrder() {
+  const remember = useOrderCache()
+
+  return useMutation({
+    mutationFn: ({ orderId, tableId }: { orderId: number; tableId: number | null }) =>
+      unwrap(api.orders({ id: orderId }).move.post({ tableId })),
+    onSuccess: remember,
+  })
+}
+
+/** Takes the lines of `sourceOrderId` onto `orderId`; the source is closed as merged. */
+export function useMergeOrders() {
+  const queryClient = useQueryClient()
+  const remember = useOrderCache()
+
+  return useMutation({
+    mutationFn: ({ orderId, sourceOrderId }: { orderId: number; sourceOrderId: number }) =>
+      unwrap(api.orders({ id: orderId }).merge.post({ sourceOrderId })),
+    onSuccess: (order) => {
+      remember(order)
+      void queryClient.invalidateQueries({ queryKey: orderKeys.all })
+    },
+  })
+}
+
+/** Moves part of the lines onto a new order on the same table and answers with that order. */
+export function useSplitOrder() {
+  const queryClient = useQueryClient()
+  const remember = useOrderCache()
+
+  return useMutation({
+    mutationFn: ({
+      orderId,
+      lines,
+      label,
+    }: {
+      orderId: number
+      lines: { lineId: number; quantity: number }[]
+      label?: string | null
+    }) => unwrap(api.orders({ id: orderId }).split.post({ lines, label })),
+    onSuccess: (order) => {
+      remember(order)
+      void queryClient.invalidateQueries({ queryKey: orderKeys.all })
+    },
   })
 }
 

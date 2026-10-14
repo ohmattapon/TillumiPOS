@@ -5,8 +5,11 @@ export {
   orderQuery,
   useAddOrderItem,
   useCancelOrder,
+  useMergeOrders,
+  useMoveOrder,
   useOpenOrder,
   usePayOrder,
   useRemoveOrderLine,
   useSetOrderLineQuantity,
+  useSplitOrder,
 } from './api'
