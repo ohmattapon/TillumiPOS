@@ -89,7 +89,7 @@ export function OptionsDialog({ product, groups, onConfirm, onCancel }: Props) {
           })}
         </div>
 
-        <DialogFooter className="items-center sm:justify-between">
+        <DialogFooter sticky className="items-center sm:justify-between">
           <p className="text-lg font-semibold tabular-nums">{money.format(unitPriceSatang)}</p>
           <div className="flex gap-2">
             <Button type="button" variant="outline" className="h-11" onClick={onCancel}>

@@ -55,7 +55,7 @@ function MoveDialog({ order, onClose }: { order: Order; onClose: () => void }) {
             {t('tools.noTable')}
           </Button>
         </div>
-        <DialogFooter>
+        <DialogFooter sticky>
           <Button variant="outline" className="h-10" onClick={onClose}>
             {tc('cancel')}
           </Button>
@@ -110,7 +110,7 @@ function MergeDialog({ order, onClose }: { order: Order; onClose: () => void }) 
             </li>
           ))}
         </ul>
-        <DialogFooter>
+        <DialogFooter sticky>
           <Button variant="outline" className="h-10" onClick={onClose}>
             {tc('cancel')}
           </Button>
@@ -183,7 +183,7 @@ function SplitDialog({ order, onClose }: { order: Order; onClose: () => void }) 
           ))}
         </ul>
         {lines.length > 0 && takenUnits >= units && <p className="text-sm text-destructive">{t('tools.leaveOne')}</p>}
-        <DialogFooter>
+        <DialogFooter sticky>
           <Button variant="outline" className="h-10" onClick={onClose}>
             {tc('cancel')}
           </Button>
