@@ -8,6 +8,7 @@ import { LoginPage, meQuery, useLogout } from '@/features/auth'
 import { BranchesPage, useActiveBranch } from '@/features/branches'
 import { CategoriesPage } from '@/features/categories'
 import { ModifiersPage } from '@/features/modifiers'
+import { TablesPage } from '@/features/tables'
 import { clearCart, PosPage } from '@/features/pos'
 import { ProductsPage } from '@/features/products'
 import { TodayPage } from '@/features/sales'
@@ -41,6 +42,7 @@ function Shell({ user }: { user: User }) {
           {isOwner && <Route path="products" element={<ProductsPage />} />}
           {isOwner && <Route path="categories" element={<CategoriesPage />} />}
           {isOwner && <Route path="modifiers" element={<ModifiersPage />} />}
+          {isOwner && <Route path="tables" element={<TablesPage />} />}
           {isOwner && <Route path="branches" element={<BranchesPage />} />}
           {isOwner && <Route path="users" element={<UsersPage />} />}
           {isOwner && <Route path="settings" element={<SettingsPage />} />}
