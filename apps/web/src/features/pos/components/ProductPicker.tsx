@@ -85,7 +85,7 @@ export function ProductPicker({ searchRef }: Props) {
   }
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col gap-3 p-4">
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 p-4">
       <form onSubmit={submitSearch} className="relative">
         <Search className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground" />
         <Input
