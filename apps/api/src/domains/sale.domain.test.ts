@@ -181,6 +181,7 @@ describe('SaleEntity.complete: lines', () => {
         unitCostSatang: 600,
         quantity: 2,
         lineTotalSatang: 5000,
+        options: [],
       },
     ])
     expect(sale).toMatchObject({ cashierId: 7, cashierName: 'สมชาย' })
@@ -236,5 +237,38 @@ describe('SaleEntity', () => {
     sale.toSnapshot().items[0]!.quantity = 999
 
     expect(sale.items[0]!.quantity).toBe(3)
+  })
+})
+
+describe('SaleEntity.complete with options', () => {
+  const pearls = { groupId: 2, groupName: 'ท็อปปิง', optionId: 20, name: 'ไข่มุก', priceSatang: 1000, costSatang: 400 }
+
+  test('a line sells and costs the product plus its options, and keeps them', () => {
+    const tea = makeProduct({ id: 1, priceSatang: 5000, costSatang: 2000 })
+
+    const sale = complete({
+      lines: [
+        { product: tea, quantity: 2, options: [pearls] },
+        { product: tea, quantity: 1 },
+      ],
+      payments: cash(17000),
+      vatMode: 'none',
+      vatRateBp: 0,
+    })
+
+    expect(sale.items).toEqual([
+      expect.objectContaining({ unitPriceSatang: 6000, unitCostSatang: 2400, quantity: 2, lineTotalSatang: 12000, options: [pearls] }),
+      expect.objectContaining({ unitPriceSatang: 5000, unitCostSatang: 2000, quantity: 1, lineTotalSatang: 5000, options: [] }),
+    ])
+    expect(sale.subtotalSatang).toBe(17000)
+  })
+
+  test('a sale restored from a snapshot made before options existed has lines without options', () => {
+    const legacy = makeSale().toSnapshot()
+    const { options: _options, ...bareItem } = legacy.items[0]!
+
+    const restored = new SaleEntity({ ...legacy, items: [bareItem as (typeof legacy.items)[number]] })
+
+    expect(restored.items[0]!.options).toEqual([])
   })
 })

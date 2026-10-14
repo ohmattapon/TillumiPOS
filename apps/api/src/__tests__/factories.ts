@@ -138,6 +138,7 @@ export const makeSale = (overrides: Partial<SaleEntityProps> = {}) =>
         unitCostSatang: 600,
         quantity: 3,
         lineTotalSatang: 3000,
+        options: [],
       },
     ],
     payments: [{ method: 'cash', amountSatang: 5000 }],
