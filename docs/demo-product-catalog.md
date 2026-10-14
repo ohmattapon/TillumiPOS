@@ -20,6 +20,8 @@ Official references:
 
 ## Import the catalog
 
+The importer writes product and category records, opening-stock movements, and image objects. Point `DATABASE_URL` at the development database you intend to populate and verify the target before running; do not use a production database.
+
 1. Start PostgreSQL and apply migrations.
 2. Create an owner account and make sure its branch is active.
 3. Start the local API and media worker with `bun run dev` so the worker is available at the configured `MEDIA_URL`.
