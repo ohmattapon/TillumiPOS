@@ -23,14 +23,19 @@ interface StatProps {
   value: string
   note?: ReactNode
   footer: string
+  /** CSS colour of the icon tile, so the four figures can be told apart at a glance. */
+  tone: string
 }
 
-function StatCard({ icon: Icon, label, value, note, footer }: StatProps) {
+function StatCard({ icon: Icon, label, value, note, footer, tone }: StatProps) {
   return (
     <div className="rounded-xl border bg-card p-4 shadow-xs">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span className="flex size-6 items-center justify-center rounded-md border">
-          <Icon className="size-3.5" />
+        <span
+          className="flex size-7 items-center justify-center rounded-md"
+          style={{ color: tone, backgroundColor: `color-mix(in oklch, ${tone} 12%, transparent)` }}
+        >
+          <Icon className="size-4" />
         </span>
         {label}
       </div>
@@ -93,12 +98,14 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
               <>
                 <StatCard
                   icon={Banknote}
+                  tone="var(--primary)"
                   label={t('stats.netSales')}
                   value={money.format(stats.totalSatang)}
                   footer={t('stats.totalDiscount', { amount: money.format(stats.discountSatang) })}
                 />
                 <StatCard
                   icon={ReceiptIcon}
+                  tone="var(--category-1)"
                   label={t('stats.saleCount')}
                   value={String(stats.saleCount)}
                   note={voidedCount > 0 && <span className="text-destructive">{t('stats.voided', { count: voidedCount })}</span>}
@@ -106,12 +113,14 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
                 />
                 <StatCard
                   icon={Wallet}
+                  tone="var(--category-3)"
                   label={t('stats.average')}
                   value={money.format(averageSatang)}
                   footer={t('stats.vatTotal', { amount: money.format(stats.vatSatang) })}
                 />
                 <StatCard
                   icon={TrendingUp}
+                  tone="var(--success)"
                   label={t('stats.grossProfit')}
                   value={money.format(stats.profitSatang)}
                   note={<span className="text-success">{t('stats.margin', { percent: marginPercent })}</span>}

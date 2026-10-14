@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { Kbd } from '@/components/Kbd'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
 import { Input } from '@/components/ui/input'
-import { categoriesQuery } from '@/features/categories'
+import { categoriesQuery, categoryColor } from '@/features/categories'
 import { modifierGroupsQuery } from '@/features/modifiers'
 import { isLowStock, isOutOfStock, ProductImage, productsQuery } from '@/features/products'
 import { useFormat } from '@/features/settings'
@@ -111,7 +111,7 @@ export function ProductPicker({ searchRef }: Props) {
             { value: 'all', label: tc('all') },
             ...(categories.data ?? [])
               .filter((item) => item.isActive)
-              .map((item) => ({ value: String(item.id), label: item.name })),
+              .map((item) => ({ value: String(item.id), label: item.name, dot: categoryColor(item.id) })),
           ]}
         />
       </div>
@@ -123,7 +123,9 @@ export function ProductPicker({ searchRef }: Props) {
             key={product.id}
             disabled={isOutOfStock(product)}
             onClick={() => pick(product)}
-            className="flex flex-col overflow-hidden rounded-xl border bg-card text-left shadow-xs transition-colors outline-none hover:border-primary/50 hover:bg-accent/40 focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-accent disabled:pointer-events-none disabled:opacity-45"
+            // A strip in the category's colour along the top, so a category can be found by colour at a glance.
+            style={product.categoryId ? { borderTopColor: categoryColor(product.categoryId) } : undefined}
+            className="flex flex-col border-t-4 overflow-hidden rounded-xl border bg-card text-left shadow-xs transition-colors outline-none hover:border-primary/50 hover:bg-accent/40 focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-accent disabled:pointer-events-none disabled:opacity-45"
           >
             {/* No picture, no empty box: the name and price take the space. */}
             {product.imageUrl && <ProductImage src={product.imageUrl} alt="" className="aspect-[4/3] w-full" />}

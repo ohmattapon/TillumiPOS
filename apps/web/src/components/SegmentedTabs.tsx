@@ -4,7 +4,8 @@ import { cn } from '@/lib/utils'
 interface Props<T extends string> {
   value: T
   onChange: (value: T) => void
-  options: { value: T; label: string; count?: number }[]
+  /** `dot` is a colour drawn as a small mark before the label, such as a category's colour. */
+  options: { value: T; label: string; count?: number; dot?: string }[]
   /** Taller triggers for touch screens. */
   size?: 'default' | 'touch'
   className?: string
@@ -25,6 +26,9 @@ export function SegmentedTabs<T extends string>({ value, onChange, options, size
               size === 'touch' && 'h-11! px-4 text-base',
             )}
           >
+            {option.dot && (
+              <span aria-hidden className="size-2.5 shrink-0 rounded-full ring-2 ring-background/70" style={{ backgroundColor: option.dot }} />
+            )}
             {option.label}
             {option.count !== undefined && <span className="tabular-nums opacity-70">{option.count}</span>}
           </TabsTrigger>
