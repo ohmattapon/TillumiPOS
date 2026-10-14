@@ -359,6 +359,13 @@
                         }
                       ]
                     },
+                    "branchName": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "cashierId": {
                       "anyOf": [
                         {
@@ -440,6 +447,63 @@
                               }
                             ]
                           },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
                           "productId": {
                             "anyOf": [
                               {
@@ -489,7 +553,8 @@
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "lineTotalSatang"
+                          "lineTotalSatang",
+                          "options"
                         ],
                         "type": "object"
                       },
@@ -554,6 +619,34 @@
                         {
                           "type": "integer"
                         }
+                      ]
+                    },
+                    "shopAddress": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopName": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopPhone": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopTaxId": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
                       ]
                     },
                     "status": {
@@ -665,6 +758,11 @@
                     "changeSatang",
                     "cashierId",
                     "cashierName",
+                    "shopName",
+                    "shopTaxId",
+                    "branchName",
+                    "shopAddress",
+                    "shopPhone",
                     "voidedAt",
                     "voidReason",
                     "createdAt",
@@ -3208,6 +3306,24 @@
                   "items": {
                     "items": {
                       "properties": {
+                        "options": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 40,
+                          "type": "array"
+                        },
                         "productId": {
                           "anyOf": [
                             {
@@ -3336,6 +3452,24 @@
                   "items": {
                     "items": {
                       "properties": {
+                        "options": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 40,
+                          "type": "array"
+                        },
                         "productId": {
                           "anyOf": [
                             {
@@ -3464,6 +3598,24 @@
                   "items": {
                     "items": {
                       "properties": {
+                        "options": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 40,
+                          "type": "array"
+                        },
                         "productId": {
                           "anyOf": [
                             {
@@ -3593,6 +3745,13 @@
                         }
                       ]
                     },
+                    "branchName": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "cashierId": {
                       "anyOf": [
                         {
@@ -3674,6 +3833,63 @@
                               }
                             ]
                           },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
                           "productId": {
                             "anyOf": [
                               {
@@ -3723,7 +3939,8 @@
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "lineTotalSatang"
+                          "lineTotalSatang",
+                          "options"
                         ],
                         "type": "object"
                       },
@@ -3788,6 +4005,34 @@
                         {
                           "type": "integer"
                         }
+                      ]
+                    },
+                    "shopAddress": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopName": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopPhone": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopTaxId": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
                       ]
                     },
                     "status": {
@@ -3899,6 +4144,11 @@
                     "changeSatang",
                     "cashierId",
                     "cashierName",
+                    "shopName",
+                    "shopTaxId",
+                    "branchName",
+                    "shopAddress",
+                    "shopPhone",
                     "voidedAt",
                     "voidReason",
                     "createdAt",
@@ -4209,6 +4459,13 @@
                         }
                       ]
                     },
+                    "branchName": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "cashierId": {
                       "anyOf": [
                         {
@@ -4290,6 +4547,63 @@
                               }
                             ]
                           },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
                           "productId": {
                             "anyOf": [
                               {
@@ -4339,7 +4653,8 @@
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "lineTotalSatang"
+                          "lineTotalSatang",
+                          "options"
                         ],
                         "type": "object"
                       },
@@ -4404,6 +4719,34 @@
                         {
                           "type": "integer"
                         }
+                      ]
+                    },
+                    "shopAddress": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopName": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopPhone": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopTaxId": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
                       ]
                     },
                     "status": {
@@ -4515,6 +4858,11 @@
                     "changeSatang",
                     "cashierId",
                     "cashierName",
+                    "shopName",
+                    "shopTaxId",
+                    "branchName",
+                    "shopAddress",
+                    "shopPhone",
                     "voidedAt",
                     "voidReason",
                     "createdAt",

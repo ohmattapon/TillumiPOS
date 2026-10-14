@@ -1107,6 +1107,1441 @@
         ]
       }
     },
+    "/api/v1/catalog/modifier-groups": {
+      "get": {
+        "operationId": "getApiV1CatalogModifier-groups",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "maxSelections": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "costSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "id": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "sortOrder": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "groupId",
+                                "name",
+                                "priceSatang",
+                                "costSatang",
+                                "sortOrder",
+                                "isActive"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "productIds": {
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "default": 0,
+                                  "format": "integer",
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "integer"
+                                }
+                              ]
+                            },
+                            "type": "array"
+                          },
+                          "required": {
+                            "type": "boolean"
+                          },
+                          "sortOrder": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "required",
+                          "maxSelections",
+                          "sortOrder",
+                          "isActive",
+                          "options",
+                          "productIds"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "กลุ่มตัวเลือกพร้อมตัวเลือกและสินค้าที่ใช้",
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "post": {
+        "operationId": "postApiV1CatalogModifier-groups",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "maxSelections": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 20,
+                    "minimum": 1
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "maxSelections": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 20,
+                    "minimum": 1
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "maxSelections": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 20,
+                    "minimum": 1
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "maxSelections": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "options": {
+                      "items": {
+                        "properties": {
+                          "costSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "groupId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "priceSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "sortOrder": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "groupId",
+                          "name",
+                          "priceSatang",
+                          "costSatang",
+                          "sortOrder",
+                          "isActive"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "productIds": {
+                      "items": {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "type": "integer"
+                          }
+                        ]
+                      },
+                      "type": "array"
+                    },
+                    "required": {
+                      "type": "boolean"
+                    },
+                    "sortOrder": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "required",
+                    "maxSelections",
+                    "sortOrder",
+                    "isActive",
+                    "options",
+                    "productIds"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "เพิ่มกลุ่มตัวเลือก",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/modifier-groups/{id}": {
+      "patch": {
+        "operationId": "patchApiV1CatalogModifier-groupsById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "maxSelections": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 20,
+                    "minimum": 1
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "maxSelections": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 20,
+                    "minimum": 1
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "maxSelections": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 20,
+                    "minimum": 1
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "maxSelections": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "options": {
+                      "items": {
+                        "properties": {
+                          "costSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "groupId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "priceSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "sortOrder": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "groupId",
+                          "name",
+                          "priceSatang",
+                          "costSatang",
+                          "sortOrder",
+                          "isActive"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "productIds": {
+                      "items": {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "type": "integer"
+                          }
+                        ]
+                      },
+                      "type": "array"
+                    },
+                    "required": {
+                      "type": "boolean"
+                    },
+                    "sortOrder": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "required",
+                    "maxSelections",
+                    "sortOrder",
+                    "isActive",
+                    "options",
+                    "productIds"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "แก้ไขหรือปิดใช้กลุ่มตัวเลือก",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/modifier-groups/{id}/options": {
+      "post": {
+        "operationId": "postApiV1CatalogModifier-groupsByIdOptions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "costSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "priceSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "costSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "priceSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "costSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "priceSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "costSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "groupId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "priceSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "sortOrder": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "groupId",
+                    "name",
+                    "priceSatang",
+                    "costSatang",
+                    "sortOrder",
+                    "isActive"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "เพิ่มตัวเลือกในกลุ่ม",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/modifier-options/{id}": {
+      "patch": {
+        "operationId": "patchApiV1CatalogModifier-optionsById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "costSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "priceSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "costSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "priceSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "costSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "priceSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "costSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "groupId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "priceSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "sortOrder": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "groupId",
+                    "name",
+                    "priceSatang",
+                    "costSatang",
+                    "sortOrder",
+                    "isActive"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "แก้ราคา ต้นทุน หรือปิดใช้ตัวเลือก",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/api/v1/catalog/products/": {
       "get": {
         "operationId": "getApiV1CatalogProducts",
@@ -2697,6 +4132,160 @@
         ]
       }
     },
+    "/api/v1/catalog/products/{id}/modifier-groups": {
+      "put": {
+        "operationId": "putApiV1CatalogProductsByIdModifier-groups",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "groupIds": {
+                    "items": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
+                    "maxItems": 50,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "groupIds"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "groupIds": {
+                    "items": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
+                    "maxItems": 50,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "groupIds"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "groupIds": {
+                    "items": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
+                    "maxItems": 50,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "groupIds"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "groupIds": {
+                      "items": {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      "maxItems": 50,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "groupIds"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ตั้งกลุ่มตัวเลือกที่สินค้านี้ใช้ (แทนที่ทั้งชุด ตามลำดับที่ส่ง)",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "getApiV1Health",
@@ -3608,6 +5197,18 @@
                           "items": {
                             "items": {
                               "properties": {
+                                "lineId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
                                 "lineTotalSatang": {
                                   "anyOf": [
                                     {
@@ -3619,6 +5220,63 @@
                                       "type": "integer"
                                     }
                                   ]
+                                },
+                                "options": {
+                                  "items": {
+                                    "properties": {
+                                      "groupId": {
+                                        "anyOf": [
+                                          {
+                                            "default": 0,
+                                            "format": "integer",
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "integer"
+                                          }
+                                        ]
+                                      },
+                                      "groupName": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "optionId": {
+                                        "anyOf": [
+                                          {
+                                            "default": 0,
+                                            "format": "integer",
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "integer"
+                                          }
+                                        ]
+                                      },
+                                      "priceSatang": {
+                                        "anyOf": [
+                                          {
+                                            "default": 0,
+                                            "format": "integer",
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "integer"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "groupId",
+                                      "groupName",
+                                      "optionId",
+                                      "name",
+                                      "priceSatang"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
                                 },
                                 "productId": {
                                   "anyOf": [
@@ -3664,12 +5322,14 @@
                                 }
                               },
                               "required": [
+                                "lineId",
                                 "productId",
                                 "productName",
                                 "sku",
                                 "unitPriceSatang",
                                 "quantity",
-                                "lineTotalSatang"
+                                "lineTotalSatang",
+                                "options"
                               ],
                               "type": "object"
                             },
@@ -3811,6 +5471,24 @@
                   "items": {
                     "items": {
                       "properties": {
+                        "options": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 40,
+                          "type": "array"
+                        },
                         "productId": {
                           "anyOf": [
                             {
@@ -3867,6 +5545,24 @@
                   "items": {
                     "items": {
                       "properties": {
+                        "options": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 40,
+                          "type": "array"
+                        },
                         "productId": {
                           "anyOf": [
                             {
@@ -3923,6 +5619,24 @@
                   "items": {
                     "items": {
                       "properties": {
+                        "options": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 40,
+                          "type": "array"
+                        },
                         "productId": {
                           "anyOf": [
                             {
@@ -4043,6 +5757,18 @@
                     "items": {
                       "items": {
                         "properties": {
+                          "lineId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "lineTotalSatang": {
                             "anyOf": [
                               {
@@ -4054,6 +5780,63 @@
                                 "type": "integer"
                               }
                             ]
+                          },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
                           },
                           "productId": {
                             "anyOf": [
@@ -4099,12 +5882,14 @@
                           }
                         },
                         "required": [
+                          "lineId",
                           "productId",
                           "productName",
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "lineTotalSatang"
+                          "lineTotalSatang",
+                          "options"
                         ],
                         "type": "object"
                       },
@@ -4307,6 +6092,18 @@
                     "items": {
                       "items": {
                         "properties": {
+                          "lineId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "lineTotalSatang": {
                             "anyOf": [
                               {
@@ -4318,6 +6115,63 @@
                                 "type": "integer"
                               }
                             ]
+                          },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
                           },
                           "productId": {
                             "anyOf": [
@@ -4363,12 +6217,14 @@
                           }
                         },
                         "required": [
+                          "lineId",
                           "productId",
                           "productName",
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "lineTotalSatang"
+                          "lineTotalSatang",
+                          "options"
                         ],
                         "type": "object"
                       },
@@ -4628,6 +6484,18 @@
                     "items": {
                       "items": {
                         "properties": {
+                          "lineId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "lineTotalSatang": {
                             "anyOf": [
                               {
@@ -4639,6 +6507,63 @@
                                 "type": "integer"
                               }
                             ]
+                          },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
                           },
                           "productId": {
                             "anyOf": [
@@ -4684,12 +6609,14 @@
                           }
                         },
                         "required": [
+                          "lineId",
                           "productId",
                           "productName",
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "lineTotalSatang"
+                          "lineTotalSatang",
+                          "options"
                         ],
                         "type": "object"
                       },
@@ -4942,6 +6869,18 @@
                     "items": {
                       "items": {
                         "properties": {
+                          "lineId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "lineTotalSatang": {
                             "anyOf": [
                               {
@@ -4953,6 +6892,63 @@
                                 "type": "integer"
                               }
                             ]
+                          },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
                           },
                           "productId": {
                             "anyOf": [
@@ -4998,12 +6994,14 @@
                           }
                         },
                         "required": [
+                          "lineId",
                           "productId",
                           "productName",
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "lineTotalSatang"
+                          "lineTotalSatang",
+                          "options"
                         ],
                         "type": "object"
                       },
@@ -5144,6 +7142,24 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "options": {
+                    "items": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
+                    "maxItems": 40,
+                    "type": "array"
+                  },
                   "productId": {
                     "anyOf": [
                       {
@@ -5183,6 +7199,24 @@
             "application/x-www-form-urlencoded": {
               "schema": {
                 "properties": {
+                  "options": {
+                    "items": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
+                    "maxItems": 40,
+                    "type": "array"
+                  },
                   "productId": {
                     "anyOf": [
                       {
@@ -5222,6 +7256,24 @@
             "multipart/form-data": {
               "schema": {
                 "properties": {
+                  "options": {
+                    "items": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
+                    "maxItems": 40,
+                    "type": "array"
+                  },
                   "productId": {
                     "anyOf": [
                       {
@@ -5328,6 +7380,18 @@
                     "items": {
                       "items": {
                         "properties": {
+                          "lineId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "lineTotalSatang": {
                             "anyOf": [
                               {
@@ -5339,6 +7403,63 @@
                                 "type": "integer"
                               }
                             ]
+                          },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
                           },
                           "productId": {
                             "anyOf": [
@@ -5384,12 +7505,14 @@
                           }
                         },
                         "required": [
+                          "lineId",
                           "productId",
                           "productName",
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "lineTotalSatang"
+                          "lineTotalSatang",
+                          "options"
                         ],
                         "type": "object"
                       },
@@ -5611,6 +7734,18 @@
                     "items": {
                       "items": {
                         "properties": {
+                          "lineId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "lineTotalSatang": {
                             "anyOf": [
                               {
@@ -5622,6 +7757,63 @@
                                 "type": "integer"
                               }
                             ]
+                          },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
                           },
                           "productId": {
                             "anyOf": [
@@ -5667,12 +7859,14 @@
                           }
                         },
                         "required": [
+                          "lineId",
                           "productId",
                           "productName",
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "lineTotalSatang"
+                          "lineTotalSatang",
+                          "options"
                         ],
                         "type": "object"
                       },
@@ -5969,6 +8163,18 @@
                     "items": {
                       "items": {
                         "properties": {
+                          "lineId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "lineTotalSatang": {
                             "anyOf": [
                               {
@@ -5980,6 +8186,63 @@
                                 "type": "integer"
                               }
                             ]
+                          },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
                           },
                           "productId": {
                             "anyOf": [
@@ -6025,12 +8288,14 @@
                           }
                         },
                         "required": [
+                          "lineId",
                           "productId",
                           "productName",
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "lineTotalSatang"
+                          "lineTotalSatang",
+                          "options"
                         ],
                         "type": "object"
                       },
@@ -6137,6 +8402,789 @@
           }
         },
         "summary": "ตั้งจำนวนสินค้าในออเดอร์",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}/lines/{lineId}": {
+      "delete": {
+        "operationId": "deleteApiV1OrdersByIdLinesByLineId",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          },
+          {
+            "in": "path",
+            "name": "lineId",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "cancelReason": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "itemCount": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "lineId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "lineTotalSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "productId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "productName": {
+                            "type": "string"
+                          },
+                          "quantity": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "sku": {
+                            "type": "string"
+                          },
+                          "unitPriceSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "lineId",
+                          "productId",
+                          "productName",
+                          "sku",
+                          "unitPriceSatang",
+                          "quantity",
+                          "lineTotalSatang",
+                          "options"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "label": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "openedById": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "openedByName": {
+                      "type": "string"
+                    },
+                    "saleId": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "status": {
+                      "enum": [
+                        "open",
+                        "paid",
+                        "cancelled"
+                      ],
+                      "type": "string"
+                    },
+                    "subtotalSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "updatedAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "branchId",
+                    "label",
+                    "status",
+                    "openedById",
+                    "openedByName",
+                    "saleId",
+                    "cancelReason",
+                    "createdAt",
+                    "updatedAt",
+                    "items",
+                    "itemCount",
+                    "subtotalSatang"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "เอาบรรทัดออกจากออเดอร์ (ระบุด้วยรหัสบรรทัด)",
+        "tags": [
+          "Orders"
+        ]
+      },
+      "patch": {
+        "operationId": "patchApiV1OrdersByIdLinesByLineId",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          },
+          {
+            "in": "path",
+            "name": "lineId",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "quantity": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "quantity"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "quantity": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "quantity"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "quantity": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "quantity"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "cancelReason": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "itemCount": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "lineId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "lineTotalSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "productId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "productName": {
+                            "type": "string"
+                          },
+                          "quantity": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "sku": {
+                            "type": "string"
+                          },
+                          "unitPriceSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "lineId",
+                          "productId",
+                          "productName",
+                          "sku",
+                          "unitPriceSatang",
+                          "quantity",
+                          "lineTotalSatang",
+                          "options"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "label": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "openedById": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "openedByName": {
+                      "type": "string"
+                    },
+                    "saleId": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "status": {
+                      "enum": [
+                        "open",
+                        "paid",
+                        "cancelled"
+                      ],
+                      "type": "string"
+                    },
+                    "subtotalSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "updatedAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "branchId",
+                    "label",
+                    "status",
+                    "openedById",
+                    "openedByName",
+                    "saleId",
+                    "cancelReason",
+                    "createdAt",
+                    "updatedAt",
+                    "items",
+                    "itemCount",
+                    "subtotalSatang"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ตั้งจำนวนของบรรทัดในออเดอร์ (ระบุด้วยรหัสบรรทัด)",
         "tags": [
           "Orders"
         ]
@@ -6408,6 +9456,13 @@
                         }
                       ]
                     },
+                    "branchName": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "cashierId": {
                       "anyOf": [
                         {
@@ -6489,6 +9544,63 @@
                               }
                             ]
                           },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
                           "productId": {
                             "anyOf": [
                               {
@@ -6538,7 +9650,8 @@
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "lineTotalSatang"
+                          "lineTotalSatang",
+                          "options"
                         ],
                         "type": "object"
                       },
@@ -6592,6 +9705,34 @@
                     },
                     "receiptNo": {
                       "type": "string"
+                    },
+                    "shopAddress": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopName": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopPhone": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopTaxId": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "status": {
                       "enum": [
@@ -6702,6 +9843,11 @@
                     "changeSatang",
                     "cashierId",
                     "cashierName",
+                    "shopName",
+                    "shopTaxId",
+                    "branchName",
+                    "shopAddress",
+                    "shopPhone",
                     "voidedAt",
                     "voidReason",
                     "createdAt",
@@ -7577,6 +10723,13 @@
                               }
                             ]
                           },
+                          "branchName": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "cashierId": {
                             "anyOf": [
                               {
@@ -7657,6 +10810,34 @@
                           },
                           "receiptNo": {
                             "type": "string"
+                          },
+                          "shopAddress": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "shopName": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "shopPhone": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "shopTaxId": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
                           },
                           "status": {
                             "enum": [
@@ -7767,6 +10948,11 @@
                           "changeSatang",
                           "cashierId",
                           "cashierName",
+                          "shopName",
+                          "shopTaxId",
+                          "branchName",
+                          "shopAddress",
+                          "shopPhone",
                           "voidedAt",
                           "voidReason",
                           "createdAt"
@@ -7828,6 +11014,24 @@
                   "items": {
                     "items": {
                       "properties": {
+                        "options": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 40,
+                          "type": "array"
+                        },
                         "productId": {
                           "anyOf": [
                             {
@@ -7941,6 +11145,24 @@
                   "items": {
                     "items": {
                       "properties": {
+                        "options": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 40,
+                          "type": "array"
+                        },
                         "productId": {
                           "anyOf": [
                             {
@@ -8054,6 +11276,24 @@
                   "items": {
                     "items": {
                       "properties": {
+                        "options": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 40,
+                          "type": "array"
+                        },
                         "productId": {
                           "anyOf": [
                             {
@@ -8168,6 +11408,13 @@
                         }
                       ]
                     },
+                    "branchName": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "cashierId": {
                       "anyOf": [
                         {
@@ -8249,6 +11496,63 @@
                               }
                             ]
                           },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
                           "productId": {
                             "anyOf": [
                               {
@@ -8298,7 +11602,8 @@
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "lineTotalSatang"
+                          "lineTotalSatang",
+                          "options"
                         ],
                         "type": "object"
                       },
@@ -8352,6 +11657,34 @@
                     },
                     "receiptNo": {
                       "type": "string"
+                    },
+                    "shopAddress": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopName": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopPhone": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopTaxId": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "status": {
                       "enum": [
@@ -8462,6 +11795,11 @@
                     "changeSatang",
                     "cashierId",
                     "cashierName",
+                    "shopName",
+                    "shopTaxId",
+                    "branchName",
+                    "shopAddress",
+                    "shopPhone",
                     "voidedAt",
                     "voidReason",
                     "createdAt",
@@ -8523,6 +11861,13 @@
                         }
                       ]
                     },
+                    "branchName": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "cashierId": {
                       "anyOf": [
                         {
@@ -8604,6 +11949,63 @@
                               }
                             ]
                           },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
                           "productId": {
                             "anyOf": [
                               {
@@ -8653,7 +12055,8 @@
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "lineTotalSatang"
+                          "lineTotalSatang",
+                          "options"
                         ],
                         "type": "object"
                       },
@@ -8707,6 +12110,34 @@
                     },
                     "receiptNo": {
                       "type": "string"
+                    },
+                    "shopAddress": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopName": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopPhone": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopTaxId": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "status": {
                       "enum": [
@@ -8817,6 +12248,11 @@
                     "changeSatang",
                     "cashierId",
                     "cashierName",
+                    "shopName",
+                    "shopTaxId",
+                    "branchName",
+                    "shopAddress",
+                    "shopPhone",
                     "voidedAt",
                     "voidReason",
                     "createdAt",
@@ -8928,6 +12364,13 @@
                         }
                       ]
                     },
+                    "branchName": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "cashierId": {
                       "anyOf": [
                         {
@@ -9009,6 +12452,63 @@
                               }
                             ]
                           },
+                          "options": {
+                            "items": {
+                              "properties": {
+                                "groupId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "groupName": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "optionId": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "groupId",
+                                "groupName",
+                                "optionId",
+                                "name",
+                                "priceSatang"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
                           "productId": {
                             "anyOf": [
                               {
@@ -9058,7 +12558,8 @@
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "lineTotalSatang"
+                          "lineTotalSatang",
+                          "options"
                         ],
                         "type": "object"
                       },
@@ -9112,6 +12613,34 @@
                     },
                     "receiptNo": {
                       "type": "string"
+                    },
+                    "shopAddress": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopName": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopPhone": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shopTaxId": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "status": {
                       "enum": [
@@ -9222,6 +12751,11 @@
                     "changeSatang",
                     "cashierId",
                     "cashierName",
+                    "shopName",
+                    "shopTaxId",
+                    "branchName",
+                    "shopAddress",
+                    "shopPhone",
                     "voidedAt",
                     "voidReason",
                     "createdAt",
@@ -9443,6 +12977,21 @@
                         "null"
                       ]
                     },
+                    "receiptFooter": {
+                      "maxLength": 200,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "receiptPaperMm": {
+                      "enum": [
+                        58,
+                        80
+                      ],
+                      "type": "string"
+                    },
                     "shopName": {
                       "maxLength": 100,
                       "minLength": 1,
@@ -9495,7 +13044,9 @@
                     "vatMode",
                     "vatRateBp",
                     "timeZone",
-                    "locale"
+                    "locale",
+                    "receiptPaperMm",
+                    "receiptFooter"
                   ],
                   "type": "object"
                 }
@@ -9543,6 +13094,21 @@
                       "string",
                       "null"
                     ]
+                  },
+                  "receiptFooter": {
+                    "maxLength": 200,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "receiptPaperMm": {
+                    "enum": [
+                      58,
+                      80
+                    ],
+                    "type": "string"
                   },
                   "shopName": {
                     "maxLength": 100,
@@ -9621,6 +13187,21 @@
                       "null"
                     ]
                   },
+                  "receiptFooter": {
+                    "maxLength": 200,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "receiptPaperMm": {
+                    "enum": [
+                      58,
+                      80
+                    ],
+                    "type": "string"
+                  },
                   "shopName": {
                     "maxLength": 100,
                     "minLength": 1,
@@ -9697,6 +13278,21 @@
                       "string",
                       "null"
                     ]
+                  },
+                  "receiptFooter": {
+                    "maxLength": 200,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "receiptPaperMm": {
+                    "enum": [
+                      58,
+                      80
+                    ],
+                    "type": "string"
                   },
                   "shopName": {
                     "maxLength": 100,
@@ -9781,6 +13377,21 @@
                         "null"
                       ]
                     },
+                    "receiptFooter": {
+                      "maxLength": 200,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "receiptPaperMm": {
+                      "enum": [
+                        58,
+                        80
+                      ],
+                      "type": "string"
+                    },
                     "shopName": {
                       "maxLength": 100,
                       "minLength": 1,
@@ -9833,7 +13444,9 @@
                     "vatMode",
                     "vatRateBp",
                     "timeZone",
-                    "locale"
+                    "locale",
+                    "receiptPaperMm",
+                    "receiptFooter"
                   ],
                   "type": "object"
                 }
