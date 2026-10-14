@@ -2556,6 +2556,16 @@
           },
           {
             "in": "query",
+            "name": "code",
+            "required": false,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
             "name": "categoryId",
             "required": false,
             "schema": {
@@ -2586,6 +2596,52 @@
                   "type": "string"
                 }
               ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "isActive",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "default": false,
+                  "format": "boolean",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "stockAtMost",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "enum": [
+                "name",
+                "stock"
+              ],
+              "type": "string"
             }
           },
           {
@@ -6335,6 +6391,44 @@
       "get": {
         "operationId": "getApiV1Orders",
         "parameters": [
+          {
+            "in": "query",
+            "name": "tableId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "excludeId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          },
           {
             "in": "query",
             "name": "status",
@@ -13877,6 +13971,18 @@
       "get": {
         "operationId": "getApiV1Sales",
         "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "enum": [
+                "completed",
+                "voided"
+              ],
+              "type": "string"
+            }
+          },
           {
             "in": "query",
             "name": "from",

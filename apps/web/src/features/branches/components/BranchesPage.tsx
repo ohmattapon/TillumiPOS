@@ -7,6 +7,8 @@ import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
 import { DataTable } from '@/components/DataTable'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import {
@@ -28,6 +30,7 @@ export function BranchesPage() {
   const update = useUpdateBranch()
   const [dialog, setDialog] = useState<OpenDialog>(null)
 
+  const paging = useListPagination('branches')
   const all = branches.data ?? []
 
   const setOpen = (branch: Branch, isActive: boolean) =>
@@ -55,7 +58,7 @@ export function BranchesPage() {
         <Panel title={t('list.title')} description={t('list.description')}>
           {branches.error && <p className="p-4 text-sm text-destructive">{branches.error.message}</p>}
           <DataTable
-            rows={all}
+            rows={all.slice(paging.offset, paging.offset + paging.pageSize)}
             rowKey={(branch) => branch.id}
             isPending={branches.isPending}
             empty={t('list.empty')}
@@ -92,6 +95,7 @@ export function BranchesPage() {
               </DropdownMenu>
             )}
           />
+          <PaginationBar {...paging} total={all.length} isLoading={branches.isFetching} onPageChange={paging.setPage} />
         </Panel>
       </div>
 

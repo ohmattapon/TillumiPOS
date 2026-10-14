@@ -7,6 +7,8 @@ import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
 import { DataTable } from '@/components/DataTable'
 import { Panel } from '@/components/Panel'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -108,6 +110,7 @@ export function CategoriesPage() {
   const update = useUpdateCategory()
   const [dialog, setDialog] = useState<OpenDialog>(null)
 
+  const paging = useListPagination('categories')
   const all = categories.data ?? []
 
   const setActive = (category: Category, isActive: boolean) =>
@@ -132,7 +135,7 @@ export function CategoriesPage() {
         <Panel title={t('list.title')} description={t('list.description')}>
           {categories.error && <p className="p-4 text-sm text-destructive">{categories.error.message}</p>}
           <DataTable
-            rows={all}
+            rows={all.slice(paging.offset, paging.offset + paging.pageSize)}
             rowKey={(category) => category.id}
             isPending={categories.isPending}
             empty={t('list.empty')}
@@ -172,6 +175,7 @@ export function CategoriesPage() {
               </DropdownMenu>
             )}
           />
+          <PaginationBar {...paging} total={all.length} isLoading={categories.isFetching} onPageChange={paging.setPage} />
         </Panel>
       </div>
 

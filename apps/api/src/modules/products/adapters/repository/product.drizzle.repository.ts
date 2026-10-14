@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, inArray, or, sql } from 'drizzle-orm'
+import { and, count, eq, ilike, inArray, lte, or, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
@@ -45,8 +45,13 @@ export class DrizzleProductRepository implements IProductRepository {
     const pattern = term && `%${escapeLike(term)}%`
 
     const matching = and(
-      query.includeInactive ? undefined : eq(products.isActive, true),
+      query.isActive !== undefined ? eq(products.isActive, query.isActive)
+        : query.includeInactive ? undefined : eq(products.isActive, true),
+      query.stockAtMost !== undefined
+        ? and(eq(products.trackStock, true), lte(sql`coalesce(${branchStock.qty}, 0)`, query.stockAtMost))
+        : undefined,
       query.categoryId ? eq(products.categoryId, query.categoryId) : undefined,
+      query.code ? or(eq(products.barcode, query.code), sql`lower(${products.sku}) = ${query.code.toLowerCase()}`) : undefined,
       pattern
         ? or(ilike(products.name, pattern), ilike(products.sku, pattern), eq(products.barcode, term!))
         : undefined,
@@ -57,10 +62,13 @@ export class DrizzleProductRepository implements IProductRepository {
       .from(products)
       .leftJoin(branchStock, inBranch(query.branchId))
       .where(matching)
-      .orderBy(products.name)
+      .orderBy(...(query.code
+        ? [sql`case when ${products.barcode} = ${query.code} then 0 else 1 end`, products.name, products.id]
+        : query.sort === 'stock' ? [sql`coalesce(${branchStock.qty}, 0)`, products.name, products.id] : [products.name, products.id]))
       .limit(query.limit ?? 500)
       .offset(query.offset ?? 0)
-    const [counted] = await currentExecutor().select({ total: count() }).from(products).where(matching)
+    const [counted] = await currentExecutor().select({ total: count() }).from(products)
+      .leftJoin(branchStock, inBranch(query.branchId)).where(matching)
 
     return { items: rows.map((row) => new ProductEntity(row)), total: counted!.total }
   }

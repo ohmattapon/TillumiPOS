@@ -43,7 +43,7 @@ import {
 import { BranchSwitcher, useActiveBranch } from '@/features/branches'
 import { clearCart } from '@/features/pos'
 import { useRegisterSelectionStore } from '@/features/shifts'
-import { isLowStock, productsQuery } from '@/features/products'
+import { LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
 import { useSettings } from '@/features/settings'
 
 interface NavItem {
@@ -63,8 +63,8 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
   const { shopName } = useSettings()
   const { branch, canSwitch } = useActiveBranch()
   const isOwner = user.role === 'owner'
-  const products = useQuery(productsQuery())
-  const lowStockCount = products.data?.filter(isLowStock).length ?? 0
+  const products = useQuery(productsQuery({ stockAtMost: LOW_STOCK_THRESHOLD, limit: 1 }))
+  const lowStockCount = products.data?.total ?? 0
   const clearRegisterSelection = useRegisterSelectionStore((state) => state.clear)
 
   const groups: { label: string; items: NavItem[] }[] = [

@@ -7,6 +7,8 @@ import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
 import { DataTable } from '@/components/DataTable'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import {
@@ -33,6 +35,7 @@ export function UsersPage() {
   const update = useUpdateUser()
   const [dialog, setDialog] = useState<OpenDialog>(null)
 
+  const paging = useListPagination('users')
   const all = users.data ?? []
   const branchName = new Map((branches.data ?? []).map((branch) => [branch.id, branch.name]))
   const openBranches = (branches.data ?? []).filter((branch) => branch.isActive)
@@ -60,7 +63,7 @@ export function UsersPage() {
         <Panel title={t('list.title')} description={t('list.description')}>
           {users.error && <p className="p-4 text-sm text-destructive">{users.error.message}</p>}
           <DataTable
-            rows={all}
+            rows={all.slice(paging.offset, paging.offset + paging.pageSize)}
             rowKey={(user) => user.id}
             isPending={users.isPending}
             empty={t('list.empty')}
@@ -108,6 +111,7 @@ export function UsersPage() {
               </DropdownMenu>
             )}
           />
+          <PaginationBar {...paging} total={all.length} isLoading={users.isFetching} onPageChange={paging.setPage} />
         </Panel>
       </div>
 

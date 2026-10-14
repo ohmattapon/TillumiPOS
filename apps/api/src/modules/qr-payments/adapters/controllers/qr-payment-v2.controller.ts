@@ -83,7 +83,7 @@ export class QrPaymentV2ElysiaController {
         },
         {
           auth: true,
-          query: pageQuery,
+          query: t.Object({ ...pageQuery.properties, amountSatang: t.Optional(t.Numeric({ minimum: 1 })) }),
           response: page(payment),
           detail: { summary: 'v2: เงินที่ธนาคารยืนยันแล้วแต่ยังไม่มีบิลในสาขา' },
         },
