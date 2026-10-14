@@ -35,7 +35,12 @@ export class PayOrderV2UseCase {
       const order = inBranch(await this.orders.findByIdForUpdate(id), actor.branch.id)
       order.assertPayable()
       const sale = await this.checkout.checkout({
-        lines: order.items.map(({ productId, quantity, unitPriceSatang }) => ({ productId, quantity, unitPriceSatang })),
+        lines: order.items.map(({ productId, quantity, unitPriceSatang, options }) => ({
+          productId,
+          quantity,
+          unitPriceSatang,
+          options,
+        })),
         discountSatang: dto.discountSatang ?? 0,
         payments: dto.payments,
         cashier: actor.user,

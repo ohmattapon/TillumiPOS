@@ -113,3 +113,113 @@ describe('offering groups on a product', () => {
     expect(noGroup.error?.value).toMatchObject({ code: 'MODIFIER_GROUP_NOT_FOUND' })
   })
 })
+
+const setup = async () => {
+  const tea = await seedProduct(owner, { name: 'ชานม', priceSatang: 5000, costSatang: 2000, stock: 10 })
+  const sweetness = ok(await owner.api.catalog['modifier-groups'].post({ name: 'ความหวาน', required: true }))
+  const less = ok(await owner.api.catalog['modifier-groups']({ id: sweetness.id }).options.post({ name: 'หวานน้อย' }))
+  const more = ok(await owner.api.catalog['modifier-groups']({ id: sweetness.id }).options.post({ name: 'หวานมาก' }))
+  const toppings = ok(await owner.api.catalog['modifier-groups'].post({ name: 'ท็อปปิง', maxSelections: 2 }))
+  const pearls = ok(
+    await owner.api.catalog['modifier-groups']({ id: toppings.id }).options.post({ name: 'ไข่มุก', priceSatang: 1000, costSatang: 400 }),
+  )
+  ok(await owner.api.catalog.products({ id: tea.id })['modifier-groups'].put({ groupIds: [sweetness.id, toppings.id] }))
+  const order = ok(await owner.api.orders.post({}))
+  return { tea, sweetness, less, more, toppings, pearls, order }
+}
+
+describe('orders with options', () => {
+  test('the same product with other options is another line, priced with its options', async () => {
+    const { tea, less, more, pearls, order } = await setup()
+
+    ok(await owner.api.orders({ id: order.id }).items.post({ productId: tea.id, quantity: 1, options: [less.id, pearls.id] }))
+    ok(await owner.api.orders({ id: order.id }).items.post({ productId: tea.id, quantity: 2, options: [more.id] }))
+    // Same choice as the first line, ids in another order: joins it.
+    const after = ok(
+      await owner.api.orders({ id: order.id }).items.post({ productId: tea.id, quantity: 1, options: [pearls.id, less.id] }),
+    )
+
+    expect(after.items.map((line) => [line.options.map((option) => option.name), line.quantity, line.unitPriceSatang])).toEqual([
+      [['หวานน้อย', 'ไข่มุก'], 2, 6000],
+      [['หวานมาก'], 2, 5000],
+    ])
+    expect(after.subtotalSatang).toBe(2 * 6000 + 2 * 5000)
+    expect(JSON.stringify(after)).not.toContain('costSatang')
+  })
+
+  test('a line keeps its id when other lines change, and is edited by that id', async () => {
+    const { tea, less, more, order } = await setup()
+    const first = ok(await owner.api.orders({ id: order.id }).items.post({ productId: tea.id, quantity: 1, options: [less.id] }))
+    const second = ok(await owner.api.orders({ id: order.id }).items.post({ productId: tea.id, quantity: 1, options: [more.id] }))
+    const [firstLine, secondLine] = second.items
+    expect(firstLine!.lineId).toBe(first.items[0]!.lineId)
+
+    const changed = ok(await owner.api.orders({ id: order.id }).lines({ lineId: secondLine!.lineId }).patch({ quantity: 4 }))
+    expect(changed.items.map((line) => [line.lineId, line.quantity])).toEqual([
+      [firstLine!.lineId, 1],
+      [secondLine!.lineId, 4],
+    ])
+
+    const removed = ok(await owner.api.orders({ id: order.id }).lines({ lineId: firstLine!.lineId }).delete())
+    expect(removed.items.map((line) => line.lineId)).toEqual([secondLine!.lineId])
+  })
+
+  test('the product-id routes of v1 still work on a line without options', async () => {
+    const plain = await seedProduct(owner, { name: 'น้ำเปล่า', priceSatang: 1000, stock: 5 })
+    const order = ok(await owner.api.orders.post({}))
+    ok(await owner.api.orders({ id: order.id }).items.post({ productId: plain.id, quantity: 1 }))
+
+    const changed = ok(await owner.api.orders({ id: order.id }).items({ productId: plain.id }).patch({ quantity: 3 }))
+
+    expect(changed.items.map((line) => line.quantity)).toEqual([3])
+  })
+
+  test('a v1 client that sends no options for a product with a required group is told which group', async () => {
+    const { tea, order } = await setup()
+
+    const refused = await owner.api.orders({ id: order.id }).items.post({ productId: tea.id, quantity: 1 })
+
+    expect(refused.status).toBe(400)
+    expect(refused.error?.value).toMatchObject({ code: 'MODIFIER_REQUIRED', detail: 'กรุณาเลือก "ความหวาน"' })
+  })
+
+  test('refuses too many, repeated and foreign options', async () => {
+    const { tea, less, more, order } = await setup()
+    const other = await seedProduct(owner, { name: 'อื่น', stock: 1 })
+
+    const tooMany = await owner.api.orders({ id: order.id }).items.post({ productId: tea.id, quantity: 1, options: [less.id, more.id] })
+    const repeated = await owner.api.orders({ id: order.id }).items.post({ productId: tea.id, quantity: 1, options: [less.id, less.id] })
+    const foreign = await owner.api.orders({ id: order.id }).items.post({ productId: other.id, quantity: 1, options: [less.id] })
+
+    expect(tooMany.error?.value).toMatchObject({ code: 'MODIFIER_TOO_MANY' })
+    expect(repeated.error?.value).toMatchObject({ code: 'MODIFIER_DUPLICATE' })
+    expect(foreign.error?.value).toMatchObject({ code: 'MODIFIER_NOT_AVAILABLE' })
+  })
+
+  test('an option deactivated later cannot be added again, but a line already ordered keeps its price', async () => {
+    const { tea, less, pearls, order } = await setup()
+    const line = ok(
+      await owner.api.orders({ id: order.id }).items.post({ productId: tea.id, quantity: 1, options: [less.id, pearls.id] }),
+    )
+    ok(await owner.api.catalog['modifier-options']({ id: pearls.id }).patch({ isActive: false, priceSatang: 5000 }))
+
+    const again = await owner.api.orders({ id: order.id }).items.post({ productId: tea.id, quantity: 1, options: [less.id, pearls.id] })
+    expect(again.error?.value).toMatchObject({ code: 'MODIFIER_NOT_AVAILABLE' })
+    expect(ok(await owner.api.orders({ id: order.id }).get()).items[0]).toMatchObject({
+      lineId: line.items[0]!.lineId,
+      unitPriceSatang: 6000,
+    })
+  })
+
+  test("another order's line id is not found and changes nothing", async () => {
+    const { tea, less, order } = await setup()
+    ok(await owner.api.orders({ id: order.id }).items.post({ productId: tea.id, quantity: 1, options: [less.id] }))
+    const mine = ok(await owner.api.orders.post({}))
+    const theirs = ok(await owner.api.orders({ id: order.id }).get()).items[0]!
+
+    const result = await owner.api.orders({ id: mine.id }).lines({ lineId: theirs.lineId }).patch({ quantity: 9 })
+
+    expect(result.error?.value).toMatchObject({ code: 'ORDER_ITEM_NOT_FOUND' })
+    expect(ok(await owner.api.orders({ id: order.id }).get()).items[0]!.quantity).toBe(1)
+  })
+})

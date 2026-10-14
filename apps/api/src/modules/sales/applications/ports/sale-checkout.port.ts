@@ -1,13 +1,18 @@
+import type { LineOption } from '../../../../domains/modifier.domain'
 import type { SaleEntity, SalePayment } from '../../../../domains/sale.domain'
 
 export interface CheckoutLine {
   productId: number
   quantity: number
   /**
-   * The price agreed earlier (an order quoted it when the item was added). Without it the product's
-   * current price is charged.
+   * What the line costs per unit, options included, as agreed earlier (an order quoted it when the item
+   * was added). Without it the product's current price plus the options is charged.
    */
   unitPriceSatang?: number
+  /** The options already resolved and kept by an order. Used together with `unitPriceSatang`. */
+  options?: readonly LineOption[]
+  /** The ids chosen in a one-step sale; checked and priced by the checkout. */
+  optionIds?: readonly number[]
 }
 
 export interface CheckoutRequest {
