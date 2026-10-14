@@ -200,10 +200,36 @@ export function TablesPage() {
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto p-4 lg:grid-cols-[1fr_20rem]">
         <div>
           {tables.error && <p className="mb-2 text-sm text-destructive">{tables.error.message}</p>}
+          {/* Phones list the tables; dragging them into place needs a screen that is big enough to drag on. */}
+          <div className="sm:hidden">
+            <p className="mb-2 text-sm text-muted-foreground">{t('phoneNote')}</p>
+            <ul className="divide-y rounded-xl border bg-background">
+              {all.map((table) => (
+                <li key={table.id}>
+                  <button
+                    type="button"
+                    aria-pressed={selectedId === table.id}
+                    onClick={() => setSelectedId(table.id)}
+                    className={cn(
+                      'flex min-h-14 w-full items-center justify-between gap-3 px-4 text-left',
+                      selectedId === table.id && 'bg-accent/40',
+                      !table.isActive && 'text-muted-foreground',
+                    )}
+                  >
+                    <span className="truncate font-medium">{table.name}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {table.isActive ? t('seats', { count: table.seats }) : t('inactive')}
+                    </span>
+                  </button>
+                </li>
+              ))}
+              {!tables.isPending && all.length === 0 && <li className="p-6 text-center text-sm text-muted-foreground">{t('empty')}</li>}
+            </ul>
+          </div>
           <div
             ref={canvas}
             aria-label={t('floor')}
-            className="relative w-full touch-none overflow-hidden rounded-xl border bg-muted/40 select-none"
+            className="relative hidden w-full touch-none overflow-hidden rounded-xl border bg-muted/40 select-none sm:block"
             style={{ aspectRatio: `${LAYOUT_WIDTH} / ${LAYOUT_HEIGHT}` }}
             onPointerMove={track}
             onPointerUp={release}
