@@ -50,6 +50,8 @@ Redis ใช้ memory สูงสุด 64 MB และ `allkeys-lru` ไม�
 
 เมื่อ Redis ใช้ไม่ได้ API อ่าน PostgreSQL ต่อ จำกัดเวลารอ Redis และพักการเชื่อมต่อใหม่ 10 วินาที Log ไม่พิมพ์ URL หรือ password เมื่อเชื่อมต่อกลับได้จะเปลี่ยน revision ก่อนอ่าน cache ชุดเก่า ความผิดพลาดของ cache ไม่ replay การขายหรือเปลี่ยนการขายที่ commit แล้วให้กลายเป็นการขายที่ล้มเหลว
 
+การแก้ฐานข้อมูลโดยตรงขณะ API ทำงาน เช่น SQL ที่รันเอง หรือ `db:seed` จะไม่หมุน revision cache ของข้อมูลนั้นจึงยังเห็นค่าเดิมจนกว่า TTL หมดหรือ API เริ่มใหม่ ให้รีสตาร์ท API หลังแก้ด้วยมือ สคริปต์ restore ทำอยู่แล้ว
+
 หาก instance หนึ่งติดต่อ Redis ไม่ได้แต่ instance อื่นยังใช้ได้ รายการของ instance อื่นอาจเก่าจน TTL หมดเมื่อ invalidation ส่งไม่ถึง ข้อมูลที่ใช้ขายจริงยังอ่านจาก PostgreSQL Redis ไม่ทดแทนฐานข้อมูลและไม่ได้แก้โควตา connection ที่เต็มด้วยตัวเอง
 
 ## ปิด cache
@@ -71,13 +73,15 @@ REDIS_CONTAINER_URL=
 
 ## ผลการตรวจงาน
 
-ตรวจบน worktree `ohmattpon/redis-cache` โดยไม่เปิด Docker และไม่แตะฐานข้อมูล cloud
+ตรวจบน worktree `ohmattpon/redis-cache` ด้วย Redis 7.4 ในคอนเทนเนอร์ของโครงการนี้ (พอร์ต 6389 ผูกกับ 127.0.0.1) และ PostgreSQL ท้องถิ่นของ `pos_test` (พอร์ต 5433) ไม่ได้แตะฐานข้อมูล cloud
 
 - typecheck, lint, `openapi:check` (v1 และ v2) ผ่าน
-- `docker compose config` ของ `docker-compose.yml` และ `docker-compose.yml` + `docker-compose.dev.yml` ผ่าน พอร์ต Redis ของ dev ผูกกับ `127.0.0.1`
-- ตรรกะของ `RepositoryReadCache` ทดสอบกับ cache ในหน่วยความจำที่ใช้กฎ revision เดียวกับ Lua: miss แล้ว hit, miss พร้อมกันรวมเป็นการอ่านเดียว, การเติมช้าหลัง invalidate ไม่ทับค่าใหม่, Redis ล่มแล้วอ่าน PostgreSQL, JSON เสียเป็น miss, การเติมที่ช้า 500 ms ไม่ทำให้คำตอบช้า และการเติมที่ error ไม่ทำให้คำขอล้มเหลว การทดสอบนี้เป็นสคริปต์ชั่วคราวที่ไม่ได้ commit ตามแผนที่ไม่เพิ่มชุดทดสอบโดยไม่มีคำขอ
+- `docker compose config` ผ่านทั้งสองแบบ พอร์ต Redis ของ dev ผูกกับ 127.0.0.1
+- Redis จริง ผ่านทั้งหมด: revision ใหม่ให้ค่าว่าง, การเติมด้วย revision ปัจจุบันถูกเก็บ, การเติมด้วย revision เก่าถูกปฏิเสธ, invalidate หมุน revision และซ่อนค่าเดิม, กลุ่มอื่นไม่ถูกล้าง, process ใหม่หมุน revision ตอนเชื่อมต่อครั้งแรก, Redis หยุดแล้ว lookup/store/invalidate คืนผลภายใน 2 ms โดยไม่โยน error, และ Redis กลับมาแล้ว cache ใช้งานได้หลังช่วงพัก 10 วินาที
+- การ rollback กับ PostgreSQL จริง ผ่าน: transaction ที่ล้มเหลวไม่ invalidate และแถวถูกยกเลิกจริง, transaction ที่สำเร็จ invalidate ครั้งเดียวหลัง commit (แถวใหม่มองเห็นจากภายนอกแล้ว), และ unit of work ซ้อนกันรวมเป็นการ invalidate ครั้งเดียว
+- ชุดทดสอบ API ทั้งหมด (`bun run test` ในแอป API): ปิด cache ผ่าน 957/957 เปิด cache (`REDIS_URL` ชี้ Redis นี้) ผ่าน 956/957 การล้มเหลวหนึ่งข้อคือ `categories > an empty or over-long name is a validation error` เพราะ `resetDatabase` ลบตารางด้วย SQL ตรงโดยไม่หมุน revision จึงเห็นรายการหมวดหมู่ของการทดสอบก่อนหน้าที่ยัง cache อยู่ ยืนยันแล้วว่าล้มเหลวเมื่อรันไฟล์นั้นเพียงลำพัง เป็นขอบเขตเดียวกับการแก้ฐานข้อมูลโดยตรงข้างบน ไม่ใช่การรั่วของ cache ผ่านเส้นทาง API
+- ชุดทดสอบ web ไม่มีการเปลี่ยนแปลงใน branch นี้
 
-ยังไม่ได้ตรวจ
-- สคริปต์ Lua และการเชื่อมต่อ Redis จริง
-- การ rollback ของ transaction กับ PostgreSQL จริง ซึ่งเป็นกลไกที่ทำให้ invalidation ไม่เกิดเมื่อบันทึกล้มเหลว
-- การรัน `bun run test` แบบเต็มกับ integration test ที่ต่อ PostgreSQL
+ยังไม่ได้ทำ
+- แก้ `resetDatabase` ให้ล้าง cache หลัง truncate เพื่อให้ชุดทดสอบเปิด cache ได้ครบ 957/957 ต้องการคำขอเจ้าของ เพราะเป็นการแก้ harness
+- การทดสอบกับ cloud ไม่ได้ทำ: ชุดทดสอบเชื่อมได้เฉพาะ `localhost:5433/pos_test` ตามที่ harness กำหนด
