@@ -78,6 +78,8 @@ export const orderSchemas = {
   pay,
   payV2: t.Composite([pay, t.Object({ shiftId: t.Integer({ minimum: 1 }) })]),
   listQuery: t.Object({
+    tableId: t.Optional(t.Numeric({ minimum: 1 })),
+    excludeId: t.Optional(t.Numeric({ minimum: 1 })),
     status: t.Optional(status),
     limit: t.Optional(t.Numeric({ minimum: 1, maximum: 500 })),
     offset: t.Optional(t.Numeric({ minimum: 0 })),

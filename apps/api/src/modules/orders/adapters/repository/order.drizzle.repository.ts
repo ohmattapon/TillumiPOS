@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, notInArray } from 'drizzle-orm'
+import { and, count, eq, inArray, ne, notInArray } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 import { OrderEntity, type NewOrder, type OrderItem } from '../../../../domains/order.domain'
 import { lineKey } from '../../../../domains/modifier.domain'
@@ -55,6 +55,8 @@ export class DrizzleOrderRepository implements IOrderRepository {
     const matching = and(
       eq(orders.branchId, query.branchId),
       query.status ? eq(orders.status, query.status) : undefined,
+      query.tableId !== undefined ? eq(orders.tableId, query.tableId) : undefined,
+      query.excludeId !== undefined ? ne(orders.id, query.excludeId) : undefined,
     )
 
     const rows = await currentExecutor()

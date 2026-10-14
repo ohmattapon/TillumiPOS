@@ -93,6 +93,7 @@ export const saleSchemas = {
   }),
   void: t.Object({ reason: t.String({ minLength: 1, maxLength: 500 }) }),
   listQuery: t.Object({
+    status: t.Optional(t.Union([t.Literal('completed'), t.Literal('voided')])),
     from: t.Optional(t.Date()),
     to: t.Optional(t.Date()),
     limit: t.Optional(t.Numeric({ minimum: 1, maximum: 500 })),

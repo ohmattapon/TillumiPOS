@@ -47,6 +47,8 @@ export const payOrderSchema = z.object({
 })
 
 export const listOrdersSchema = z.object({
+  tableId: z.number().int().positive().optional(),
+  excludeId: z.number().int().positive().optional(),
   status: z.enum(ORDER_STATUSES).optional(),
   limit: z.number().int().min(1).max(500).optional(),
   offset: z.number().int().min(0).optional(),
