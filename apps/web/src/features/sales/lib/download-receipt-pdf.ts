@@ -13,13 +13,30 @@ export async function downloadReceiptPdf(
     backgroundColor: '#ffffff',
     logging: false,
     scale: 3,
-    onclone: (_document, clonedElement) => {
+    onclone: (clonedDocument, clonedElement) => {
+      // html2canvas also parses the cloned page background, even though only
+      // the receipt element is being rendered.
+      clonedDocument.documentElement.style.backgroundColor = '#ffffff'
+      if (clonedDocument.body) clonedDocument.body.style.backgroundColor = '#ffffff'
+
       clonedElement.style.width = `${contentWidthMm}mm`
       clonedElement.style.maxWidth = 'none'
       clonedElement.style.boxSizing = 'border-box'
       clonedElement.style.backgroundColor = '#ffffff'
       clonedElement.style.color = '#000000'
+      clonedElement.style.borderColor = '#9ca3af'
+      clonedElement.style.outlineColor = '#000000'
       clonedElement.style.fontSize = paperWidthMm === 58 ? '11px' : '14px'
+
+      // Tailwind v4 emits oklch colors, which html2canvas 1.4 cannot parse.
+      // Inline print-safe colors in the cloned receipt so app theme colors do
+      // not reach html2canvas while the on-screen receipt remains unchanged.
+      clonedElement.querySelectorAll<HTMLElement>('*').forEach((child) => {
+        child.style.color = '#000000'
+        child.style.borderColor = '#9ca3af'
+        child.style.outlineColor = '#000000'
+        child.style.textDecorationColor = '#000000'
+      })
     },
   })
 
