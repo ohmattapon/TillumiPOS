@@ -79,9 +79,10 @@ REDIS_CONTAINER_URL=
 - `docker compose config` ผ่านทั้งสองแบบ พอร์ต Redis ของ dev ผูกกับ 127.0.0.1
 - Redis จริง ผ่านทั้งหมด: revision ใหม่ให้ค่าว่าง, การเติมด้วย revision ปัจจุบันถูกเก็บ, การเติมด้วย revision เก่าถูกปฏิเสธ, invalidate หมุน revision และซ่อนค่าเดิม, กลุ่มอื่นไม่ถูกล้าง, process ใหม่หมุน revision ตอนเชื่อมต่อครั้งแรก, Redis หยุดแล้ว lookup/store/invalidate คืนผลภายใน 2 ms โดยไม่โยน error, และ Redis กลับมาแล้ว cache ใช้งานได้หลังช่วงพัก 10 วินาที
 - การ rollback กับ PostgreSQL จริง ผ่าน: transaction ที่ล้มเหลวไม่ invalidate และแถวถูกยกเลิกจริง, transaction ที่สำเร็จ invalidate ครั้งเดียวหลัง commit (แถวใหม่มองเห็นจากภายนอกแล้ว), และ unit of work ซ้อนกันรวมเป็นการ invalidate ครั้งเดียว
-- ชุดทดสอบ API ทั้งหมด (`bun run test` ในแอป API): ปิด cache ผ่าน 957/957 เปิด cache (`REDIS_URL` ชี้ Redis นี้) ผ่าน 956/957 การล้มเหลวหนึ่งข้อคือ `categories > an empty or over-long name is a validation error` เพราะ `resetDatabase` ลบตารางด้วย SQL ตรงโดยไม่หมุน revision จึงเห็นรายการหมวดหมู่ของการทดสอบก่อนหน้าที่ยัง cache อยู่ ยืนยันแล้วว่าล้มเหลวเมื่อรันไฟล์นั้นเพียงลำพัง เป็นขอบเขตเดียวกับการแก้ฐานข้อมูลโดยตรงข้างบน ไม่ใช่การรั่วของ cache ผ่านเส้นทาง API
+- ชุดทดสอบ API ทั้งหมด (`bun run test` ในแอป API): ปิด cache ผ่าน 957/957 และเปิด cache (`REDIS_URL` ชี้ Redis นี้) ผ่าน 957/957 โดยมี 102 hits ในการรันนั้น
+- `resetDatabase` ล้าง cache ของทุกกลุ่มหลัง truncate ด้วยเส้นทางเดียวกับการเขียนที่ commit แล้ว ก่อนหน้านี้การ truncate ด้วย SQL ตรงทำให้ข้อมูลเก่ายังอยู่ใน cache และทำให้การทดสอบหมวดหมู่หนึ่งข้อล้มเหลว
 - ชุดทดสอบ web ไม่มีการเปลี่ยนแปลงใน branch นี้
 
 ยังไม่ได้ทำ
-- แก้ `resetDatabase` ให้ล้าง cache หลัง truncate เพื่อให้ชุดทดสอบเปิด cache ได้ครบ 957/957 ต้องการคำขอเจ้าของ เพราะเป็นการแก้ harness
 - การทดสอบกับ cloud ไม่ได้ทำ: ชุดทดสอบเชื่อมได้เฉพาะ `localhost:5433/pos_test` ตามที่ harness กำหนด
+- การรัน Docker app เต็มรูปแบบตาม install kit กับ Redis และการทำงานหลาย instance พร้อมกัน
