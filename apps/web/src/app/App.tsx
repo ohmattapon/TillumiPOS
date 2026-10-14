@@ -17,6 +17,7 @@ import { SettingsPage, useSettings } from '@/features/settings'
 import { UsersPage } from '@/features/users'
 import { ShiftsPage, useRegisterSelectionStore } from '@/features/shifts'
 import { AppSidebar } from './AppSidebar'
+import { BottomNav } from './BottomNav'
 import { applyLocale } from './i18n'
 
 function Shell({ user }: { user: User }) {
@@ -33,10 +34,12 @@ function Shell({ user }: { user: User }) {
   }, [locale])
 
   return (
-    <SidebarProvider>
+    // Tablets start with the icon rail so the till has the room; wide screens start with the labels.
+    <SidebarProvider defaultOpen={window.matchMedia('(min-width: 1024px)').matches}>
       {/* The cart belongs to the till, not the account: a new user must not inherit the last one's. */}
       <AppSidebar user={user} onLogout={() => logout.mutate(undefined, { onSuccess: () => { clearCart(); clearRegisterSelection() } })} />
-      <SidebarInset className="h-svh min-w-0 overflow-hidden">
+      {/* Room at the bottom for the phone menu, which takes the place of the sidebar there. */}
+      <SidebarInset className="h-svh min-w-0 overflow-hidden pb-16 sm:pb-0">
         <Routes>
           <Route index element={<PosPage />} />
           <Route path="today" element={<TodayPage isOwner={isOwner} />} />
@@ -51,6 +54,7 @@ function Shell({ user }: { user: User }) {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </SidebarInset>
+      <BottomNav />
     </SidebarProvider>
   )
 }

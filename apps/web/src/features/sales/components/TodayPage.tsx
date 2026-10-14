@@ -78,7 +78,7 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
             {t('today.lowStockBadge', { items: tc('items', { count: lowStock.length }) })}
           </StatusBadge>
         )}
-        <Button asChild className="h-9 px-3">
+        <Button asChild className="h-11 px-3">
           <Link to="/">
             <ShoppingCart />
             {t('today.openPos')}

@@ -191,7 +191,7 @@ export function TablesPage() {
   return (
     <>
       <PageHeader title={t('title')} description={t('description', { items: tc('items', { count: all.length }) })}>
-        <Button className="h-9 px-3" onClick={() => setAdding(true)}>
+        <Button className="h-11 px-3" onClick={() => setAdding(true)}>
           <Plus />
           {t('add')}
         </Button>

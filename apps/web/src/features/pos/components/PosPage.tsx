@@ -113,12 +113,12 @@ export function PosPage() {
   return (
     <>
       <PageHeader title={t('title')} highlight={date.longDate(today)} description={t('description')}>
-        {needsShift && <Button variant="outline" className="h-9 px-3" onClick={() => { window.location.href = '/shifts' }}>{shiftReady ? t('shiftReady') : t('shiftRequired')}</Button>}
-        <Button variant="outline" className="h-9 px-3" onClick={() => setIsChoosingTable(true)}>
+        {needsShift && <Button variant="outline" className="h-11 px-3" onClick={() => { window.location.href = '/shifts' }}>{shiftReady ? t('shiftReady') : t('shiftRequired')}</Button>}
+        <Button variant="outline" className="h-11 px-3" onClick={() => setIsChoosingTable(true)}>
           <LayoutGrid />
           {t('floor.button')}
         </Button>
-        <Button variant="outline" className="h-9 px-3" onClick={() => setIsListingOrders(true)}>
+        <Button variant="outline" className="h-11 px-3" onClick={() => setIsListingOrders(true)}>
           <ClipboardList />
           {t('orders.button')}
           {!!openOrders.data?.length && (

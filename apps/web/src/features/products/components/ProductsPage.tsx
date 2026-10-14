@@ -74,7 +74,7 @@ export function ProductsPage() {
           priceNote: t(`priceNote.${vatMode}`),
         })}
       >
-        <Button className="h-9 px-3" onClick={() => setDialog({ kind: 'form' })}>
+        <Button className="h-11 px-3" onClick={() => setDialog({ kind: 'form' })}>
           <Plus />
           {t('add')}
         </Button>
