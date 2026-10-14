@@ -123,6 +123,13 @@ apps/api/src/
 - ออเดอร์เก็บชื่อและราคาของสินค้า ณ ตอนเพิ่มรายการ และชำระด้วยราคานั้น สต็อกไม่ถูกกันตอนเพิ่มรายการ แต่ตรวจและตัดตอนชำระ
 - use case ที่แก้ออเดอร์ต้องล็อกแถวออเดอร์ (`findByIdForUpdate`) ก่อนแก้ และออเดอร์ของสาขาอื่นตอบ `ORDER_NOT_FOUND`
 
+### ตัวเลือกเสริม (modifiers)
+
+- กลุ่มตัวเลือกสร้างครั้งเดียวและผูกกับหลายสินค้า ใช้ร่วมทุกสาขา ตัวเลือกปิดใช้ได้แต่ลบไม่ได้
+- กฎการเลือก (บังคับ จำนวนสูงสุด ซ้ำ ไม่อยู่ในกลุ่มของสินค้า ปิดใช้) อยู่ที่ `resolveLineOptions` ใน `domains/modifier.domain.ts` ที่เดียว ทั้งออเดอร์และ `SaleCheckout` เรียกผ่าน port `ILineOptionsResolver` และเว็บใช้ฟังก์ชันเดียวกันผ่าน `@pos/api/modifiers`
+- บรรทัดของออเดอร์และบิลคือสินค้า + ชุดตัวเลือก (`options` เป็น snapshot) `unitPriceSatang` รวมราคาตัวเลือกแล้ว และ `unitCostSatang` ของบิลรวมต้นทุนตัวเลือก ห้ามแก้สูตร `calculateTotals` ต้นทุนของตัวเลือกไม่ออกใน response ของออเดอร์และบิล
+- สต็อกตรวจที่ยอดรวมของสินค้า ไม่ใช่ต่อบรรทัด บรรทัดของออเดอร์แก้ด้วย `lineId` (repository เทียบบรรทัด ไม่ลบแล้วใส่ใหม่) เส้นทางด้วย `productId` ใช้กับบรรทัดที่ไม่มีตัวเลือกเท่านั้น
+
 ### การชำระด้วย QR (SCB)
 
 - สถานะ "ชำระแล้ว" ของ QR มาจากการที่ระบบเรียก inquiry ของ SCB เองเท่านั้น ห้ามเชื่อ body ของ callback (`/payments/qr/scb/confirmation`) เพราะ SCB ไม่ได้เซ็นชื่อมา: callback เป็นแค่สัญญาณให้ไปตรวจ
@@ -158,7 +165,7 @@ apps/api/src/
 apps/web/src/
 ├── app/                  ประกอบแอป: App.tsx (เส้นทาง), AppSidebar.tsx, i18n.ts (รวมไฟล์ภาษาของทุก feature)
 ├── features/
-│   └── <feature>/        auth, branches, categories, orders, products, sales, pos, settings, shifts, users
+│   └── <feature>/        auth, branches, categories, modifiers, orders, products, sales, pos, settings, shifts, users
 │       ├── index.ts      ทางเข้าสาธารณะของ feature: ส่งออกเฉพาะที่ feature อื่นใช้
 │       ├── api.ts        query key, queryOptions และ mutation hook ของ feature (TanStack Query)
 │       ├── components/   หน้าและคอมโพเนนต์ของ feature
