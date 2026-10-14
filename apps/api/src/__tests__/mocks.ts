@@ -6,6 +6,8 @@ import type { IStockMovementRepository } from '../modules/inventory/applications
 import type { ILineOptionsResolver } from '../modules/modifiers/applications/ports/line-options-resolver.port'
 import type { IModifierRepository } from '../modules/modifiers/applications/ports/modifier.repository'
 import type { IOrderRepository } from '../modules/orders/applications/ports/order.repository'
+import type { IFirstRunGuard } from '../modules/setup/applications/ports/first-run-guard.port'
+import type { ISetupCode } from '../modules/setup/applications/ports/setup-code.port'
 import type { ITableOccupancy } from '../modules/tables/applications/ports/table-occupancy.port'
 import type { ITableRepository } from '../modules/tables/applications/ports/table.repository'
 import type { IQrPaymentGateway } from '../modules/qr-payments/applications/ports/qr-payment-gateway.port'
@@ -199,4 +201,15 @@ export const mockTableRepository = (): Mocked<ITableRepository> => ({
 export const mockTableOccupancy = (): Mocked<ITableOccupancy> => ({
   byTable: mock<ITableOccupancy['byTable']>(async () => new Map()),
   openOrderCount: mock<ITableOccupancy['openOrderCount']>(async () => 0),
+})
+
+export const mockSetupCode = (): Mocked<ISetupCode> => ({
+  issue: mock<ISetupCode['issue']>(() => 'ABCDEFGHJKMN'),
+  verify: mock<ISetupCode['verify']>(() => 'accepted'),
+  retire: mock<ISetupCode['retire']>(),
+})
+
+export const mockFirstRunGuard = (): Mocked<IFirstRunGuard> => ({
+  countUsers: mock<IFirstRunGuard['countUsers']>(async () => 0),
+  lockAndCountUsers: mock<IFirstRunGuard['lockAndCountUsers']>(async () => 0),
 })
