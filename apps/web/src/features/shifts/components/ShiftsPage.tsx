@@ -5,6 +5,8 @@ import { PageHeader } from '@/components/PageHeader'
 import { SkeletonRows } from '@/components/Skeletons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { meQuery } from '@/features/auth'
 import { useActiveBranch } from '@/features/branches'
 import { useFormat } from '@/features/settings'
@@ -68,13 +70,25 @@ export function ShiftsPage() {
       <main className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 md:p-6">
         {mode.data?.checkoutMode === 'legacy' && <p role="status" className="mx-auto w-full max-w-3xl rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">{t('legacyMode')}</p>}
         <section className="mx-auto w-full max-w-3xl space-y-5 rounded-xl border bg-card p-5 shadow-sm">
-          <label className="grid gap-2 text-sm font-medium">
-            {t('register')}
-            <select disabled={registers.isPending} className="h-11 rounded-md border bg-background px-3" value={currentId ?? ''} onChange={(event) => { if (me && branch) selectRegister(me.id, branch.id, Number(event.target.value)) }}>
-              <option value="" disabled>{t('chooseRegister')}</option>
-              {registers.data?.items.filter((item) => item.isActive).map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}
-            </select>
-          </label>
+          <div className="grid min-w-0 gap-2">
+            <Label htmlFor="shift-register">{t('register')}</Label>
+            <Select
+              value={currentId === null ? '' : String(currentId)}
+              disabled={registers.isPending || currentId === null || !me || !branch}
+              onValueChange={(value) => { if (value && me && branch) selectRegister(me.id, branch.id, Number(value)) }}
+            >
+              <SelectTrigger id="shift-register" className="h-11! w-full min-w-0">
+                <SelectValue placeholder={t('chooseRegister')} />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <SelectGroup>
+                  {registers.data?.items.filter((item) => item.isActive).map((item) => (
+                    <SelectItem key={item.id} value={String(item.id)}>{item.code} · {item.name}</SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
 
           {shiftLoading ? (
             <div className="border-t pt-5">
@@ -100,7 +114,25 @@ export function ShiftsPage() {
                     })
                   }
                 }}>
-                  <label className="grid gap-2 text-sm font-medium">{t('cashMovement')}<select className="h-10 rounded-md border bg-background px-3" value={movementKind} onChange={(e) => { movementCommandKey.current = null; setMovementKind(e.target.value as 'cash_in' | 'cash_out') }}><option value="cash_in">{t('cashIn')}</option><option value="cash_out">{t('cashOut')}</option></select></label>
+                  <div className="grid min-w-0 gap-2">
+                    <Label htmlFor="shift-movement-kind">{t('cashMovement')}</Label>
+                    <Select value={movementKind} onValueChange={(value) => {
+                      if (value === 'cash_in' || value === 'cash_out') {
+                        movementCommandKey.current = null
+                        setMovementKind(value)
+                      }
+                    }}>
+                      <SelectTrigger id="shift-movement-kind" className="h-10! w-full min-w-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent position="popper">
+                        <SelectGroup>
+                          <SelectItem value="cash_in">{t('cashIn')}</SelectItem>
+                          <SelectItem value="cash_out">{t('cashOut')}</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <label className="grid gap-2 text-sm font-medium">{t('amount')}<Input inputMode="decimal" value={movementAmount} onChange={(e) => { movementCommandKey.current = null; setMovementAmount(e.target.value) }} /></label>
                   <label className="grid gap-2 text-sm font-medium">{t('reason')}<Input value={movementReason} onChange={(e) => { movementCommandKey.current = null; setMovementReason(e.target.value) }} /></label>
                   <Button type="submit" variant="outline" className="h-10 md:col-span-3" disabled={movement.isPending || !movementReason.trim() || money.parse(movementAmount) === null}>{t('saveMovement')}</Button>

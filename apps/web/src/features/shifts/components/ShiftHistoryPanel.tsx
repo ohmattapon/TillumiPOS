@@ -3,6 +3,8 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SkeletonRows } from '@/components/Skeletons'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useFormat } from '@/features/settings'
 import { createMoney } from '@/lib/money'
 import { shiftHistoryQuery, type ShiftStatusFilter } from '../api'
@@ -35,35 +37,47 @@ export function ShiftHistoryPanel({ registers }: { registers: { id: number; code
     <section className="mx-auto w-full max-w-3xl space-y-4 rounded-xl border bg-card p-5">
       <h2 className="font-semibold">{t('history')}</h2>
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="grid gap-2 text-sm font-medium">
-          {t('register')}
-          <select
-            className="h-10 rounded-md border bg-background px-3"
-            value={registerId ?? ''}
-            onChange={(event) => filter(() => setRegisterId(event.target.value === '' ? null : Number(event.target.value)))}
+        <div className="grid min-w-0 gap-2">
+          <Label htmlFor="shift-history-register">{t('register')}</Label>
+          <Select
+            value={registerId === null ? 'all' : String(registerId)}
+            onValueChange={(value) => filter(() => setRegisterId(value === 'all' ? null : Number(value)))}
           >
-            <option value="">{t('historyAllRegisters')}</option>
-            {registers.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.code} · {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-2 text-sm font-medium">
-          {t('status')}
-          <select
-            className="h-10 rounded-md border bg-background px-3"
+            <SelectTrigger id="shift-history-register" className="h-10! w-full min-w-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectGroup>
+                <SelectItem value="all">{t('historyAllRegisters')}</SelectItem>
+                {registers.map((item) => (
+                  <SelectItem key={item.id} value={String(item.id)}>
+                    {item.code} · {item.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid min-w-0 gap-2">
+          <Label htmlFor="shift-history-status">{t('status')}</Label>
+          <Select
             value={status}
-            onChange={(event) => filter(() => setStatus(event.target.value as ShiftStatusFilter))}
+            onValueChange={(value) => filter(() => setStatus(value as ShiftStatusFilter))}
           >
-            {statuses.map((value) => (
-              <option key={value} value={value}>
-                {value === 'all' ? t('historyAllStatuses') : t(`status_${value}`)}
-              </option>
-            ))}
-          </select>
-        </label>
+            <SelectTrigger id="shift-history-status" className="h-10! w-full min-w-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectGroup>
+                {statuses.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {value === 'all' ? t('historyAllStatuses') : t(`status_${value}`)}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {history.error && <p className="text-sm text-destructive">{history.error.message}</p>}
