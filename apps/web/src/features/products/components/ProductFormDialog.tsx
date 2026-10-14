@@ -1,4 +1,5 @@
 import type { Category, Product } from '@pos/api/types'
+import { useQuery } from '@tanstack/react-query'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -10,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { ProductImage } from './ProductImage'
+import { modifierGroupsQuery } from '@/features/modifiers'
 import { useFormat, useSettings } from '@/features/settings'
 import { useSaveProduct } from '../api'
 
@@ -39,6 +41,14 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
   })
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm({ ...form, [key]: value })
 
+  const groups = useQuery(modifierGroupsQuery).data ?? []
+  // The groups already offered on this product; until the owner touches them, what is stored.
+  const [groupIds, setGroupIds] = useState<number[] | null>(null)
+  const chosenGroupIds =
+    groupIds ?? (product ? groups.filter((group) => group.productIds.includes(product.id)).map((group) => group.id) : [])
+  const toggleGroup = (id: number) =>
+    setGroupIds(chosenGroupIds.includes(id) ? chosenGroupIds.filter((value) => value !== id) : [...chosenGroupIds, id])
+
   // undefined = keep the current image, null = remove it, File = replace it.
   const [image, setImage] = useState<File | null | undefined>(undefined)
   const [preview, setPreview] = useState<string | null>(null)
@@ -66,6 +76,8 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
       {
         id: product?.id,
         image,
+        // Only sent once the list has loaded, so a slow request never clears what a product offers.
+        modifierGroupIds: groups.length > 0 ? chosenGroupIds : undefined,
         input: {
           sku: form.sku.trim(),
           name: form.name.trim(),
@@ -183,6 +195,29 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
             </span>
             <Switch checked={form.trackStock} onCheckedChange={(checked) => set('trackStock', checked)} />
           </label>
+
+          {groups.length > 0 && (
+            <fieldset className="col-span-2 space-y-2 rounded-lg border p-3">
+              <legend className="px-1 text-sm font-medium">{t('form.modifiers')}</legend>
+              <p className="text-xs text-muted-foreground">{t('form.modifiersHint')}</p>
+              <div className="flex flex-wrap gap-2">
+                {groups
+                  .filter((group) => group.isActive || chosenGroupIds.includes(group.id))
+                  .map((group) => (
+                    <button
+                      key={group.id}
+                      type="button"
+                      role="checkbox"
+                      aria-checked={chosenGroupIds.includes(group.id)}
+                      onClick={() => toggleGroup(group.id)}
+                      className="rounded-full border px-3 py-1.5 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50 aria-checked:border-primary aria-checked:bg-primary/10 aria-checked:text-primary"
+                    >
+                      {group.name}
+                    </button>
+                  ))}
+              </div>
+            </fieldset>
+          )}
 
           {save.error && (
             <p role="alert" className="col-span-2 text-sm text-destructive">
