@@ -19,4 +19,13 @@ if [ "$(wc -c < "$FILE")" -lt 200 ]; then
   exit 1
 fi
 echo "Backup saved: $FILE ($(du -h "$FILE" | cut -f1))"
+
+# Product images kept on this machine live in the app's volume; they go in a second file with the same name.
+MEDIA_FILE="${FILE%.sql.gz}.media.tar.gz"
+if docker compose -f docker-compose.yml exec -T app sh -c 'find /data/media -type f 2>/dev/null | head -n 1 | grep -q .'; then
+  # Inside sh -c, so a shell that rewrites paths on its way to the command (Git Bash on Windows) leaves /data/media alone.
+  docker compose -f docker-compose.yml exec -T app sh -c 'tar -czf - -C /data/media .' > "$MEDIA_FILE"     || { rm -f "$MEDIA_FILE"; echo "The images could not be saved." >&2; exit 1; }
+  gzip -t "$MEDIA_FILE" || { rm -f "$MEDIA_FILE"; echo "The images could not be saved." >&2; exit 1; }
+  echo "Images saved: $MEDIA_FILE ($(du -h "$MEDIA_FILE" | cut -f1))"
+fi
 echo "Keep a copy somewhere else too (another disk, or a cloud drive)."

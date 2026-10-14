@@ -22,4 +22,15 @@ if (-not (Test-Path $full) -or (Get-Item $full).Length -lt 200) {
   Write-Error 'The backup failed: is the database running? (docker compose ps)'
 }
 Write-Host "Backup saved: $file"
+
+# Product images kept on this machine live in the app's volume; they go in a second file with the same name.
+$mediaName = $name -replace '\.sql\.gz$', '.media.tar.gz'
+$mediaFile = Join-Path $Directory $mediaName
+$mediaFull = Join-Path (Get-Location) $mediaFile
+docker compose -f docker-compose.yml exec -T app sh -c 'find /data/media -type f 2>/dev/null | head -n 1 | grep -q . && tar -czf /tmp/media.tar.gz -C /data/media .'
+if ($LASTEXITCODE -eq 0) {
+  docker compose -f docker-compose.yml cp app:/tmp/media.tar.gz $mediaFull
+  docker compose -f docker-compose.yml exec -T app rm -f /tmp/media.tar.gz
+  Write-Host "Images saved: $mediaFile"
+}
 Write-Host 'Keep a copy somewhere else too (another disk, or a cloud drive).'
