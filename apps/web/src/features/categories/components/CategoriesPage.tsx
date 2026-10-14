@@ -5,7 +5,8 @@ import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
-import { Panel, tableCell, tableHead } from '@/components/Panel'
+import { DataTable } from '@/components/DataTable'
+import { Panel } from '@/components/Panel'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -17,7 +18,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { categoriesQuery, useCreateCategory, useUpdateCategory } from '../api'
 
 type OpenDialog = { category?: Category } | null
@@ -130,53 +130,42 @@ export function CategoriesPage() {
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         <Panel title={t('list.title')} description={t('list.description')}>
           {categories.error && <p className="p-4 text-sm text-destructive">{categories.error.message}</p>}
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className={tableHead}>{t('columns.name')}</TableHead>
-                <TableHead className={`${tableHead} text-right`}>{t('columns.sortOrder')}</TableHead>
-                <TableHead className={tableHead}>{t('columns.status')}</TableHead>
-                <TableHead className={`${tableHead} w-0`}>
-                  <span className="sr-only">{t('columns.actions')}</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {all.map((category) => (
-                <TableRow key={category.id} className={category.isActive ? '' : 'text-muted-foreground'}>
-                  <TableCell className={`${tableCell} font-medium`}>{category.name}</TableCell>
-                  <TableCell className={`${tableCell} text-right tabular-nums`}>{category.sortOrder}</TableCell>
-                  <TableCell className={tableCell}>
-                    <StatusBadge tone={category.isActive ? 'success' : 'neutral'}>
-                      {category.isActive ? t('status.active') : t('status.inactive')}
-                    </StatusBadge>
-                  </TableCell>
-                  <TableCell className={`${tableCell} text-right whitespace-nowrap`}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="size-9" aria-label={t('actions.more', { name: category.name })}>
-                          <MoreHorizontal />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => setDialog({ category })}>{t('actions.edit')}</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => setActive(category, !category.isActive)}>
-                          {category.isActive ? t('actions.deactivate') : t('actions.activate')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!categories.isPending && all.length === 0 && (
-                <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                    {t('list.empty')}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <DataTable
+            rows={all}
+            rowKey={(category) => category.id}
+            isPending={categories.isPending}
+            empty={t('list.empty')}
+            muted={(category) => !category.isActive}
+            columns={[
+              { id: 'name', header: t('columns.name'), priority: 'primary', className: 'font-medium', cell: (category) => category.name },
+              { id: 'sortOrder', header: t('columns.sortOrder'), priority: 'wide-only', align: 'right', cell: (category) => category.sortOrder },
+              {
+                id: 'status',
+                header: t('columns.status'),
+                priority: 'secondary',
+                cell: (category) => (
+                  <StatusBadge tone={category.isActive ? 'success' : 'neutral'}>
+                    {category.isActive ? t('status.active') : t('status.inactive')}
+                  </StatusBadge>
+                ),
+              },
+            ]}
+            actions={(category) => (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="size-11" aria-label={t('actions.more', { name: category.name })}>
+                    <MoreHorizontal />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setDialog({ category })}>{t('actions.edit')}</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setActive(category, !category.isActive)}>
+                    {category.isActive ? t('actions.deactivate') : t('actions.activate')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          />
         </Panel>
       </div>
 
