@@ -125,8 +125,11 @@ export function ProductPicker({ searchRef }: Props) {
             onClick={() => pick(product)}
             className="flex flex-col overflow-hidden rounded-xl border bg-card text-left shadow-xs transition-colors outline-none hover:border-primary/50 hover:bg-accent/40 focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-accent disabled:pointer-events-none disabled:opacity-45"
           >
-            <ProductImage src={product.imageUrl} alt="" className="aspect-[4/3] w-full" />
-            <span className="line-clamp-2 min-h-10 px-3 pt-2 text-sm leading-snug font-medium">{product.name}</span>
+            {/* No picture, no empty box: the name and price take the space. */}
+            {product.imageUrl && <ProductImage src={product.imageUrl} alt="" className="aspect-[4/3] w-full" />}
+            <span className={cn('line-clamp-2 min-h-12 px-3 text-base leading-snug font-medium', product.imageUrl ? 'pt-2' : 'pt-3')}>
+              {product.name}
+            </span>
             <span className="flex items-end justify-between gap-2 px-3 pt-1 pb-3">
               <span className="text-lg font-semibold tabular-nums">{money.format(product.priceSatang)}</span>
               {product.trackStock && (

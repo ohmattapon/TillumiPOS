@@ -1,20 +1,28 @@
 import type { Sale } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, LayoutGrid } from 'lucide-react'
+import { ClipboardList, LayoutGrid, MoreHorizontal } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { openOrdersQuery, usePayOrder } from '@/features/orders'
 import { useFormat } from '@/features/settings'
 import { checkoutModeQuery, currentShiftQuery, registersQuery, useRegisterSelectionStore } from '@/features/shifts'
 import { meQuery } from '@/features/auth'
 import { useActiveBranch } from '@/features/branches'
+import { useNavigate } from 'react-router'
 import type { PaymentInput } from '@/lib/money'
 import { useCheckout } from '../api'
 import { useCart } from '../hooks/use-cart'
 import { hasKeyboard } from '../lib/focus'
 import { useCartStore } from '../store/cart.store'
+import { CartBar } from './CartBar'
 import { CartPanel } from './CartPanel'
 import { FloorDialog } from './FloorDialog'
 import { PaymentDialog } from './PaymentDialog'
@@ -26,12 +34,14 @@ import { SaveOrderDialog } from './SaveOrderDialog'
 /** The sell screen: pick products, review the cart, take payment, show the receipt. */
 export function PosPage() {
   const { t } = useTranslation('pos')
+  const navigate = useNavigate()
   const { date } = useFormat()
   const cart = useCart()
   const clearCart = useCartStore((state) => state.clear)
   const checkout = useCheckout()
   const payOrder = usePayOrder()
   const openOrders = useQuery(openOrdersQuery)
+  const openCount = openOrders.data?.length ?? 0
   const checkoutMode = useQuery(checkoutModeQuery)
   const registers = useQuery(registersQuery)
   const me = useQuery(meQuery).data
@@ -113,25 +123,56 @@ export function PosPage() {
   return (
     <>
       <PageHeader title={t('title')} highlight={date.longDate(today)} description={t('description')}>
-        {needsShift && <Button variant="outline" className="h-11 px-3" onClick={() => { window.location.href = '/shifts' }}>{shiftReady ? t('shiftReady') : t('shiftRequired')}</Button>}
-        <Button variant="outline" className="h-11 px-3" onClick={() => setIsChoosingTable(true)}>
-          <LayoutGrid />
-          {t('floor.button')}
-        </Button>
-        <Button variant="outline" className="h-11 px-3" onClick={() => setIsListingOrders(true)}>
-          <ClipboardList />
-          {t('orders.button')}
-          {!!openOrders.data?.length && (
-            <span className="rounded-full bg-primary/10 px-1.5 text-xs text-primary tabular-nums">
-              {openOrders.data.length}
-            </span>
+        {/* Wide screens keep the buttons in the header; smaller screens put the same actions in one menu. */}
+        <div className="hidden items-center gap-2 sm:flex">
+          {needsShift && (
+            <Button variant="outline" className="h-11 px-3" onClick={() => navigate('/shifts')}>
+              {shiftReady ? t('shiftReady') : t('shiftRequired')}
+            </Button>
           )}
-        </Button>
+          <Button variant="outline" className="h-11 px-3" onClick={() => setIsChoosingTable(true)}>
+            <LayoutGrid />
+            {t('floor.button')}
+          </Button>
+          <Button variant="outline" className="h-11 px-3" onClick={() => setIsListingOrders(true)}>
+            <ClipboardList />
+            {t('orders.button')}
+            {openCount > 0 && <span className="rounded-full bg-primary/10 px-1.5 text-xs text-primary tabular-nums">{openCount}</span>}
+          </Button>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="size-11 sm:hidden" aria-label={t('moreActions')}>
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {needsShift && (
+              <DropdownMenuItem onSelect={() => navigate('/shifts')}>
+                {shiftReady ? t('shiftReady') : t('shiftRequired')}
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onSelect={() => setIsChoosingTable(true)}>
+              <LayoutGrid />
+              {t('floor.button')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setIsListingOrders(true)}>
+              <ClipboardList />
+              {t('orders.button')}
+              {openCount > 0 && <span className="ml-auto rounded-full bg-primary/10 px-1.5 text-xs text-primary tabular-nums">{openCount}</span>}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </PageHeader>
 
-      <div className="flex min-h-0 flex-1 print:hidden">
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row print:hidden">
         <ProductPicker searchRef={searchRef} />
         <CartPanel
+          onPay={() => setIsPaying(true)}
+          onSaveOrder={() => setIsSavingOrder(true)}
+          paymentAvailable={shiftReady === true}
+        />
+        <CartBar
           onPay={() => setIsPaying(true)}
           onSaveOrder={() => setIsSavingOrder(true)}
           paymentAvailable={shiftReady === true}
