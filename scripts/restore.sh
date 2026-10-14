@@ -14,6 +14,7 @@ gzip -t "$FILE" || { echo "$FILE is not a valid backup (the file is damaged)." >
 if [ "${2:-}" != "--yes" ]; then
   echo "This replaces ALL data in the shop's database with the contents of:"
   echo "  $FILE"
+  [ -f "${FILE%.sql.gz}.media.tar.gz" ] && echo "  and the product images in ${FILE%.sql.gz}.media.tar.gz"
   read -r -p "Type YES to go on: " answer
   [ "$answer" = "YES" ] || { echo "Cancelled."; exit 1; }
 fi
@@ -24,4 +25,12 @@ echo "Loading the backup..."
 gunzip -c "$FILE" | docker compose -f docker-compose.yml exec -T db psql -U pos -d pos -v ON_ERROR_STOP=1 --quiet
 echo "Starting the app (it brings the database up to date if the backup is from an older version)..."
 docker compose -f docker-compose.yml start app
+
+# The images saved with it, if any. A dump without them leaves the images that are there alone.
+MEDIA_FILE="${FILE%.sql.gz}.media.tar.gz"
+if [ -f "$MEDIA_FILE" ]; then
+  gzip -t "$MEDIA_FILE" || { echo "$MEDIA_FILE is damaged; the database is restored but the images are not." >&2; exit 1; }
+  echo "Restoring the images..."
+  docker compose -f docker-compose.yml exec -T app sh -c 'rm -rf /data/media/* && tar -xzf - -C /data/media' < "$MEDIA_FILE"
+fi
 echo "Restored from $FILE"

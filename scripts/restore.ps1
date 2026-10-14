@@ -18,4 +18,10 @@ if ($LASTEXITCODE -ne 0) {
   Write-Error 'The restore failed. The app is stopped: fix the cause, then start it with: docker compose start app'
 }
 docker compose -f docker-compose.yml start app
+$mediaFile = $File -replace '\.sql\.gz$', '.media.tar.gz'
+if (Test-Path $mediaFile) {
+  Write-Host 'Restoring the images...'
+  docker compose -f docker-compose.yml cp $mediaFile app:/tmp/media.tar.gz
+  docker compose -f docker-compose.yml exec -T app sh -c 'rm -rf /data/media/* && tar -xzf /tmp/media.tar.gz -C /data/media && rm /tmp/media.tar.gz'
+}
 Write-Host "Restored from $File"
