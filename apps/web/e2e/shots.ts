@@ -6,6 +6,7 @@
 //
 // Uses its own database (pos_e2e_shots), its own API and web server on spare ports, and never the development database.
 import { SQL } from 'bun'
+import assert from 'node:assert/strict'
 import { mkdir, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -82,7 +83,10 @@ async function main() {
       const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, locale: 'th-TH', hasTouch: size.name !== 'desktop' })
       const page = await context.newPage()
       page.setDefaultTimeout(15_000)
-      const shot = (name: string) => page.screenshot({ path: join(OUT, `${size.name}-${name}.png`) })
+      const shot = async (name: string) => {
+        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${size.name}/${name}: horizontal overflow`)
+        await page.screenshot({ path: join(OUT, `${size.name}-${name}.png`), animations: 'disabled' })
+      }
 
       await page.goto(WEB)
       await page.waitForTimeout(800)
@@ -113,6 +117,15 @@ async function main() {
       for (const index of [0, 1, 1, 2]) await tryClick(page, products.nth(index))
       await page.waitForTimeout(500)
       await shot('02-pos-cart')
+      if (size.width < 1024) {
+        await page.getByRole('button', { name: /4 ชิ้น/ }).click()
+        const close = page.getByRole('button', { name: 'ปิดตะกร้า', exact: true })
+        const bounds = await close.boundingBox()
+        assert(bounds && bounds.width >= 44 && bounds.height >= 44, 'cart close target must be at least 44px')
+        await shot('02a-cart-sheet')
+        await close.click()
+        await page.getByRole('dialog').waitFor({ state: 'hidden' })
+      }
       await page.mouse.wheel(0, 2000)
       await page.waitForTimeout(300)
       await shot('03-pos-cart-scrolled')
@@ -145,6 +158,30 @@ async function main() {
         await page.waitForTimeout(1000)
         await shot(name)
       }
+
+      // A failed first read must not look like zero sales or keep totals loading forever.
+      const salesReads = /\/api\/v1\/sales(?:\/summary)?\?/
+      const failure = 'ทดสอบการเชื่อมต่อขัดข้อง'
+      await page.route(salesReads, (route) => route.fulfill({
+        status: 503, contentType: 'application/problem+json',
+        body: JSON.stringify({ type: 'about:blank', title: 'Unavailable', status: 503, detail: failure, code: 'GUI_TEST_UNAVAILABLE' }),
+      }))
+      await page.goto(`${WEB}/today`)
+      const totals = page.getByRole('region', { name: 'สรุปยอดขายวันนี้' })
+      await totals.getByRole('alert').waitFor()
+      await page.getByText(failure, { exact: true }).nth(1).waitFor()
+      assert.equal(await page.getByText('วันนี้ยังไม่มีบิลขาย', { exact: true }).count(), 0)
+      assert.equal(await totals.locator('[aria-busy="true"]').count(), 0)
+      await shot('20-today-error')
+
+      // Retry both failed sections against the real isolated API, without a page reload.
+      await page.unroute(salesReads)
+      await totals.getByRole('button', { name: 'ลองใหม่' }).click()
+      await totals.getByRole('alert').waitFor({ state: 'hidden' })
+      await page.getByRole('alert').getByRole('button', { name: 'ลองใหม่' }).click()
+      await page.getByRole('alert').waitFor({ state: 'hidden' })
+      await page.getByText('วันนี้ยังไม่มีบิลขาย', { exact: true }).and(page.locator(':visible')).waitFor()
+      await shot('21-today-recovered')
       await context.close()
     }
   } finally {
@@ -165,6 +202,7 @@ try {
   await main()
 } catch (error) {
   console.error(error)
+  process.exitCode = 1
 } finally {
   for (const child of children) {
     if (process.platform === 'win32') Bun.spawnSync(['taskkill', '/F', '/T', '/PID', String(child.pid)], { stdout: 'ignore', stderr: 'ignore' })

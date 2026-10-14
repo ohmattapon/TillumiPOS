@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { Banknote, PackageX, Receipt as ReceiptIcon, ShoppingCart, TrendingUp, Wallet, type LucideIcon } from 'lucide-react'
+import { PackageX, ShoppingCart } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
-import { SkeletonRows, SkeletonStatCards } from '@/components/Skeletons'
+import { SkeletonRows } from '@/components/Skeletons'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Panel } from '@/components/Panel'
 import { DataTable } from '@/components/DataTable'
 import { PaginationBar } from '@/components/PaginationBar'
@@ -20,32 +21,29 @@ import { salesTodayQuery, summaryTodayQuery } from '../api'
 type StatusFilter = 'all' | 'completed' | 'voided'
 
 interface StatProps {
-  icon: LucideIcon
   label: string
   value: string
   note?: ReactNode
   footer: string
-  /** CSS colour of the icon tile, so the four figures can be told apart at a glance. */
-  tone: string
 }
 
-function StatCard({ icon: Icon, label, value, note, footer, tone }: StatProps) {
+function SummaryValue({ label, value, note, footer }: StatProps) {
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-xs">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span
-          className="flex size-7 items-center justify-center rounded-md"
-          style={{ color: tone, backgroundColor: `color-mix(in oklch, ${tone} 12%, transparent)` }}
-        >
-          <Icon className="size-4" />
-        </span>
-        {label}
-      </div>
-      <div className="mt-3 flex items-baseline justify-between gap-2">
-        <span className="text-2xl font-semibold tabular-nums">{value}</span>
-        <span className="text-xs">{note}</span>
-      </div>
-      <p className="mt-3 border-t pt-2.5 text-xs text-muted-foreground">{footer}</p>
+    <div className="min-w-0 bg-card p-3 sm:p-4">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-1 break-words text-xl font-semibold tabular-nums">{value}</dd>
+      <dd className="mt-1 text-xs text-muted-foreground">{footer}</dd>
+      {note && <dd className="mt-1 text-xs">{note}</dd>}
+    </div>
+  )
+}
+
+function RetryNotice({ error, stale, pending, onRetry }: { error: Error; stale: boolean; pending: boolean; onRetry: () => void }) {
+  const { t } = useTranslation('sales')
+  return (
+    <div role="alert" className="flex flex-wrap items-center justify-between gap-2 p-3">
+      <p className="text-sm text-destructive">{stale ? t('today.refreshFailed') : error.message}</p>
+      <Button variant="outline" className="h-11" disabled={pending} onClick={onRetry}>{t('today.retry')}</Button>
     </div>
   )
 }
@@ -103,52 +101,55 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
         {isOwner && (
-          <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+          <section aria-label={t('today.totals')} className="overflow-hidden rounded-md border bg-card">
+            {summary.error && (
+              <RetryNotice error={summary.error} stale={!!stats} pending={summary.isFetching} onRetry={() => void summary.refetch()} />
+            )}
+            {summary.isPending && <p role="status" className="sr-only">{tc('loading')}</p>}
+            <dl aria-busy={summary.isPending} className="grid grid-cols-2 gap-px bg-border xl:grid-cols-4">
             {stats ? (
               <>
-                <StatCard
-                  icon={Banknote}
-                  tone="var(--primary)"
+                <SummaryValue
                   label={t('stats.netSales')}
                   value={money.format(stats.totalSatang)}
                   footer={t('stats.totalDiscount', { amount: money.format(stats.discountSatang) })}
                 />
-                <StatCard
-                  icon={ReceiptIcon}
-                  tone="var(--category-1)"
+                <SummaryValue
                   label={t('stats.saleCount')}
                   value={String(stats.saleCount)}
                   note={voidedCount > 0 && <span className="text-destructive">{t('stats.voided', { count: voidedCount })}</span>}
                   footer={t('stats.completedOnly')}
                 />
-                <StatCard
-                  icon={Wallet}
-                  tone="var(--category-3)"
+                <SummaryValue
                   label={t('stats.average')}
                   value={money.format(averageSatang)}
                   footer={t('stats.vatTotal', { amount: money.format(stats.vatSatang) })}
                 />
-                <StatCard
-                  icon={TrendingUp}
-                  tone="var(--success)"
+                <SummaryValue
                   label={t('stats.grossProfit')}
                   value={money.format(stats.profitSatang)}
                   note={<span className="text-success">{t('stats.margin', { percent: marginPercent })}</span>}
                   footer={t('stats.profitNote')}
                 />
               </>
-            ) : (
-              <SkeletonStatCards />
-            )}
-          </div>
+            ) : summary.isPending ? (
+              <>
+                {Array.from({ length: 4 }, (_, index) => <div key={index} aria-hidden className="space-y-2 bg-card p-4"><Skeleton className="h-3 w-20" /><Skeleton className="h-6 w-24" /><Skeleton className="h-3 w-full" /></div>)}
+              </>
+            ) : null}
+            </dl>
+          </section>
         )}
 
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <Panel
+            className="rounded-md shadow-none"
             title={t('list.title')}
             description={t('list.description')}
-            action={
+          >
+            <div className="overflow-x-auto border-b px-3 py-2">
               <SegmentedTabs
+                size="touch"
                 value={filter}
                 onChange={setFilter}
                 options={[
@@ -157,9 +158,9 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
                   { value: 'voided', label: t('list.voided') },
                 ]}
               />
-            }
-          >
-            {sales.error && <p className="p-4 text-sm text-destructive">{sales.error.message}</p>}
+            </div>
+            {sales.error && <RetryNotice error={sales.error} stale={!!sales.data} pending={sales.isFetching} onRetry={() => void sales.refetch()} />}
+            {(!sales.error || sales.data) && <>
             <DataTable
               rows={visibleSales}
               rowKey={(sale) => sale.id}
@@ -199,10 +200,12 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
               ]}
             />
             <PaginationBar {...paging} total={sales.data?.total} isLoading={sales.isFetching} onPageChange={paging.setPage} />
+            </>}
           </Panel>
 
           <div className="space-y-4">
             <Panel
+              className="rounded-md shadow-none"
               title={t('attention.title')}
               description={t('attention.description', { count: LOW_STOCK_THRESHOLD })}
               action={
@@ -232,12 +235,12 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
                 )}
               </ul>
               )}
-              {products.error && <p className="p-3 text-sm text-destructive">{products.error.message}</p>}
+              {products.error && <RetryNotice error={products.error} stale={!!products.data} pending={products.isFetching} onRetry={() => void products.refetch()} />}
               <PaginationBar {...lowPaging} total={products.data?.total} isLoading={products.isFetching} onPageChange={lowPaging.setPage} />
             </Panel>
 
             {stats && (
-              <Panel title={t('payments.title')} description={t('payments.description')}>
+              <Panel className="rounded-md shadow-none" title={t('payments.title')} description={t('payments.description')}>
                 <ul className="divide-y">
                   {stats.byMethod.map((row) => (
                     <li key={row.method} className="flex items-center justify-between px-4 py-2.5 text-sm">
