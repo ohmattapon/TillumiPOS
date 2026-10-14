@@ -8,6 +8,7 @@ import { LoginPage, meQuery, useLogout } from '@/features/auth'
 import { BranchesPage, useActiveBranch } from '@/features/branches'
 import { CategoriesPage } from '@/features/categories'
 import { ModifiersPage } from '@/features/modifiers'
+import { SetupPage, setupStatusQuery } from '@/features/setup'
 import { TablesPage } from '@/features/tables'
 import { clearCart, PosPage } from '@/features/pos'
 import { ProductsPage } from '@/features/products'
@@ -57,10 +58,11 @@ function Shell({ user }: { user: User }) {
 export default function App() {
   const { t } = useTranslation()
   const me = useQuery(meQuery)
+  const setup = useQuery(setupStatusQuery)
 
-  if (me.isPending) return <p className="p-8 text-muted-foreground">{t('loading')}</p>
+  if (me.isPending || setup.isPending) return <p className="p-8 text-muted-foreground">{t('loading')}</p>
   // Settings need a session, so they are only requested once someone is signed in.
-  if (!me.data) return <LoginPage />
+  if (!me.data) return setup.data ? <SetupPage /> : <LoginPage />
 
   return <Shell user={me.data} />
 }
