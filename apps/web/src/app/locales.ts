@@ -22,6 +22,16 @@ const th = {
     owner: 'เจ้าของร้าน',
     cashier: 'แคชเชียร์',
   },
+  theme: {
+    label: 'ธีมสี',
+    options: {
+      light: 'สว่าง',
+      dark: 'มืด',
+      midnight: 'น้ำเงินเที่ยงคืน',
+      forest: 'เขียวป่า',
+      rose: 'ชมพูกุหลาบ',
+    },
+  },
   logout: 'ออกจากระบบ',
 }
 
@@ -48,6 +58,16 @@ const en = {
   roles: {
     owner: 'Owner',
     cashier: 'Cashier',
+  },
+  theme: {
+    label: 'Color theme',
+    options: {
+      light: 'Light',
+      dark: 'Dark',
+      midnight: 'Midnight blue',
+      forest: 'Forest green',
+      rose: 'Rose',
+    },
   },
   logout: 'Sign out',
 } satisfies typeof th

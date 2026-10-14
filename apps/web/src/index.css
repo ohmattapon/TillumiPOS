@@ -112,6 +112,156 @@
   --sidebar-ring: oklch(0.59 0.17 45);
 }
 
+/* Neutral charcoal with the shop's existing warm orange action color. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --background: oklch(0.19 0.012 55);
+  --foreground: oklch(0.94 0.006 70);
+  --card: oklch(0.23 0.012 55);
+  --card-foreground: oklch(0.94 0.006 70);
+  --popover: oklch(0.25 0.012 55);
+  --popover-foreground: oklch(0.94 0.006 70);
+  --primary: oklch(0.72 0.15 48);
+  --primary-foreground: oklch(0.2 0.015 45);
+  --secondary: oklch(0.29 0.012 55);
+  --secondary-foreground: oklch(0.91 0.006 70);
+  --muted: oklch(0.27 0.012 55);
+  --muted-foreground: oklch(0.7 0.012 65);
+  --accent: oklch(0.31 0.025 48);
+  --accent-foreground: oklch(0.91 0.04 65);
+  --destructive: oklch(0.65 0.2 25);
+  --success: oklch(0.7 0.13 155);
+  --warning: oklch(0.78 0.14 75);
+  --border: oklch(0.34 0.012 55);
+  --input: oklch(0.34 0.012 55);
+  --ring: oklch(0.72 0.15 48);
+  --chart-1: oklch(0.72 0.15 48);
+  --chart-2: oklch(0.7 0.13 155);
+  --chart-3: oklch(0.78 0.14 75);
+  --chart-4: oklch(0.68 0.06 230);
+  --chart-5: oklch(0.68 0.12 310);
+  --canvas: oklch(0.16 0.01 55);
+  --sidebar: oklch(0.205 0.012 55);
+  --sidebar-foreground: oklch(0.91 0.006 70);
+  --sidebar-primary: oklch(0.72 0.15 48);
+  --sidebar-primary-foreground: oklch(0.2 0.015 45);
+  --sidebar-accent: oklch(0.29 0.012 55);
+  --sidebar-accent-foreground: oklch(0.94 0.006 70);
+  --sidebar-border: oklch(0.34 0.012 55);
+  --sidebar-ring: oklch(0.72 0.15 48);
+}
+
+/* Deep navy surfaces keep contrast while giving the till a cooler night palette. */
+:root[data-theme='midnight'] {
+  color-scheme: dark;
+  --background: oklch(0.17 0.035 255);
+  --foreground: oklch(0.94 0.015 235);
+  --card: oklch(0.205 0.04 255);
+  --card-foreground: oklch(0.94 0.015 235);
+  --popover: oklch(0.23 0.042 255);
+  --popover-foreground: oklch(0.94 0.015 235);
+  --primary: oklch(0.75 0.13 225);
+  --primary-foreground: oklch(0.18 0.04 255);
+  --secondary: oklch(0.28 0.04 255);
+  --secondary-foreground: oklch(0.91 0.02 235);
+  --muted: oklch(0.25 0.035 255);
+  --muted-foreground: oklch(0.71 0.025 240);
+  --accent: oklch(0.31 0.055 245);
+  --accent-foreground: oklch(0.93 0.025 225);
+  --destructive: oklch(0.66 0.19 25);
+  --success: oklch(0.72 0.13 160);
+  --warning: oklch(0.8 0.14 78);
+  --border: oklch(0.34 0.04 255);
+  --input: oklch(0.34 0.04 255);
+  --ring: oklch(0.75 0.13 225);
+  --chart-1: oklch(0.75 0.13 225);
+  --chart-2: oklch(0.72 0.13 160);
+  --chart-3: oklch(0.8 0.14 78);
+  --chart-4: oklch(0.7 0.12 300);
+  --chart-5: oklch(0.72 0.14 35);
+  --canvas: oklch(0.145 0.035 255);
+  --sidebar: oklch(0.185 0.04 255);
+  --sidebar-foreground: oklch(0.91 0.02 235);
+  --sidebar-primary: oklch(0.75 0.13 225);
+  --sidebar-primary-foreground: oklch(0.18 0.04 255);
+  --sidebar-accent: oklch(0.28 0.04 255);
+  --sidebar-accent-foreground: oklch(0.94 0.015 235);
+  --sidebar-border: oklch(0.34 0.04 255);
+  --sidebar-ring: oklch(0.75 0.13 225);
+}
+
+/* A soft green canvas and forest actions for shops that prefer a natural tone. */
+:root[data-theme='forest'] {
+  color-scheme: light;
+  --background: oklch(0.99 0.008 145);
+  --foreground: oklch(0.23 0.035 155);
+  --card: oklch(0.998 0.004 145);
+  --card-foreground: oklch(0.23 0.035 155);
+  --popover: oklch(0.998 0.004 145);
+  --popover-foreground: oklch(0.23 0.035 155);
+  --primary: oklch(0.48 0.12 155);
+  --primary-foreground: oklch(0.98 0.01 145);
+  --secondary: oklch(0.95 0.025 145);
+  --secondary-foreground: oklch(0.28 0.05 155);
+  --muted: oklch(0.955 0.018 145);
+  --muted-foreground: oklch(0.49 0.035 155);
+  --accent: oklch(0.93 0.045 145);
+  --accent-foreground: oklch(0.35 0.09 155);
+  --border: oklch(0.89 0.025 145);
+  --input: oklch(0.89 0.025 145);
+  --ring: oklch(0.48 0.12 155);
+  --chart-1: oklch(0.48 0.12 155);
+  --chart-2: oklch(0.62 0.12 190);
+  --chart-3: oklch(0.68 0.13 90);
+  --chart-4: oklch(0.62 0.12 245);
+  --chart-5: oklch(0.58 0.13 35);
+  --canvas: oklch(0.955 0.018 145);
+  --sidebar: oklch(0.975 0.012 145);
+  --sidebar-foreground: oklch(0.28 0.05 155);
+  --sidebar-primary: oklch(0.48 0.12 155);
+  --sidebar-primary-foreground: oklch(0.98 0.01 145);
+  --sidebar-accent: oklch(0.93 0.025 145);
+  --sidebar-accent-foreground: oklch(0.23 0.035 155);
+  --sidebar-border: oklch(0.89 0.025 145);
+  --sidebar-ring: oklch(0.48 0.12 155);
+}
+
+/* Blush accents sit on warm neutral surfaces so the palette stays comfortable for long shifts. */
+:root[data-theme='rose'] {
+  color-scheme: light;
+  --background: oklch(0.995 0.006 5);
+  --foreground: oklch(0.25 0.025 5);
+  --card: oklch(1 0.003 5);
+  --card-foreground: oklch(0.25 0.025 5);
+  --popover: oklch(1 0.003 5);
+  --popover-foreground: oklch(0.25 0.025 5);
+  --primary: oklch(0.58 0.17 5);
+  --primary-foreground: oklch(0.99 0.005 5);
+  --secondary: oklch(0.96 0.018 5);
+  --secondary-foreground: oklch(0.32 0.04 5);
+  --muted: oklch(0.965 0.012 5);
+  --muted-foreground: oklch(0.52 0.025 5);
+  --accent: oklch(0.945 0.035 5);
+  --accent-foreground: oklch(0.43 0.12 5);
+  --border: oklch(0.91 0.018 5);
+  --input: oklch(0.91 0.018 5);
+  --ring: oklch(0.58 0.17 5);
+  --chart-1: oklch(0.58 0.17 5);
+  --chart-2: oklch(0.6 0.12 155);
+  --chart-3: oklch(0.69 0.13 70);
+  --chart-4: oklch(0.61 0.13 245);
+  --chart-5: oklch(0.58 0.12 300);
+  --canvas: oklch(0.97 0.012 5);
+  --sidebar: oklch(0.985 0.008 5);
+  --sidebar-foreground: oklch(0.3 0.035 5);
+  --sidebar-primary: oklch(0.58 0.17 5);
+  --sidebar-primary-foreground: oklch(0.99 0.005 5);
+  --sidebar-accent: oklch(0.95 0.018 5);
+  --sidebar-accent-foreground: oklch(0.25 0.025 5);
+  --sidebar-border: oklch(0.91 0.018 5);
+  --sidebar-ring: oklch(0.58 0.17 5);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
