@@ -1,3 +1,5 @@
+import { lineOptionsResolverToken } from '../../../modifiers/applications/ports/line-options-resolver.port'
+import type { ILineOptionsResolver } from '../../../modifiers/applications/ports/line-options-resolver.port'
 import type { IOrderRepository } from '../ports/order.repository'
 import type { IProductRepository } from '../../../products/applications/ports/product.repository'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
@@ -17,6 +19,7 @@ export class OpenOrderUseCase {
     @inject(orderRepositoryToken) private readonly orders: IOrderRepository,
     @inject(productRepositoryToken) private readonly products: IProductRepository,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
+    @inject(lineOptionsResolverToken) private readonly lineOptions: ILineOptionsResolver,
   ) {}
 
   async execute(input: unknown, actor: OrderActor) {
@@ -24,8 +27,17 @@ export class OpenOrderUseCase {
 
     return this.unitOfWork.run(async () => {
       const items = []
-      for (const line of dto.items ?? [])
-        items.push({ ...(await findOrderedProduct(this.products, line.productId, actor.branch.id)), quantity: line.quantity })
+      for (const line of dto.items ?? []) {
+        const product = await findOrderedProduct(this.products, line.productId, actor.branch.id)
+        const chosen = await this.lineOptions.resolve(line.productId, line.options ?? [])
+        items.push({
+          ...product,
+          unitPriceSatang: product.unitPriceSatang + chosen.priceSatang,
+          quantity: line.quantity,
+          lineId: 0,
+          options: chosen.options,
+        })
+      }
 
       return this.orders.create(
         OrderEntity.open({

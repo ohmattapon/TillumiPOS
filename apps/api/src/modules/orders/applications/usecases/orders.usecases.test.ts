@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
 import { makeOrder, makeProduct, makeSale } from '../../../../__tests__/factories'
 import {
+  mockLineOptionsResolver,
   mockOrderRepository,
   mockProductRepository,
   mockSaleCheckout,
@@ -15,13 +16,16 @@ import { ListOrdersUseCase } from './list-orders.usecase'
 import { OpenOrderUseCase } from './open-order.usecase'
 import { PayOrderUseCase } from './pay-order.usecase'
 import { RemoveOrderItemUseCase } from './remove-order-item.usecase'
+import { RemoveOrderLineUseCase } from './remove-order-line.usecase'
 import { RenameOrderUseCase } from './rename-order.usecase'
 import { SetOrderItemQuantityUseCase } from './set-order-item-quantity.usecase'
+import { SetOrderLineQuantityUseCase } from './set-order-line-quantity.usecase'
 
 let orders: ReturnType<typeof mockOrderRepository>
 let products: ReturnType<typeof mockProductRepository>
 let checkout: ReturnType<typeof mockSaleCheckout>
 let unitOfWork: ReturnType<typeof mockUnitOfWork>
+let lineOptions: ReturnType<typeof mockLineOptionsResolver>
 
 const actor = { user: { id: 7, displayName: 'สมชาย' }, branch: { id: 1, code: 'MAIN' } }
 const tea = makeProduct({ id: 1, name: 'ชา', sku: 'TEA', priceSatang: 2500 })
@@ -32,6 +36,7 @@ beforeEach(() => {
   products = mockProductRepository()
   checkout = mockSaleCheckout()
   unitOfWork = mockUnitOfWork()
+  lineOptions = mockLineOptionsResolver()
   products.findById.mockImplementation(async (id) => [tea, cake].find((product) => product.id === id) ?? null)
   orders.save.mockImplementation(async (order) => order)
 })
@@ -77,7 +82,7 @@ describe('OpenOrderUseCase', () => {
 
   beforeEach(() => {
     orders.create.mockImplementation(async (order) => new OrderEntity({ ...order, id: 5, status: 'open', saleId: null, cancelReason: null, cancelledById: null, createdAt: new Date(), updatedAt: new Date() }))
-    useCase = new OpenOrderUseCase(orders, products, unitOfWork)
+    useCase = new OpenOrderUseCase(orders, products, unitOfWork, lineOptions)
   })
 
   test('opens an empty order for the branch and the person who opened it', async () => {
@@ -90,8 +95,8 @@ describe('OpenOrderUseCase', () => {
     await useCase.execute({ items: [{ productId: 1, quantity: 2 }, { productId: 2, quantity: 1 }] }, actor)
 
     expect(orders.create.mock.calls[0]![0].items).toEqual([
-      { productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2 },
-      { productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1 },
+      { lineId: 0, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [] },
+      { lineId: 0, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [] },
     ])
   })
 
@@ -131,7 +136,7 @@ describe('editing an open order', () => {
   })
 
   test('adding a product quotes its current price and locks the order first', async () => {
-    const order = await new AddOrderItemUseCase(orders, products, unitOfWork).execute(3, { productId: 2, quantity: 1 }, 1)
+    const order = await new AddOrderItemUseCase(orders, products, unitOfWork, lineOptions).execute(3, { productId: 2, quantity: 1 }, 1)
 
     expect(orders.findByIdForUpdate).toHaveBeenCalledWith(3)
     expect(order.items.map((item) => [item.productId, item.quantity, item.unitPriceSatang])).toEqual([
@@ -143,9 +148,9 @@ describe('editing an open order', () => {
   test('adding a product already on the order keeps its quoted price, even if the menu price changed', async () => {
     products.findById.mockResolvedValue(makeProduct({ id: 1, priceSatang: 9900 }))
 
-    const order = await new AddOrderItemUseCase(orders, products, unitOfWork).execute(3, { productId: 1, quantity: 1 }, 1)
+    const order = await new AddOrderItemUseCase(orders, products, unitOfWork, lineOptions).execute(3, { productId: 1, quantity: 1 }, 1)
 
-    expect(order.items).toEqual([{ productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 3 }])
+    expect(order.items).toEqual([{ lineId: 1, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 3, options: [] }])
     expect(products.findById).not.toHaveBeenCalled()
   })
 
@@ -167,7 +172,7 @@ describe('editing an open order', () => {
     orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 3, branchId: 2 }))
 
     await expect(
-      new AddOrderItemUseCase(orders, products, unitOfWork).execute(3, { productId: 1, quantity: 1 }, 1),
+      new AddOrderItemUseCase(orders, products, unitOfWork, lineOptions).execute(3, { productId: 1, quantity: 1 }, 1),
     ).rejects.toMatchObject({ code: 'ORDER_NOT_FOUND' })
     await expect(new RemoveOrderItemUseCase(orders, unitOfWork).execute(3, 1, 1)).rejects.toMatchObject({
       code: 'ORDER_NOT_FOUND',
@@ -226,8 +231,8 @@ describe('PayOrderUseCase', () => {
       makeOrder({
         id: 3,
         items: [
-          { productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2 },
-          { productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1 },
+          { lineId: 1, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [] },
+          { lineId: 2, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [] },
         ],
       }),
     )
@@ -241,8 +246,8 @@ describe('PayOrderUseCase', () => {
     expect(unitOfWork.run).toHaveBeenCalledTimes(1)
     expect(checkout.checkout).toHaveBeenCalledWith({
       lines: [
-        { productId: 1, quantity: 2, unitPriceSatang: 2500 },
-        { productId: 2, quantity: 1, unitPriceSatang: 5700 },
+        { productId: 1, quantity: 2, unitPriceSatang: 2500, options: [] },
+        { productId: 2, quantity: 1, unitPriceSatang: 5700, options: [] },
       ],
       discountSatang: 500,
       payments: [{ method: 'cash', amountSatang: 10000 }],
@@ -290,5 +295,108 @@ describe('PayOrderUseCase', () => {
   ])('rejects %s without opening a unit of work', async (_label, bad) => {
     await expect(useCase.execute(3, bad, actor)).rejects.toBeInstanceOf(ZodError)
     expect(unitOfWork.run).not.toHaveBeenCalled()
+  })
+})
+
+describe('options on order lines', () => {
+  const pearls = { groupId: 2, groupName: 'ท็อปปิง', optionId: 20, name: 'ไข่มุก', priceSatang: 1000, costSatang: 400 }
+
+  beforeEach(() => {
+    lineOptions.resolve.mockResolvedValue({ options: [pearls], priceSatang: 1000, costSatang: 400, key: '20' })
+  })
+
+  test('adding with options quotes the product price plus the options, and keeps the options', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ items: [] }))
+
+    const saved = await new AddOrderItemUseCase(orders, products, unitOfWork, lineOptions).execute(
+      1,
+      { productId: 1, quantity: 2, options: [20] },
+      1,
+    )
+
+    expect(lineOptions.resolve).toHaveBeenCalledWith(1, [20])
+    expect(saved.items).toEqual([
+      { lineId: 0, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 3500, quantity: 2, options: [pearls] },
+    ])
+  })
+
+  test('adding the same choice again joins the line and keeps its quoted price', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(
+      makeOrder({
+        items: [{ lineId: 7, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 3000, quantity: 1, options: [pearls] }],
+      }),
+    )
+
+    const saved = await new AddOrderItemUseCase(orders, products, unitOfWork, lineOptions).execute(
+      1,
+      { productId: 1, quantity: 1, options: [20] },
+      1,
+    )
+
+    expect(saved.items).toHaveLength(1)
+    expect(saved.items[0]).toMatchObject({ lineId: 7, unitPriceSatang: 3000, quantity: 2 })
+  })
+
+  test('a choice that breaks a rule is refused and nothing is saved', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder())
+    const refusal = Object.assign(new Error('x'), { code: 'MODIFIER_REQUIRED' })
+    lineOptions.resolve.mockRejectedValue(refusal)
+
+    await expect(
+      new AddOrderItemUseCase(orders, products, unitOfWork, lineOptions).execute(1, { productId: 1, quantity: 1 }, 1),
+    ).rejects.toBe(refusal)
+    expect(orders.save).not.toHaveBeenCalled()
+  })
+
+  test('opening an order with options prices each line with its own options', async () => {
+    orders.create.mockImplementation(
+      async (order) =>
+        new OrderEntity({
+          ...order,
+          id: 5,
+          status: 'open',
+          saleId: null,
+          cancelReason: null,
+          cancelledById: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }),
+    )
+
+    const opened = await new OpenOrderUseCase(orders, products, unitOfWork, lineOptions).execute(
+      { items: [{ productId: 1, quantity: 1, options: [20] }] },
+      actor,
+    )
+
+    expect(opened.items[0]).toMatchObject({ unitPriceSatang: 3500, options: [pearls] })
+  })
+
+  test('a line is changed and removed by its id', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(
+      makeOrder({
+        items: [{ lineId: 7, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 3500, quantity: 1, options: [pearls] }],
+      }),
+    )
+
+    const changed = await new SetOrderLineQuantityUseCase(orders, unitOfWork).execute(1, 7, { quantity: 3 }, 1)
+    expect(changed.items[0]!.quantity).toBe(3)
+
+    const removed = await new RemoveOrderLineUseCase(orders, unitOfWork).execute(1, 7, 1)
+    expect(removed.items).toEqual([])
+  })
+
+  test('paying passes each line with its options and the price it was quoted', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(
+      makeOrder({
+        items: [{ lineId: 7, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 3500, quantity: 2, options: [pearls] }],
+      }),
+    )
+    checkout.checkout.mockResolvedValue(makeSale({ id: 9 }))
+
+    await new PayOrderUseCase(orders, checkout, unitOfWork).execute(1, { payments: [{ method: 'cash', amountSatang: 7000 }] }, actor)
+
+    expect(checkout.checkout.mock.calls[0]![0].lines).toEqual([
+      { productId: 1, quantity: 2, unitPriceSatang: 3500, options: [pearls] },
+    ])
   })
 })

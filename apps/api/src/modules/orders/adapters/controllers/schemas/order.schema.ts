@@ -4,15 +4,29 @@ import { satang } from '../../../../../libs/http-schemas'
 const status = t.Union([t.Literal('open'), t.Literal('paid'), t.Literal('cancelled')])
 const method = t.Union([t.Literal('cash'), t.Literal('promptpay'), t.Literal('card')])
 
+// What was chosen, as it was when chosen. The option's cost is internal and not part of the response.
+const lineOption = t.Object({
+  groupId: t.Integer(),
+  groupName: t.String(),
+  optionId: t.Integer(),
+  name: t.String(),
+  priceSatang: t.Integer(),
+})
+
 const item = t.Object({
+  // Identifies the line: the same product with other options is another line.
+  lineId: t.Integer(),
   productId: t.Integer(),
   productName: t.String(),
   sku: t.String(),
-  // The price quoted when the item was put on the order; it is what is charged.
+  // The price quoted when the item was put on the order, options included; it is what is charged.
   unitPriceSatang: t.Integer(),
   quantity: t.Integer(),
   lineTotalSatang: t.Integer(),
+  options: t.Array(lineOption),
 })
+
+const optionIds = t.Optional(t.Array(t.Integer({ minimum: 1 }), { maxItems: 40 }))
 
 const pay = t.Object({
   discountSatang: t.Optional(satang()),
@@ -46,13 +60,14 @@ export const orderSchemas = {
   open: t.Object({
     label: t.Optional(t.Nullable(t.String({ maxLength: 100 }))),
     items: t.Optional(
-      t.Array(t.Object({ productId: t.Integer({ minimum: 1 }), quantity: t.Integer({ minimum: 1 }) }), {
-        maxItems: 100,
-      }),
+      t.Array(
+        t.Object({ productId: t.Integer({ minimum: 1 }), quantity: t.Integer({ minimum: 1 }), options: optionIds }),
+        { maxItems: 100 },
+      ),
     ),
   }),
   update: t.Object({ label: t.Nullable(t.String({ maxLength: 100 })) }),
-  addItem: t.Object({ productId: t.Integer({ minimum: 1 }), quantity: t.Integer({ minimum: 1 }) }),
+  addItem: t.Object({ productId: t.Integer({ minimum: 1 }), quantity: t.Integer({ minimum: 1 }), options: optionIds }),
   setQuantity: t.Object({ quantity: t.Integer({ minimum: 1 }) }),
   cancel: t.Object({ reason: t.String({ minLength: 1, maxLength: 500 }) }),
   pay,
@@ -63,6 +78,7 @@ export const orderSchemas = {
     offset: t.Optional(t.Numeric({ minimum: 0 })),
   }),
   itemParams: t.Object({ id: t.Numeric({ minimum: 1 }), productId: t.Numeric({ minimum: 1 }) }),
+  lineParams: t.Object({ id: t.Numeric({ minimum: 1 }), lineId: t.Numeric({ minimum: 1 }) }),
 }
 
 export type OrderResponse = typeof orderSchemas.order.static

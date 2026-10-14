@@ -5,15 +5,16 @@ import { PAYMENT_METHODS } from '../../../../domains/sale.domain'
 const productId = z.number().int().positive()
 const quantity = z.number().int().min(1)
 const label = z.string().max(100).nullable()
+const options = z.array(z.number().int().positive()).max(40)
 
 export const openOrderSchema = z.object({
   label: label.optional(),
-  items: z.array(z.object({ productId, quantity })).max(100).optional(),
+  items: z.array(z.object({ productId, quantity, options: options.optional() })).max(100).optional(),
 })
 
 export const updateOrderSchema = z.object({ label })
 
-export const addOrderItemSchema = z.object({ productId, quantity })
+export const addOrderItemSchema = z.object({ productId, quantity, options: options.optional() })
 
 export const setOrderItemQuantitySchema = z.object({ quantity })
 

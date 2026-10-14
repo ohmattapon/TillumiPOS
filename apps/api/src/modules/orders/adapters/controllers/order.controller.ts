@@ -12,15 +12,22 @@ import { ListOrdersUseCase } from '../../applications/usecases/list-orders.useca
 import { OpenOrderUseCase } from '../../applications/usecases/open-order.usecase'
 import { PayOrderUseCase } from '../../applications/usecases/pay-order.usecase'
 import { RemoveOrderItemUseCase } from '../../applications/usecases/remove-order-item.usecase'
+import { RemoveOrderLineUseCase } from '../../applications/usecases/remove-order-line.usecase'
 import { RenameOrderUseCase } from '../../applications/usecases/rename-order.usecase'
 import { SetOrderItemQuantityUseCase } from '../../applications/usecases/set-order-item-quantity.usecase'
+import { SetOrderLineQuantityUseCase } from '../../applications/usecases/set-order-line-quantity.usecase'
 import { orderSchemas, type OrderResponse } from './schemas/order.schema'
 
 function toResponse(order: OrderEntity): OrderResponse {
   const { items, ...header } = order.toSnapshot()
   return {
     ...header,
-    items: items.map((item) => ({ ...item, lineTotalSatang: item.unitPriceSatang * item.quantity })),
+    items: items.map((item) => ({
+      ...item,
+      // The cost of an option is internal, like the cost of a sale line.
+      options: item.options.map(({ costSatang: _cost, ...option }) => option),
+      lineTotalSatang: item.unitPriceSatang * item.quantity,
+    })),
     itemCount: order.itemCount,
     subtotalSatang: order.subtotalSatang,
   }
@@ -38,6 +45,8 @@ export class OrderElysiaController {
     @inject(RemoveOrderItemUseCase) private readonly removeItem: RemoveOrderItemUseCase,
     @inject(CancelOrderUseCase) private readonly cancelOrder: CancelOrderUseCase,
     @inject(PayOrderUseCase) private readonly payOrder: PayOrderUseCase,
+    @inject(SetOrderLineQuantityUseCase) private readonly setLineQuantity: SetOrderLineQuantityUseCase,
+    @inject(RemoveOrderLineUseCase) private readonly removeLine: RemoveOrderLineUseCase,
   ) {}
 
   getRoutes() {
@@ -101,6 +110,27 @@ export class OrderElysiaController {
         async ({ params, branch }) =>
           toResponse(await this.removeItem.execute(params.id, params.productId, (await branch()).id)),
         { params: orderSchemas.itemParams, response: orderSchemas.order, detail: { summary: 'เอาสินค้าออกจากออเดอร์' } },
+      )
+      .patch(
+        '/:id/lines/:lineId',
+        async ({ params, body, branch }) =>
+          toResponse(await this.setLineQuantity.execute(params.id, params.lineId, body, (await branch()).id)),
+        {
+          params: orderSchemas.lineParams,
+          body: orderSchemas.setQuantity,
+          response: orderSchemas.order,
+          detail: { summary: 'ตั้งจำนวนของบรรทัดในออเดอร์ (ระบุด้วยรหัสบรรทัด)' },
+        },
+      )
+      .delete(
+        '/:id/lines/:lineId',
+        async ({ params, branch }) =>
+          toResponse(await this.removeLine.execute(params.id, params.lineId, (await branch()).id)),
+        {
+          params: orderSchemas.lineParams,
+          response: orderSchemas.order,
+          detail: { summary: 'เอาบรรทัดออกจากออเดอร์ (ระบุด้วยรหัสบรรทัด)' },
+        },
       )
       .post(
         '/:id/cancel',
