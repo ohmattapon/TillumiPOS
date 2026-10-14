@@ -17,7 +17,7 @@ const codeOf = (run: () => unknown) => {
 }
 
 describe('OrderEntity.open', () => {
-  const base = { branchId: 1, label: null, openedById: 3, openedByName: 'สมชาย', items: [] }
+  const base = { branchId: 1, label: null, tableId: null, openedById: 3, openedByName: 'สมชาย', items: [] }
 
   test('keeps a valid order as given', () => {
     expect(OrderEntity.open({ ...base, label: 'โต๊ะ 4', items: [item({ quantity: 2 })] })).toEqual({
@@ -247,6 +247,7 @@ describe('OrderEntity lines with options', () => {
     const opened = OrderEntity.open({
       branchId: 1,
       label: null,
+      tableId: null,
       openedById: 3,
       openedByName: 'สมชาย',
       items: [item({ options: [pearls] }), item({ options: [jelly] }), item({ options: [pearls], quantity: 2 })],
@@ -256,5 +257,130 @@ describe('OrderEntity lines with options', () => {
       ['ไข่มุก', 3],
       ['วุ้น', 1],
     ])
+  })
+})
+
+describe('OrderEntity on a table', () => {
+  test('moves to another table, or to none, only while open', () => {
+    const order = makeOrder({ tableId: 3 })
+
+    expect(order.moveToTable(5).tableId).toBe(5)
+    expect(order.moveToTable(null).tableId).toBeNull()
+    expect(codeOf(() => makeOrder({ status: 'cancelled', cancelReason: 'x' }).moveToTable(5))).toBe('ORDER_NOT_OPEN')
+  })
+})
+
+describe('OrderEntity merge', () => {
+  const into = () => makeOrder({ id: 1, items: [item({ lineId: 1, quantity: 2, unitPriceSatang: 2500 })] })
+  const from = () =>
+    makeOrder({
+      id: 2,
+      items: [
+        item({ lineId: 7, quantity: 1, unitPriceSatang: 9999 }),
+        item({ lineId: 8, ...cake, quantity: 1 }),
+      ],
+    })
+
+  test('takes the lines of the other order, adding the same product and keeping the quoted price', () => {
+    const merged = into().absorb(from())
+
+    expect(merged.items.map((line) => [line.productId, line.quantity, line.unitPriceSatang])).toEqual([
+      [1, 3, 2500],
+      [2, 1, 5700],
+    ])
+    expect(merged.subtotalSatang).toBe(3 * 2500 + 5700)
+  })
+
+  test('the source is closed as merged, with its lines moved away', () => {
+    const closed = from().markMerged(1)
+
+    expect(closed).toMatchObject({ status: 'merged', mergedIntoId: 1, items: [] })
+    expect(codeOf(() => closed.addItem(tea, 1))).toBe('ORDER_NOT_OPEN')
+    expect(codeOf(() => closed.cancel('x', 1))).toBe('ORDER_NOT_OPEN')
+    expect(codeOf(() => closed.markPaid(9))).toBe('ORDER_NOT_OPEN')
+  })
+
+  test('an order cannot be merged into itself, and a closed order cannot take part', () => {
+    expect(codeOf(() => into().absorb(into()))).toBe('ORDER_MERGE_SAME')
+    expect(codeOf(() => into().absorb(makeOrder({ id: 2, status: 'cancelled', cancelReason: 'x' })))).toBe(
+      'ORDER_NOT_OPEN',
+    )
+    expect(codeOf(() => makeOrder({ id: 1, status: 'paid', saleId: 5 }).absorb(from()))).toBe('ORDER_NOT_OPEN')
+  })
+
+  test('a merged order must say what it was merged into', () => {
+    expect(codeOf(() => makeOrder({ status: 'merged', mergedIntoId: null }))).toBe('INVALID_ORDER')
+  })
+})
+
+describe('OrderEntity split', () => {
+  const actor = { id: 9, displayName: 'สมหญิง' }
+  const order = () =>
+    makeOrder({
+      id: 4,
+      tableId: 3,
+      label: 'โต๊ะ 3',
+      items: [item({ lineId: 1, quantity: 3, unitPriceSatang: 2500 }), item({ lineId: 2, ...cake, quantity: 1 })],
+    })
+
+  test('moves part of a line to a new order on the same table, and the totals still add up', () => {
+    const { remaining, created } = order().splitOff([{ lineId: 1, quantity: 2 }], actor, null)
+
+    expect(remaining.items.map((line) => [line.lineId, line.quantity])).toEqual([
+      [1, 1],
+      [2, 1],
+    ])
+    expect(created).toMatchObject({ branchId: 1, tableId: 3, label: 'โต๊ะ 3', openedById: 9, openedByName: 'สมหญิง' })
+    expect(created.items.map((line) => [line.lineId, line.productId, line.quantity, line.unitPriceSatang])).toEqual([
+      [0, 1, 2, 2500],
+    ])
+    const createdTotal = created.items.reduce((total, line) => total + line.unitPriceSatang * line.quantity, 0)
+    expect(remaining.subtotalSatang + createdTotal).toBe(order().subtotalSatang)
+  })
+
+  test('moving a whole line takes it off the original', () => {
+    const { remaining, created } = order().splitOff([{ lineId: 2, quantity: 1 }], actor, 'แยก')
+
+    expect(remaining.items.map((line) => line.lineId)).toEqual([1])
+    expect(created.label).toBe('แยก')
+  })
+
+  test('refuses to take everything, to take nothing, or to take more than there is', () => {
+    expect(
+      codeOf(() =>
+        order().splitOff(
+          [
+            { lineId: 1, quantity: 3 },
+            { lineId: 2, quantity: 1 },
+          ],
+          actor,
+          null,
+        ),
+      ),
+    ).toBe('ORDER_SPLIT_EMPTY')
+    expect(codeOf(() => order().splitOff([], actor, null))).toBe('ORDER_SPLIT_EMPTY')
+    expect(codeOf(() => order().splitOff([{ lineId: 1, quantity: 4 }], actor, null))).toBe('ORDER_SPLIT_QUANTITY')
+    expect(codeOf(() => order().splitOff([{ lineId: 1, quantity: 0 }], actor, null))).toBe('INVALID_ORDER')
+  })
+
+  test('an unknown or repeated line is refused, and a closed order cannot be split', () => {
+    expect(codeOf(() => order().splitOff([{ lineId: 99, quantity: 1 }], actor, null))).toBe('ORDER_ITEM_NOT_FOUND')
+    expect(
+      codeOf(() =>
+        order().splitOff(
+          [
+            { lineId: 1, quantity: 1 },
+            { lineId: 1, quantity: 1 },
+          ],
+          actor,
+          null,
+        ),
+      ),
+    ).toBe('INVALID_ORDER')
+    expect(
+      codeOf(() =>
+        makeOrder({ status: 'cancelled', cancelReason: 'x' }).splitOff([{ lineId: 1, quantity: 1 }], actor, null),
+      ),
+    ).toBe('ORDER_NOT_OPEN')
   })
 })

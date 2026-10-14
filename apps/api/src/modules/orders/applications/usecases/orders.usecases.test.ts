@@ -81,7 +81,7 @@ describe('OpenOrderUseCase', () => {
   let useCase: OpenOrderUseCase
 
   beforeEach(() => {
-    orders.create.mockImplementation(async (order) => new OrderEntity({ ...order, id: 5, status: 'open', saleId: null, cancelReason: null, cancelledById: null, createdAt: new Date(), updatedAt: new Date() }))
+    orders.create.mockImplementation(async (order) => new OrderEntity({ ...order, id: 5, status: 'open', saleId: null, cancelReason: null, cancelledById: null, mergedIntoId: null, createdAt: new Date(), updatedAt: new Date() }))
     useCase = new OpenOrderUseCase(orders, products, unitOfWork, lineOptions)
   })
 
@@ -357,7 +357,7 @@ describe('options on order lines', () => {
           status: 'open',
           saleId: null,
           cancelReason: null,
-          cancelledById: null,
+          cancelledById: null, mergedIntoId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         }),
