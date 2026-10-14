@@ -93,8 +93,8 @@ async function check(name: string, run: () => Promise<void>) {
   }
 }
 
-async function signIn(browser: Browser, username: string, password: string): Promise<Page> {
-  const context = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: 'th-TH' })
+async function signIn(browser: Browser, username: string, password: string, viewport = { width: 1366, height: 900 }): Promise<Page> {
+  const context = await browser.newContext({ viewport, locale: 'th-TH' })
   const page = await context.newPage()
   page.setDefaultTimeout(15_000)
   await page.goto(WEB)
@@ -249,6 +249,23 @@ async function main() {
       await sellOneForCash(owner)
     })
 
+    await check('on a phone the cashier sells with the cart bar: open the cart, change the quantity both ways, pay', async () => {
+      const phone = await signIn(browser, 'cashier', CASHIER_PASSWORD, { width: 390, height: 844 })
+      try {
+        await phone.getByRole('button', { name: /น้ำดื่ม 600 มล\./ }).first().click()
+        // The bar shows the count and the total; a tap opens the whole cart. Up then down leaves one bottle.
+        await phone.getByRole('button', { name: /1 ชิ้น/ }).click()
+        await phone.getByRole('dialog').getByRole('button', { name: 'เพิ่มจำนวน น้ำดื่ม 600 มล.' }).click()
+        await phone.getByRole('dialog').getByRole('button', { name: 'ลดจำนวน น้ำดื่ม 600 มล.' }).click()
+        await phone.getByRole('dialog').getByRole('button', { name: /^ชำระเงิน/ }).click()
+        await phone.getByRole('button', { name: 'พอดี' }).click()
+        await phone.getByRole('button', { name: 'ยืนยันการชำระ' }).click()
+        await phone.getByRole('button', { name: 'ขายรายการต่อไป' }).waitFor()
+      } finally {
+        await phone.context().close()
+      }
+    })
+
     await check('with a tax ID the receipt is an abbreviated tax invoice, ends with the footer and prints 48 mm wide on 58 mm paper', async () => {
       const changed = await owner.request.patch(`${WEB}/api/v1/settings`, {
         data: { taxId: '0105500000000', receiptFooter: 'ขอบคุณที่ใช้บริการ', receiptPaperMm: 58 },
@@ -381,9 +398,9 @@ async function main() {
     await check('the owner starts counting: the report is frozen and shows what the drawer should hold', async () => {
       await owner.getByRole('button', { name: 'เริ่มนับปิดกะ' }).click()
       await owner.getByText(/ยอดที่หยุดไว้ตอนเริ่มนับ/).waitFor()
-      // 100.00 opening + three sales of 10.00 + one of 20.00 (10.00 and a 10.00 topping).
+      // 100.00 opening + four sales of 10.00 (one of them on a phone) + one of 20.00 (10.00 and a 10.00 topping).
       await owner.getByText('เงินสดที่ควรมี').first().waitFor()
-      await owner.getByText('฿150.00').first().waitFor()
+      await owner.getByText('฿160.00').first().waitFor()
     })
 
     await check('the other till can no longer take payment once counting has started', async () => {
@@ -397,7 +414,7 @@ async function main() {
     })
 
     await check('a count that differs needs a reason before the shift can be closed', async () => {
-      await owner.getByLabel('เงินสดที่นับได้').fill('125')
+      await owner.getByLabel('เงินสดที่นับได้').fill('135')
       const close = owner.getByRole('button', { name: 'ยืนยันปิดกะ' })
       if (!(await close.isDisabled())) throw new Error('Close is enabled without a reason for the difference')
       await owner.getByLabel('เหตุผลของยอดเงินที่ต่างกัน').fill('ทอนเงินผิด')
@@ -470,12 +487,56 @@ async function main() {
       if (!loaded) throw new Error('The product image did not load from /media')
     })
 
+    console.log('\nScreens:')
+
+    // Each check gets its own browser context and closes it, so the many page loads do not exhaust the browser's sockets.
+    for (const size of [{ width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1366, height: 900 }]) {
+      await check(`no page scrolls sideways at ${size.width} px`, async () => {
+        const screen = await signIn(browser, 'admin', OWNER_PASSWORD, size)
+        try {
+          const wide: string[] = []
+          for (const path of ['/', '/today', '/shifts', '/products', '/categories', '/modifiers', '/tables', '/branches', '/users', '/settings']) {
+            await screen.goto(`${WEB}${path}`)
+            await screen.waitForLoadState('networkidle')
+            const overflow = await screen.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+            if (overflow > 0) wide.push(`${path} (+${overflow}px)`)
+          }
+          if (wide.length) throw new Error(`Pages wider than the screen at ${size.width} px: ${wide.join(', ')}`)
+        } finally {
+          await screen.context().close()
+        }
+      })
+    }
+
+    await check('every control in the main area of the sell screen is at least 44 px tall at 768 px', async () => {
+      const screen = await signIn(browser, 'admin', OWNER_PASSWORD, { width: 768, height: 1024 })
+      try {
+        await screen.goto(WEB)
+        await screen.waitForLoadState('networkidle')
+        const small = await screen.evaluate(() =>
+          [...document.querySelectorAll('main button, main input, main [role="tab"]')]
+            .filter((element) => (element as HTMLElement).offsetParent !== null)
+            .map((element) => ({
+              name: element.getAttribute('aria-label') ?? element.textContent?.trim() ?? element.tagName,
+              height: element.getBoundingClientRect().height,
+            }))
+            .filter((control) => control.height < 43.5)
+            .map((control) => `${control.name} (${Math.round(control.height)}px)`),
+        )
+        if (small.length) throw new Error(`Too small to tap: ${small.join(', ')}`)
+      } finally {
+        await screen.context().close()
+      }
+    })
+
     await check('in English the same screens read in English', async () => {
       const changed = await owner.request.patch(`${WEB}/api/v1/settings`, { data: { locale: 'en' } })
       if (!changed.ok()) throw new Error(`Could not switch language: ${changed.status()}`)
       await owner.goto(`${WEB}/shifts`)
+      await owner.waitForLoadState('networkidle')
       await owner.getByRole('button', { name: 'Open shift and start selling' }).waitFor()
       await owner.goto(WEB)
+      await owner.waitForLoadState('networkidle')
       await owner.getByRole('button', { name: 'Open a shift to sell' }).waitFor()
     })
   } finally {
