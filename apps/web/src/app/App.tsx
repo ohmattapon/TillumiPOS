@@ -6,10 +6,12 @@ import { Navigate, Route, Routes } from 'react-router'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { LoginPage, meQuery, useLogout } from '@/features/auth'
 import { BranchesPage, useActiveBranch } from '@/features/branches'
+import { CategoriesPage } from '@/features/categories'
 import { clearCart, PosPage } from '@/features/pos'
 import { ProductsPage } from '@/features/products'
 import { TodayPage } from '@/features/sales'
 import { SettingsPage, useSettings } from '@/features/settings'
+import { UsersPage } from '@/features/users'
 import { ShiftsPage, useRegisterSelectionStore } from '@/features/shifts'
 import { AppSidebar } from './AppSidebar'
 import { applyLocale } from './i18n'
@@ -36,7 +38,9 @@ function Shell({ user }: { user: User }) {
           <Route index element={<PosPage />} />
           <Route path="today" element={<TodayPage isOwner={isOwner} />} />
           {isOwner && <Route path="products" element={<ProductsPage />} />}
+          {isOwner && <Route path="categories" element={<CategoriesPage />} />}
           {isOwner && <Route path="branches" element={<BranchesPage />} />}
+          {isOwner && <Route path="users" element={<UsersPage />} />}
           {isOwner && <Route path="settings" element={<SettingsPage />} />}
           <Route path="shifts" element={<ShiftsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

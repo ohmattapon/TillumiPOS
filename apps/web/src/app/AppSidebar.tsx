@@ -10,7 +10,9 @@ import {
   ShoppingCart,
   WalletCards,
   Store,
+  Tags,
   UserRound,
+  Users,
   type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -77,7 +79,9 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
             label: t('groups.manage'),
             items: [
               { to: '/products', label: t('nav.products'), icon: Package, badge: lowStockCount },
+              { to: '/categories', label: t('nav.categories'), icon: Tags },
               { to: '/branches', label: t('nav.branches'), icon: Building2 },
+              { to: '/users', label: t('nav.users'), icon: Users },
               { to: '/settings', label: t('nav.settings'), icon: Settings },
             ],
           },

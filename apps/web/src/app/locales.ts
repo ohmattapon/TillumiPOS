@@ -8,7 +8,9 @@ const th = {
     today: 'วันนี้',
     shifts: 'กะและลิ้นชัก',
     products: 'สินค้าและสต็อก',
+    categories: 'หมวดหมู่',
     branches: 'สาขา',
+    users: 'ผู้ใช้',
     settings: 'ตั้งค่าร้าน',
   },
   roles: {
@@ -28,7 +30,9 @@ const en = {
     today: 'Today',
     shifts: 'Shifts and drawer',
     products: 'Products & stock',
+    categories: 'Categories',
     branches: 'Branches',
+    users: 'Users',
     settings: 'Shop settings',
   },
   roles: {
