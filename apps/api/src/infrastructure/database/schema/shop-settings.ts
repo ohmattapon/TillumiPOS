@@ -17,6 +17,9 @@ export const shopSettings = pgTable(
     vatRateBp: integer().notNull(),
     timeZone: text().notNull(),
     locale: text().notNull(),
+    // Width of the thermal paper receipts are laid out for: 58 or 80.
+    receiptPaperMm: integer().notNull().default(80),
+    receiptFooter: text(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [check('shop_settings_single_row', sql`${table.id} = 1`)],

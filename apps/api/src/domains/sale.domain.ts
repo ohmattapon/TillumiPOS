@@ -25,6 +25,21 @@ export interface SalePayment {
   amountSatang: number
 }
 
+/**
+ * What the heading of the receipt said when the sale was made, kept so an old receipt never changes
+ * when the shop is renamed or a branch moves. All null on sales recorded before this was kept.
+ */
+export interface SaleSeller {
+  shopName: string | null
+  shopTaxId: string | null
+  branchName: string | null
+  /** The address and phone the receipt prints: the branch's own, or the shop's where the branch has none. */
+  shopAddress: string | null
+  shopPhone: string | null
+}
+
+const UNKNOWN_SELLER: SaleSeller = { shopName: null, shopTaxId: null, branchName: null, shopAddress: null, shopPhone: null }
+
 interface SaleTotals {
   subtotalSatang: number
   discountSatang: number
@@ -36,7 +51,7 @@ interface SaleTotals {
 }
 
 /** A priced and settled sale that has not been stored yet: it has no id, receipt number or timestamp. */
-export interface NewSale extends SaleTotals {
+export interface NewSale extends SaleTotals, SaleSeller {
   /** How VAT was applied to this sale, kept so the receipt never changes when the shop settings do. */
   vatMode: VatMode
   /** The rate in basis points that was applied; 0 when no VAT was charged. */
@@ -71,6 +86,7 @@ export interface CompleteSaleInput {
   branchId: number
   shiftId?: number | null
   cashier: { id: number; displayName: string }
+  seller?: SaleSeller
 }
 
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
@@ -100,6 +116,11 @@ export class SaleEntity {
   public readonly shiftId: number | null
   public readonly cashierId: number
   public readonly cashierName: string
+  public readonly shopName: string | null
+  public readonly shopTaxId: string | null
+  public readonly branchName: string | null
+  public readonly shopAddress: string | null
+  public readonly shopPhone: string | null
   public readonly voidedById: number | null
   public readonly voidedAt: Date | null
   public readonly voidReason: string | null
@@ -127,6 +148,12 @@ export class SaleEntity {
     this.shiftId = props.shiftId ?? null
     this.cashierId = props.cashierId
     this.cashierName = props.cashierName
+    // `?? null`: a sale restored from a snapshot stored before these were kept has none of them.
+    this.shopName = props.shopName ?? null
+    this.shopTaxId = props.shopTaxId ?? null
+    this.branchName = props.branchName ?? null
+    this.shopAddress = props.shopAddress ?? null
+    this.shopPhone = props.shopPhone ?? null
     this.voidedById = props.voidedById
     this.voidedAt = props.voidedAt
     this.voidReason = props.voidReason
@@ -139,7 +166,7 @@ export class SaleEntity {
    * Prices and settles a sale. All amounts are integer satang. Prices include VAT,
    * so VAT is extracted from the discounted total rather than added on top.
    */
-  static complete({ lines, discountSatang, payments, vatMode, vatRateBp, branchId, shiftId, cashier }: CompleteSaleInput): NewSale {
+  static complete({ lines, discountSatang, payments, vatMode, vatRateBp, branchId, shiftId, cashier, seller }: CompleteSaleInput): NewSale {
     if (lines.length === 0) throw new DomainError('บิลต้องมีสินค้าอย่างน้อย 1 รายการ', 'EMPTY_SALE')
     if (lines.some((line) => !Number.isInteger(line.quantity) || line.quantity < 1))
       throw new DomainError('จำนวนสินค้าต้องเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป', 'INVALID_QUANTITY')
@@ -185,6 +212,7 @@ export class SaleEntity {
       shiftId: shiftId ?? null,
       cashierId: cashier.id,
       cashierName: cashier.displayName,
+      ...(seller ?? UNKNOWN_SELLER),
       items,
       payments: payments.map(({ method, amountSatang }) => ({ method, amountSatang })),
     }
@@ -216,6 +244,11 @@ export class SaleEntity {
       shiftId: this.shiftId,
       cashierId: this.cashierId,
       cashierName: this.cashierName,
+      shopName: this.shopName,
+      shopTaxId: this.shopTaxId,
+      branchName: this.branchName,
+      shopAddress: this.shopAddress,
+      shopPhone: this.shopPhone,
       voidedById: this.voidedById,
       voidedAt: this.voidedAt,
       voidReason: this.voidReason,

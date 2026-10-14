@@ -69,6 +69,8 @@ describe('UpdateShopSettingsUseCase', () => {
     ['a fractional VAT rate', { vatRateBp: 7.5 }],
     ['an unknown VAT mode', { vatMode: 'maybe' }],
     ['an unsupported language', { locale: 'fr' }],
+    ['a paper width no printer uses', { receiptPaperMm: 72 }],
+    ['a receipt footer over 200 characters', { receiptFooter: 'x'.repeat(201) }],
     ['a currency code of the wrong length', { currency: 'BAHT' }],
   ])('rejects %s before reading or storing anything', async (_label, input) => {
     await expect(update(input)).rejects.toBeInstanceOf(ZodError)

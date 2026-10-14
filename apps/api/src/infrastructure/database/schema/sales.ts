@@ -48,6 +48,12 @@ export const sales = pgTable(
       .notNull()
       .references(() => users.id),
     cashierName: text().notNull(),
+    // The receipt heading as it was when the sale was made. Null on sales recorded before these were kept.
+    shopName: text(),
+    shopTaxId: text(),
+    branchName: text(),
+    shopAddress: text(),
+    shopPhone: text(),
     voidedById: integer().references(() => users.id),
     voidedAt: timestamp({ withTimezone: true }),
     voidReason: text(),

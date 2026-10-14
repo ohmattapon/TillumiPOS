@@ -19,6 +19,12 @@ const header = {
   changeSatang: t.Integer(),
   cashierId: t.Integer(),
   cashierName: t.String(),
+  // The receipt heading as it was when the sale was made; null on sales recorded before it was kept.
+  shopName: t.Nullable(t.String()),
+  shopTaxId: t.Nullable(t.String()),
+  branchName: t.Nullable(t.String()),
+  shopAddress: t.Nullable(t.String()),
+  shopPhone: t.Nullable(t.String()),
   voidedAt: t.Nullable(t.Date()),
   voidReason: t.Nullable(t.String()),
   createdAt: t.Date(),
