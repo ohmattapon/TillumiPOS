@@ -1,6 +1,6 @@
 import type { Sale } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList } from 'lucide-react'
+import { ClipboardList, LayoutGrid } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/PageHeader'
@@ -16,6 +16,7 @@ import { useCart } from '../hooks/use-cart'
 import { hasKeyboard } from '../lib/focus'
 import { useCartStore } from '../store/cart.store'
 import { CartPanel } from './CartPanel'
+import { FloorDialog } from './FloorDialog'
 import { PaymentDialog } from './PaymentDialog'
 import { OpenOrdersDialog } from './OpenOrdersDialog'
 import { ProductPicker } from './ProductPicker'
@@ -41,6 +42,7 @@ export function PosPage() {
   const needsShift = checkoutMode.data?.checkoutMode === 'shifts'
   const shiftReady = checkoutMode.data?.checkoutMode === 'legacy' || (needsShift && currentShift.data?.status === 'open')
   const [isListingOrders, setIsListingOrders] = useState(false)
+  const [isChoosingTable, setIsChoosingTable] = useState(false)
   const [isSavingOrder, setIsSavingOrder] = useState(false)
 
   const [isPaying, setIsPaying] = useState(false)
@@ -112,6 +114,10 @@ export function PosPage() {
     <>
       <PageHeader title={t('title')} highlight={date.longDate(today)} description={t('description')}>
         {needsShift && <Button variant="outline" className="h-9 px-3" onClick={() => { window.location.href = '/shifts' }}>{shiftReady ? t('shiftReady') : t('shiftRequired')}</Button>}
+        <Button variant="outline" className="h-9 px-3" onClick={() => setIsChoosingTable(true)}>
+          <LayoutGrid />
+          {t('floor.button')}
+        </Button>
         <Button variant="outline" className="h-9 px-3" onClick={() => setIsListingOrders(true)}>
           <ClipboardList />
           {t('orders.button')}
@@ -145,6 +151,7 @@ export function PosPage() {
 
       {receipt && <ReceiptDialog sale={receipt} onClose={closeReceipt} />}
       {isListingOrders && <OpenOrdersDialog onClose={() => setIsListingOrders(false)} />}
+      {isChoosingTable && <FloorDialog onClose={() => setIsChoosingTable(false)} />}
       {isSavingOrder && <SaveOrderDialog onClose={() => setIsSavingOrder(false)} />}
     </>
   )
