@@ -46,7 +46,10 @@ export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions,
               <TableRow
                 key={rowKey(row)}
                 className={cn(muted?.(row) && 'text-muted-foreground', onSelect && 'cursor-pointer')}
+                // A row that opens something is reachable from the keyboard as well as by the mouse.
+                tabIndex={onSelect ? 0 : undefined}
                 onClick={onSelect && (() => onSelect(row))}
+                onKeyDown={onSelect && ((event) => event.key === 'Enter' && onSelect(row))}
               >
                 {columns.map((column) => (
                   <TableCell key={column.id} className={cn(tableCell, column.align === 'right' && 'text-right tabular-nums', column.className)}>
@@ -71,17 +74,17 @@ export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions,
         {rows.map((row) => {
           const body = (
             <>
-              <span className="block truncate font-medium">
+              <div className="min-w-0 font-medium">
                 {primary.map((column) => (
-                  <span key={column.id} className="mr-2">{column.cell(row)}</span>
+                  <div key={column.id} className="truncate">{column.cell(row)}</div>
                 ))}
-              </span>
+              </div>
               {secondary.length > 0 && (
-                <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   {secondary.map((column) => (
                     <span key={column.id} className={cn(column.align === 'right' && 'tabular-nums')}>{column.cell(row)}</span>
                   ))}
-                </span>
+                </div>
               )}
             </>
           )
