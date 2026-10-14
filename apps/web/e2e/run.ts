@@ -2,17 +2,22 @@
 //
 //   bun run e2e            (from the repo root; the database container must be up)
 //
-// It never touches the development database or the real bank: it creates its own database (pos_e2e),
-// starts its own API and web server on spare ports, with no SCB settings, and removes nothing of yours.
+// It never touches the development database or the real bank: it creates its own databases (pos_e2e, and
+// pos_e2e_setup for the first-run setup page), starts its own API and web servers on spare ports, with no
+// SCB settings, and removes nothing of yours.
 // It drives the Chrome that is already installed, headless.
 import { SQL } from 'bun'
 import { chromium, type Browser, type Page } from 'playwright-core'
 
 const DB_ADMIN = 'postgres://pos:pos@localhost:5433/postgres'
 const DB_NAME = 'pos_e2e'
+const SETUP_DB_NAME = 'pos_e2e_setup'
 const API_PORT = 3190
 const WEB_PORT = 5290
+const SETUP_API_PORT = API_PORT + 10
+const SETUP_WEB_PORT = WEB_PORT + 10
 const WEB = `http://localhost:${WEB_PORT}`
+const SETUP_WEB = `http://localhost:${SETUP_WEB_PORT}`
 const OWNER_PASSWORD = 'e2e-owner-password'
 const CASHIER_PASSWORD = 'e2e-cashier-password'
 const root = new URL('../../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
@@ -35,21 +40,29 @@ const apiEnv = {
   SCB_REF3_PREFIX: '',
 }
 
+// The same settings, pointed at a database nobody has an account in: what a fresh install looks like.
+const setupApiEnv = {
+  ...apiEnv,
+  PORT: String(SETUP_API_PORT),
+  DATABASE_URL: `postgres://pos:pos@localhost:5433/${SETUP_DB_NAME}`,
+  SEED_OWNER_PASSWORD: undefined,
+}
+
 const children: ReturnType<typeof Bun.spawn>[] = []
 const results: { name: string; ok: boolean; detail?: string }[] = []
 
-async function freshDatabase() {
+async function freshDatabase(name: string) {
   const admin = new SQL(DB_ADMIN)
   try {
-    await admin.unsafe(`drop database if exists "${DB_NAME}" with (force)`)
-    await admin.unsafe(`create database "${DB_NAME}"`)
+    await admin.unsafe(`drop database if exists "${name}" with (force)`)
+    await admin.unsafe(`create database "${name}"`)
   } finally {
     await admin.close()
   }
 }
 
-async function runOnce(args: string[]) {
-  const child = Bun.spawn(['bun', ...args], { cwd: `${root}/apps/api`, env: apiEnv, stdout: 'pipe', stderr: 'pipe' })
+async function runOnce(args: string[], env: Record<string, string | undefined> = apiEnv) {
+  const child = Bun.spawn(['bun', ...args], { cwd: `${root}/apps/api`, env, stdout: 'pipe', stderr: 'pipe' })
   if ((await child.exited) !== 0) throw new Error(`${args.join(' ')} failed: ${await new Response(child.stderr).text()}`)
 }
 
@@ -99,26 +112,105 @@ async function sellOneForCash(page: Page) {
   await page.getByRole('button', { name: 'ขายรายการต่อไป' }).waitFor()
 }
 
-async function main() {
-  console.log('Preparing a throwaway database, API and web server…')
-  await freshDatabase()
-  await runOnce(['src/infrastructure/database/migrate.ts'])
-  await runOnce(['src/infrastructure/database/seed.ts'])
-
-  children.push(Bun.spawn(['bun', 'src/index.ts'], { cwd: `${root}/apps/api`, env: apiEnv, stdout: 'ignore', stderr: 'inherit' }))
+/** Starts an API and a web server on their own ports; returns what the API has printed so far. */
+function startServers(env: Record<string, string | undefined>, apiPort: number, webPort: number): () => string {
+  const api = Bun.spawn(['bun', 'src/index.ts'], { cwd: `${root}/apps/api`, env, stdout: 'pipe', stderr: 'inherit' })
+  let printed = ''
+  void (async () => {
+    const decoder = new TextDecoder()
+    for await (const chunk of api.stdout) printed += decoder.decode(chunk, { stream: true })
+  })()
+  children.push(api)
   children.push(
-    Bun.spawn(['bun', 'x', 'vite', '--port', String(WEB_PORT), '--strictPort'], {
+    Bun.spawn(['bun', 'x', 'vite', '--port', String(webPort), '--strictPort'], {
       cwd: `${root}/apps/web`,
-      env: { ...process.env, API_TARGET: `http://localhost:${API_PORT}` },
+      env: { ...process.env, API_TARGET: `http://localhost:${apiPort}` },
       stdout: 'ignore',
       stderr: 'inherit',
     }),
   )
+  return () => printed
+}
+
+/** The first-run setup page on an empty database: the code comes from what the API prints, as it would in `docker compose logs`. */
+async function runSetupFlow(browser: Browser) {
+  console.log('\nFirst-run setup, empty database:')
+  await freshDatabase(SETUP_DB_NAME)
+  await runOnce(['src/infrastructure/database/migrate.ts'], setupApiEnv)
+  const printed = startServers(setupApiEnv, SETUP_API_PORT, SETUP_WEB_PORT)
+  await waitFor(`http://localhost:${SETUP_API_PORT}/api/v1/health`, 'Setup API')
+  await waitFor(SETUP_WEB, 'Setup web')
+
+  const context = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: 'th-TH' })
+  const page = await context.newPage()
+  page.setDefaultTimeout(15_000)
+
+  const fillForm = async (code: string) => {
+    const fields: [string, string][] = [
+      ['รหัสตั้งค่า', code],
+      ['ชื่อร้าน', 'ร้านทดสอบ'],
+      ['ชื่อสาขาแรก', 'สาขาหลัก'],
+      ['ชื่อผู้ใช้ของเจ้าของ', 'shopowner'],
+      ['ชื่อที่แสดง', 'เจ้าของร้าน'],
+      ['รหัสผ่าน', 'e2e-first-owner-password'],
+      ['ยืนยันรหัสผ่าน', 'e2e-first-owner-password'],
+    ]
+    for (const [label, value] of fields) await page.getByLabel(label, { exact: true }).fill(value)
+  }
+
+  try {
+    await check('with nobody registered, the page asks for first-time setup instead of a sign-in', async () => {
+      await page.goto(SETUP_WEB)
+      await page.getByText('ตั้งค่าร้านครั้งแรก', { exact: true }).waitFor()
+      if ((await page.getByRole('button', { name: 'เข้าสู่ระบบ', exact: true }).count()) > 0)
+        throw new Error('The sign-in form is shown while nobody has an account')
+    })
+
+    await check('a wrong setup code is refused with a message, and nothing is created', async () => {
+      await fillForm('AAAAAAAAAAAA')
+      await page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' }).click()
+      await page.getByRole('alert').getByText(/รหัสตั้งค่าไม่ถูกต้อง/).waitFor()
+      const status = await (await fetch(`http://localhost:${SETUP_API_PORT}/api/v1/setup`)).json()
+      if (status.needsSetup !== true) throw new Error('A wrong code ended the setup')
+    })
+
+    await check('the code printed by the API creates the owner and signs in', async () => {
+      let code: string | undefined
+      for (let attempt = 0; attempt < 30 && code === undefined; attempt++) {
+        code = /SETUP CODE[^:]*:\s+([A-Z0-9]{12})/.exec(printed())?.[1]
+        if (code === undefined) await Bun.sleep(500)
+      }
+      if (code === undefined) throw new Error('The API did not print a setup code')
+      await page.getByLabel('รหัสตั้งค่า', { exact: true }).fill(code)
+      await page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' }).click()
+      await page.getByRole('heading', { name: /ขายสินค้า/ }).waitFor()
+    })
+
+    await check('after a reload the owner is still signed in and the setup page is gone', async () => {
+      await page.reload()
+      await page.getByRole('heading', { name: /ขายสินค้า/ }).waitFor()
+      if ((await page.getByText('ตั้งค่าร้านครั้งแรก', { exact: true }).count()) > 0)
+        throw new Error('The setup page is still shown after setup')
+    })
+  } finally {
+    await context.close()
+  }
+}
+
+async function main() {
+  console.log('Preparing a throwaway database, API and web server…')
+  await freshDatabase(DB_NAME)
+  await runOnce(['src/infrastructure/database/migrate.ts'])
+  await runOnce(['src/infrastructure/database/seed.ts'])
+
+  startServers(apiEnv, API_PORT, WEB_PORT)
   await waitFor(`http://localhost:${API_PORT}/api/v1/health`, 'API')
   await waitFor(WEB, 'Web')
 
   const browser = await chromium.launch({ channel: 'chrome', headless: true })
   try {
+    await runSetupFlow(browser)
+
     const owner = await signIn(browser, 'admin', OWNER_PASSWORD)
 
     // A second person, with their own account, on their own "till".
