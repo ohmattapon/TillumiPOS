@@ -130,6 +130,13 @@ apps/api/src/
 - บรรทัดของออเดอร์และบิลคือสินค้า + ชุดตัวเลือก (`options` เป็น snapshot) `unitPriceSatang` รวมราคาตัวเลือกแล้ว และ `unitCostSatang` ของบิลรวมต้นทุนตัวเลือก ห้ามแก้สูตร `calculateTotals` ต้นทุนของตัวเลือกไม่ออกใน response ของออเดอร์และบิล
 - สต็อกตรวจที่ยอดรวมของสินค้า ไม่ใช่ต่อบรรทัด บรรทัดของออเดอร์แก้ด้วย `lineId` (repository เทียบบรรทัด ไม่ลบแล้วใส่ใหม่) เส้นทางด้วย `productId` ใช้กับบรรทัดที่ไม่มีตัวเลือกเท่านั้น
 
+### โต๊ะ (tables)
+
+- โต๊ะเป็นของสาขา ชื่อห้ามซ้ำในสาขา ปิดใช้ได้แต่ลบไม่ได้ และปิดไม่ได้ถ้ามีออเดอร์เปิดอยู่ ตำแหน่งและขนาดเป็นจำนวนเต็มในหน่วยของผัง (กว้าง 1000 สูง 700) และ entity ปฏิเสธค่านอกผังเอง
+- สถานะของโต๊ะ (ว่าง/มีลูกค้า) คำนวณจากออเดอร์เปิด ห้ามเก็บเป็นคอลัมน์ โมดูล `tables` ถามผ่าน port `ITableOccupancy` ซึ่งโมดูล `orders` เป็นผู้ตอบ ห้ามอ่านตาราง `orders` ตรง
+- โต๊ะหนึ่งมีออเดอร์เปิดได้หลายใบ ย้ายโต๊ะเปลี่ยน `orders.table_id` รวมบิลย้ายบรรทัดของต้นทางเข้าปลายทางแล้วปิดต้นทางเป็น `merged` (พร้อม `merged_into_id` และล้างบรรทัด) แยกบิลสร้างออเดอร์ใหม่ที่โต๊ะเดียวกันโดยถือราคาที่ quote ไว้ ต้องเหลืออย่างน้อยหนึ่งรายการในออเดอร์เดิม
+- รวมบิลล็อกแถวออเดอร์ทั้งสองตามลำดับ id เสมอ กัน deadlock เมื่อสองเครื่องรวมสวนทางกัน
+
 ### การชำระด้วย QR (SCB)
 
 - สถานะ "ชำระแล้ว" ของ QR มาจากการที่ระบบเรียก inquiry ของ SCB เองเท่านั้น ห้ามเชื่อ body ของ callback (`/payments/qr/scb/confirmation`) เพราะ SCB ไม่ได้เซ็นชื่อมา: callback เป็นแค่สัญญาณให้ไปตรวจ
@@ -165,7 +172,7 @@ apps/api/src/
 apps/web/src/
 ├── app/                  ประกอบแอป: App.tsx (เส้นทาง), AppSidebar.tsx, i18n.ts (รวมไฟล์ภาษาของทุก feature)
 ├── features/
-│   └── <feature>/        auth, branches, categories, modifiers, orders, products, sales, pos, settings, shifts, users
+│   └── <feature>/        auth, branches, categories, modifiers, orders, products, sales, pos, settings, shifts, tables, users
 │       ├── index.ts      ทางเข้าสาธารณะของ feature: ส่งออกเฉพาะที่ feature อื่นใช้
 │       ├── api.ts        query key, queryOptions และ mutation hook ของ feature (TanStack Query)
 │       ├── components/   หน้าและคอมโพเนนต์ของ feature
