@@ -23,6 +23,9 @@ interface Props<T> {
  * A table on screens from 640px, a list on phones. Both are rendered and CSS shows one, so nothing
  * measures the screen and nothing flickers while the page loads.
  */
+// Wide-only columns need the room of a laptop; tablets get the columns that matter for the job.
+const wideOnly = <T,>(column: Column<T>) => column.priority === 'wide-only' && 'hidden lg:table-cell'
+
 export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions, onSelect, rowLabel, muted }: Props<T>) {
   const { primary, secondary } = splitColumns(columns)
   const isEmpty = !isPending && rows.length === 0
@@ -34,7 +37,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions,
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               {columns.map((column) => (
-                <TableHead key={column.id} className={cn(tableHead, column.align === 'right' && 'text-right')}>
+                <TableHead key={column.id} className={cn(tableHead, column.align === 'right' && 'text-right', wideOnly(column))}>
                   {column.header}
                 </TableHead>
               ))}
@@ -52,7 +55,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions,
                 onKeyDown={onSelect && ((event) => event.key === 'Enter' && onSelect(row))}
               >
                 {columns.map((column) => (
-                  <TableCell key={column.id} className={cn(tableCell, column.align === 'right' && 'text-right tabular-nums', column.className)}>
+                  <TableCell key={column.id} className={cn(tableCell, column.align === 'right' && 'text-right tabular-nums', column.className, wideOnly(column))}>
                     {column.cell(row)}
                   </TableCell>
                 ))}
