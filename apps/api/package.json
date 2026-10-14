@@ -6,7 +6,8 @@
     ".": "./src/app.ts",
     "./types": "./src/types.ts",
     "./pricing": "./src/domains/pricing.ts",
-    "./shop-settings": "./src/domains/shop-settings.domain.ts"
+    "./shop-settings": "./src/domains/shop-settings.domain.ts",
+    "./modifiers": "./src/domains/modifier.domain.ts"
   },
   "scripts": {
     "dev": "bun --env-file=../../.env --watch src/index.ts",
