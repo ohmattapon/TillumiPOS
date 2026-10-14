@@ -3,6 +3,8 @@ import type { IBranchRepository } from '../modules/branches/applications/ports/b
 import type { ICategoryRepository } from '../modules/categories/applications/ports/category.repository'
 import type { IStockLedger } from '../modules/inventory/applications/ports/stock-ledger.port'
 import type { IStockMovementRepository } from '../modules/inventory/applications/ports/stock-movement.repository'
+import type { ILineOptionsResolver } from '../modules/modifiers/applications/ports/line-options-resolver.port'
+import type { IModifierRepository } from '../modules/modifiers/applications/ports/modifier.repository'
 import type { IOrderRepository } from '../modules/orders/applications/ports/order.repository'
 import type { IQrPaymentGateway } from '../modules/qr-payments/applications/ports/qr-payment-gateway.port'
 import type { IQrPaymentRepository } from '../modules/qr-payments/applications/ports/qr-payment.repository'
@@ -164,4 +166,23 @@ export const mockShiftLedger = (): Mocked<IShiftLedger> => ({
 
 export const mockShiftSettingsGuard = (): Mocked<IShiftSettingsGuard> => ({
   assertCurrencyChangeAllowed: mock<IShiftSettingsGuard['assertCurrencyChangeAllowed']>(async () => {}),
+})
+
+export const mockModifierRepository = (): Mocked<IModifierRepository> => ({
+  findAllGroups: mock<IModifierRepository['findAllGroups']>(),
+  findGroupView: mock<IModifierRepository['findGroupView']>(),
+  findGroupById: mock<IModifierRepository['findGroupById']>(),
+  findGroupsByIds: mock<IModifierRepository['findGroupsByIds']>(),
+  findOptionById: mock<IModifierRepository['findOptionById']>(),
+  findGroupsForProduct: mock<IModifierRepository['findGroupsForProduct']>(),
+  createGroup: mock<IModifierRepository['createGroup']>(),
+  updateGroup: mock<IModifierRepository['updateGroup']>(),
+  createOption: mock<IModifierRepository['createOption']>(),
+  updateOption: mock<IModifierRepository['updateOption']>(),
+  setProductGroups: mock<IModifierRepository['setProductGroups']>(),
+})
+
+/** Resolves every choice to nothing by default: a product without option groups. */
+export const mockLineOptionsResolver = (): Mocked<ILineOptionsResolver> => ({
+  resolve: mock<ILineOptionsResolver['resolve']>(async () => ({ options: [], priceSatang: 0, costSatang: 0, key: '' })),
 })
