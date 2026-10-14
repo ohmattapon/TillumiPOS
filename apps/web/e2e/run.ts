@@ -7,6 +7,9 @@
 // SCB settings, and removes nothing of yours.
 // It drives the Chrome that is already installed, headless.
 import { SQL } from 'bun'
+import { mkdtemp } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { chromium, type Browser, type Page } from 'playwright-core'
 
 const DB_ADMIN = 'postgres://pos:pos@localhost:5433/postgres'
@@ -27,9 +30,9 @@ const apiEnv = {
   PORT: String(API_PORT),
   DATABASE_URL: `postgres://pos:pos@localhost:5433/${DB_NAME}`,
   JWT_SECRET: 'e2e-only-secret-e2e-only-secret-e2e-only',
-  // Unroutable on purpose: these checks never store an image.
-  MEDIA_URL: 'http://127.0.0.1:9',
-  MEDIA_TOKEN: 'e2e-media-token',
+  // Images go to a throwaway folder on this machine, so the checks never reach a real bucket.
+  MEDIA_STORAGE: 'local',
+  MEDIA_DIR: await mkdtemp(join(tmpdir(), 'easypos-e2e-media-')),
   COOKIE_SECURE: 'false',
   SEED_OWNER_PASSWORD: OWNER_PASSWORD,
   CHECKOUT_MODE: 'shifts',
@@ -445,6 +448,26 @@ async function main() {
       await row.getByRole('button', { name: /การทำงานอื่นของ ของทดสอบ/ }).click()
       await owner.getByRole('menuitem', { name: 'ปิดใช้งาน' }).click()
       await row.getByText('ปิดใช้งาน').waitFor()
+    })
+
+    await check('the owner uploads a product image from the product form, and the till shows it after a reload', async () => {
+      await owner.goto(`${WEB}/products`)
+      const row = owner.getByRole('row', { name: /น้ำดื่ม 600 มล\./ })
+      await row.getByRole('button', { name: /การทำงานอื่นของ น้ำดื่ม 600 มล\./ }).click()
+      await owner.getByRole('menuitem', { name: 'แก้ไขสินค้า' }).click()
+      const form = owner.getByRole('dialog')
+      // A 1x1 PNG: the smallest real image.
+      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+      await form.locator('input[type=file]').setInputFiles({ name: 'p.png', mimeType: 'image/png', buffer: png })
+      await form.getByRole('button', { name: 'บันทึก' }).click()
+      await form.waitFor({ state: 'detached' })
+
+      await owner.goto(WEB)
+      await owner.reload()
+      const image = owner.locator('img[src^="/media/products/"]').first()
+      await image.waitFor()
+      const loaded = await image.evaluate((element) => (element as HTMLImageElement).complete && (element as HTMLImageElement).naturalWidth > 0)
+      if (!loaded) throw new Error('The product image did not load from /media')
     })
 
     await check('in English the same screens read in English', async () => {
