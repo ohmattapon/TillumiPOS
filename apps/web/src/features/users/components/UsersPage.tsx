@@ -5,7 +5,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
-import { Panel, tableCell, tableHead } from '@/components/Panel'
+import { Panel } from '@/components/Panel'
+import { DataTable } from '@/components/DataTable'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,7 +15,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { meQuery } from '@/features/auth'
 import { branchesQuery, useActiveBranch } from '@/features/branches'
 import { usersQuery, useUpdateUser } from '../api'
@@ -59,60 +59,55 @@ export function UsersPage() {
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         <Panel title={t('list.title')} description={t('list.description')}>
           {users.error && <p className="p-4 text-sm text-destructive">{users.error.message}</p>}
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className={tableHead}>{t('columns.name')}</TableHead>
-                <TableHead className={tableHead}>{t('columns.username')}</TableHead>
-                <TableHead className={tableHead}>{t('columns.role')}</TableHead>
-                <TableHead className={tableHead}>{t('columns.branch')}</TableHead>
-                <TableHead className={tableHead}>{t('columns.status')}</TableHead>
-                <TableHead className={`${tableHead} w-0`}>
-                  <span className="sr-only">{t('columns.actions')}</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {all.map((user) => (
-                <TableRow key={user.id} className={user.isActive ? '' : 'text-muted-foreground'}>
-                  <TableCell className={`${tableCell} font-medium`}>
+          <DataTable
+            rows={all}
+            rowKey={(user) => user.id}
+            isPending={users.isPending}
+            empty={t('list.empty')}
+            muted={(user) => !user.isActive}
+            columns={[
+              {
+                id: 'name',
+                header: t('columns.name'),
+                priority: 'primary',
+                className: 'font-medium',
+                cell: (user) => (
+                  <>
                     {user.displayName}
                     {user.id === me?.id && <span className="ml-2 text-xs font-normal text-muted-foreground">({t('you')})</span>}
-                  </TableCell>
-                  <TableCell className={tableCell}>{user.username}</TableCell>
-                  <TableCell className={tableCell}>{t(`roles.${user.role}`)}</TableCell>
-                  <TableCell className={tableCell}>{branchName.get(user.branchId) ?? t('unknownBranch')}</TableCell>
-                  <TableCell className={tableCell}>
-                    <StatusBadge tone={user.isActive ? 'success' : 'neutral'}>
-                      {user.isActive ? t('status.active') : t('status.inactive')}
-                    </StatusBadge>
-                  </TableCell>
-                  <TableCell className={`${tableCell} text-right whitespace-nowrap`}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="size-9" aria-label={t('actions.more', { name: user.displayName })}>
-                          <MoreHorizontal />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => setDialog({ user })}>{t('actions.edit')}</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => setActive(user, !user.isActive)}>
-                          {user.isActive ? t('actions.deactivate') : t('actions.activate')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!users.isPending && all.length === 0 && (
-                <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                    {t('list.empty')}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                  </>
+                ),
+              },
+              { id: 'username', header: t('columns.username'), priority: 'secondary', cell: (user) => user.username },
+              { id: 'role', header: t('columns.role'), priority: 'secondary', cell: (user) => t(`roles.${user.role}`) },
+              { id: 'branch', header: t('columns.branch'), priority: 'wide-only', cell: (user) => branchName.get(user.branchId) ?? t('unknownBranch') },
+              {
+                id: 'status',
+                header: t('columns.status'),
+                priority: 'secondary',
+                cell: (user) => (
+                  <StatusBadge tone={user.isActive ? 'success' : 'neutral'}>
+                    {user.isActive ? t('status.active') : t('status.inactive')}
+                  </StatusBadge>
+                ),
+              },
+            ]}
+            actions={(user) => (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="size-11" aria-label={t('actions.more', { name: user.displayName })}>
+                    <MoreHorizontal />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setDialog({ user })}>{t('actions.edit')}</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setActive(user, !user.isActive)}>
+                    {user.isActive ? t('actions.deactivate') : t('actions.activate')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          />
         </Panel>
       </div>
 

@@ -5,7 +5,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
-import { Panel, tableCell, tableHead } from '@/components/Panel'
+import { Panel } from '@/components/Panel'
+import { DataTable } from '@/components/DataTable'
 import { ProductFormDialog } from './ProductFormDialog'
 import { ProductImage } from './ProductImage'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
@@ -20,7 +21,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { categoriesQuery } from '@/features/categories'
 import { useFormat, useSettings } from '@/features/settings'
 import { productsQuery, useSetProductActive } from '../api'
@@ -105,99 +105,94 @@ export function ProductsPage() {
 
         <Panel title={t('list.title')} description={t('list.description', { shown: visible.length, total: all.length })}>
           {products.error && <p className="p-4 text-sm text-destructive">{products.error.message}</p>}
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className={tableHead}>{t('columns.product')}</TableHead>
-                <TableHead className={tableHead}>{t('columns.category')}</TableHead>
-                <TableHead className={tableHead}>{t('columns.barcode')}</TableHead>
-                <TableHead className={`${tableHead} text-right`}>{t('columns.price')}</TableHead>
-                <TableHead className={`${tableHead} text-right`}>{t('columns.cost')}</TableHead>
-                <TableHead className={`${tableHead} text-right`}>{t('columns.stock')}</TableHead>
-                <TableHead className={tableHead}>{t('columns.status')}</TableHead>
-                <TableHead className={`${tableHead} w-0`}>
-                  <span className="sr-only">{t('columns.actions')}</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible.map((product) => (
-                <TableRow key={product.id} className={product.isActive ? '' : 'text-muted-foreground'}>
-                  <TableCell className={tableCell}>
-                    <div className="flex items-center gap-3">
-                      <ProductImage src={product.imageUrl} alt="" className="size-10 rounded-md border" />
-                      <div>
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-xs text-muted-foreground">{product.sku}</p>
-                      </div>
+          <DataTable
+            rows={visible}
+            rowKey={(product) => product.id}
+            isPending={products.isPending}
+            empty={t('list.empty')}
+            muted={(product) => !product.isActive}
+            columns={[
+              {
+                id: 'product',
+                header: t('columns.product'),
+                priority: 'primary',
+                cell: (product) => (
+                  <div className="flex items-center gap-3">
+                    <ProductImage src={product.imageUrl} alt="" className="size-10 rounded-md border" />
+                    <div className="min-w-0">
+                      <p className="font-medium">{product.name}</p>
+                      <p className="text-xs text-muted-foreground">{product.sku}</p>
                     </div>
-                  </TableCell>
-                  <TableCell className={tableCell}>
-                    {(product.categoryId && categoryName.get(product.categoryId)) || '—'}
-                  </TableCell>
-                  <TableCell className={`${tableCell} tabular-nums`}>{product.barcode ?? '—'}</TableCell>
-                  <TableCell className={`${tableCell} text-right tabular-nums`}>{money.plain(product.priceSatang)}</TableCell>
-                  <TableCell className={`${tableCell} text-right tabular-nums`}>{money.plain(product.costSatang)}</TableCell>
-                  <TableCell className={`${tableCell} text-right font-medium tabular-nums`}>
-                    {product.trackStock ? product.stockQty : '—'}
-                  </TableCell>
-                  <TableCell className={tableCell}>
-                    {!product.isActive ? (
-                      <StatusBadge tone="neutral">{t('status.inactive')}</StatusBadge>
-                    ) : !product.trackStock ? (
-                      <StatusBadge tone="neutral">{t('status.untracked')}</StatusBadge>
-                    ) : product.stockQty <= 0 ? (
-                      <StatusBadge tone="danger">{t('status.out')}</StatusBadge>
-                    ) : isLowStock(product) ? (
-                      <StatusBadge tone="warning">{t('status.low')}</StatusBadge>
-                    ) : (
-                      <StatusBadge tone="success">{t('status.ready')}</StatusBadge>
-                    )}
-                  </TableCell>
-                  <TableCell className={`${tableCell} text-right whitespace-nowrap`}>
+                  </div>
+                ),
+              },
+              {
+                id: 'category',
+                header: t('columns.category'),
+                priority: 'wide-only',
+                cell: (product) => (product.categoryId && categoryName.get(product.categoryId)) || '—',
+              },
+              { id: 'barcode', header: t('columns.barcode'), priority: 'wide-only', className: 'tabular-nums', cell: (product) => product.barcode ?? '—' },
+              { id: 'price', header: t('columns.price'), priority: 'secondary', align: 'right', cell: (product) => money.plain(product.priceSatang) },
+              { id: 'cost', header: t('columns.cost'), priority: 'wide-only', align: 'right', cell: (product) => money.plain(product.costSatang) },
+              {
+                id: 'stock',
+                header: t('columns.stock'),
+                priority: 'secondary',
+                align: 'right',
+                className: 'font-medium',
+                cell: (product) => (product.trackStock ? product.stockQty : '—'),
+              },
+              {
+                id: 'status',
+                header: t('columns.status'),
+                priority: 'secondary',
+                cell: (product) =>
+                  !product.isActive ? (
+                    <StatusBadge tone="neutral">{t('status.inactive')}</StatusBadge>
+                  ) : !product.trackStock ? (
+                    <StatusBadge tone="neutral">{t('status.untracked')}</StatusBadge>
+                  ) : product.stockQty <= 0 ? (
+                    <StatusBadge tone="danger">{t('status.out')}</StatusBadge>
+                  ) : isLowStock(product) ? (
+                    <StatusBadge tone="warning">{t('status.low')}</StatusBadge>
+                  ) : (
+                    <StatusBadge tone="success">{t('status.ready')}</StatusBadge>
+                  ),
+              },
+            ]}
+            actions={(product) => (
+              <>
+                {product.trackStock && (
+                  <Button variant="outline" className="mr-2 h-11" onClick={() => setDialog({ kind: 'stock', product, mode: 'receive' })}>
+                    <PackagePlus />
+                    {t('actions.receive')}
+                  </Button>
+                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="size-11" aria-label={t('actions.more', { name: product.name })}>
+                      <MoreHorizontal />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => setDialog({ kind: 'form', product })}>
+                      {t('actions.edit')}
+                    </DropdownMenuItem>
                     {product.trackStock && (
-                      <Button
-                        variant="outline"
-                        className="mr-2 h-9"
-                        onClick={() => setDialog({ kind: 'stock', product, mode: 'receive' })}
-                      >
-                        <PackagePlus />
-                        {t('actions.receive')}
-                      </Button>
+                      <DropdownMenuItem onSelect={() => setDialog({ kind: 'stock', product, mode: 'adjust' })}>
+                        {t('actions.adjust')}
+                      </DropdownMenuItem>
                     )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="size-9" aria-label={t('actions.more', { name: product.name })}>
-                          <MoreHorizontal />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => setDialog({ kind: 'form', product })}>
-                          {t('actions.edit')}
-                        </DropdownMenuItem>
-                        {product.trackStock && (
-                          <DropdownMenuItem onSelect={() => setDialog({ kind: 'stock', product, mode: 'adjust' })}>
-                            {t('actions.adjust')}
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => toggleActive(product)}>
-                          {product.isActive ? t('actions.deactivate') : t('actions.activate')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!products.isPending && visible.length === 0 && (
-                <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                    {t('list.empty')}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => toggleActive(product)}>
+                      {product.isActive ? t('actions.deactivate') : t('actions.activate')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            )}
+          />
         </Panel>
       </div>
 

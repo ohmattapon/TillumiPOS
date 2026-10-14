@@ -26,6 +26,7 @@ const th = {
     voided: 'ยกเลิก',
     empty: 'วันนี้ยังไม่มีบิลขาย',
     emptyFiltered: 'ไม่มีบิลในสถานะนี้',
+    openReceipt: 'เปิดใบเสร็จ {{receiptNo}}',
   },
   columns: {
     receiptNo: 'เลขที่',
@@ -110,6 +111,7 @@ const en = {
     voided: 'Voided',
     empty: 'No sales yet today',
     emptyFiltered: 'No sales with this status',
+    openReceipt: 'Open receipt {{receiptNo}}',
   },
   columns: {
     receiptNo: 'Receipt',

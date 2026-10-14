@@ -4,13 +4,13 @@ import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
-import { Panel, tableCell, tableHead } from '@/components/Panel'
+import { Panel } from '@/components/Panel'
+import { DataTable } from '@/components/DataTable'
 import { SaleDetailDialog } from './SaleDetailDialog'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { isLowStock, LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
 import { useFormat } from '@/features/settings'
 import { salesTodayQuery, summaryTodayQuery } from '../api'
@@ -141,51 +141,44 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
             }
           >
             {sales.error && <p className="p-4 text-sm text-destructive">{sales.error.message}</p>}
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className={tableHead}>{t('columns.receiptNo')}</TableHead>
-                  <TableHead className={tableHead}>{t('columns.time')}</TableHead>
-                  <TableHead className={tableHead}>{t('columns.cashier')}</TableHead>
-                  <TableHead className={`${tableHead} text-right`}>{t('columns.total')}</TableHead>
-                  <TableHead className={tableHead}>{t('columns.status')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleSales.map((sale) => (
-                  <TableRow
-                    key={sale.id}
-                    tabIndex={0}
-                    className="cursor-pointer"
-                    onClick={() => setSelectedId(sale.id)}
-                    onKeyDown={(event) => event.key === 'Enter' && setSelectedId(sale.id)}
-                  >
-                    <TableCell className={`${tableCell} font-medium tabular-nums`}>{sale.receiptNo}</TableCell>
-                    <TableCell className={`${tableCell} text-muted-foreground tabular-nums`}>
-                      {date.time(sale.createdAt)}
-                    </TableCell>
-                    <TableCell className={tableCell}>{sale.cashierName}</TableCell>
-                    <TableCell className={`${tableCell} text-right font-medium tabular-nums`}>
-                      {money.plain(sale.totalSatang)}
-                    </TableCell>
-                    <TableCell className={tableCell}>
-                      {sale.status === 'voided' ? (
-                        <StatusBadge tone="danger">{t('list.voided')}</StatusBadge>
-                      ) : (
-                        <StatusBadge tone="success">{t('list.completed')}</StatusBadge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {!sales.isPending && visibleSales.length === 0 && (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                      {filter === 'all' ? t('list.empty') : t('list.emptyFiltered')}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <DataTable
+              rows={visibleSales}
+              rowKey={(sale) => sale.id}
+              isPending={sales.isPending}
+              empty={filter === 'all' ? t('list.empty') : t('list.emptyFiltered')}
+              onSelect={(sale) => setSelectedId(sale.id)}
+              rowLabel={(sale) => t('list.openReceipt', { receiptNo: sale.receiptNo })}
+              columns={[
+                { id: 'receiptNo', header: t('columns.receiptNo'), priority: 'primary', className: 'font-medium tabular-nums', cell: (sale) => sale.receiptNo },
+                {
+                  id: 'time',
+                  header: t('columns.time'),
+                  priority: 'secondary',
+                  className: 'text-muted-foreground tabular-nums',
+                  cell: (sale) => date.time(sale.createdAt),
+                },
+                { id: 'cashier', header: t('columns.cashier'), priority: 'wide-only', cell: (sale) => sale.cashierName },
+                {
+                  id: 'total',
+                  header: t('columns.total'),
+                  priority: 'secondary',
+                  align: 'right',
+                  className: 'font-medium',
+                  cell: (sale) => money.plain(sale.totalSatang),
+                },
+                {
+                  id: 'status',
+                  header: t('columns.status'),
+                  priority: 'secondary',
+                  cell: (sale) =>
+                    sale.status === 'voided' ? (
+                      <StatusBadge tone="danger">{t('list.voided')}</StatusBadge>
+                    ) : (
+                      <StatusBadge tone="success">{t('list.completed')}</StatusBadge>
+                    ),
+                },
+              ]}
+            />
           </Panel>
 
           <div className="space-y-4">
