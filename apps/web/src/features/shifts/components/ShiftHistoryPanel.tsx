@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { SkeletonRows } from '@/components/Skeletons'
 import { Button } from '@/components/ui/button'
 import { useFormat } from '@/features/settings'
 import { createMoney } from '@/lib/money'
@@ -69,6 +70,11 @@ export function ShiftHistoryPanel({ registers }: { registers: { id: number; code
       {!history.isPending && total === 0 && <p className="text-sm text-muted-foreground">{t('historyEmpty')}</p>}
 
       <ul className="divide-y">
+        {history.isPending && (
+          <li>
+            <SkeletonRows rows={3} />
+          </li>
+        )}
         {history.data?.items.map((shift) => {
           const money = createMoney(shift.currency, locale)
           const isOpen = openId === shift.id

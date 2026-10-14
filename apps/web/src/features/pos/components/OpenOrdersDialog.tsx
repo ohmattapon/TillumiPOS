@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { SkeletonRows } from '@/components/Skeletons'
 import { Input } from '@/components/ui/input'
 import { openOrdersQuery, useCancelOrder, type Order } from '@/features/orders'
 import { useFormat } from '@/features/settings'
@@ -56,6 +57,11 @@ export function OpenOrdersDialog({ onClose }: { onClose: () => void }) {
         <ul className="max-h-[60vh] divide-y overflow-y-auto rounded-lg border">
           {!orders.isPending && items.length === 0 && (
             <li className="px-4 py-10 text-center text-sm text-muted-foreground">{t('orders.empty')}</li>
+          )}
+          {orders.isPending && (
+            <li>
+              <SkeletonRows rows={3} />
+            </li>
           )}
           {items.map((order) => (
             <li key={order.id} className="space-y-3 px-4 py-3">

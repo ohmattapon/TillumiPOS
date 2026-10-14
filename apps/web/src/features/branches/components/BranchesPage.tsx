@@ -43,7 +43,7 @@ export function BranchesPage() {
     <>
       <PageHeader
         title={t('title')}
-        description={t('description', { items: tc('items', { count: all.length }) })}
+        description={branches.isPending ? undefined : t('description', { items: tc('items', { count: all.length }) })}
       >
         <Button className="h-11 px-3" onClick={() => setDialog({})}>
           <Plus />

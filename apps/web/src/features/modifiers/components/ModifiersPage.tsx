@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
+import { SkeletonPanel } from '@/components/Skeletons'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -254,7 +255,7 @@ export function ModifiersPage() {
 
   return (
     <>
-      <PageHeader title={t('title')} description={t('description', { items: tc('items', { count: all.length }) })}>
+      <PageHeader title={t('title')} description={groups.isPending ? undefined : t('description', { items: tc('items', { count: all.length }) })}>
         <Button className="h-11 px-3" onClick={() => setGroupDialog({})}>
           <Plus />
           {t('addGroup')}
@@ -263,6 +264,7 @@ export function ModifiersPage() {
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
         {groups.error && <p className="text-sm text-destructive">{groups.error.message}</p>}
+        {groups.isPending && Array.from({ length: 2 }, (_, index) => <SkeletonPanel key={index} rows={3} />)}
         {!groups.isPending && all.length === 0 && (
           <p className="py-12 text-center text-muted-foreground">{t('empty')}</p>
         )}

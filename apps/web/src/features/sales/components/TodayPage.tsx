@@ -4,13 +4,13 @@ import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
+import { SkeletonRows, SkeletonStatCards } from '@/components/Skeletons'
 import { Panel } from '@/components/Panel'
 import { DataTable } from '@/components/DataTable'
 import { SaleDetailDialog } from './SaleDetailDialog'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
 import { isLowStock, LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
 import { useFormat } from '@/features/settings'
 import { salesTodayQuery, summaryTodayQuery } from '../api'
@@ -76,7 +76,7 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
       <PageHeader
         title={t('today.title')}
         highlight={date.longDate(today)}
-        description={t('today.summary', { count: allSales.length, voided: voidedCount })}
+        description={sales.isPending ? undefined : t('today.summary', { count: allSales.length, voided: voidedCount })}
       >
         {lowStock.length > 0 && (
           <StatusBadge tone="warning" className="hidden h-7 px-3 sm:inline-flex">
@@ -128,7 +128,7 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
                 />
               </>
             ) : (
-              Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-30 rounded-xl" />)
+              <SkeletonStatCards />
             )}
           </div>
         )}
@@ -198,6 +198,9 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
                 lowStock.length > 0 && <StatusBadge tone="warning">{tc('items', { count: lowStock.length })}</StatusBadge>
               }
             >
+              {products.isPending ? (
+                <SkeletonRows rows={3} />
+              ) : (
               <ul className="divide-y">
                 {lowStock.slice(0, 8).map((product) => (
                   <li key={product.id} className="flex items-center gap-3 px-4 py-2.5">
@@ -217,6 +220,7 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
                   <li className="px-4 py-6 text-center text-sm text-muted-foreground">{t('attention.allGood')}</li>
                 )}
               </ul>
+              )}
             </Panel>
 
             {stats && (

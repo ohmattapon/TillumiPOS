@@ -49,7 +49,7 @@ export function UsersPage() {
 
   return (
     <>
-      <PageHeader title={t('title')} description={t('description', { items: tc('items', { count: all.length }) })}>
+      <PageHeader title={t('title')} description={users.isPending ? undefined : t('description', { items: tc('items', { count: all.length }) })}>
         <Button className="h-11 px-3" onClick={() => setDialog({})}>
           <Plus />
           {t('add')}

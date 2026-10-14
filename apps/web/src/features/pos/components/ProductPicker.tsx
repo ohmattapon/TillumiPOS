@@ -6,7 +6,9 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Kbd } from '@/components/Kbd'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
+import { SkeletonCardGrid } from '@/components/Skeletons'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import { categoriesQuery, categoryColor } from '@/features/categories'
 import { modifierGroupsQuery } from '@/features/modifiers'
 import { isLowStock, isOutOfStock, ProductImage, productsQuery } from '@/features/products'
@@ -103,21 +105,26 @@ export function ProductPicker({ searchRef }: Props) {
       </form>
 
       <div className="-mx-4 overflow-x-auto px-4">
-        <SegmentedTabs
-          size="touch"
-          value={category}
-          onChange={setCategory}
-          options={[
-            { value: 'all', label: tc('all') },
-            ...(categories.data ?? [])
-              .filter((item) => item.isActive)
-              .map((item) => ({ value: String(item.id), label: item.name, dot: categoryColor(item.id) })),
-          ]}
-        />
+        {categories.isPending ? (
+          <Skeleton className="h-13 w-72 rounded-xl" />
+        ) : (
+          <SegmentedTabs
+            size="touch"
+            value={category}
+            onChange={setCategory}
+            options={[
+              { value: 'all', label: tc('all') },
+              ...(categories.data ?? [])
+                .filter((item) => item.isActive)
+                .map((item) => ({ value: String(item.id), label: item.name, dot: categoryColor(item.id) })),
+            ]}
+          />
+        )}
       </div>
 
       {products.error && <p className="text-sm text-destructive">{products.error.message}</p>}
       <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-3 overflow-y-auto pb-1">
+        {products.isPending && <SkeletonCardGrid className="contents" count={8} />}
         {visibleProducts.map((product) => (
           <button
             key={product.id}

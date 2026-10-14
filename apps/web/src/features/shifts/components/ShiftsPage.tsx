@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/PageHeader'
+import { SkeletonRows } from '@/components/Skeletons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { meQuery } from '@/features/auth'
@@ -39,6 +40,8 @@ export function ShiftsPage() {
   const currentId = (rememberedRegisterId && registers.data?.items.some((register) => register.id === rememberedRegisterId && register.isActive)
     ? rememberedRegisterId : registers.data?.items.find((register) => register.isActive)?.id) ?? null
   const current = useQuery({ ...currentShiftQuery(currentId ?? 0), enabled: currentId !== null })
+  // Until the register and its shift are known, "no shift" would be a lie and would offer to open one.
+  const shiftLoading = registers.isPending || (currentId !== null && current.isPending)
   const detailsId = current.data?.id
   const activeShift = useQuery({
     queryKey: ['shifts', 'detail', detailsId],
@@ -67,13 +70,17 @@ export function ShiftsPage() {
         <section className="mx-auto w-full max-w-3xl space-y-5 rounded-xl border bg-card p-5 shadow-sm">
           <label className="grid gap-2 text-sm font-medium">
             {t('register')}
-            <select className="h-11 rounded-md border bg-background px-3" value={currentId ?? ''} onChange={(event) => { if (me && branch) selectRegister(me.id, branch.id, Number(event.target.value)) }}>
+            <select disabled={registers.isPending} className="h-11 rounded-md border bg-background px-3" value={currentId ?? ''} onChange={(event) => { if (me && branch) selectRegister(me.id, branch.id, Number(event.target.value)) }}>
               <option value="" disabled>{t('chooseRegister')}</option>
               {registers.data?.items.filter((item) => item.isActive).map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}
             </select>
           </label>
 
-          {current.data ? (
+          {shiftLoading ? (
+            <div className="border-t pt-5">
+              <SkeletonRows rows={3} />
+            </div>
+          ) : current.data ? (
             <div className="space-y-4 border-t pt-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -166,7 +173,7 @@ export function ShiftsPage() {
           {current.data && (
             <div className="border-t pt-4">
               <h3 className="mb-3 text-sm font-semibold">{t('entries')}</h3>
-              {entries.data?.items.length ? <ul className="divide-y">{entries.data.items.map((entry) => <li key={entry.id} className="flex flex-wrap items-center gap-2 py-2 text-sm"><span>{t(`entry_${entry.kind}`)}</span><span className="font-medium tabular-nums">{money.format(entry.amountSatang)}</span><span className="text-muted-foreground">{entry.actorName} · {date.dateTime(entry.createdAt)}{entry.reason ? ` · ${entry.reason}` : ''}</span></li>)}</ul> : <p className="text-sm text-muted-foreground">{t('noEntries')}</p>}
+              {entries.isPending ? <SkeletonRows rows={2} /> : entries.data?.items.length ? <ul className="divide-y">{entries.data.items.map((entry) => <li key={entry.id} className="flex flex-wrap items-center gap-2 py-2 text-sm"><span>{t(`entry_${entry.kind}`)}</span><span className="font-medium tabular-nums">{money.format(entry.amountSatang)}</span><span className="text-muted-foreground">{entry.actorName} · {date.dateTime(entry.createdAt)}{entry.reason ? ` · ${entry.reason}` : ''}</span></li>)}</ul> : <p className="text-sm text-muted-foreground">{t('noEntries')}</p>}
             </div>
           )}
         </section>
@@ -181,7 +188,7 @@ export function ShiftsPage() {
               <label className="grid gap-2 text-sm">{t('registerName')}<Input value={newRegisterName} onChange={(event) => setNewRegisterName(event.target.value)} maxLength={100} required /></label>
               <Button className="h-10 self-end" disabled={createRegister.isPending}>{t('createRegister')}</Button>
             </form>
-            <ul className="divide-y">{registers.data?.items.map((register) => <li key={register.id} className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm"><span className="font-medium">{register.code}</span><Input className="h-9 max-w-64" aria-label={t('registerName')} value={registerNames[register.id] ?? register.name} onChange={(event) => setRegisterNames((names) => ({ ...names, [register.id]: event.target.value }))} maxLength={100} /><div className="flex gap-2"><Button variant="outline" className="h-9" disabled={updateRegister.isPending || !(registerNames[register.id]?.trim()) || (registerNames[register.id]?.trim() ?? register.name) === register.name} onClick={() => updateRegister.mutate({ id: register.id, name: registerNames[register.id]!.trim() })}>{t('saveName')}</Button><Button variant="outline" className="h-9" disabled={updateRegister.isPending || (!!current.data && current.data.registerId === register.id)} onClick={() => updateRegister.mutate({ id: register.id, isActive: !register.isActive })}>{register.isActive ? t('deactivate') : t('activate')}</Button></div></li>)}</ul>
+            {registers.isPending ? <SkeletonRows rows={3} /> : <ul className="divide-y">{registers.data?.items.map((register) => <li key={register.id} className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm"><span className="font-medium">{register.code}</span><Input className="h-9 max-w-64" aria-label={t('registerName')} value={registerNames[register.id] ?? register.name} onChange={(event) => setRegisterNames((names) => ({ ...names, [register.id]: event.target.value }))} maxLength={100} /><div className="flex gap-2"><Button variant="outline" className="h-9" disabled={updateRegister.isPending || !(registerNames[register.id]?.trim()) || (registerNames[register.id]?.trim() ?? register.name) === register.name} onClick={() => updateRegister.mutate({ id: register.id, name: registerNames[register.id]!.trim() })}>{t('saveName')}</Button><Button variant="outline" className="h-9" disabled={updateRegister.isPending || (!!current.data && current.data.registerId === register.id)} onClick={() => updateRegister.mutate({ id: register.id, isActive: !register.isActive })}>{register.isActive ? t('deactivate') : t('activate')}</Button></div></li>)}</ul>}
           </section>
         )}
 

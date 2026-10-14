@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { tableCell, tableHead } from '@/components/Panel'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { splitColumns, type Column } from '@/lib/data-table'
+import { barWidth } from '@/lib/skeleton'
 import { cn } from '@/lib/utils'
 
 interface Props<T> {
@@ -26,12 +29,18 @@ interface Props<T> {
 // Wide-only columns need the room of a laptop; tablets get the columns that matter for the job.
 const wideOnly = <T,>(column: Column<T>) => column.priority === 'wide-only' && 'hidden lg:table-cell'
 
+// How many placeholder rows stand in while the first answer is on its way.
+const PLACEHOLDER_ROWS = 5
+const PHONE_PLACEHOLDER_ROWS = 4
+
 export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions, onSelect, rowLabel, muted }: Props<T>) {
   const { primary, secondary } = splitColumns(columns)
+  const { t } = useTranslation()
   const isEmpty = !isPending && rows.length === 0
 
   return (
     <>
+      {isPending && <p role="status" aria-busy="true" className="sr-only">{t('loading')}</p>}
       <div className="hidden sm:block">
         <Table>
           <TableHeader>
@@ -45,6 +54,21 @@ export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions,
             </TableRow>
           </TableHeader>
           <TableBody>
+            {isPending &&
+              Array.from({ length: PLACEHOLDER_ROWS }, (_, row) => (
+                <TableRow key={row} className="hover:bg-transparent" aria-hidden>
+                  {columns.map((column, index) => (
+                    <TableCell key={column.id} className={cn(tableCell, wideOnly(column))}>
+                      <Skeleton className={cn('h-4', barWidth(row + index), column.align === 'right' && 'ml-auto')} />
+                    </TableCell>
+                  ))}
+                  {actions && (
+                    <TableCell className={cn(tableCell, 'text-right')}>
+                      <Skeleton className="ml-auto size-9 rounded-md" />
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
             {rows.map((row) => (
               <TableRow
                 key={rowKey(row)}
@@ -74,6 +98,15 @@ export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions,
       </div>
 
       <ul className="divide-y sm:hidden">
+        {isPending &&
+          Array.from({ length: PHONE_PLACEHOLDER_ROWS }, (_, row) => (
+            <li key={row} className="flex min-h-14 items-center px-4 py-3" aria-hidden>
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className={cn('h-4', barWidth(row))} />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+            </li>
+          ))}
         {rows.map((row) => {
           const body = (
             <>
