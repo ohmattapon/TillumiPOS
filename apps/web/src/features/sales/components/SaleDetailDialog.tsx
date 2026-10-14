@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Printer } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -10,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { currentShiftQuery, registersQuery } from '@/features/shifts'
 import { saleQuery, useCashRefund, useVoidSale } from '../api'
 import { Receipt } from './Receipt'
+import { ReceiptPdfButton } from './ReceiptPdfButton'
 
 interface Props {
   saleId: number
@@ -21,6 +21,7 @@ export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
   const { t } = useTranslation('sales')
   const { t: tc } = useTranslation()
   const [isVoiding, setIsVoiding] = useState(false)
+  const receiptRef = useRef<HTMLDivElement>(null)
   const [reason, setReason] = useState('')
   const [refundReason, setRefundReason] = useState('')
   const [isRefunding, setIsRefunding] = useState(false)
@@ -37,17 +38,17 @@ export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-sm">
-        <DialogHeader className="print:hidden">
+        <DialogHeader>
           <DialogTitle>{t('detail.title')}</DialogTitle>
           <DialogDescription>{sale.data ? t('detail.receiptNo', { receiptNo: sale.data.receiptNo }) : tc('loading')}</DialogDescription>
         </DialogHeader>
 
         {sale.error && <p className="text-sm text-destructive">{sale.error.message}</p>}
-        {sale.data && <Receipt sale={sale.data} />}
+        {sale.data && <Receipt sale={sale.data} elementRef={receiptRef} />}
 
         {isVoiding ? (
           <form
-            className="space-y-3 print:hidden"
+            className="space-y-3"
             onSubmit={(event) => {
               event.preventDefault()
               voidSale.mutate(reason.trim(), {
@@ -87,7 +88,7 @@ export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
             </div>
           </form>
         ) : (
-          <div className="flex gap-2 print:hidden">
+          <div className="flex gap-2">
             {canVoid && sale.data?.status === 'completed' && (
               <Button variant="destructive" className="h-10 flex-1" onClick={() => setIsVoiding(true)}>
                 {t('detail.voidSale')}
@@ -109,10 +110,12 @@ export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
                 </form>
               ) : <Button variant="outline" className="h-10" disabled={!shift.data} onClick={() => setIsRefunding(true)}>{t('detail.cashRefund')}</Button>
             )}
-            <Button variant="outline" className="h-10 flex-1" disabled={!sale.data} onClick={() => window.print()}>
-              <Printer />
-              {t('detail.print')}
-            </Button>
+            <ReceiptPdfButton
+              receiptNo={sale.data?.receiptNo ?? ''}
+              receiptRef={receiptRef}
+              className="h-10 flex-1"
+              disabled={!sale.data}
+            />
           </div>
         )}
       </DialogContent>

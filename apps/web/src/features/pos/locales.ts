@@ -121,7 +121,6 @@ const th = {
   },
   receipt: {
     saved: 'บันทึกการขายแล้ว · เงินทอน',
-    print: 'พิมพ์ใบเสร็จ',
     next: 'ขายรายการต่อไป',
   },
 }
@@ -249,7 +248,6 @@ const en = {
   },
   receipt: {
     saved: 'Sale recorded · change',
-    print: 'Print receipt',
     next: 'Next sale',
   },
 } satisfies typeof th
