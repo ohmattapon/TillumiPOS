@@ -3,6 +3,7 @@ const th = {
   description: 'สแกนบาร์โค้ด หรือแตะสินค้าเพื่อเพิ่มลงตะกร้า',
   shiftReady: 'กะเปิดอยู่',
   shiftRequired: 'เปิดกะก่อนขาย',
+  moreActions: 'การทำงานอื่น',
   picker: {
     searchPlaceholder: 'สแกนบาร์โค้ด หรือพิมพ์ชื่อ / รหัสสินค้า แล้วกด Enter',
     searchLabel: 'ค้นหาสินค้า',
@@ -130,6 +131,7 @@ const en = {
   title: 'Sell',
   shiftReady: 'Shift open',
   shiftRequired: 'Open a shift to sell',
+  moreActions: 'More actions',
   description: 'Scan a barcode, or tap a product to add it to the cart',
   picker: {
     searchPlaceholder: 'Scan a barcode, or type a name or SKU and press Enter',

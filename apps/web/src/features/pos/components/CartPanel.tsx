@@ -18,9 +18,11 @@ interface Props {
   onSaveOrder: () => void
   /** False while the till may not take payment at all, e.g. no shift is open or the shift is being counted. */
   paymentAvailable?: boolean
+  /** side: the wide-screen panel. sheet: the same cart, shown from the bottom on a small screen. */
+  variant?: 'side' | 'sheet'
 }
 
-export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true }: Props) {
+export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant = 'side' }: Props) {
   const { t } = useTranslation('pos')
   const { money, currency } = useFormat()
   const { vatMode, vatRateBp } = useSettings()
@@ -34,7 +36,12 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true }: Props
   const tableName = tables.data?.find((table) => table.id === cart.order?.tableId)?.name
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l bg-sidebar xl:w-96">
+    <aside
+      className={cn(
+        'flex flex-col',
+        variant === 'side' ? 'hidden w-80 shrink-0 border-l bg-sidebar lg:flex xl:w-96' : 'min-h-0 flex-1',
+      )}
+    >
       <div className="flex items-center gap-2 border-b px-4 py-3">
         <ShoppingCart className="size-4 text-muted-foreground" />
         <h2 className="min-w-0 truncate text-sm font-semibold">
@@ -63,7 +70,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true }: Props
           return (
           <li key={lineKey} className="space-y-2 px-4 py-3">
             <div className="flex items-start justify-between gap-3">
-              <p className="min-w-0 text-sm leading-snug font-medium">{name}</p>
+              <p className="min-w-0 text-base leading-snug font-medium">{name}</p>
               <p className="shrink-0 text-sm font-semibold tabular-nums">{money.plain(lineTotalSatang)}</p>
             </div>
             {options.length > 0 && (
@@ -130,7 +137,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true }: Props
         <label className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
           <span>{t('cart.discount', { currency })}</span>
           <Input
-            className="h-10 w-32 text-right tabular-nums"
+            className="h-11 w-32 text-right tabular-nums"
             inputMode="decimal"
             aria-invalid={!cart.isDiscountValid}
             value={discount}
@@ -151,7 +158,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true }: Props
           <span className="text-3xl font-semibold tabular-nums">{money.format(cart.totalSatang)}</span>
         </p>
         {!isOrder && (
-          <Button variant="outline" className="h-10 w-full" disabled={cart.lines.length === 0} onClick={onSaveOrder}>
+          <Button variant="outline" className="h-11 w-full" disabled={cart.lines.length === 0} onClick={onSaveOrder}>
             <ClipboardList />
             {t('cart.saveOrder')}
           </Button>
