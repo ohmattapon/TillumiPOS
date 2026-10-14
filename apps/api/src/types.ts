@@ -1,4 +1,5 @@
 // Type-only entry point for clients (the web app imports these alongside the Eden `App` type).
+export type { SalesReportResponse as SalesReport, ReportProductResponse as ReportProduct, ReportBranchResponse as ReportBranch } from './modules/sales/adapters/controllers/schemas/sales-report.schema'
 export type { UserResponse as User } from './modules/users/adapters/controllers/schemas/user.schema'
 export type { BranchResponse as Branch } from './modules/branches/adapters/controllers/schemas/branch.schema'
 export type { SettingsResponse as ShopSettings } from './modules/settings/adapters/controllers/schemas/settings.schema'
