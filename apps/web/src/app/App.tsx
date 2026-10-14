@@ -1,7 +1,6 @@
 import type { User } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
 import { Navigate, Route, Routes } from 'react-router'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { LoginPage, meQuery, useLogout } from '@/features/auth'
@@ -17,6 +16,7 @@ import { SettingsPage, useSettings } from '@/features/settings'
 import { UsersPage } from '@/features/users'
 import { ShiftsPage, useRegisterSelectionStore } from '@/features/shifts'
 import { AppSidebar } from './AppSidebar'
+import { AppSkeleton } from './AppSkeleton'
 import { BottomNav } from './BottomNav'
 import { applyLocale } from './i18n'
 
@@ -60,11 +60,10 @@ function Shell({ user }: { user: User }) {
 }
 
 export default function App() {
-  const { t } = useTranslation()
   const me = useQuery(meQuery)
   const setup = useQuery(setupStatusQuery)
 
-  if (me.isPending || setup.isPending) return <p className="p-8 text-muted-foreground">{t('loading')}</p>
+  if (me.isPending || setup.isPending) return <AppSkeleton />
   // Settings need a session, so they are only requested once someone is signed in.
   if (!me.data) return setup.data ? <SetupPage /> : <LoginPage />
 

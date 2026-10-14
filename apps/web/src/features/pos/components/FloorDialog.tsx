@@ -50,6 +50,7 @@ export function FloorDialog({ onClose }: { onClose: () => void }) {
         {tables.error && <p className="text-sm text-destructive">{tables.error.message}</p>}
         <FloorPlan
           tables={tables.data ?? []}
+          isPending={tables.isPending}
           selectedId={selected?.id ?? null}
           onSelect={setSelected}
           renderBadge={(table) =>

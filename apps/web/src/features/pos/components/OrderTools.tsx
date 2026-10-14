@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { SkeletonRows } from '@/components/Skeletons'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { openOrdersQuery, useMergeOrders, useMoveOrder, useSplitOrder } from '@/features/orders'
 import { useFormat } from '@/features/settings'
@@ -38,6 +40,7 @@ function MoveDialog({ order, onClose }: { order: Order; onClose: () => void }) {
           <DialogDescription>{t('tools.moveDescription')}</DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap gap-2">
+          {tables.isPending && Array.from({ length: 3 }, (_, index) => <Skeleton key={index} className="h-11 w-24" />)}
           {(tables.data ?? [])
             .filter((table) => table.isActive)
             .map((table) => (
@@ -81,7 +84,12 @@ function MergeDialog({ order, onClose }: { order: Order; onClose: () => void }) 
           <DialogDescription>{t('tools.mergeDescription')}</DialogDescription>
         </DialogHeader>
         <ul className="max-h-[50vh] divide-y overflow-y-auto rounded-lg border">
-          {others.length === 0 && (
+          {open.isPending && (
+            <li>
+              <SkeletonRows rows={3} />
+            </li>
+          )}
+          {!open.isPending && others.length === 0 && (
             <li className="px-4 py-8 text-center text-sm text-muted-foreground">{t('tools.nothingToMerge')}</li>
           )}
           {others.map((other) => (

@@ -4,11 +4,11 @@ import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
+import { SkeletonPanel } from '@/components/Skeletons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { createMoney, type Locale } from '@/lib/money'
 import { settingsQuery, useUpdateSettings } from '../api'
@@ -265,7 +265,7 @@ export function SettingsPage() {
       <PageHeader title={t('title')} description={t('description')} />
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {settings.error && <p className="text-sm text-destructive">{settings.error.message}</p>}
-        {settings.isPending && <Skeleton className="mx-auto h-96 max-w-3xl rounded-xl" />}
+        {settings.isPending && <SkeletonPanel rows={6} className="mx-auto max-w-3xl" />}
         {/* Keyed by the stored values, so the form starts again from what was saved. */}
         {settings.data && <SettingsForm key={JSON.stringify(settings.data)} settings={settings.data} />}
       </div>

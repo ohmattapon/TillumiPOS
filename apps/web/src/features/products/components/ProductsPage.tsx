@@ -69,10 +69,14 @@ export function ProductsPage() {
     <>
       <PageHeader
         title={t('title')}
-        description={t('pageDescription', {
-          items: tc('items', { count: all.length }),
-          priceNote: t(`priceNote.${vatMode}`),
-        })}
+        description={
+          products.isPending
+            ? undefined
+            : t('pageDescription', {
+                items: tc('items', { count: all.length }),
+                priceNote: t(`priceNote.${vatMode}`),
+              })
+        }
       >
         <Button className="h-11 px-3" onClick={() => setDialog({ kind: 'form' })}>
           <Plus />
@@ -86,9 +90,9 @@ export function ProductsPage() {
             value={filter}
             onChange={setFilter}
             options={[
-              { value: 'all', label: t('filters.all'), count: all.length },
-              { value: 'low', label: t('filters.low'), count: all.filter((product) => product.isActive && isLowStock(product)).length },
-              { value: 'inactive', label: t('filters.inactive'), count: all.filter((product) => !product.isActive).length },
+              { value: 'all', label: t('filters.all'), count: products.isPending ? undefined : all.length },
+              { value: 'low', label: t('filters.low'), count: products.isPending ? undefined : all.filter((product) => product.isActive && isLowStock(product)).length },
+              { value: 'inactive', label: t('filters.inactive'), count: products.isPending ? undefined : all.filter((product) => !product.isActive).length },
             ]}
           />
           <div className="relative ml-auto w-full max-w-xs">
@@ -103,7 +107,7 @@ export function ProductsPage() {
           </div>
         </div>
 
-        <Panel title={t('list.title')} description={t('list.description', { shown: visible.length, total: all.length })}>
+        <Panel title={t('list.title')} description={products.isPending ? undefined : t('list.description', { shown: visible.length, total: all.length })}>
           {products.error && <p className="p-4 text-sm text-destructive">{products.error.message}</p>}
           <DataTable
             rows={visible}

@@ -7,10 +7,12 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
+import { SkeletonRows } from '@/components/Skeletons'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { tablesQuery, useCreateTable, useUpdateTable } from '../api'
@@ -190,7 +192,7 @@ export function TablesPage() {
 
   return (
     <>
-      <PageHeader title={t('title')} description={t('description', { items: tc('items', { count: all.length }) })}>
+      <PageHeader title={t('title')} description={tables.isPending ? undefined : t('description', { items: tc('items', { count: all.length }) })}>
         <Button className="h-11 px-3" onClick={() => setAdding(true)}>
           <Plus />
           {t('add')}
@@ -203,6 +205,9 @@ export function TablesPage() {
           {/* Phones list the tables; dragging them into place needs a screen that is big enough to drag on. */}
           <div className="sm:hidden">
             <p className="mb-2 text-sm text-muted-foreground">{t('phoneNote')}</p>
+            {tables.isPending ? (
+              <SkeletonRows rows={4} className="rounded-xl border bg-background" />
+            ) : (
             <ul className="divide-y rounded-xl border bg-background">
               {all.map((table) => (
                 <li key={table.id}>
@@ -225,6 +230,7 @@ export function TablesPage() {
               ))}
               {!tables.isPending && all.length === 0 && <li className="p-6 text-center text-sm text-muted-foreground">{t('empty')}</li>}
             </ul>
+            )}
           </div>
           <div
             ref={canvas}
@@ -236,6 +242,7 @@ export function TablesPage() {
             onPointerCancel={release}
             onPointerDown={() => setSelectedId(null)}
           >
+            {tables.isPending && <Skeleton className="absolute inset-0 rounded-none" />}
             {!tables.isPending && all.length === 0 && (
               <p className="absolute inset-0 flex items-center justify-center p-6 text-center text-muted-foreground">
                 {t('empty')}

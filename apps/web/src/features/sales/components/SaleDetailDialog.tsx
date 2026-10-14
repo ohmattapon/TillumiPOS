@@ -3,6 +3,7 @@ import { Printer } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { SkeletonRows } from '@/components/Skeletons'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
@@ -19,7 +20,6 @@ interface Props {
 
 export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
   const { t } = useTranslation('sales')
-  const { t: tc } = useTranslation()
   const [isVoiding, setIsVoiding] = useState(false)
   const [reason, setReason] = useState('')
   const [refundReason, setRefundReason] = useState('')
@@ -39,10 +39,11 @@ export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
       <DialogContent className="sm:max-w-sm">
         <DialogHeader className="print:hidden">
           <DialogTitle>{t('detail.title')}</DialogTitle>
-          <DialogDescription>{sale.data ? t('detail.receiptNo', { receiptNo: sale.data.receiptNo }) : tc('loading')}</DialogDescription>
+          <DialogDescription>{sale.data && t('detail.receiptNo', { receiptNo: sale.data.receiptNo })}</DialogDescription>
         </DialogHeader>
 
         {sale.error && <p className="text-sm text-destructive">{sale.error.message}</p>}
+        {sale.isPending && <SkeletonRows rows={5} />}
         {sale.data && <Receipt sale={sale.data} />}
 
         {isVoiding ? (
