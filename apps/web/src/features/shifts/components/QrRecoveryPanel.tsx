@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useFormat } from '@/features/settings'
@@ -15,15 +17,17 @@ import { unclaimedQrQuery, unresolvedQrAttemptsQuery, useDismissQrPayment, useRe
 export function QrRecoveryPanel({ isOwner }: { isOwner: boolean }) {
   const { t } = useTranslation('shifts')
   const { money, date } = useFormat()
-  const attempts = useQuery(unresolvedQrAttemptsQuery)
-  const unclaimed = useQuery(unclaimedQrQuery)
+  const attemptPaging = useListPagination('qr-attempts', 10)
+  const paymentPaging = useListPagination('qr-unclaimed', 10)
+  const attempts = useQuery(unresolvedQrAttemptsQuery({ limit: attemptPaging.pageSize, offset: attemptPaging.offset }))
+  const unclaimed = useQuery(unclaimedQrQuery({ limit: paymentPaging.pageSize, offset: paymentPaging.offset }))
   const resolve = useResolveQrAttempt()
   const dismiss = useDismissQrPayment()
   const [dismissing, setDismissing] = useState<{ id: number; reason: string } | null>(null)
 
   const pendingAttempts = attempts.data?.items ?? []
   const payments = unclaimed.data?.items ?? []
-  if (pendingAttempts.length === 0 && payments.length === 0) return null
+  if (attempts.data?.total === 0 && unclaimed.data?.total === 0 && !attempts.error && !unclaimed.error && attemptPaging.page === 0 && paymentPaging.page === 0) return null
 
   const confirmDismiss = (event: FormEvent) => {
     event.preventDefault()
@@ -47,7 +51,9 @@ export function QrRecoveryPanel({ isOwner }: { isOwner: boolean }) {
         <p className="text-sm text-muted-foreground">{t('qr.description')}</p>
       </div>
 
-      {pendingAttempts.length > 0 && (
+      {attempts.error && <p role="alert" className="text-sm text-destructive">{attempts.error.message}</p>}
+      {unclaimed.error && <p role="alert" className="text-sm text-destructive">{unclaimed.error.message}</p>}
+      {(attempts.isPending || (attempts.data?.total ?? 0) > 0 || attemptPaging.page > 0) && (
         <div className="space-y-2">
           <h3 className="text-sm font-medium">{t('qr.attemptsTitle')}</h3>
           <ul className="divide-y rounded-lg border">
@@ -76,10 +82,11 @@ export function QrRecoveryPanel({ isOwner }: { isOwner: boolean }) {
               </li>
             ))}
           </ul>
+          <PaginationBar {...attemptPaging} total={attempts.data?.total} isLoading={attempts.isFetching || resolve.isPending} onPageChange={attemptPaging.setPage} />
         </div>
       )}
 
-      {payments.length > 0 && (
+      {(unclaimed.isPending || (unclaimed.data?.total ?? 0) > 0 || paymentPaging.page > 0) && (
         <div className="space-y-2">
           <h3 className="text-sm font-medium">{t('qr.unclaimedTitle')}</h3>
           <p className="text-xs text-muted-foreground">{t('qr.unclaimedHint')}</p>
@@ -128,6 +135,7 @@ export function QrRecoveryPanel({ isOwner }: { isOwner: boolean }) {
               </li>
             ))}
           </ul>
+          <PaginationBar {...paymentPaging} total={unclaimed.data?.total} isLoading={unclaimed.isFetching || dismiss.isPending} onPageChange={(page) => { setDismissing(null); paymentPaging.setPage(page) }} />
         </div>
       )}
     </section>

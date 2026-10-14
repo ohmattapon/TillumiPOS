@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/PageHeader'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { meQuery } from '@/features/auth'
@@ -12,7 +14,8 @@ import { selectedRegisterId, useRegisterSelectionStore } from '../store/register
 import { QrRecoveryPanel } from './QrRecoveryPanel'
 import { ShiftHistoryPanel } from './ShiftHistoryPanel'
 import { ShiftSummaryView } from './ShiftSummaryView'
-import { checkoutModeQuery, currentShiftQuery, registersQuery, shiftEntriesQuery, useCancelClosing, useCloseShift, useCreateRegister, useOpenShift, useRecordCashMovement, useStartClosing, useUpdateRegister } from '../api'
+import { ShiftEntriesPanel } from './ShiftEntriesPanel'
+import { checkoutModeQuery, currentShiftQuery, registersQuery, useCancelClosing, useCloseShift, useCreateRegister, useOpenShift, useRecordCashMovement, useStartClosing, useUpdateRegister } from '../api'
 
 export function ShiftsPage() {
   const { t } = useTranslation('shifts')
@@ -21,6 +24,7 @@ export function ShiftsPage() {
   const { branch } = useActiveBranch()
   const mode = useQuery(checkoutModeQuery)
   const registers = useQuery(registersQuery)
+  const registerPaging = useListPagination('registers')
   const selections = useRegisterSelectionStore((state) => state.selections)
   const selectRegister = useRegisterSelectionStore((state) => state.select)
   const [openingAmount, setOpeningAmount] = useState('0')
@@ -54,9 +58,8 @@ export function ShiftsPage() {
   const movement = useRecordCashMovement()
   const createRegister = useCreateRegister()
   const updateRegister = useUpdateRegister()
-  const entries = useQuery({ ...shiftEntriesQuery(detailsId ?? 0), enabled: detailsId !== undefined })
   const registerName = useMemo(() => registers.data?.items.find((item) => item.id === currentId)?.name ?? '', [registers.data, currentId])
-  const error = [mode.error, registers.error, current.error, entries.error, open.error, startClosing.error, cancelClosing.error, close.error, movement.error, createRegister.error, updateRegister.error].find(Boolean)
+  const error = [mode.error, registers.error, current.error, open.error, startClosing.error, cancelClosing.error, close.error, movement.error, createRegister.error, updateRegister.error].find(Boolean)
   const errorCode = error instanceof ApiError ? error.code : null
 
   return (
@@ -163,12 +166,7 @@ export function ShiftsPage() {
             </div>
           )}
           {error && <p role="alert" className="text-sm text-destructive">{errorCode ? t(`errors.${errorCode}`, { defaultValue: error.message }) : error.message || t('error')}</p>}
-          {current.data && (
-            <div className="border-t pt-4">
-              <h3 className="mb-3 text-sm font-semibold">{t('entries')}</h3>
-              {entries.data?.items.length ? <ul className="divide-y">{entries.data.items.map((entry) => <li key={entry.id} className="flex flex-wrap items-center gap-2 py-2 text-sm"><span>{t(`entry_${entry.kind}`)}</span><span className="font-medium tabular-nums">{money.format(entry.amountSatang)}</span><span className="text-muted-foreground">{entry.actorName} · {date.dateTime(entry.createdAt)}{entry.reason ? ` · ${entry.reason}` : ''}</span></li>)}</ul> : <p className="text-sm text-muted-foreground">{t('noEntries')}</p>}
-            </div>
-          )}
+          {current.data && <ShiftEntriesPanel shiftId={current.data.id} />}
         </section>
 
         {mode.data?.checkoutMode === 'shifts' && <QrRecoveryPanel isOwner={me?.role === 'owner'} />}
@@ -181,7 +179,8 @@ export function ShiftsPage() {
               <label className="grid gap-2 text-sm">{t('registerName')}<Input value={newRegisterName} onChange={(event) => setNewRegisterName(event.target.value)} maxLength={100} required /></label>
               <Button className="h-10 self-end" disabled={createRegister.isPending}>{t('createRegister')}</Button>
             </form>
-            <ul className="divide-y">{registers.data?.items.map((register) => <li key={register.id} className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm"><span className="font-medium">{register.code}</span><Input className="h-9 max-w-64" aria-label={t('registerName')} value={registerNames[register.id] ?? register.name} onChange={(event) => setRegisterNames((names) => ({ ...names, [register.id]: event.target.value }))} maxLength={100} /><div className="flex gap-2"><Button variant="outline" className="h-9" disabled={updateRegister.isPending || !(registerNames[register.id]?.trim()) || (registerNames[register.id]?.trim() ?? register.name) === register.name} onClick={() => updateRegister.mutate({ id: register.id, name: registerNames[register.id]!.trim() })}>{t('saveName')}</Button><Button variant="outline" className="h-9" disabled={updateRegister.isPending || (!!current.data && current.data.registerId === register.id)} onClick={() => updateRegister.mutate({ id: register.id, isActive: !register.isActive })}>{register.isActive ? t('deactivate') : t('activate')}</Button></div></li>)}</ul>
+            <ul className="divide-y">{registers.data?.items.slice(registerPaging.offset, registerPaging.offset + registerPaging.pageSize).map((register) => <li key={register.id} className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm"><span className="font-medium">{register.code}</span><Input className="h-9 max-w-64" aria-label={t('registerName')} value={registerNames[register.id] ?? register.name} onChange={(event) => setRegisterNames((names) => ({ ...names, [register.id]: event.target.value }))} maxLength={100} /><div className="flex gap-2"><Button variant="outline" className="h-9" disabled={updateRegister.isPending || !(registerNames[register.id]?.trim()) || (registerNames[register.id]?.trim() ?? register.name) === register.name} onClick={() => updateRegister.mutate({ id: register.id, name: registerNames[register.id]!.trim() })}>{t('saveName')}</Button><Button variant="outline" className="h-9" disabled={updateRegister.isPending || (!!current.data && current.data.registerId === register.id)} onClick={() => updateRegister.mutate({ id: register.id, isActive: !register.isActive })}>{register.isActive ? t('deactivate') : t('activate')}</Button></div></li>)}</ul>
+            <PaginationBar {...registerPaging} total={registers.data?.total} isLoading={registers.isFetching} onPageChange={registerPaging.setPage} />
           </section>
         )}
 

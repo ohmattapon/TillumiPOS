@@ -8,9 +8,9 @@ export const shiftKeys = {
   history: (filters: object = {}) => [...shiftKeys.all, 'history', filters] as const,
   summary: (id: number) => [...shiftKeys.all, 'summary', id] as const,
   detail: (id: number) => [...shiftKeys.all, 'detail', id] as const,
-  entries: (id: number) => [...shiftKeys.all, 'entries', id] as const,
-  qrAttempts: () => [...shiftKeys.all, 'qr', 'attempts'] as const,
-  qrUnclaimed: () => [...shiftKeys.all, 'qr', 'unclaimed'] as const,
+  entries: (id: number, filters: object = {}) => [...shiftKeys.all, 'entries', id, filters] as const,
+  qrAttempts: (filters: object = {}) => [...shiftKeys.all, 'qr', 'attempts', filters] as const,
+  qrUnclaimed: (filters: object = {}) => [...shiftKeys.all, 'qr', 'unclaimed', filters] as const,
 }
 
 export const registersQuery = queryOptions({
@@ -52,7 +52,6 @@ export const shiftHistoryQuery = (filters: ShiftHistoryFilters) => queryOptions(
       ...(filters.status !== 'all' && { status: filters.status }),
     },
   })),
-  placeholderData: (previous) => previous,
 })
 
 /** The report of a shift: live while it is open, frozen from when counting started. */
@@ -78,9 +77,9 @@ export function useUpdateRegister() {
   })
 }
 
-export const shiftEntriesQuery = (shiftId: number) => queryOptions({
-  queryKey: shiftKeys.entries(shiftId),
-  queryFn: () => unwrap(apiV2.shifts({ id: shiftId })['cash-entries'].get({ query: { limit: 50, offset: 0 } })),
+export const shiftEntriesQuery = (shiftId: number, filters: { limit?: number; offset?: number } = {}) => queryOptions({
+  queryKey: shiftKeys.entries(shiftId, filters),
+  queryFn: () => unwrap(apiV2.shifts({ id: shiftId })['cash-entries'].get({ query: { limit: 20, offset: 0, ...filters } })),
 })
 
 function invalidateShifts(queryClient: ReturnType<typeof useQueryClient>) {
@@ -133,16 +132,16 @@ export function useRecordCashMovement() {
 }
 
 /** QR requests whose outcome at the bank was never learned. They block counting until resolved. */
-export const unresolvedQrAttemptsQuery = queryOptions({
-  queryKey: shiftKeys.qrAttempts(),
-  queryFn: () => unwrap(apiV2.payments.qr.attempts.get({ query: { limit: 50, offset: 0 } })),
+export const unresolvedQrAttemptsQuery = (filters: { limit?: number; offset?: number } = {}) => queryOptions({
+  queryKey: shiftKeys.qrAttempts(filters),
+  queryFn: () => unwrap(apiV2.payments.qr.attempts.get({ query: { limit: 10, offset: 0, ...filters } })),
   refetchInterval: 15_000,
 })
 
 /** Money the bank confirmed that has no sale yet, for the whole branch. */
-export const unclaimedQrQuery = queryOptions({
-  queryKey: shiftKeys.qrUnclaimed(),
-  queryFn: () => unwrap(apiV2.payments.qr.unclaimed.get({ query: { limit: 50, offset: 0 } })),
+export const unclaimedQrQuery = (filters: { limit?: number; offset?: number; amountSatang?: number } = {}) => queryOptions({
+  queryKey: shiftKeys.qrUnclaimed(filters),
+  queryFn: () => unwrap(apiV2.payments.qr.unclaimed.get({ query: { limit: 10, offset: 0, ...filters } })),
   refetchInterval: 15_000,
 })
 

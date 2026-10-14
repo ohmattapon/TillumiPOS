@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { openOrdersQuery, useOpenOrder, type Order } from '@/features/orders'
@@ -15,12 +17,16 @@ export function FloorDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation('pos')
   const { money } = useFormat()
   const tables = useQuery(tablesQuery)
-  const orders = useQuery(openOrdersQuery)
   const openOrder = useOpenOrder()
   const workOnOrder = useCartStore((state) => state.workOnOrder)
   const [selected, setSelected] = useState<DiningTable | null>(null)
+  const paging = useListPagination(`table:${selected?.id ?? ''}`, 5)
+  const orders = useQuery({
+    ...openOrdersQuery({ tableId: selected?.id, limit: paging.pageSize, offset: paging.offset }),
+    enabled: selected !== null,
+  })
 
-  const here = (orders.data ?? []).filter((order) => order.tableId === selected?.id)
+  const here = orders.data?.items ?? []
   const usable = (tables.data ?? []).filter((table) => table.isActive)
 
   const resume = (order: Order) => {
@@ -77,6 +83,8 @@ export function FloorDialog({ onClose }: { onClose: () => void }) {
                 </li>
               ))}
             </ul>
+            {orders.error && <p className="text-sm text-destructive">{orders.error.message}</p>}
+            <PaginationBar {...paging} total={orders.data?.total} isLoading={orders.isFetching} onPageChange={paging.setPage} />
             <Button className="h-10" onClick={startNew} disabled={openOrder.isPending}>
               {t('floor.newOrder', { name: selected.name })}
             </Button>

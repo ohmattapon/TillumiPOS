@@ -31,7 +31,7 @@ export function PosPage() {
   const clearCart = useCartStore((state) => state.clear)
   const checkout = useCheckout()
   const payOrder = usePayOrder()
-  const openOrders = useQuery(openOrdersQuery)
+  const openOrders = useQuery(openOrdersQuery({ limit: 1 }))
   const checkoutMode = useQuery(checkoutModeQuery)
   const registers = useQuery(registersQuery)
   const me = useQuery(meQuery).data
@@ -121,9 +121,9 @@ export function PosPage() {
         <Button variant="outline" className="h-9 px-3" onClick={() => setIsListingOrders(true)}>
           <ClipboardList />
           {t('orders.button')}
-          {!!openOrders.data?.length && (
+          {!!openOrders.data?.total && (
             <span className="rounded-full bg-primary/10 px-1.5 text-xs text-primary tabular-nums">
-              {openOrders.data.length}
+              {openOrders.data.total}
             </span>
           )}
         </Button>

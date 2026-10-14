@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { openOrdersQuery, useMergeOrders, useMoveOrder, useSplitOrder } from '@/features/orders'
@@ -69,9 +71,10 @@ function MergeDialog({ order, onClose }: { order: Order; onClose: () => void }) 
   const { t } = useTranslation('pos')
   const { t: tc } = useTranslation()
   const { money } = useFormat()
-  const open = useQuery(openOrdersQuery)
+  const paging = useListPagination(`merge:${order.id}`, 10)
+  const open = useQuery(openOrdersQuery({ excludeId: order.id, limit: paging.pageSize, offset: paging.offset }))
   const merge = useMergeOrders()
-  const others = (open.data ?? []).filter((other) => other.id !== order.id)
+  const others = open.data?.items ?? []
 
   return (
     <Dialog open onOpenChange={(value) => !value && onClose()}>
@@ -81,7 +84,7 @@ function MergeDialog({ order, onClose }: { order: Order; onClose: () => void }) 
           <DialogDescription>{t('tools.mergeDescription')}</DialogDescription>
         </DialogHeader>
         <ul className="max-h-[50vh] divide-y overflow-y-auto rounded-lg border">
-          {others.length === 0 && (
+          {!open.isPending && !open.error && others.length === 0 && (
             <li className="px-4 py-8 text-center text-sm text-muted-foreground">{t('tools.nothingToMerge')}</li>
           )}
           {others.map((other) => (
@@ -110,6 +113,8 @@ function MergeDialog({ order, onClose }: { order: Order; onClose: () => void }) 
             </li>
           ))}
         </ul>
+        {open.error && <p className="text-sm text-destructive">{open.error.message}</p>}
+        <PaginationBar {...paging} total={open.data?.total} isLoading={open.isFetching || merge.isPending} onPageChange={paging.setPage} />
         <DialogFooter>
           <Button variant="outline" className="h-10" onClick={onClose}>
             {tc('cancel')}

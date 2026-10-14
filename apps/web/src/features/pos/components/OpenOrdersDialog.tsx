@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -14,7 +16,8 @@ import { useCartStore } from '../store/cart.store'
 export function OpenOrdersDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation('pos')
   const { money, date } = useFormat()
-  const orders = useQuery(openOrdersQuery)
+  const paging = useListPagination('open-orders', 10)
+  const orders = useQuery(openOrdersQuery({ limit: paging.pageSize, offset: paging.offset }))
   const tables = useQuery(tablesQuery)
   const cancelOrder = useCancelOrder()
   const workOnOrder = useCartStore((state) => state.workOnOrder)
@@ -42,7 +45,7 @@ export function OpenOrdersDialog({ onClose }: { onClose: () => void }) {
     )
   }
 
-  const items = orders.data ?? []
+  const items = orders.data?.items ?? []
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -115,6 +118,7 @@ export function OpenOrdersDialog({ onClose }: { onClose: () => void }) {
             </li>
           ))}
         </ul>
+        <PaginationBar {...paging} total={orders.data?.total} isLoading={orders.isFetching || cancelOrder.isPending} onPageChange={(page) => { setCancelling(null); paging.setPage(page) }} />
       </DialogContent>
     </Dialog>
   )

@@ -9,14 +9,15 @@ import type { PaymentInput } from '@/lib/money'
 export const orderKeys = {
   /** Prefix of every order query. */
   all: ['orders'] as const,
-  open: () => [...orderKeys.all, 'list', { status: 'open' }] as const,
+  open: () => [...orderKeys.all, 'list', 'open'] as const,
+  openPage: (filters: object) => [...orderKeys.open(), filters] as const,
   detail: (id: number) => [...orderKeys.all, 'detail', id] as const,
 }
 
-/** The open orders of the branch: a restaurant has few at a time, so they are read in one request. */
-export const openOrdersQuery = queryOptions({
-  queryKey: orderKeys.open(),
-  queryFn: async () => (await unwrap(api.orders.get({ query: { status: 'open', limit: 200 } }))).items,
+/** One page of open orders, oldest first. The badge reads total, independently of the page. */
+export const openOrdersQuery = (filters: { tableId?: number; excludeId?: number; limit?: number; offset?: number } = {}) => queryOptions({
+  queryKey: orderKeys.openPage(filters),
+  queryFn: () => unwrap(api.orders.get({ query: { status: 'open', limit: 10, offset: 0, ...filters } })),
   // Other tills open and pay orders too; keep the list close to the truth without a push channel.
   refetchInterval: 15_000,
 })
