@@ -93,6 +93,7 @@ docker compose up -d --build
 | `DOMAIN`, `COOKIE_SECURE` | เปิด HTTPS (ดูหัวข้อด้านบน) |
 | `MEDIA_URL`, `MEDIA_TOKEN` | เปิดรูปสินค้า (ต้องมี Cloudflare Worker ของ `apps/media`) ถ้าเว้นว่าง ระบบทำงานได้โดยไม่มีรูป |
 | `SCB_API_KEY`, `SCB_API_SECRET`, `SCB_BILLER_ID`, `SCB_REF3_PREFIX` | เปิดการชำระ QR ของ SCB ตั้งค่าและทดสอบกับธนาคารก่อนใช้จริง |
+| `SCB_API_BASE_URL` | ที่อยู่ API ของ SCB ค่าเริ่มต้นเป็น sandbox: ตอนใช้จริงต้องเปลี่ยนเป็นที่อยู่ production ที่ SCB ให้มาพร้อมกุญแจ |
 
 แก้ `.env` แล้วรัน `docker compose up -d` เพื่อให้มีผล
 
