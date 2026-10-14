@@ -29,6 +29,8 @@ services:
       CHECKOUT_MODE: ${CHECKOUT_MODE:-shifts}
       MEDIA_URL: ${MEDIA_URL:-}
       MEDIA_TOKEN: ${MEDIA_TOKEN:-}
+      MEDIA_STORAGE: ${MEDIA_STORAGE:-}
+      MEDIA_DIR: /data/media
       SCB_API_KEY: ${SCB_API_KEY:-}
       SCB_API_SECRET: ${SCB_API_SECRET:-}
       SCB_BILLER_ID: ${SCB_BILLER_ID:-}
@@ -37,6 +39,8 @@ services:
       SCB_TWO_REFERENCES: ${SCB_TWO_REFERENCES:-false}
     ports:
       - "${PORT:-3000}:3000"
+    volumes:
+      - pos-media:/data/media
 
   # Turned on with `--profile https` and DOMAIN set: gets and renews the certificate by itself.
   caddy:
@@ -57,4 +61,5 @@ services:
 
 volumes:
   pos-db:
+  pos-media:
   caddy-data:
