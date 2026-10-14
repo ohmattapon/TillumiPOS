@@ -154,22 +154,52 @@ async function main() {
       await sellOneForCash(owner)
     })
 
+    await check('with a tax ID the receipt is an abbreviated tax invoice, ends with the footer and prints 48 mm wide on 58 mm paper', async () => {
+      const changed = await owner.request.patch(`${WEB}/api/v1/settings`, {
+        data: { taxId: '0105500000000', receiptFooter: 'ขอบคุณที่ใช้บริการ', receiptPaperMm: 58 },
+      })
+      if (!changed.ok()) throw new Error(`Could not change the settings: ${changed.status()}`)
+      await sellOneForCash(owner)
+      const receipt = owner.getByRole('dialog')
+      await receipt.getByText('ใบกำกับภาษีอย่างย่อ').waitFor()
+      await receipt.getByText('เลขประจำตัวผู้เสียภาษี 0105500000000').waitFor()
+      await receipt.getByText('ขอบคุณที่ใช้บริการ').waitFor()
+
+      await owner.emulateMedia({ media: 'print' })
+      const widthMm = await receipt.evaluate((element) => (element.getBoundingClientRect().width * 25.4) / 96)
+      const appVisible = await owner.locator('#root').isVisible()
+      await owner.emulateMedia({ media: 'screen' })
+      if (Math.abs(widthMm - 48) > 0.5) throw new Error(`The printed receipt is ${widthMm.toFixed(1)} mm wide, not 48`)
+      if (appVisible) throw new Error('The app behind the receipt would be printed too')
+    })
+
+    await check('the sale made before the tax ID was set still prints as a plain receipt', async () => {
+      await owner.goto(`${WEB}/today`)
+      // Newest first: the last row is the cashier's sale, made before the settings changed.
+      await owner.getByRole('row').nth(3).waitFor()
+      await owner.getByRole('row').last().click()
+      const detail = owner.getByRole('dialog')
+      await detail.getByText('ใบเสร็จรับเงิน').waitFor()
+      if ((await detail.getByText('ใบกำกับภาษีอย่างย่อ').count()) > 0) throw new Error('An old sale turned into a tax invoice')
+      if ((await detail.getByText(/เลขประจำตัวผู้เสียภาษี/).count()) > 0) throw new Error('An old sale gained a tax ID')
+    })
+
     await check('a reload keeps the shift: the till is still ready to sell', async () => {
       await cashier.reload()
       await cashier.getByRole('button', { name: 'กะเปิดอยู่' }).waitFor()
     })
 
-    await check('the shift page shows both cash sales in the drawer entries', async () => {
+    await check('the shift page shows the cash sales in the drawer entries', async () => {
       await owner.goto(`${WEB}/shifts`)
-      await owner.getByText('รับเงินสดจากการขาย').nth(1).waitFor()
+      await owner.getByText('รับเงินสดจากการขาย').nth(2).waitFor()
     })
 
     await check('the owner starts counting: the report is frozen and shows what the drawer should hold', async () => {
       await owner.getByRole('button', { name: 'เริ่มนับปิดกะ' }).click()
       await owner.getByText(/ยอดที่หยุดไว้ตอนเริ่มนับ/).waitFor()
-      // 100.00 opening + two sales of 10.00.
+      // 100.00 opening + three sales of 10.00.
       await owner.getByText('เงินสดที่ควรมี').first().waitFor()
-      await owner.getByText('฿120.00').first().waitFor()
+      await owner.getByText('฿130.00').first().waitFor()
     })
 
     await check('the other till can no longer take payment once counting has started', async () => {
@@ -181,7 +211,7 @@ async function main() {
     })
 
     await check('a count that differs needs a reason before the shift can be closed', async () => {
-      await owner.getByLabel('เงินสดที่นับได้').fill('115')
+      await owner.getByLabel('เงินสดที่นับได้').fill('125')
       const close = owner.getByRole('button', { name: 'ยืนยันปิดกะ' })
       if (!(await close.isDisabled())) throw new Error('Close is enabled without a reason for the difference')
       await owner.getByLabel('เหตุผลของยอดเงินที่ต่างกัน').fill('ทอนเงินผิด')
@@ -196,6 +226,42 @@ async function main() {
       await owner.getByText('ทอนเงินผิด').waitFor()
       await owner.getByText('-฿5.00').waitFor()
       await owner.getByText(/ยอดที่หยุดไว้ตอนเริ่มนับ/).waitFor()
+    })
+
+    console.log('\nOwner pages:')
+
+    await check('the owner adds a user on the users page, and that person can sign in', async () => {
+      await owner.goto(`${WEB}/users`)
+      await owner.getByRole('button', { name: 'เพิ่มผู้ใช้' }).click()
+      const form = owner.getByRole('dialog')
+      await form.getByLabel('ชื่อผู้ใช้').fill('somsri')
+      await form.getByLabel('ชื่อที่แสดงบนใบเสร็จ').fill('สมศรี')
+      await form.getByLabel('รหัสผ่าน').fill(CASHIER_PASSWORD)
+      await form.getByRole('button', { name: 'บันทึก' }).click()
+      await owner.getByRole('row', { name: /somsri/ }).waitFor()
+      const somsri = await signIn(browser, 'somsri', CASHIER_PASSWORD)
+      await somsri.context().close()
+    })
+
+    await check('a cashier has no users or categories page', async () => {
+      await cashier.goto(`${WEB}/users`)
+      await cashier.getByRole('heading', { name: /ขายสินค้า/ }).waitFor()
+      if ((await cashier.getByRole('link', { name: 'ผู้ใช้' }).count()) > 0) throw new Error('A cashier sees the users link')
+      if ((await cashier.getByRole('link', { name: 'หมวดหมู่' }).count()) > 0) throw new Error('A cashier sees the categories link')
+    })
+
+    await check('the owner adds a category and then deactivates it', async () => {
+      await owner.goto(`${WEB}/categories`)
+      await owner.getByRole('button', { name: 'เพิ่มหมวดหมู่' }).click()
+      const form = owner.getByRole('dialog')
+      await form.getByLabel('ชื่อหมวดหมู่').fill('ของทดสอบ')
+      await form.getByLabel('ลำดับการแสดง').fill('9')
+      await form.getByRole('button', { name: 'บันทึก' }).click()
+      const row = owner.getByRole('row', { name: /ของทดสอบ/ })
+      await row.getByText('ใช้งานอยู่').waitFor()
+      await row.getByRole('button', { name: /การทำงานอื่นของ ของทดสอบ/ }).click()
+      await owner.getByRole('menuitem', { name: 'ปิดใช้งาน' }).click()
+      await row.getByText('ปิดใช้งาน').waitFor()
     })
 
     await check('in English the same screens read in English', async () => {
