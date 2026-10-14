@@ -65,7 +65,7 @@ scripts/backup.sh
 
 ควรตั้งให้สำรองทุกคืน: บน Linux ใช้ cron (`0 2 * * * cd /path/to/easypos && scripts/backup.sh`) บน Windows ใช้ Task Scheduler เรียก `backup.ps1`
 
-รูปสินค้าที่เก็บบน Cloudflare R2 ไม่อยู่ในไฟล์สำรองนี้
+ถ้าเก็บรูปสินค้าในเครื่อง (ค่าเริ่มต้น) สคริปต์จะสำรองรูปเป็นไฟล์ที่สองชื่อเดียวกัน `backups/easypos-วันที่-เวลา.media.tar.gz` เก็บและคัดลอกคู่กับไฟล์ `.sql.gz` ตอนกู้คืนให้ระบุไฟล์ `.sql.gz` ระบบจะกู้รูปจากไฟล์คู่ให้เองถ้ามี ส่วนรูปที่เก็บบน Cloudflare R2 ไม่อยู่ในไฟล์สำรองนี้
 
 ## กู้คืนข้อมูล
 
@@ -91,7 +91,9 @@ docker compose up -d --build
 |---|---|
 | `PORT` | พอร์ตของเว็บ (ค่าเริ่มต้น 3000) |
 | `DOMAIN`, `COOKIE_SECURE` | เปิด HTTPS (ดูหัวข้อด้านบน) |
-| `MEDIA_URL`, `MEDIA_TOKEN` | เปิดรูปสินค้า (ต้องมี Cloudflare Worker ของ `apps/media`) ถ้าเว้นว่าง ระบบทำงานได้โดยไม่มีรูป |
+| `MEDIA_STORAGE` | ที่เก็บรูปสินค้า: `local` เก็บในเครื่อง (ค่าเริ่มต้นเมื่อไม่ได้ตั้ง `MEDIA_URL` และ `MEDIA_TOKEN` ครบ), `worker` ใช้ Cloudflare R2 ผ่าน Worker ของ `apps/media` (ค่าเริ่มต้นเมื่อตั้งสองตัวนั้นครบ), `none` ไม่ใช้รูป เปลี่ยนที่เก็บแล้วต้องอัปโหลดรูปใหม่ (รูปเดิมไม่ถูกย้าย) |
+| `MEDIA_URL`, `MEDIA_TOKEN` | ใช้เมื่อเลือก `worker` |
+| `MEDIA_DIR` | โฟลเดอร์เก็บรูปเมื่อรันนอก Docker (ใน Docker คือ volume `pos-media` ไม่ต้องตั้ง) |
 | `SCB_API_KEY`, `SCB_API_SECRET`, `SCB_BILLER_ID`, `SCB_REF3_PREFIX` | เปิดการชำระ QR ของ SCB ตั้งค่าและทดสอบกับธนาคารก่อนใช้จริง |
 | `SCB_API_BASE_URL` | ที่อยู่ API ของ SCB ค่าเริ่มต้นเป็น sandbox: ตอนใช้จริงต้องเปลี่ยนเป็นที่อยู่ production ที่ SCB ให้มาพร้อมกุญแจ |
 
