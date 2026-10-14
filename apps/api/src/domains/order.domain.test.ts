@@ -5,7 +5,7 @@ import { MAX_LINE_QUANTITY, MAX_ORDER_LINES, OrderEntity, type OrderItem } from 
 
 const tea = { productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500 }
 const cake = { productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700 }
-const item = (overrides: Partial<OrderItem> = {}): OrderItem => ({ ...tea, quantity: 1, ...overrides })
+const item = (overrides: Partial<OrderItem> = {}): OrderItem => ({ ...tea, lineId: 0, options: [], quantity: 1, ...overrides })
 
 const codeOf = (run: () => unknown) => {
   try {
@@ -168,5 +168,93 @@ describe('OrderEntity', () => {
 
   test('a paid order must have a sale', () => {
     expect(() => makeOrder({ status: 'paid', saleId: null })).toThrow(DomainError)
+  })
+})
+
+const pearls = { groupId: 2, groupName: 'ท็อปปิง', optionId: 20, name: 'ไข่มุก', priceSatang: 1000, costSatang: 400 }
+const jelly = { groupId: 2, groupName: 'ท็อปปิง', optionId: 21, name: 'วุ้น', priceSatang: 500, costSatang: 200 }
+
+describe('OrderEntity lines with options', () => {
+  test('the same product with different options is a different line, the same options one line', () => {
+    const order = makeOrder({ items: [] })
+      .addItem({ ...tea, unitPriceSatang: 3500 }, 1, [pearls])
+      .addItem(tea, 1)
+      .addItem({ ...tea, unitPriceSatang: 3500 }, 2, [pearls])
+
+    expect(order.items.map((line) => [line.options.map((option) => option.name), line.quantity])).toEqual([
+      [['ไข่มุก'], 3],
+      [[], 1],
+    ])
+  })
+
+  test('a line keeps the price quoted with its options', () => {
+    const order = makeOrder({ items: [item({ lineId: 5, unitPriceSatang: 3500, options: [pearls], quantity: 1 })] }).addItem(
+      { ...tea, unitPriceSatang: 9999 },
+      1,
+      [pearls],
+    )
+
+    expect(order.items).toHaveLength(1)
+    expect(order.items[0]).toMatchObject({ lineId: 5, unitPriceSatang: 3500, quantity: 2 })
+  })
+
+  test('sums the lines as quoted, options included', () => {
+    const order = makeOrder({
+      items: [item({ lineId: 1, unitPriceSatang: 3500, options: [pearls], quantity: 2 }), item({ lineId: 2, quantity: 1 })],
+    })
+
+    expect(order.subtotalSatang).toBe(2 * 3500 + 2500)
+    expect(order.itemCount).toBe(3)
+  })
+
+  test('a line is changed and removed by its id, leaving the other lines of the product', () => {
+    const order = makeOrder({
+      items: [item({ lineId: 1, options: [pearls], unitPriceSatang: 3500 }), item({ lineId: 2, options: [jelly], unitPriceSatang: 3000 })],
+    })
+
+    const changed = order.setLineQuantity(2, 4)
+    const removed = order.removeLine(1)
+
+    expect(changed.items.map((line) => [line.lineId, line.quantity])).toEqual([
+      [1, 1],
+      [2, 4],
+    ])
+    expect(removed.items.map((line) => line.lineId)).toEqual([2])
+  })
+
+  test('an unknown line id is not found', () => {
+    const order = makeOrder({ items: [item({ lineId: 1 })] })
+
+    expect(codeOf(() => order.setLineQuantity(9, 2))).toBe('ORDER_ITEM_NOT_FOUND')
+    expect(codeOf(() => order.removeLine(9))).toBe('ORDER_ITEM_NOT_FOUND')
+  })
+
+  test('the product-id methods work on the line without options only', () => {
+    const order = makeOrder({ items: [item({ lineId: 1, options: [pearls], unitPriceSatang: 3500 })] })
+
+    expect(codeOf(() => order.setQuantity(1, 2))).toBe('ORDER_ITEM_NOT_FOUND')
+    expect(codeOf(() => order.removeItem(1))).toBe('ORDER_ITEM_NOT_FOUND')
+
+    const withPlain = order.addItem(tea, 1)
+    expect(withPlain.setQuantity(1, 5).items.map((line) => [line.options.length, line.quantity])).toEqual([
+      [1, 1],
+      [0, 5],
+    ])
+    expect(withPlain.removeItem(1).items.map((line) => line.options.length)).toEqual([1])
+  })
+
+  test('opening an order merges lines by product and options', () => {
+    const opened = OrderEntity.open({
+      branchId: 1,
+      label: null,
+      openedById: 3,
+      openedByName: 'สมชาย',
+      items: [item({ options: [pearls] }), item({ options: [jelly] }), item({ options: [pearls], quantity: 2 })],
+    })
+
+    expect(opened.items.map((line) => [line.options[0]!.name, line.quantity])).toEqual([
+      ['ไข่มุก', 3],
+      ['วุ้น', 1],
+    ])
   })
 })

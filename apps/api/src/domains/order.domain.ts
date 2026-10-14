@@ -1,17 +1,22 @@
 import { DomainConflictError } from './errors/domain-conflict.error'
 import { DomainError } from './errors/domain-error'
 import { DomainNotFoundError } from './errors/domain-not-found.error'
+import { lineKey, type LineOption } from './modifier.domain'
 
 export const ORDER_STATUSES = ['open', 'paid', 'cancelled'] as const
 export type OrderStatus = (typeof ORDER_STATUSES)[number]
 
 /** One line of an order. Name, SKU and price are what was quoted when it was ordered. */
 export interface OrderItem {
+  /** Id of the stored line; 0 until the order has been stored. */
+  lineId: number
   productId: number
   productName: string
   sku: string
+  /** The product's price plus the options chosen: what is charged for one unit of this line. */
   unitPriceSatang: number
   quantity: number
+  options: readonly LineOption[]
 }
 
 /** What is needed to put a product on an order: the product as it is now. */
@@ -53,19 +58,26 @@ function assertQuantity(quantity: number) {
     throw invalid(`จำนวนสินค้าต้องเป็นจำนวนเต็มตั้งแต่ 1 ถึง ${MAX_LINE_QUANTITY}`)
 }
 
-/** The lines of an order, with repeated products merged into the first line of each. */
+/** The same product with the same options is the same line. */
+const identity = (item: OrderItem) => `${item.productId}:${lineKey(item.options)}`
+
+/** The lines of an order, with repeated products and options merged into the first line of each. */
 function mergeLines(items: readonly OrderItem[]): OrderItem[] {
-  const merged = new Map<number, OrderItem>()
+  const merged = new Map<string, OrderItem>()
   for (const item of items) {
     assertQuantity(item.quantity)
-    const existing = merged.get(item.productId)
-    merged.set(item.productId, existing ? { ...existing, quantity: existing.quantity + item.quantity } : { ...item })
+    const key = identity(item)
+    const existing = merged.get(key)
+    merged.set(key, existing ? { ...existing, quantity: existing.quantity + item.quantity } : { ...item })
   }
   const lines = [...merged.values()]
   lines.forEach((line) => assertQuantity(line.quantity))
   if (lines.length > MAX_ORDER_LINES) throw invalid(`ออเดอร์มีรายการได้ไม่เกิน ${MAX_ORDER_LINES} บรรทัด`)
   return lines
 }
+
+const plainLineOf = (productId: number) => (item: OrderItem) => item.productId === productId && item.options.length === 0
+const lineWithId = (lineId: number) => (item: OrderItem) => item.lineId === lineId
 
 /**
  * A bill that is still being built. It is edited while open and closed once: paid (it then
@@ -119,25 +131,33 @@ export class OrderEntity {
     return this.items.reduce((total, item) => total + item.quantity, 0)
   }
 
-  /** Puts a product on the order. A product already on it gains the quantity and keeps its quoted price. */
-  addItem(product: OrderedProduct, quantity: number): OrderEntity {
+  /**
+   * Puts a product on the order. The same product with the same options gains the quantity and keeps
+   * the price it was quoted. `product.unitPriceSatang` is the unit price including the options.
+   */
+  addItem(product: OrderedProduct, quantity: number, options: readonly LineOption[] = []): OrderEntity {
     this.assertOpen()
     assertQuantity(quantity)
-    return this.change({ items: mergeLines([...this.items, { ...product, quantity }]) })
+    return this.change({ items: mergeLines([...this.items, { ...product, lineId: 0, options, quantity }]) })
   }
 
-  /** Sets how many of a product are ordered. */
+  /** Sets how many of a product, without options, are ordered. */
   setQuantity(productId: number, quantity: number): OrderEntity {
-    this.assertOpen()
-    assertQuantity(quantity)
-    this.requireItem(productId)
-    return this.change({ items: this.items.map((item) => (item.productId === productId ? { ...item, quantity } : item)) })
+    return this.setQuantityOf(plainLineOf(productId), quantity)
   }
 
+  /** Sets how many of one line are ordered, whatever options it has. */
+  setLineQuantity(lineId: number, quantity: number): OrderEntity {
+    return this.setQuantityOf(lineWithId(lineId), quantity)
+  }
+
+  /** Takes the line of a product without options off the order. */
   removeItem(productId: number): OrderEntity {
-    this.assertOpen()
-    this.requireItem(productId)
-    return this.change({ items: this.items.filter((item) => item.productId !== productId) })
+    return this.removeWhere(plainLineOf(productId))
+  }
+
+  removeLine(lineId: number): OrderEntity {
+    return this.removeWhere(lineWithId(lineId))
   }
 
   /** A blank label clears it. */
@@ -188,9 +208,21 @@ export class OrderEntity {
     if (this.status !== 'open') throw new DomainConflictError('ออเดอร์นี้ปิดแล้ว แก้ไขไม่ได้', 'ORDER_NOT_OPEN')
   }
 
-  private requireItem(productId: number): void {
-    if (!this.items.some((item) => item.productId === productId))
-      throw new DomainNotFoundError('ไม่พบสินค้านี้ในออเดอร์', 'ORDER_ITEM_NOT_FOUND')
+  private setQuantityOf(match: (item: OrderItem) => boolean, quantity: number): OrderEntity {
+    this.assertOpen()
+    assertQuantity(quantity)
+    this.requireItem(match)
+    return this.change({ items: this.items.map((item) => (match(item) ? { ...item, quantity } : item)) })
+  }
+
+  private removeWhere(match: (item: OrderItem) => boolean): OrderEntity {
+    this.assertOpen()
+    this.requireItem(match)
+    return this.change({ items: this.items.filter((item) => !match(item)) })
+  }
+
+  private requireItem(match: (item: OrderItem) => boolean): void {
+    if (!this.items.some(match)) throw new DomainNotFoundError('ไม่พบสินค้านี้ในออเดอร์', 'ORDER_ITEM_NOT_FOUND')
   }
 
   private change(changes: Partial<OrderEntityProps>): OrderEntity {
