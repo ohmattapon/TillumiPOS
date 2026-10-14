@@ -1,6 +1,7 @@
 {
   "name": "pos",
   "private": true,
+  "license": "AGPL-3.0-only",
   "workspaces": ["apps/*"],
   "scripts": {
     "dev": "bun run --parallel dev:api dev:web dev:media",
