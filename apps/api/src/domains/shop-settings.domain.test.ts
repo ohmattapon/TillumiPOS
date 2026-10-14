@@ -17,6 +17,8 @@ describe('ShopSettingsEntity', () => {
       vatRateBp: 700,
       timeZone: 'Asia/Bangkok',
       locale: 'th',
+      receiptPaperMm: 80,
+      receiptFooter: null,
     })
   })
 
@@ -34,6 +36,8 @@ describe('ShopSettingsEntity', () => {
     ['a fractional VAT rate', { vatRateBp: 7.5 }],
     ['an unknown time zone', { timeZone: 'Mars/Olympus' }],
     ['an unsupported language', { locale: 'fr' as never }],
+    ['a paper width no printer uses', { receiptPaperMm: 72 as never }],
+    ['a receipt footer over 200 characters', { receiptFooter: 'x'.repeat(201) }],
   ])('rejects %s', (_label, overrides) => {
     expect(() => settings(overrides)).toThrow(DomainError)
   })
@@ -45,6 +49,8 @@ describe('ShopSettingsEntity', () => {
     { vatRateBp: 10_000 },
     { timeZone: 'UTC' },
     { currency: 'USD', locale: 'en' as const },
+    { receiptPaperMm: 58 as const },
+    { receiptFooter: 'x'.repeat(200) },
   ])('accepts the edge value %p', (overrides) => {
     expect(() => settings(overrides)).not.toThrow()
   })

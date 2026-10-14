@@ -2,6 +2,8 @@ import { inject, injectable } from 'tsyringe'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { SaleEntity } from '../../../../domains/sale.domain'
+import { branchRepositoryToken } from '../../../branches/applications/ports/branch.repository'
+import type { IBranchRepository } from '../../../branches/applications/ports/branch.repository'
 import { stockLedgerToken } from '../../../inventory/applications/ports/stock-ledger.port'
 import type { IStockLedger } from '../../../inventory/applications/ports/stock-ledger.port'
 import { qrPaymentClaimsToken } from '../../../qr-payments/applications/ports/qr-payment-claims.port'
@@ -27,6 +29,7 @@ export class SaleCheckout implements ISaleCheckout {
     @inject(qrPaymentClaimsToken) private readonly qrPayments: IQrPaymentClaims,
     @inject(TOKENS.CheckoutPolicy) private readonly checkoutPolicy: ICheckoutPolicy,
     @inject(TOKENS.ShiftLedger) private readonly shiftLedger: IShiftLedger,
+    @inject(branchRepositoryToken) private readonly branches: IBranchRepository,
   ) {}
 
   async checkout({ lines: requested, discountSatang, payments, cashier, branch, shiftId }: CheckoutRequest) {
@@ -46,6 +49,7 @@ export class SaleCheckout implements ISaleCheckout {
 
     // Read inside the caller's unit of work, so the sale is priced with the settings in force when it is recorded.
     const shop = await this.settings.get()
+    const sellingBranch = await this.branches.findById(branch.id)
 
     // Locked until the sale commits, so two tills cannot sell the same last unit.
     const locked = await this.products.findManyForUpdate([...quantities.keys()], branch.id)
@@ -68,6 +72,14 @@ export class SaleCheckout implements ISaleCheckout {
       branchId: branch.id,
       shiftId: shiftId ?? null,
       cashier,
+      // Kept on the sale, so its receipt still reads the same after the shop is renamed or the branch moves.
+      seller: {
+        shopName: shop.shopName,
+        shopTaxId: shop.taxId,
+        branchName: sellingBranch?.name ?? null,
+        shopAddress: sellingBranch?.address ?? shop.address,
+        shopPhone: sellingBranch?.phone ?? shop.phone,
+      },
     })
     // Money that a bank has confirmed backs QR payments; checked here, after the amounts are known to add up.
     const claimed = await this.claimQrPayments(payments, branch.id)

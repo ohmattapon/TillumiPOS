@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
-import { makeProduct, makeSale, makeStockMovement } from '../../../../__tests__/factories'
+import { makeBranch, makeProduct, makeSale, makeStockMovement } from '../../../../__tests__/factories'
 import {
+  mockBranchRepository,
   mockProductRepository,
   mockSaleRepository,
   mockQrPaymentClaims,
@@ -33,6 +34,7 @@ let settings: ReturnType<typeof mockShopSettingsRepository>
 let qrPayments: ReturnType<typeof mockQrPaymentClaims>
 let checkoutPolicy: ReturnType<typeof mockCheckoutPolicy>
 let shiftLedger: ReturnType<typeof mockShiftLedger>
+let branches: ReturnType<typeof mockBranchRepository>
 
 beforeEach(() => {
   sales = mockSaleRepository()
@@ -43,6 +45,8 @@ beforeEach(() => {
   qrPayments = mockQrPaymentClaims()
   checkoutPolicy = mockCheckoutPolicy()
   shiftLedger = mockShiftLedger()
+  branches = mockBranchRepository()
+  branches.findById.mockResolvedValue(makeBranch())
   settings.get.mockResolvedValue(new ShopSettingsEntity(DEFAULT_SHOP_SETTINGS))
   ledger.record.mockResolvedValue(makeStockMovement())
 })
@@ -58,7 +62,7 @@ describe('CompleteSaleUseCase', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger), unitOfWork)
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches), unitOfWork)
   })
 
   const sell = (overrides: Record<string, unknown> = {}) =>
@@ -92,6 +96,25 @@ describe('CompleteSaleUseCase', () => {
       cashierName: 'สมชาย',
     })
     expect(unitOfWork.run).toHaveBeenCalledTimes(1)
+  })
+
+  test('keeps the shop and branch details the receipt is headed with', async () => {
+    settings.get.mockResolvedValue(
+      new ShopSettingsEntity({ ...DEFAULT_SHOP_SETTINGS, shopName: 'ร้านสมชาย', taxId: '0105500000000', address: 'สำนักงานใหญ่', phone: '020000000' }),
+    )
+    branches.findById.mockResolvedValue(makeBranch({ name: 'สาขาสีลม', address: '1 ถนนสีลม', phone: null }))
+
+    const sale = await sell()
+
+    expect(branches.findById).toHaveBeenCalledWith(1)
+    expect(sale.toSnapshot()).toMatchObject({
+      shopName: 'ร้านสมชาย',
+      shopTaxId: '0105500000000',
+      branchName: 'สาขาสีลม',
+      // The branch's own address, and the shop's phone because the branch has none.
+      shopAddress: '1 ถนนสีลม',
+      shopPhone: '020000000',
+    })
   })
 
   test('prices with the settings in force: exclusive VAT is added on top and recorded on the sale', async () => {
@@ -261,7 +284,7 @@ describe('QR payments in a sale', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger), unitOfWork)
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches), unitOfWork)
   })
 
   test('a promptpay payment backed by a QR is checked for this branch and amount, then used by the sale', async () => {
