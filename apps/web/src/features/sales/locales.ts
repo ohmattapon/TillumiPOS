@@ -65,6 +65,7 @@ const th = {
   },
   receipt: {
     title: 'ใบเสร็จรับเงิน',
+    titleTaxInvoice: 'ใบกำกับภาษีอย่างย่อ',
     number: 'เลขที่ {{receiptNo}}',
     cashier: 'พนักงาน: {{name}}',
     voided: '*** ยกเลิกแล้ว: {{reason}} ***',
@@ -148,6 +149,7 @@ const en = {
   },
   receipt: {
     title: 'Receipt',
+    titleTaxInvoice: 'Abbreviated tax invoice',
     number: 'No. {{receiptNo}}',
     cashier: 'Cashier: {{name}}',
     voided: '*** VOIDED: {{reason}} ***',
