@@ -8,6 +8,7 @@ import {
   Package,
   Settings,
   ShoppingCart,
+  SlidersHorizontal,
   WalletCards,
   Store,
   Tags,
@@ -80,6 +81,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
             items: [
               { to: '/products', label: t('nav.products'), icon: Package, badge: lowStockCount },
               { to: '/categories', label: t('nav.categories'), icon: Tags },
+              { to: '/modifiers', label: t('nav.modifiers'), icon: SlidersHorizontal },
               { to: '/branches', label: t('nav.branches'), icon: Building2 },
               { to: '/users', label: t('nav.users'), icon: Users },
               { to: '/settings', label: t('nav.settings'), icon: Settings },
