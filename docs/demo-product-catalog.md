@@ -1,12 +1,14 @@
 # Demo product catalog
 
-The demo catalog contains 450 packaged food and drink products listed in Open Food Facts with Thailand as a country tag. Each entry keeps its barcode, available Thai and original product names, brand, quantity, category tags, product page, and image source in `apps/api/src/infrastructure/database/demo-product-catalog.json`. The matching 400-pixel front image is stored beside the manifest.
+The demo catalog contains 450 packaged food and drink products listed in Open Food Facts with Thailand as a country tag. Each entry keeps its barcode, available Thai and original product names, brand, quantity, category tags, product page, and image source URL in `apps/api/src/infrastructure/database/demo-product-catalog.json`. A matching 400-pixel JPEG is stored beside the manifest.
+
+Open Food Facts recommends its public image dataset for bulk downloads. That bucket provides raw photos, and the sample showed that some are side or back-of-package shots rather than the selected front image. Since the POS needs recognizable shelf thumbnails, this demo uses the selected 400-pixel front images and downloads them one at a time from the official image host.
 
 Open Food Facts says its product data is contributed by volunteers and is not guaranteed to be accurate or complete. Names, barcodes, and packaging may change. The demo selling prices, costs, and starting stock in EasyPOS are generated for demonstration and are not taken from Open Food Facts or a retailer.
 
 ## Attribution and licenses
 
-Open Food Facts makes its database available under the Open Database License (ODbL); individual database contents are under the Database Contents License. Product photos are under the Creative Commons Attribution-ShareAlike (CC BY-SA) license. The manifest preserves a product-page URL and the original image URL for each record so the source can be identified. The image files are unchanged copies of the 400-pixel selected front images.
+Open Food Facts makes its database available under the Open Database License (ODbL); individual database contents are under the Database Contents License. Product photos are under the Creative Commons Attribution-ShareAlike (CC BY-SA) license. The manifest preserves a product-page URL and source image URLs for each record so the source can be identified. The bundled image files are unchanged copies of Open Food Facts' 400-pixel images.
 
 Keep this notice and the per-record source links when redistributing the demo catalog. If an image is modified, distribute that adaptation under the same CC BY-SA terms. Open Food Facts also notes that packaging can contain marks or artwork subject to other rights.
 
