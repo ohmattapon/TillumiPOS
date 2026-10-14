@@ -10,7 +10,14 @@ import { useCartActions } from '../hooks/use-cart-actions'
 import { useCartStore } from '../store/cart.store'
 
 /** The cart, its discount and the pay button. */
-export function CartPanel({ onPay, onSaveOrder }: { onPay: () => void; onSaveOrder: () => void }) {
+interface Props {
+  onPay: () => void
+  onSaveOrder: () => void
+  /** False while the till may not take payment at all, e.g. no shift is open or the shift is being counted. */
+  paymentAvailable?: boolean
+}
+
+export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true }: Props) {
   const { t } = useTranslation('pos')
   const { money, currency } = useFormat()
   const { vatMode, vatRateBp } = useSettings()
@@ -128,7 +135,7 @@ export function CartPanel({ onPay, onSaveOrder }: { onPay: () => void; onSaveOrd
             {t('cart.saveOrder')}
           </Button>
         )}
-        <Button className="h-14 w-full gap-3 text-lg" disabled={!cart.canPay} onClick={onPay}>
+        <Button className="h-14 w-full gap-3 text-lg" disabled={!cart.canPay || !paymentAvailable} onClick={onPay}>
           {t('cart.pay')}
           <Kbd>F9</Kbd>
         </Button>

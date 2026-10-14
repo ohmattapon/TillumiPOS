@@ -121,7 +121,11 @@ export function PosPage() {
 
       <div className="flex min-h-0 flex-1 print:hidden">
         <ProductPicker searchRef={searchRef} />
-        <CartPanel onPay={() => setIsPaying(true)} onSaveOrder={() => setIsSavingOrder(true)} />
+        <CartPanel
+          onPay={() => setIsPaying(true)}
+          onSaveOrder={() => setIsSavingOrder(true)}
+          paymentAvailable={shiftReady === true}
+        />
       </div>
 
       {isPaying && (
