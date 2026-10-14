@@ -1,14 +1,13 @@
+# EasyPOS for a shop: `scripts/install.sh` writes .env and starts this. Developers add docker-compose.dev.yml
+# (see `bun run db:up`) to reach the database from the host.
 services:
   db:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: pos
-      POSTGRES_PASSWORD: pos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pos}
       POSTGRES_DB: pos
-    ports:
-      # 5433 on the host: 5432 is often taken by a locally installed PostgreSQL.
-      - "5433:5432"
     volumes:
       - pos-db:/var/lib/postgresql/data
     healthcheck:
@@ -17,5 +16,45 @@ services:
       timeout: 3s
       retries: 10
 
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://pos:${POSTGRES_PASSWORD:-pos}@db:5432/pos
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is not set - run scripts/install.sh, or copy .env.example to .env}"
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      CHECKOUT_MODE: ${CHECKOUT_MODE:-shifts}
+      MEDIA_URL: ${MEDIA_URL:-}
+      MEDIA_TOKEN: ${MEDIA_TOKEN:-}
+      SCB_API_KEY: ${SCB_API_KEY:-}
+      SCB_API_SECRET: ${SCB_API_SECRET:-}
+      SCB_BILLER_ID: ${SCB_BILLER_ID:-}
+      SCB_REF3_PREFIX: ${SCB_REF3_PREFIX:-}
+      SCB_API_BASE_URL: ${SCB_API_BASE_URL:-}
+      SCB_TWO_REFERENCES: ${SCB_TWO_REFERENCES:-false}
+    ports:
+      - "${PORT:-3000}:3000"
+
+  # Turned on with `--profile https` and DOMAIN set: gets and renews the certificate by itself.
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["https"]
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      # Only used with the https profile. `localhost` keeps the file valid when it is not set.
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+
 volumes:
   pos-db:
+  caddy-data:

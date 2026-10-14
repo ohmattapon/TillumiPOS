@@ -8,7 +8,7 @@
     "dev:web": "bun run --filter @pos/web dev",
     "dev:media": "bun run --filter @pos/media dev",
     "deploy:media": "bun run --filter @pos/media deploy",
-    "db:up": "docker compose up -d db",
+    "db:up": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db",
     "db:generate": "bun run --filter @pos/api db:generate",
     "db:migrate": "bun run --filter @pos/api db:migrate",
     "db:seed": "bun run --filter @pos/api db:seed",
