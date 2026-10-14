@@ -11,7 +11,7 @@ The migration creates a `MAIN` register for each existing branch and a new branc
 - Bank QR works in `shifts` mode through `/api/v2/payments/qr`: each request is recorded before the bank is called, an unknown outcome is kept until someone checks it with the bank, and paid money without a sale is listed for the branch until it is sold or an owner dismisses it. **This has been tested against a fake SCB only. Make one real payment in your own environment before relying on it.**
 - A shift cannot be counted while it has a QR request with an unknown outcome or paid money without a sale. QRs still waiting to be paid need an acknowledgement, because counting does not cancel them at the bank.
 - The shift report is frozen when counting starts and is not rewritten afterwards; sales voided later are listed beside it. Shift history and detail are on the shift page.
-- Not verified in a browser yet: run the two-session checks of the design (two accounts in one shift, counting started on another till) before going live.
+- Browser-checked with `bun run e2e`: two accounts selling in one shift, the till stopping when another session starts counting, reload, the variance reason, history and English. Not browser-checked: QR recovery, cash refund, register management and paying an order in a shift.
 
 ## Before enabling shifts
 
