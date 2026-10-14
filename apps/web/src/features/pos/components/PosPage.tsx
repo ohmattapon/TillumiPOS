@@ -129,7 +129,7 @@ export function PosPage() {
         </Button>
       </PageHeader>
 
-      <div className="flex min-h-0 flex-1 print:hidden">
+      <div className="flex min-h-0 flex-1">
         <ProductPicker searchRef={searchRef} />
         <CartPanel
           onPay={() => setIsPaying(true)}

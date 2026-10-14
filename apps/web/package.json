@@ -17,6 +17,8 @@
     "@fontsource/ibm-plex-sans-thai": "^5.3.0",
     "@pos/api": "workspace:*",
     "@tanstack/react-query": "^5.104.2",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "i18next": "^26.4.4",
