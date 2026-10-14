@@ -68,7 +68,7 @@ export const makeOrder = (overrides: Partial<OrderEntityProps> = {}) =>
     cancelledById: null,
     createdAt: new Date('2026-10-13T06:00:00Z'),
     updatedAt: new Date('2026-10-13T06:00:00Z'),
-    items: [{ productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2 }],
+    items: [{ lineId: 1, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [] }],
     ...overrides,
   })
 
