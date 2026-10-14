@@ -45,7 +45,7 @@ export function BranchesPage() {
         title={t('title')}
         description={t('description', { items: tc('items', { count: all.length }) })}
       >
-        <Button className="h-9 px-3" onClick={() => setDialog({})}>
+        <Button className="h-11 px-3" onClick={() => setDialog({})}>
           <Plus />
           {t('add')}
         </Button>

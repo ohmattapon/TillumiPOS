@@ -14,6 +14,8 @@ const th = {
     branches: 'สาขา',
     users: 'ผู้ใช้',
     settings: 'ตั้งค่าร้าน',
+    more: 'เมนู',
+    bottom: 'เมนูหลัก',
   },
   roles: {
     owner: 'เจ้าของร้าน',
@@ -38,6 +40,8 @@ const en = {
     branches: 'Branches',
     users: 'Users',
     settings: 'Shop settings',
+    more: 'Menu',
+    bottom: 'Main menu',
   },
   roles: {
     owner: 'Owner',

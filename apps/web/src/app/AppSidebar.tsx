@@ -134,7 +134,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
                     asChild
                     isActive={pathname === item.to}
                     tooltip={item.label}
-                    className={`h-9 ${activeItem}`}
+                    className={`h-11 ${activeItem}`}
                   >
                     <NavLink to={item.to}>
                       <item.icon />
