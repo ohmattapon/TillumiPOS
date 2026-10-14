@@ -2,6 +2,7 @@ import type { User } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
 import {
   Building2,
+  ChartNoAxesCombined,
   CalendarCheck,
   ChevronsUpDown,
   LayoutGrid,
@@ -72,6 +73,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
       items: [
         { to: '/', label: t('nav.sell'), icon: ShoppingCart },
         { to: '/today', label: t('nav.today'), icon: CalendarCheck },
+        ...(isOwner ? [{ to: '/reports', label: t('nav.reports'), icon: ChartNoAxesCombined }] : []),
         { to: '/shifts', label: t('nav.shifts'), icon: WalletCards },
       ],
     },

@@ -21,6 +21,7 @@
     "jspdf": "^4.2.1",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
+    "exceljs": "4.4.0",
     "i18next": "^26.4.4",
     "lucide-react": "^1.56.0",
     "radix-ui": "^1.8.1",

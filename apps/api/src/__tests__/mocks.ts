@@ -1,4 +1,11 @@
 import { mock, type Mock } from 'bun:test'
+import type { ISalesReportRepository } from '../modules/sales/applications/ports/sales-report.repository'
+
+export const mockSalesReportRepository = (): Mocked<ISalesReportRepository> => ({
+  overview: mock<ISalesReportRepository['overview']>(),
+  products: mock<ISalesReportRepository['products']>(),
+  branches: mock<ISalesReportRepository['branches']>(),
+})
 import type { IBranchRepository } from '../modules/branches/applications/ports/branch.repository'
 import type { ICategoryRepository } from '../modules/categories/applications/ports/category.repository'
 import type { IStockLedger } from '../modules/inventory/applications/ports/stock-ledger.port'

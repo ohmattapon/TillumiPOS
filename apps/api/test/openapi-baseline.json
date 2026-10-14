@@ -16031,6 +16031,802 @@
         ]
       }
     },
+    "/api/v1/sales/reports/": {
+      "get": {
+        "operationId": "getApiV1SalesReports",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "enum": [
+                "branch",
+                "all"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "byMethod": {
+                      "items": {
+                        "properties": {
+                          "amountSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "method": {
+                            "enum": [
+                              "cash",
+                              "promptpay",
+                              "card"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "method",
+                          "amountSatang"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "days": {
+                      "properties": {
+                        "items": {
+                          "items": {
+                            "allOf": [
+                              {
+                                "properties": {
+                                  "costSatang": {
+                                    "anyOf": [
+                                      {
+                                        "default": 0,
+                                        "format": "integer",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "integer"
+                                      }
+                                    ]
+                                  },
+                                  "discountSatang": {
+                                    "anyOf": [
+                                      {
+                                        "default": 0,
+                                        "format": "integer",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "integer"
+                                      }
+                                    ]
+                                  },
+                                  "netSalesSatang": {
+                                    "anyOf": [
+                                      {
+                                        "default": 0,
+                                        "format": "integer",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "integer"
+                                      }
+                                    ]
+                                  },
+                                  "profitSatang": {
+                                    "anyOf": [
+                                      {
+                                        "default": 0,
+                                        "format": "integer",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "integer"
+                                      }
+                                    ]
+                                  },
+                                  "saleCount": {
+                                    "anyOf": [
+                                      {
+                                        "default": 0,
+                                        "format": "integer",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "integer"
+                                      }
+                                    ]
+                                  },
+                                  "totalSatang": {
+                                    "anyOf": [
+                                      {
+                                        "default": 0,
+                                        "format": "integer",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "integer"
+                                      }
+                                    ]
+                                  },
+                                  "vatSatang": {
+                                    "anyOf": [
+                                      {
+                                        "default": 0,
+                                        "format": "integer",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "integer"
+                                      }
+                                    ]
+                                  },
+                                  "voidedCount": {
+                                    "anyOf": [
+                                      {
+                                        "default": 0,
+                                        "format": "integer",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "integer"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "saleCount",
+                                  "voidedCount",
+                                  "totalSatang",
+                                  "vatSatang",
+                                  "discountSatang",
+                                  "costSatang",
+                                  "netSalesSatang",
+                                  "profitSatang"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "properties": {
+                                  "day": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "day"
+                                ],
+                                "type": "object"
+                              }
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "total": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "total"
+                      ],
+                      "type": "object"
+                    },
+                    "from": {
+                      "type": "string"
+                    },
+                    "scope": {
+                      "enum": [
+                        "branch",
+                        "all"
+                      ],
+                      "type": "string"
+                    },
+                    "summary": {
+                      "properties": {
+                        "costSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "discountSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "netSalesSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "profitSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "saleCount": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "totalSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "vatSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "voidedCount": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "saleCount",
+                        "voidedCount",
+                        "totalSatang",
+                        "vatSatang",
+                        "discountSatang",
+                        "costSatang",
+                        "netSalesSatang",
+                        "profitSatang"
+                      ],
+                      "type": "object"
+                    },
+                    "timeZone": {
+                      "type": "string"
+                    },
+                    "to": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "to",
+                    "timeZone",
+                    "scope",
+                    "summary",
+                    "days",
+                    "byMethod"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ยอดขายย้อนหลังตามวันและเขตเวลาของร้าน (สูงสุด 366 วัน)",
+        "tags": [
+          "Sales"
+        ]
+      }
+    },
+    "/api/v1/sales/reports/branches": {
+      "get": {
+        "operationId": "getApiV1SalesReportsBranches",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "enum": [
+                "branch",
+                "all"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "maximum": 500,
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "maximum": 500,
+              "minimum": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "allOf": [
+                          {
+                            "properties": {
+                              "costSatang": {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              "discountSatang": {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              "netSalesSatang": {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              "profitSatang": {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              "saleCount": {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              "totalSatang": {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              "vatSatang": {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              "voidedCount": {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "saleCount",
+                              "voidedCount",
+                              "totalSatang",
+                              "vatSatang",
+                              "discountSatang",
+                              "costSatang",
+                              "netSalesSatang",
+                              "profitSatang"
+                            ],
+                            "type": "object"
+                          },
+                          {
+                            "properties": {
+                              "branchId": {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              "branchName": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "branchId",
+                              "branchName"
+                            ],
+                            "type": "object"
+                          }
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "เปรียบเทียบยอดขายแยกสาขา",
+        "tags": [
+          "Sales"
+        ]
+      }
+    },
+    "/api/v1/sales/reports/products": {
+      "get": {
+        "operationId": "getApiV1SalesReportsProducts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "enum": [
+                "branch",
+                "all"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "maximum": 500,
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "maximum": 500,
+              "minimum": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "lineTotalSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "productId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "productName": {
+                            "type": "string"
+                          },
+                          "quantity": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "sku": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "productId",
+                          "productName",
+                          "sku",
+                          "quantity",
+                          "lineTotalSatang"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "สินค้าขายดี เรียงตามจำนวน ใช้ข้อมูล ณ ตอนขาย",
+        "tags": [
+          "Sales"
+        ]
+      }
+    },
     "/api/v1/sales/summary": {
       "get": {
         "operationId": "getApiV1SalesSummary",

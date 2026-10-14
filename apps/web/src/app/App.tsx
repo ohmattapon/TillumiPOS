@@ -12,6 +12,7 @@ import { TablesPage } from '@/features/tables'
 import { clearCart, PosPage } from '@/features/pos'
 import { ProductsPage } from '@/features/products'
 import { TodayPage } from '@/features/sales'
+import { ReportsPage } from '@/features/reports'
 import { SettingsPage, useSettings } from '@/features/settings'
 import { UsersPage } from '@/features/users'
 import { ShiftsPage, useRegisterSelectionStore } from '@/features/shifts'
@@ -43,6 +44,7 @@ function Shell({ user }: { user: User }) {
         <Routes>
           <Route index element={<PosPage />} />
           <Route path="today" element={<TodayPage isOwner={isOwner} />} />
+          {isOwner && <Route path="reports" element={<ReportsPage />} />}
           {isOwner && <Route path="products" element={<ProductsPage />} />}
           {isOwner && <Route path="categories" element={<CategoriesPage />} />}
           {isOwner && <Route path="modifiers" element={<ModifiersPage />} />}
