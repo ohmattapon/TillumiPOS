@@ -184,6 +184,54 @@ async function main() {
       if ((await detail.getByText(/เลขประจำตัวผู้เสียภาษี/).count()) > 0) throw new Error('An old sale gained a tax ID')
     })
 
+    console.log('\nModifiers:')
+
+    await check('the owner sets up a group with a priced option on the modifiers page', async () => {
+      await owner.goto(`${WEB}/modifiers`)
+      await owner.getByRole('button', { name: 'เพิ่มกลุ่มตัวเลือก' }).click()
+      const form = owner.getByRole('dialog')
+      await form.getByLabel('ชื่อกลุ่ม').fill('ท็อปปิง')
+      await form.getByLabel('เลือกได้สูงสุด').fill('2')
+      await form.getByRole('button', { name: 'บันทึก' }).click()
+      await owner.getByRole('heading', { name: 'ท็อปปิง' }).waitFor()
+
+      await owner.getByRole('button', { name: 'เพิ่มตัวเลือก' }).click()
+      const option = owner.getByRole('dialog')
+      await option.getByLabel('ชื่อตัวเลือก').fill('ไข่มุก')
+      await option.getByLabel(/ราคาเพิ่ม/).fill('10')
+      await option.getByLabel(/ต้นทุน/).fill('4')
+      await option.getByRole('button', { name: 'บันทึก' }).click()
+      await owner.getByText('ไข่มุก').first().waitFor()
+      await owner.getByText('+10.00').first().waitFor()
+    })
+
+    await check('the owner offers the group on a product from the product form', async () => {
+      await owner.goto(`${WEB}/products`)
+      const row = owner.getByRole('row', { name: /น้ำดื่ม 600 มล\./ })
+      await row.getByRole('button', { name: /การทำงานอื่นของ น้ำดื่ม 600 มล\./ }).click()
+      await owner.getByRole('menuitem', { name: 'แก้ไขสินค้า' }).click()
+      const form = owner.getByRole('dialog')
+      await form.getByRole('checkbox', { name: 'ท็อปปิง' }).click()
+      await form.getByRole('button', { name: 'บันทึก' }).click()
+      await owner.getByRole('dialog').waitFor({ state: 'detached' })
+    })
+
+    await check('selling a product with options asks for them, adds their price, and the receipt lists them', async () => {
+      await owner.goto(WEB)
+      await owner.getByRole('button', { name: /น้ำดื่ม 600 มล\./ }).first().click()
+      const dialog = owner.getByRole('dialog')
+      await dialog.getByRole('checkbox', { name: /ไข่มุก/ }).click()
+      await dialog.getByRole('button', { name: 'เพิ่มลงตะกร้า' }).click()
+      // The topping is listed under the product in the cart, and the line is 10.00 + 10.00.
+      await owner.getByText('+10.00').first().waitFor()
+      await owner.getByRole('button', { name: /^ชำระเงิน/ }).click()
+      await owner.getByRole('button', { name: 'พอดี' }).click()
+      await owner.getByRole('button', { name: 'ยืนยันการชำระ' }).click()
+      await owner.getByRole('button', { name: 'ขายรายการต่อไป' }).waitFor()
+      await owner.getByText('+ ไข่มุก').waitFor()
+      await owner.getByRole('button', { name: 'ขายรายการต่อไป' }).click()
+    })
+
     await check('a reload keeps the shift: the till is still ready to sell', async () => {
       await cashier.reload()
       await cashier.getByRole('button', { name: 'กะเปิดอยู่' }).waitFor()
@@ -197,15 +245,17 @@ async function main() {
     await check('the owner starts counting: the report is frozen and shows what the drawer should hold', async () => {
       await owner.getByRole('button', { name: 'เริ่มนับปิดกะ' }).click()
       await owner.getByText(/ยอดที่หยุดไว้ตอนเริ่มนับ/).waitFor()
-      // 100.00 opening + three sales of 10.00.
+      // 100.00 opening + three sales of 10.00 + one of 20.00 (10.00 and a 10.00 topping).
       await owner.getByText('เงินสดที่ควรมี').first().waitFor()
-      await owner.getByText('฿130.00').first().waitFor()
+      await owner.getByText('฿150.00').first().waitFor()
     })
 
     await check('the other till can no longer take payment once counting has started', async () => {
       await cashier.goto(WEB)
       await cashier.getByRole('button', { name: 'เปิดกะก่อนขาย' }).waitFor({ timeout: 20_000 })
       await cashier.getByRole('button', { name: /น้ำดื่ม 600 มล\./ }).first().click()
+      // The product now has an optional option group, so it asks before it goes in the cart.
+      await cashier.getByRole('button', { name: 'เพิ่มลงตะกร้า' }).click()
       if (!(await cashier.getByRole('button', { name: /^ชำระเงิน/ }).isDisabled()))
         throw new Error('The pay button is enabled while the shift is being counted')
     })
@@ -224,7 +274,7 @@ async function main() {
       const row = owner.getByRole('button', { name: /ปิดแล้ว/ }).first()
       await row.click()
       await owner.getByText('ทอนเงินผิด').waitFor()
-      await owner.getByText('-฿5.00').waitFor()
+      await owner.getByText('-฿25.00').waitFor()
       await owner.getByText(/ยอดที่หยุดไว้ตอนเริ่มนับ/).waitFor()
     })
 
