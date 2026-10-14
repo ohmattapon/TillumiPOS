@@ -14,6 +14,7 @@
     "db:migrate": "bun run --filter @pos/api db:migrate",
     "db:seed": "bun run --filter @pos/api db:seed",
     "e2e": "bun apps/web/e2e/run.ts",
+    "screenshots": "bun apps/web/e2e/shots.ts",
     "scb:inquiry": "bun --env-file=.env apps/api/scripts/scb-inquiry.ts",
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "bun run --filter @pos/web lint",
