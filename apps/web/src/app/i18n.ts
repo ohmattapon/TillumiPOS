@@ -2,10 +2,12 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import { authLocales } from '@/features/auth'
 import { branchesLocales } from '@/features/branches'
+import { categoriesLocales } from '@/features/categories'
 import { posLocales } from '@/features/pos'
 import { productsLocales } from '@/features/products'
 import { salesLocales } from '@/features/sales'
 import { settingsLocales } from '@/features/settings'
+import { usersLocales } from '@/features/users'
 import { shiftsLocales } from '@/features/shifts'
 import { common } from '@/locales/common'
 import { errors } from '@/locales/errors'
@@ -22,6 +24,8 @@ export const resources = {
     app: appLocales.th,
     auth: authLocales.th,
     branches: branchesLocales.th,
+    categories: categoriesLocales.th,
+    users: usersLocales.th,
     pos: posLocales.th,
     products: productsLocales.th,
     sales: salesLocales.th,
@@ -33,6 +37,8 @@ export const resources = {
     app: appLocales.en,
     auth: authLocales.en,
     branches: branchesLocales.en,
+    categories: categoriesLocales.en,
+    users: usersLocales.en,
     pos: posLocales.en,
     products: productsLocales.en,
     sales: salesLocales.en,
