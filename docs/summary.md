@@ -140,10 +140,10 @@ EasyPOS คือ POS แบบโอเพนซอร์สที่ติด�
 
 ## สถานะ git
 
-- `main` (และ `origin/main`) อยู่ที่ `d721cb3` รวมข้อ 1–8, 10 และ 11 แล้ว แต่ commit baseline ของ OpenAPI สำหรับโต๊ะ (`8da92de`) อยู่บน `ohmattpon/tables` เท่านั้น
-- `ohmattpon/install-kit` แตกจาก `main`: งานข้อ 14 (ชุดติดตั้ง) ยังไม่ได้ push มี commit baseline ที่เนื้อหาเหมือน `8da92de` ติดมาด้วย เพื่อให้ `openapi:check` ผ่านบน branch นี้ ถ้า merge `ohmattpon/tables` ทีหลังไฟล์ baseline ควรไม่ชนเพราะเนื้อหาส่วนนั้นเหมือนกัน
-- `ohmattpon/demo-data` (ต่อจาก `ohmattpon/tables`): ตัวสร้างข้อมูลตัวอย่าง `bun run db:seed:demo`
-- `ohmattpon/responsive-layout` (ต่อจาก `ohmattpon/local-image-storage`): งานปรับ design รอบที่ 1 เสร็จฝั่งโค้ด ยังไม่ได้ push
+- `main` ในเครื่องรวม branch ที่ค้างทั้งหมดแล้ว (14 ตุลาคม 2026, เจ้าของโครงการอนุญาตให้ merge): สายงานออกแบบ `install-kit` → `local-image-storage` → `responsive-layout` → `ui-color-refresh` → `skeleton-loading` (fast-forward), จากนั้น `logout-redirect`, `shadcn-dropdowns`, `professional-readme`, `demo-data`, `receipt-pdf`, `demo-product-catalog`, `sales-reports` และ `list-pagination` (merge commit ผ่าน `gitcz`) ยังไม่ได้ push ขึ้น `origin/main`
+- `ohmattpon/tables` ไม่ต้อง merge: commit baseline ของโต๊ะมีเนื้อหาเดียวกันอยู่ใน `main` แล้วผ่าน `install-kit`
+- `ohmattpon/scb-inquiry-tool` เป็น branch เก่า (ตามหลัง `main` 51 commit): เครื่องมือ `scb:inquiry` และการแก้ not-found อยู่ใน `main` แล้ว ส่วนการแก้ CRLF ของ `openapi-snapshot.ts` ถูกแทนด้วยตัวตรวจ v1/v2 ตัวใหม่ จึงไม่ได้ merge
+- `ohmattpon/redis-cache` อยู่ใน worktree ของ Codex มีแค่ spec และแผน (งานที่กำลังทำ) ไม่ได้แตะ
 - branch เก่าทั้งหมดยังอยู่ ยังไม่ได้ลบ
 
 ## เรื่องที่ต้องทำต่อ (เป็นของเจ้าของโครงการ)
