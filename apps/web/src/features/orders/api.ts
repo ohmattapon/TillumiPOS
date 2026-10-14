@@ -37,7 +37,7 @@ function useOrderCache() {
 
 export interface OpenOrderInput {
   label?: string | null
-  items?: { productId: number; quantity: number }[]
+  items?: { productId: number; quantity: number; options?: number[] }[]
 }
 
 export function useOpenOrder() {
@@ -53,28 +53,38 @@ export function useAddOrderItem() {
   const remember = useOrderCache()
 
   return useMutation({
-    mutationFn: ({ orderId, productId, quantity }: { orderId: number; productId: number; quantity: number }) =>
-      unwrap(api.orders({ id: orderId }).items.post({ productId, quantity })),
+    mutationFn: ({
+      orderId,
+      productId,
+      quantity,
+      options,
+    }: {
+      orderId: number
+      productId: number
+      quantity: number
+      options?: number[]
+    }) => unwrap(api.orders({ id: orderId }).items.post({ productId, quantity, options })),
     onSuccess: remember,
   })
 }
 
-export function useSetOrderItemQuantity() {
+/** Sets how many of one line, by its id; the same product with other options is another line. */
+export function useSetOrderLineQuantity() {
   const remember = useOrderCache()
 
   return useMutation({
-    mutationFn: ({ orderId, productId, quantity }: { orderId: number; productId: number; quantity: number }) =>
-      unwrap(api.orders({ id: orderId }).items({ productId }).patch({ quantity })),
+    mutationFn: ({ orderId, lineId, quantity }: { orderId: number; lineId: number; quantity: number }) =>
+      unwrap(api.orders({ id: orderId }).lines({ lineId }).patch({ quantity })),
     onSuccess: remember,
   })
 }
 
-export function useRemoveOrderItem() {
+export function useRemoveOrderLine() {
   const remember = useOrderCache()
 
   return useMutation({
-    mutationFn: ({ orderId, productId }: { orderId: number; productId: number }) =>
-      unwrap(api.orders({ id: orderId }).items({ productId }).delete()),
+    mutationFn: ({ orderId, lineId }: { orderId: number; lineId: number }) =>
+      unwrap(api.orders({ id: orderId }).lines({ lineId }).delete()),
     onSuccess: remember,
   })
 }

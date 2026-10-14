@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
+import { modifierGroupsQuery } from '@/features/modifiers'
 import { orderQuery } from '@/features/orders'
 import { productsQuery } from '@/features/products'
 import { useFormat, useSettings } from '@/features/settings'
@@ -17,8 +18,21 @@ export function useCart() {
   const clear = useCartStore((state) => state.clear)
   const products = useQuery(productsQuery())
   const order = useQuery({ ...orderQuery(orderId ?? 0), enabled: orderId !== null })
+  const modifiers = useQuery(modifierGroupsQuery)
   const { vatMode, vatRateBp } = useSettings()
   const { money } = useFormat()
+
+  // Only options that can still be chosen; a cart line with any other option is flagged as unavailable.
+  const optionsById = useMemo(
+    () =>
+      new Map(
+        (modifiers.data ?? [])
+          .flatMap((group) => (group.isActive ? group.options : []))
+          .filter((option) => option.isActive)
+          .map((option) => [option.id, { id: option.id, name: option.name, priceSatang: option.priceSatang }] as const),
+      ),
+    [modifiers.data],
+  )
 
   const productsById = useMemo(
     () => new Map((products.data ?? []).map((product) => [product.id, product])),
@@ -33,9 +47,9 @@ export function useCart() {
 
   const priced = useMemo(() => {
     const options = { vatMode, vatRateBp, parseAmount: money.parse }
-    if (orderId === null) return priceCart(lines, productsById, discount, options)
+    if (orderId === null) return priceCart(lines, productsById, discount, options, optionsById)
     return priceOrder(order.data?.items ?? [], productsById, discount, options)
-  }, [lines, productsById, discount, orderId, order.data, vatMode, vatRateBp, money])
+  }, [lines, productsById, optionsById, discount, orderId, order.data, vatMode, vatRateBp, money])
 
   return { ...priced, orderId, order: order.data }
 }

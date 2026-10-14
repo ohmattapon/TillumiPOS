@@ -6,7 +6,7 @@ import { api, apiV2, unwrap } from '@/lib/api'
 import type { PaymentInput } from '@/lib/money'
 
 export interface CheckoutInput {
-  items: { productId: number; quantity: number }[]
+  items: { productId: number; quantity: number; options?: number[] }[]
   discountSatang: number
   payment: PaymentInput
   shiftId?: number

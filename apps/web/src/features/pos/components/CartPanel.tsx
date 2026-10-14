@@ -51,17 +51,30 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true }: Props
         {cart.lines.length === 0 && (
           <li className="px-4 py-16 text-center text-sm text-muted-foreground">{t('cart.empty')}</li>
         )}
-        {cart.lines.map(({ productId, name, unitPriceSatang, stockQty, quantity, lineTotalSatang, exceedsStock }) => (
-          <li key={productId} className="space-y-2 px-4 py-3">
+        {cart.lines.map((line) => {
+          const { lineKey, name, unitPriceSatang, stockQty, quantity, lineTotalSatang, exceedsStock, options, unavailable } = line
+          return (
+          <li key={lineKey} className="space-y-2 px-4 py-3">
             <div className="flex items-start justify-between gap-3">
               <p className="min-w-0 text-sm leading-snug font-medium">{name}</p>
               <p className="shrink-0 text-sm font-semibold tabular-nums">{money.plain(lineTotalSatang)}</p>
             </div>
+            {options.length > 0 && (
+              <ul className="-mt-1 space-y-0.5 text-xs text-muted-foreground">
+                {options.map((option) => (
+                  <li key={option.name} className="flex justify-between gap-3">
+                    <span className="truncate">{option.name}</span>
+                    {option.priceSatang > 0 && <span className="tabular-nums">+{money.plain(option.priceSatang)}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {unavailable && <p className="text-xs font-medium text-destructive">{t('cart.optionUnavailable')}</p>}
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 className="size-11 bg-background"
-                onClick={() => setQuantity(productId, quantity - 1)}
+                onClick={() => setQuantity(line, quantity - 1)}
                 aria-label={t('cart.decrease', { name })}
               >
                 <Minus />
@@ -70,18 +83,18 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true }: Props
                 className="h-11 w-16 bg-background text-center text-base! font-semibold tabular-nums"
                 inputMode="numeric"
                 aria-label={t('cart.quantity', { name })}
-                aria-invalid={exceedsStock}
+                aria-invalid={exceedsStock || unavailable}
                 value={quantity}
                 onFocus={(event) => event.target.select()}
                 onChange={(event) => {
                   const next = Number.parseInt(event.target.value, 10)
-                  if (next >= 1) setQuantity(productId, next)
+                  if (next >= 1) setQuantity(line, next)
                 }}
               />
               <Button
                 variant="outline"
                 className="size-11 bg-background"
-                onClick={() => setQuantity(productId, quantity + 1)}
+                onClick={() => setQuantity(line, quantity + 1)}
                 aria-label={t('cart.increase', { name })}
               >
                 <Plus />
@@ -98,7 +111,8 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true }: Props
               </span>
             </div>
           </li>
-        ))}
+          )
+        })}
       </ul>
 
       <div className="space-y-3 border-t bg-background p-4">

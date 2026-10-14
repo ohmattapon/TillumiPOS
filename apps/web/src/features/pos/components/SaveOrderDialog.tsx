@@ -20,7 +20,10 @@ export function SaveOrderDialog({ onClose }: { onClose: () => void }) {
   const submit = (event: FormEvent) => {
     event.preventDefault()
     openOrder.mutate(
-      { label: label.trim() || null, items: lines },
+      {
+        label: label.trim() || null,
+        items: lines.map(({ productId, quantity, optionIds }) => ({ productId, quantity, options: optionIds })),
+      },
       {
         onSuccess: () => {
           clear()

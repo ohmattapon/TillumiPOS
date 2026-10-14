@@ -7,6 +7,6 @@ export {
   useCancelOrder,
   useOpenOrder,
   usePayOrder,
-  useRemoveOrderItem,
-  useSetOrderItemQuantity,
+  useRemoveOrderLine,
+  useSetOrderLineQuantity,
 } from './api'

@@ -80,7 +80,11 @@ export function PosPage() {
       paymentCommandKey.current ??= crypto.randomUUID()
       checkout.mutate(
         {
-          items: cart.lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
+          items: cart.lines.map((line) => ({
+            productId: line.productId,
+            quantity: line.quantity,
+            options: line.optionIds,
+          })),
           discountSatang: cart.discountSatang,
           payment,
           ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id } : {}),

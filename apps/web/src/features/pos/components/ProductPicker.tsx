@@ -8,11 +8,14 @@ import { Kbd } from '@/components/Kbd'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
 import { Input } from '@/components/ui/input'
 import { categoriesQuery } from '@/features/categories'
+import { modifierGroupsQuery } from '@/features/modifiers'
 import { isLowStock, isOutOfStock, ProductImage, productsQuery } from '@/features/products'
 import { useFormat } from '@/features/settings'
 import { cn } from '@/lib/utils'
 import { hasKeyboard } from '../lib/focus'
+import { offeredGroups } from '../lib/options'
 import { useCartActions } from '../hooks/use-cart-actions'
+import { OptionsDialog } from './OptionsDialog'
 
 interface Props {
   /** Owned by the page so it can also return focus here after a sale. */
@@ -26,7 +29,9 @@ export function ProductPicker({ searchRef }: Props) {
   const { money } = useFormat()
   const products = useQuery(productsQuery())
   const categories = useQuery(categoriesQuery)
+  const modifiers = useQuery(modifierGroupsQuery)
   const { add: addToCart } = useCartActions()
+  const [choosing, setChoosing] = useState<Product | null>(null)
 
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('all')
@@ -56,6 +61,11 @@ export function ProductPicker({ searchRef }: Props) {
   }, [searchRef])
 
   const pick = (product: Product) => {
+    // A product with option groups is asked about them first; one without goes straight into the cart.
+    if (offeredGroups(modifiers.data ?? [], product.id).length > 0) {
+      setChoosing(product)
+      return
+    }
     addToCart(product.id)
     if (hasKeyboard()) searchRef.current?.focus()
   }
@@ -136,6 +146,18 @@ export function ProductPicker({ searchRef }: Props) {
           <p className="col-span-full py-12 text-center text-muted-foreground">{t('picker.noMatches')}</p>
         )}
       </div>
+      {choosing && (
+        <OptionsDialog
+          product={choosing}
+          groups={offeredGroups(modifiers.data ?? [], choosing.id)}
+          onCancel={() => setChoosing(null)}
+          onConfirm={(optionIds) => {
+            addToCart(choosing.id, optionIds)
+            setChoosing(null)
+            if (hasKeyboard()) searchRef.current?.focus()
+          }}
+        />
+      )}
     </section>
   )
 }
