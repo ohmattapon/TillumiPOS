@@ -5,6 +5,8 @@ export interface IFindOrdersQuery {
   /** Only this branch's orders are listed. */
   branchId: number
   status?: OrderStatus
+  tableId?: number
+  excludeId?: number
   limit?: number
   offset?: number
 }

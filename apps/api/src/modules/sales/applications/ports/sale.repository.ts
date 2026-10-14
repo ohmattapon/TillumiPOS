@@ -11,6 +11,7 @@ export interface IFindSalesQuery {
   from?: Date
   /** Exclusive. */
   to?: Date
+  status?: 'completed' | 'voided'
   limit?: number
   offset?: number
 }

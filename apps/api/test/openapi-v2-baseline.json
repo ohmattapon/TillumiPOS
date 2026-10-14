@@ -2541,6 +2541,25 @@
               ],
               "minimum": 0
             }
+          },
+          {
+            "in": "query",
+            "name": "amountSatang",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
           }
         ],
         "responses": {

@@ -99,6 +99,7 @@ export class DrizzleSaleRepository implements ISaleRepository {
 
   async findHeaders(query: IFindSalesQuery): Promise<Page<ISaleHeader>> {
     const matching = and(
+      query.status ? eq(sales.status, query.status) : undefined,
       eq(sales.branchId, query.branchId),
       query.from ? gte(sales.createdAt, query.from) : undefined,
       query.to ? lt(sales.createdAt, query.to) : undefined,
