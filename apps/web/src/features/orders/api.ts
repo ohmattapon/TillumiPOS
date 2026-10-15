@@ -40,6 +40,7 @@ function useOrderCache() {
 }
 
 export interface OpenOrderInput {
+  memberId?: number | null
   label?: string | null
   tableId?: number | null
   items?: { productId: number; quantity: number; options?: number[] }[]
@@ -127,6 +128,7 @@ export function usePayOrder() {
         queryClient.invalidateQueries({ queryKey: orderKeys.all }),
         queryClient.invalidateQueries({ queryKey: productKeys.all }),
         queryClient.invalidateQueries({ queryKey: saleKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ['members'] }),
         queryClient.invalidateQueries({ queryKey: tableKeys.all }),
       ]),
   })
@@ -180,3 +182,11 @@ export function useSplitOrder() {
 }
 
 export type { Order }
+
+export function useSetOrderMember() {
+  const remember = useOrderCache()
+  return useMutation({
+    mutationFn: ({ orderId, memberId }: { orderId: number; memberId: number | null }) => unwrap(api.orders({ id: orderId }).member.patch({ memberId })),
+    onSuccess: remember,
+  })
+}

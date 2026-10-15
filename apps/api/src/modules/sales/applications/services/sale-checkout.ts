@@ -1,4 +1,6 @@
 import { inject, injectable } from 'tsyringe'
+import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
+import { memberRepositoryToken, type IMemberRepository } from '../../../members/applications/ports/member.repository'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { lineKey, type LineOption } from '../../../../domains/modifier.domain'
@@ -34,15 +36,22 @@ export class SaleCheckout implements ISaleCheckout {
     @inject(TOKENS.ShiftLedger) private readonly shiftLedger: IShiftLedger,
     @inject(branchRepositoryToken) private readonly branches: IBranchRepository,
     @inject(lineOptionsResolverToken) private readonly lineOptions: ILineOptionsResolver,
+    @inject(memberRepositoryToken) private readonly members: IMemberRepository,
   ) {}
 
-  async checkout({ lines: requested, discountSatang, payments, cashier, branch, shiftId }: CheckoutRequest) {
+  async checkout({ lines: requested, discountSatang, payments, cashier, branch, shiftId, memberId }: CheckoutRequest) {
     const shiftsEnabled = await this.checkoutPolicy.isShiftsEnabled()
     if (shiftsEnabled && shiftId === undefined)
       throw new DomainConflictError('กรุณาระบุกะที่เปิดอยู่ก่อนรับชำระ', 'SHIFT_REQUIRED')
     if (!shiftsEnabled && shiftId !== undefined)
       throw new DomainConflictError('การชำระด้วยกะต้องเปิด CHECKOUT_MODE=shifts', 'CHECKOUT_MODE_REQUIRED')
     if (shiftId !== undefined) await this.shiftLedger.assertOpenForCheckout(shiftId, branch.id)
+    // Member lock precedes product locks, and the caller has already locked an order if present.
+    const selectedMember = memberId == null ? null : await this.members.findByIdForUpdate(memberId)
+    if (memberId != null && !selectedMember)
+      throw new DomainNotFoundError('ไม่พบสมาชิก', 'MEMBER_NOT_FOUND')
+    selectedMember?.assertActive()
+    const member = selectedMember ? { id: selectedMember.id, code: selectedMember.code, name: selectedMember.name } : null
     // Lines are the product with its options: the same choice repeated is merged, a Map keeps the order
     // they were added, and the first quoted price of a line wins.
     interface WantedLine {
@@ -96,6 +105,7 @@ export class SaleCheckout implements ISaleCheckout {
 
     const priced = SaleEntity.complete({
       lines,
+      member,
       discountSatang,
       payments: payments.map(({ method, amountSatang }) => ({ method, amountSatang })),
       vatMode: shop.vatMode,

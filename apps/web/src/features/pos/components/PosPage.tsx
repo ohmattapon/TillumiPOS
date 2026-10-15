@@ -98,6 +98,7 @@ export function PosPage() {
             options: line.optionIds,
           })),
           discountSatang: cart.discountSatang,
+          memberId: cart.memberId,
           payment,
           ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id } : {}),
           ...(needsShift ? { idempotencyKey: paymentCommandKey.current } : {}),

@@ -41,3 +41,7 @@ container.registerSingleton(VoidSaleV2UseCase)
 container.registerSingleton(RecordCashRefundUseCase)
 container.registerSingleton(SaleElysiaController)
 container.registerSingleton(SaleV2ElysiaController)
+
+import { memberSalesHistoryToken } from '../members/applications/ports/member-sales-history.port'
+import { DrizzleMemberSalesHistory } from './adapters/repository/member-sales-history.drizzle.adapter'
+container.register(memberSalesHistoryToken, { useClass: DrizzleMemberSalesHistory })

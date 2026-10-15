@@ -14,3 +14,5 @@ import './sales/sales.module'
 import './orders/orders.module'
 import './qr-payments/qr-payments.module'
 import './settings/settings.module'
+
+import './members/members.module'
