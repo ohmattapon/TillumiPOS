@@ -51,6 +51,13 @@ describe('UpdateShopSettingsUseCase', () => {
     expect(saved).toMatchObject({ shopName: 'ร้านใหม่', currency: 'USD' })
   })
 
+  test.each(['tables', 'till'] as const)('accepts %s as the home view and stores it', async (homeView) => {
+    const saved = await update({ homeView })
+
+    expect(saved.homeView).toBe(homeView)
+    expect(repo.save).toHaveBeenCalledWith(saved)
+  })
+
   test('checks active shifts before changing currency', async () => {
     await update({ currency: 'USD' })
 
@@ -72,6 +79,7 @@ describe('UpdateShopSettingsUseCase', () => {
     ['a paper width no printer uses', { receiptPaperMm: 72 }],
     ['a receipt footer over 200 characters', { receiptFooter: 'x'.repeat(201) }],
     ['a currency code of the wrong length', { currency: 'BAHT' }],
+    ['an unknown home view', { homeView: 'floor' }],
   ])('rejects %s before reading or storing anything', async (_label, input) => {
     await expect(update(input)).rejects.toBeInstanceOf(ZodError)
     expect(repo.getForUpdate).not.toHaveBeenCalled()
