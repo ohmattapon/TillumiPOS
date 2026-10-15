@@ -26,7 +26,7 @@ export function LoginPage() {
           <span className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <Store className="size-6" />
           </span>
-          <CardTitle className="text-xl">EasyPOS</CardTitle>
+          <CardTitle className="text-xl">TillumiPOS</CardTitle>
           <CardDescription>{t('subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
