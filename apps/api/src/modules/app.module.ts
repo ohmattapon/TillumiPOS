@@ -6,6 +6,7 @@ import { CategoryElysiaController } from './categories/adapters/controllers/cate
 import './di-registrations'
 import { InventoryElysiaController } from './inventory/adapters/controllers/inventory.controller'
 import { KitchenCatalogElysiaController } from './kitchen/adapters/controllers/kitchen-catalog.controller'
+import { KitchenTicketElysiaController } from './kitchen/adapters/controllers/kitchen-ticket.controller'
 import { ModifierElysiaController } from './modifiers/adapters/controllers/modifier.controller'
 import { OrderElysiaController } from './orders/adapters/controllers/order.controller'
 import { QrPaymentElysiaController } from './qr-payments/adapters/controllers/qr-payment.controller'
@@ -28,6 +29,7 @@ const kitchenCatalogController = container.resolve(KitchenCatalogElysiaControlle
 const inventoryController = container.resolve(InventoryElysiaController)
 const saleController = container.resolve(SaleElysiaController)
 const orderController = container.resolve(OrderElysiaController)
+const kitchenTicketController = container.resolve(KitchenTicketElysiaController)
 const qrPaymentController = container.resolve(QrPaymentElysiaController)
 const settingsController = container.resolve(SettingsElysiaController)
 const setupController = container.resolve(SetupElysiaController)
@@ -52,5 +54,6 @@ export const appModule = new Elysia({ name: 'api', prefix: '/api/v1' })
   .use(saleController.getRoutes())
   .use(container.resolve(SalesReportElysiaController).getRoutes())
   .use(orderController.getRoutes())
+  .use(kitchenTicketController.getRoutes())
   .use(qrPaymentController.getRoutes())
   .use(settingsController.getRoutes())
