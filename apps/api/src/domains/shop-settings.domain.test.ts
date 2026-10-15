@@ -8,7 +8,7 @@ const settings = (overrides: Partial<ShopSettingsProps> = {}) =>
 describe('ShopSettingsEntity', () => {
   test('the defaults are valid and describe a Thai shop with VAT-inclusive prices', () => {
     expect(settings().toSnapshot()).toEqual({
-      shopName: 'EasyPOS',
+      shopName: 'TillumiPOS',
       taxId: null,
       address: null,
       phone: null,
@@ -19,6 +19,7 @@ describe('ShopSettingsEntity', () => {
       locale: 'th',
       receiptPaperMm: 80,
       receiptFooter: null,
+      homeView: 'till',
     })
   })
 
@@ -38,6 +39,7 @@ describe('ShopSettingsEntity', () => {
     ['an unsupported language', { locale: 'fr' as never }],
     ['a paper width no printer uses', { receiptPaperMm: 72 as never }],
     ['a receipt footer over 200 characters', { receiptFooter: 'x'.repeat(201) }],
+    ['an unknown home view', { homeView: 'floor' as never }],
   ])('rejects %s', (_label, overrides) => {
     expect(() => settings(overrides)).toThrow(DomainError)
   })
@@ -51,8 +53,25 @@ describe('ShopSettingsEntity', () => {
     { currency: 'USD', locale: 'en' as const },
     { receiptPaperMm: 58 as const },
     { receiptFooter: 'x'.repeat(200) },
+    { homeView: 'tables' as const },
   ])('accepts the edge value %p', (overrides) => {
     expect(() => settings(overrides)).not.toThrow()
+  })
+
+  describe('home view', () => {
+    test('the default is the till', () => {
+      expect(DEFAULT_SHOP_SETTINGS.homeView).toBe('till')
+    })
+
+    test('the floor plan of tables can be the home view', () => {
+      expect(settings({ homeView: 'tables' }).homeView).toBe('tables')
+    })
+
+    test('a refused home view is an INVALID_SHOP_SETTINGS domain error', () => {
+      expect(() => settings({ homeView: 'floor' as never })).toThrow(
+        expect.objectContaining({ code: 'INVALID_SHOP_SETTINGS' }),
+      )
+    })
   })
 
   describe('with', () => {
@@ -67,7 +86,7 @@ describe('ShopSettingsEntity', () => {
 
       expect(changed.taxId).toBeNull()
       expect(changed.phone).toBe('02-000-0000')
-      expect(changed.shopName).toBe('EasyPOS')
+      expect(changed.shopName).toBe('TillumiPOS')
     })
 
     test('enforces the same rules as the constructor', () => {

@@ -266,6 +266,46 @@ async function main() {
       }
     })
 
+    await check('the customer screen needs no sign-in, then follows the cashier: the item and total, then paid, then idle', async () => {
+      // A stranger's browser: no session. The screen must neither show a login page nor ask the API for anything.
+      const stranger = await browser.newContext({ viewport: { width: 1366, height: 768 }, locale: 'th-TH' })
+      try {
+        const bare = await stranger.newPage()
+        bare.setDefaultTimeout(15_000)
+        const apiCalls: string[] = []
+        bare.on('request', (request) => {
+          if (new URL(request.url()).pathname.startsWith('/api/')) apiCalls.push(request.url())
+        })
+        await bare.goto(`${WEB}/customer`)
+        await bare.getByText('ยินดีต้อนรับ').waitFor()
+        if (apiCalls.length > 0) throw new Error(`The customer screen called the API: ${apiCalls[0]}`)
+      } finally {
+        await stranger.close()
+      }
+
+      // In the cashier's own browser the screen follows what is on the counter.
+      const display = await cashier.context().newPage()
+      display.setDefaultTimeout(15_000)
+      try {
+        await display.goto(`${WEB}/customer`)
+        await cashier.goto(WEB)
+        await cashier.getByRole('button', { name: /น้ำดื่ม 600 มล\./ }).first().click()
+        await display.getByText('น้ำดื่ม 600 มล.').waitFor()
+        await display.getByText('ยอดสุทธิ').waitFor()
+        await cashier.getByRole('button', { name: /^ชำระเงิน/ }).click()
+        // Not cash: the checks that close the shift assert exactly what the drawer should hold (฿160.00, and
+        // a difference of -฿25.00), so this sale must not add to it.
+        await cashier.getByRole('button', { name: 'พร้อมเพย์' }).click()
+        await cashier.getByRole('button', { name: 'ยืนยันการชำระ' }).click()
+        await display.getByText('ชำระแล้ว').waitFor()
+        await cashier.getByRole('button', { name: 'ขายรายการต่อไป' }).click()
+        // The till ends the paid screen itself after a few seconds.
+        await display.getByText('ยินดีต้อนรับ').waitFor({ timeout: 10_000 })
+      } finally {
+        await display.close()
+      }
+    })
+
     await check('with a tax ID the receipt is an abbreviated tax invoice, ends with the footer and prints 48 mm wide on 58 mm paper', async () => {
       const changed = await owner.request.patch(`${WEB}/api/v1/settings`, {
         data: { taxId: '0105500000000', receiptFooter: 'ขอบคุณที่ใช้บริการ', receiptPaperMm: 58 },

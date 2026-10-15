@@ -1,11 +1,26 @@
 import { describe, expect, test } from 'bun:test'
 import { makeOrder } from '../__tests__/factories'
 import { DomainError } from './errors/domain-error'
-import { MAX_LINE_QUANTITY, MAX_ORDER_LINES, OrderEntity, type OrderItem } from './order.domain'
+import type { LineOption } from './modifier.domain'
+import {
+  identityOf,
+  lineIdentity,
+  MAX_LINE_QUANTITY,
+  MAX_ORDER_LINES,
+  OrderEntity,
+  type OrderItem,
+} from './order.domain'
 
 const tea = { productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500 }
 const cake = { productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700 }
-const item = (overrides: Partial<OrderItem> = {}): OrderItem => ({ ...tea, lineId: 0, options: [], quantity: 1, ...overrides })
+const item = (overrides: Partial<OrderItem> = {}): OrderItem => ({
+  ...tea,
+  lineId: 0,
+  options: [],
+  quantity: 1,
+  note: null,
+  ...overrides,
+})
 
 const codeOf = (run: () => unknown) => {
   try {
@@ -385,6 +400,92 @@ describe('OrderEntity split', () => {
   })
 })
 
+const optionOf = (optionId: number) =>
+  ({ groupId: 1, groupName: 'กลุ่ม', optionId, name: 'ตัวเลือก', priceSatang: 0, costSatang: 0 }) as LineOption
+
+const noteLine = (overrides: Partial<OrderItem> = {}): OrderItem => ({
+  lineId: 1,
+  productId: 10,
+  productName: 'ชาเย็น',
+  sku: 'TEA',
+  unitPriceSatang: 3500,
+  quantity: 1,
+  options: [],
+  note: null,
+  ...overrides,
+})
+
+describe('หมายเหตุต่อบรรทัด', () => {
+  test('ตัดช่องว่างหัวท้าย และค่าว่างหมายถึงไม่มีหมายเหตุ', () => {
+    const order = makeOrder({ items: [noteLine()] })
+
+    expect(order.setLineNote(1, '  ไม่ใส่น้ำแข็ง  ').items[0]!.note).toBe('ไม่ใส่น้ำแข็ง')
+    expect(order.setLineNote(1, '   ').items[0]!.note).toBeNull()
+    expect(order.setLineNote(1, null).items[0]!.note).toBeNull()
+  })
+
+  test('หมายเหตุเกิน 200 ตัวอักษรถูกปฏิเสธ และ 200 ตัวอักษรพอดีผ่าน', () => {
+    const order = makeOrder({ items: [noteLine()] })
+
+    expect(codeOf(() => order.setLineNote(1, 'x'.repeat(201)))).toBe('INVALID_ORDER')
+    expect(order.setLineNote(1, 'x'.repeat(200)).items[0]!.note).toHaveLength(200)
+  })
+
+  test('แก้หมายเหตุได้เฉพาะออเดอร์ที่ยังเปิด', () => {
+    const paid = makeOrder({ status: 'paid', saleId: 9, items: [noteLine()] })
+
+    expect(codeOf(() => paid.setLineNote(1, 'เผ็ด'))).toBe('ORDER_NOT_OPEN')
+  })
+
+  test('บรรทัดที่ไม่มีในออเดอร์ไม่พบ', () => {
+    const order = makeOrder({ items: [noteLine()] })
+
+    expect(codeOf(() => order.setLineNote(99, 'เผ็ด'))).toBe('ORDER_ITEM_NOT_FOUND')
+  })
+
+  test('รวมบรรทัดสินค้าเดียวกันเก็บหมายเหตุแรกที่มีค่า', () => {
+    const order = makeOrder({ items: [noteLine({ lineId: 1, note: null })] })
+
+    const merged = order.addItem({ productId: 10, productName: 'ชาเย็น', sku: 'TEA', unitPriceSatang: 3500 }, 2)
+
+    expect(merged.items).toHaveLength(1)
+    expect(merged.items[0]!.quantity).toBe(3)
+    expect(merged.items[0]!.note).toBeNull()
+  })
+
+  test('รวมออเดอร์ใช้หมายเหตุของปลายทางก่อน ถ้าว่างจึงใช้ของต้นทาง', () => {
+    const destination = makeOrder({ id: 1, items: [noteLine({ lineId: 1, note: 'หวานน้อย' })] })
+    const source = makeOrder({
+      id: 2,
+      items: [noteLine({ lineId: 5, note: 'เผ็ด' }), noteLine({ lineId: 6, productId: 11, note: 'ไม่ใส่ไข่' })],
+    })
+
+    const absorbed = destination.absorb(source)
+
+    expect(absorbed.items.find((item) => item.productId === 10)!.note).toBe('หวานน้อย')
+    expect(absorbed.items.find((item) => item.productId === 11)!.note).toBe('ไม่ใส่ไข่')
+  })
+})
+
+describe('คีย์ของบรรทัด', () => {
+  test('สินค้าเดียวกันกับตัวเลือกชุดเดียวกันมีคีย์เดียว ไม่สนลำดับตัวเลือก', () => {
+    expect(lineIdentity(10, [])).toBe(identityOf(10, ''))
+    expect(lineIdentity(10, [optionOf(3), optionOf(1)])).toBe(lineIdentity(10, [optionOf(1), optionOf(3)]))
+  })
+
+  test('quantitiesByLine บอกจำนวนของแต่ละบรรทัด', () => {
+    const order = makeOrder({
+      items: [noteLine({ quantity: 2 }), noteLine({ lineId: 2, productId: 11, quantity: 4 })],
+    })
+
+    expect(order.quantitiesByLine()).toEqual(
+      new Map([
+        [identityOf(10, ''), 2],
+        [identityOf(11, ''), 4],
+      ]),
+    )
+  })
+})
 
 describe('order membership', () => {
   test('inherits one member on merge and rejects different members', () => {

@@ -8,6 +8,10 @@ export type Locale = (typeof LOCALES)[number]
 export const RECEIPT_PAPER_WIDTHS = [58, 80] as const
 export type ReceiptPaperMm = (typeof RECEIPT_PAPER_WIDTHS)[number]
 
+/** What the sell screen opens on: the till itself, or the floor plan of tables. */
+export const HOME_VIEWS = ['till', 'tables'] as const
+export type HomeView = (typeof HOME_VIEWS)[number]
+
 export interface ShopSettingsProps {
   shopName: string
   /** Tax identification number printed on receipts. */
@@ -25,11 +29,12 @@ export interface ShopSettingsProps {
   receiptPaperMm: ReceiptPaperMm
   /** Printed under every receipt, such as a thank-you line or the return policy. */
   receiptFooter: string | null
+  homeView: HomeView
 }
 
 /** What a shop that has never been configured runs with. */
 export const DEFAULT_SHOP_SETTINGS: ShopSettingsProps = {
-  shopName: 'EasyPOS',
+  shopName: 'TillumiPOS',
   taxId: null,
   address: null,
   phone: null,
@@ -40,6 +45,7 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettingsProps = {
   locale: 'th',
   receiptPaperMm: 80,
   receiptFooter: null,
+  homeView: 'till',
 }
 
 export type ShopSettingsChanges = Partial<ShopSettingsProps>
@@ -68,6 +74,7 @@ export class ShopSettingsEntity {
   public readonly locale: Locale
   public readonly receiptPaperMm: ReceiptPaperMm
   public readonly receiptFooter: string | null
+  public readonly homeView: HomeView
 
   constructor(props: ShopSettingsProps) {
     if (props.shopName.length < 1 || props.shopName.length > 100) throw invalid('ชื่อร้านต้องยาว 1 ถึง 100 ตัวอักษร')
@@ -82,6 +89,7 @@ export class ShopSettingsEntity {
     if (!LOCALES.includes(props.locale)) throw invalid('ภาษาไม่ถูกต้อง')
     if (!RECEIPT_PAPER_WIDTHS.includes(props.receiptPaperMm)) throw invalid('ขนาดกระดาษใบเสร็จต้องเป็น 58 หรือ 80 มม.')
     if (!within(props.receiptFooter, 200)) throw invalid('ข้อความท้ายใบเสร็จต้องไม่เกิน 200 ตัวอักษร')
+    if (!HOME_VIEWS.includes(props.homeView)) throw invalid('หน้าแรกต้องเป็นหน้าขายหรือผังโต๊ะ')
 
     this.shopName = props.shopName
     this.taxId = props.taxId
@@ -94,6 +102,7 @@ export class ShopSettingsEntity {
     this.locale = props.locale
     this.receiptPaperMm = props.receiptPaperMm
     this.receiptFooter = props.receiptFooter
+    this.homeView = props.homeView
   }
 
   /**
@@ -123,6 +132,7 @@ export class ShopSettingsEntity {
       locale: this.locale,
       receiptPaperMm: this.receiptPaperMm,
       receiptFooter: this.receiptFooter,
+      homeView: this.homeView,
     }
   }
 }

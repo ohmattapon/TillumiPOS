@@ -15,7 +15,7 @@ export interface ReportExportData {
 export async function buildReportWorkbook(data: ReportExportData) {
   const { default: ExcelJS } = await import('exceljs')
   const workbook = new ExcelJS.Workbook()
-  workbook.creator = 'EasyPOS'
+  workbook.creator = 'TillumiPOS'
   workbook.created = new Date()
   const t = reportsLocales[data.locale]
   const factor = 10 ** data.fractionDigits

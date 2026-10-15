@@ -1,6 +1,6 @@
 import type { Sale } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, LayoutGrid, MoreHorizontal } from 'lucide-react'
+import { ClipboardList, LayoutGrid, Monitor, MoreHorizontal } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/PageHeader'
@@ -12,7 +12,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { openOrdersQuery, usePayOrder } from '@/features/orders'
-import { useFormat } from '@/features/settings'
+import { useFormat, useSettings } from '@/features/settings'
+import { isCustomerDisplaySupported, openCustomerDisplay, PAID_SHOWN_MS, useCustomerDisplayPublisher } from '@/features/customer-display'
 import { checkoutModeQuery, currentShiftQuery, registersQuery, useRegisterSelectionStore } from '@/features/shifts'
 import { meQuery } from '@/features/auth'
 import { useActiveBranch } from '@/features/branches'
@@ -22,6 +23,7 @@ import { useCreateQuote } from '@/features/promotions'
 import { useCheckout } from '../api'
 import { useCart } from '../hooks/use-cart'
 import { hasKeyboard } from '../lib/focus'
+import { toDisplayState } from '../lib/customer-display'
 import { useCartStore } from '../store/cart.store'
 import { CartBar } from './CartBar'
 import { CartPanel } from './CartPanel'
@@ -59,6 +61,24 @@ export function PosPage() {
 
   const [isPaying, setIsPaying] = useState(false)
   const [receipt, setReceipt] = useState<Sale | null>(null)
+  const settings = useSettings()
+  // The bank QR the payment dialog is showing, and the sale just paid, for the customer's screen.
+  const [shownQr, setShownQr] = useState<{ image: string; expiresAt: string } | null>(null)
+  const [paidSale, setPaidSale] = useState<{ totalSatang: number; changeSatang: number } | null>(null)
+
+  // "Paid" stays on the customer's screen for a few seconds, then the idle screen returns.
+  useEffect(() => {
+    if (paidSale === null) return
+    const timer = window.setTimeout(() => setPaidSale(null), PAID_SHOWN_MS)
+    return () => window.clearTimeout(timer)
+  }, [paidSale])
+
+  useCustomerDisplayPublisher({
+    locale: settings.locale,
+    currency: settings.currency,
+    shopName: settings.shopName,
+    state: toDisplayState({ cart, vatMode: settings.vatMode, isPaying, qr: shownQr, paidSale }),
+  })
   const [today] = useState(() => new Date())
   const searchRef = useRef<HTMLInputElement>(null)
   const paymentCommandKey = useRef<string | null>(null)
@@ -110,6 +130,7 @@ export function PosPage() {
   const paid = {
     onSuccess: (sale: Sale) => {
       setReceipt(sale)
+      setPaidSale({ totalSatang: sale.totalSatang, changeSatang: sale.changeSatang })
       setIsPaying(false)
       paymentCommandKey.current = null
       createQuote.reset()
@@ -178,6 +199,12 @@ export function PosPage() {
             {t('orders.button')}
             {openCount > 0 && <span className="rounded-full bg-primary/10 px-1.5 text-xs text-primary tabular-nums">{openCount}</span>}
           </Button>
+          {isCustomerDisplaySupported() && (
+            <Button variant="outline" className="h-11 px-3" onClick={openCustomerDisplay}>
+              <Monitor />
+              {t('customerDisplay')}
+            </Button>
+          )}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -200,6 +227,12 @@ export function PosPage() {
               {t('orders.button')}
               {openCount > 0 && <span className="ml-auto rounded-full bg-primary/10 px-1.5 text-xs text-primary tabular-nums">{openCount}</span>}
             </DropdownMenuItem>
+            {isCustomerDisplaySupported() && (
+              <DropdownMenuItem onSelect={openCustomerDisplay}>
+                <Monitor />
+                {t('customerDisplay')}
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </PageHeader>
@@ -238,6 +271,7 @@ export function PosPage() {
           initialMethod={methodAfterQuote}
           onConfirm={pay}
           onCancel={cancelPayment}
+          onQrChange={setShownQr}
         />
       )}
 

@@ -9,6 +9,7 @@ const th = {
   shiftReady: 'กะเปิดอยู่',
   shiftRequired: 'เปิดกะก่อนขาย',
   moreActions: 'การทำงานอื่น',
+  customerDisplay: 'จอลูกค้า',
   picker: {
     searchPlaceholder: 'สแกนบาร์โค้ด หรือพิมพ์ชื่อ / รหัสสินค้า แล้วกด Enter',
     searchLabel: 'ค้นหาสินค้า',
@@ -142,6 +143,14 @@ const th = {
     saved: 'บันทึกการขายแล้ว · เงินทอน',
     next: 'ขายรายการต่อไป',
   },
+  kitchen: {
+    send: 'ส่งครัว ({{count}})',
+    sent: 'ส่งครัวแล้ว',
+    sentBadge: 'ส่งแล้ว {{count}}',
+    noteFor: 'หมายเหตุของ {{name}}',
+    notePlaceholder: 'เช่น ไม่ใส่น้ำแข็ง',
+    lockedNote: 'ส่งครัวแล้ว แก้หมายเหตุไม่ได้',
+  },
 }
 
 const en = {
@@ -154,6 +163,7 @@ const en = {
   shiftReady: 'Shift open',
   shiftRequired: 'Open a shift to sell',
   moreActions: 'More actions',
+  customerDisplay: 'Customer screen',
   description: 'Scan a barcode, or tap a product to add it to the cart',
   picker: {
     searchPlaceholder: 'Scan a barcode, or type a name or SKU and press Enter',
@@ -287,6 +297,14 @@ const en = {
   receipt: {
     saved: 'Sale recorded · change',
     next: 'Next sale',
+  },
+  kitchen: {
+    send: 'Send to kitchen ({{count}})',
+    sent: 'Sent to the kitchen',
+    sentBadge: 'Sent {{count}}',
+    noteFor: 'Note for {{name}}',
+    notePlaceholder: 'e.g. no ice',
+    lockedNote: 'Sent to the kitchen. The note can no longer be changed.',
   },
 } satisfies typeof th
 

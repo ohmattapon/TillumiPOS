@@ -4,6 +4,7 @@ import {
   Building2,
   ChartNoAxesCombined,
   CalendarCheck,
+  ChefHat,
   ChevronsUpDown,
   LayoutGrid,
   LogOut,
@@ -23,6 +24,7 @@ import {
   Tags,
   UserRound,
   Users,
+  Utensils,
   type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -86,6 +88,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
       label: t('groups.sales'),
       items: [
         { to: '/', label: t('nav.sell'), icon: ShoppingCart },
+        { to: '/kitchen', label: t('nav.kitchen'), icon: ChefHat },
         { to: '/today', label: t('nav.today'), icon: CalendarCheck },
         ...(isOwner ? [{ to: '/reports', label: t('nav.reports'), icon: ChartNoAxesCombined }] : []),
         { to: '/members', label: t('nav.members'), icon: UserRound },
@@ -102,6 +105,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
               { to: '/categories', label: t('nav.categories'), icon: Tags },
               { to: '/modifiers', label: t('nav.modifiers'), icon: SlidersHorizontal },
               { to: '/tables', label: t('nav.tables'), icon: LayoutGrid },
+              { to: '/kitchen-stations', label: t('nav.kitchenStations'), icon: Utensils },
               { to: '/branches', label: t('nav.branches'), icon: Building2 },
               { to: '/users', label: t('nav.users'), icon: Users },
               { to: '/settings', label: t('nav.settings'), icon: Settings },
