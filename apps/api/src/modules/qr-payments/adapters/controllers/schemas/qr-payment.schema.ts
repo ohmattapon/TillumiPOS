@@ -21,7 +21,7 @@ const payment = t.Object({
 export const qrPaymentSchemas = {
   payment,
   created: t.Composite([payment, t.Object({ qrRawData: t.String(), qrImage: t.String() })]),
-  create: t.Object({ amountSatang: satang({ minimum: 1 }) }),
+  create: t.Object({ amountSatang: satang({ minimum: 1 }), quoteId: t.Optional(t.Integer({ minimum: 1 })) }),
   config: t.Object({ enabled: t.Boolean() }),
   // SCB posts many fields; only the reference is read, and the rest is deliberately not trusted.
   scbConfirmation: t.Object(

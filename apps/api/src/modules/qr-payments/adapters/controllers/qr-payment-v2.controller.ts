@@ -126,7 +126,7 @@ export class QrPaymentV2ElysiaController {
         {
           auth: true,
           headers: idempotencyHeaders,
-          body: t.Object({ amountSatang: satang({ minimum: 1 }), shiftId: t.Integer({ minimum: 1 }) }),
+          body: t.Object({ amountSatang: satang({ minimum: 1 }), shiftId: t.Integer({ minimum: 1 }), quoteId: t.Optional(t.Integer({ minimum: 1 })) }),
           response: t.Composite([payment, t.Object({ qrRawData: t.String(), qrImage: t.String() })]),
           detail: { summary: 'v2: ขอ QR ในกะที่เปิดอยู่ (บันทึกคำขอก่อนเรียกธนาคาร)' },
         },
