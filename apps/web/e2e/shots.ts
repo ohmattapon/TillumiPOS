@@ -10,7 +10,7 @@ import assert from 'node:assert/strict'
 import { mkdir, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { chromium, type Page } from 'playwright-core'
+import { chromium, type BrowserContext, type Page } from 'playwright-core'
 
 const DB_NAME = 'pos_e2e_shots'
 const API_PORT = 3290
@@ -159,6 +159,7 @@ async function main() {
         await page.waitForTimeout(1000)
         await shot(name)
       }
+      await shootCustomerDisplay(context, size.name)
 
       // Date-only values survive the shadcn calendar without UTC conversion or premature submission.
       await page.goto(`${WEB}/reports?from=2024-02-01&to=2024-02-29&scope=branch`)
@@ -264,6 +265,43 @@ async function main() {
     }
   } finally {
     await browser.close()
+  }
+}
+
+/** The customer's screen has no sign-in and no API, so it is fed by posting messages on the real channel. */
+async function shootCustomerDisplay(context: BrowserContext, name: string) {
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+  const lines = [
+    { name: 'กาแฟเย็น', options: ['หวานน้อย'], quantity: 2, lineTotalSatang: 7000 },
+    { name: 'ช็อกโกแลตแท่ง', options: [], quantity: 1, lineTotalSatang: 2500 },
+  ]
+  const states: [string, unknown][] = [
+    ['idle', { kind: 'idle' }],
+    ['selling', { kind: 'selling', lines, subtotalSatang: 9500, discountSatang: 0, vatSatang: 621, vatMode: 'inclusive', totalSatang: 9500 }],
+    ['paying', { kind: 'paying', lines, totalSatang: 9500, qr: { image: png, expiresAt: new Date(Date.now() + 300_000).toISOString() } }],
+    ['paid', { kind: 'paid', totalSatang: 9500, changeSatang: 500 }],
+  ]
+  const display = await context.newPage()
+  const sender = await context.newPage()
+  try {
+    await display.goto(`${WEB}/customer`)
+    await sender.goto(`${WEB}/customer`)
+    await display.waitForTimeout(800)
+    let seq = 0
+    for (const [state, value] of states) {
+      seq += 1
+      const envelope = { v: 1, sessionId: 'shots', seq, at: Date.now(), locale: 'th', currency: 'THB', shopName: 'EasyPOS', state: value }
+      await sender.evaluate((message) => {
+        const channel = new BroadcastChannel('easypos-customer-display')
+        channel.postMessage(message)
+        channel.close()
+      }, { type: 'state', envelope })
+      await display.waitForTimeout(600)
+      await display.screenshot({ path: join(OUT, `${name}-20-customer-${state}.png`) })
+    }
+  } finally {
+    await display.close()
+    await sender.close()
   }
 }
 

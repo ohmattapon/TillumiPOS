@@ -1,11 +1,12 @@
 import type { User } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { Navigate, Route, Routes } from 'react-router'
+import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { LoginPage, meQuery, useLogout } from '@/features/auth'
 import { BranchesPage, useActiveBranch } from '@/features/branches'
 import { CategoriesPage } from '@/features/categories'
+import { CustomerDisplayPage } from '@/features/customer-display'
 import { MembersPage, MemberDetailsPage } from '@/features/members'
 import { ModifiersPage } from '@/features/modifiers'
 import { SetupPage, setupStatusQuery } from '@/features/setup'
@@ -64,7 +65,7 @@ function Shell({ user }: { user: User }) {
   )
 }
 
-export default function App() {
+function Gate() {
   const me = useQuery(meQuery)
   const setup = useQuery(setupStatusQuery)
 
@@ -73,4 +74,12 @@ export default function App() {
   if (!me.data) return setup.data ? <SetupPage /> : <LoginPage />
 
   return <Shell user={me.data} />
+}
+
+export default function App() {
+  const { pathname } = useLocation()
+  // The customer's screen shows only what the till sends it over the browser channel, so it needs no
+  // sign-in and asks the server for nothing: it must also work when the cashier's session has expired.
+  if (pathname === '/customer') return <CustomerDisplayPage />
+  return <Gate />
 }
