@@ -99,6 +99,13 @@
       "when": 1791951838942,
       "tag": "0013_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792023500081,
+      "tag": "0014_kitchen",
+      "breakpoints": true
     }
   ]
 }
