@@ -1,5 +1,6 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
+import { memberQuery } from '@/features/members'
 import { modifierGroupsQuery } from '@/features/modifiers'
 import { orderQuery } from '@/features/orders'
 import { productQuery } from '@/features/products'
@@ -15,8 +16,12 @@ export function useCart() {
   const lines = useCartStore((state) => state.lines)
   const discount = useCartStore((state) => state.discount)
   const orderId = useCartStore((state) => state.orderId)
+  const localMemberId = useCartStore((state) => state.memberId)
   const clear = useCartStore((state) => state.clear)
   const order = useQuery({ ...orderQuery(orderId ?? 0), enabled: orderId !== null })
+  const memberId = orderId === null ? localMemberId : order.data?.memberId ?? null
+  const member = useQuery({ ...memberQuery(memberId ?? 0), enabled: memberId !== null, staleTime: 0, refetchInterval: 15_000 })
+  const memberReady = memberId === null || (member.isSuccess && member.data.isActive)
   const ids = [...new Set((orderId === null ? lines : order.data?.items ?? []).map((line) => line.productId))]
   // The basket reads only its own products, independently of the page being browsed.
   const products = useQueries({ queries: ids.map(productQuery) })
@@ -53,10 +58,10 @@ export function useCart() {
 
   const productsReady = products.every((result) => result.isSuccess && result.data.isActive)
   return {
-    ...priced, canPay: priced.canPay && productsReady, productsReady,
+    ...priced, canPay: priced.canPay && productsReady && memberReady, productsReady,
     isLoadingProducts: products.some((result) => result.isPending),
     productError: products.find((result) => result.error)?.error,
     hasUnavailableProducts: products.some((result) => result.data && !result.data.isActive),
-    orderId, order: order.data,
+    orderId, order: order.data, memberId, member: member.data, memberError: member.error,
   }
 }

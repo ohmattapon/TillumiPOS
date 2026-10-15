@@ -1,3 +1,4 @@
+import { SetOrderMemberUseCase } from '../../applications/usecases/set-order-member.usecase'
 import { Elysia } from 'elysia'
 import { inject, injectable } from 'tsyringe'
 import type { OrderEntity } from '../../../../domains/order.domain'
@@ -25,6 +26,7 @@ function toResponse(order: OrderEntity): OrderResponse {
   const { items, ...header } = order.toSnapshot()
   return {
     ...header,
+    memberId: order.memberId,
     items: items.map((item) => ({
       ...item,
       // The cost of an option is internal, like the cost of a sale line.
@@ -52,6 +54,7 @@ export class OrderElysiaController {
     @inject(RemoveOrderLineUseCase) private readonly removeLine: RemoveOrderLineUseCase,
     @inject(MoveOrderToTableUseCase) private readonly moveToTable: MoveOrderToTableUseCase,
     @inject(MergeOrdersUseCase) private readonly mergeOrders: MergeOrdersUseCase,
+    @inject(SetOrderMemberUseCase) private readonly setMember: SetOrderMemberUseCase,
     @inject(SplitOrderUseCase) private readonly splitOrder: SplitOrderUseCase,
   ) {}
 
@@ -88,6 +91,12 @@ export class OrderElysiaController {
         async ({ params, body, branch }) =>
           toResponse(await this.renameOrder.execute(params.id, body, (await branch()).id)),
         { params: idParams, body: orderSchemas.update, response: orderSchemas.order, detail: { summary: 'เปลี่ยนป้ายชื่อออเดอร์' } },
+      )
+      .patch(
+        '/:id/member',
+        async ({ params, body, branch }) =>
+          toResponse(await this.setMember.execute(params.id, body, (await branch()).id)),
+        { params: idParams, body: orderSchemas.member, response: orderSchemas.order, detail: { summary: 'เปลี่ยนสมาชิกของออเดอร์' } },
       )
       .post(
         '/:id/items',

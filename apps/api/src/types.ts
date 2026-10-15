@@ -17,3 +17,5 @@ export type {
   ModifierOptionResponse as ModifierOption,
 } from './modules/modifiers/adapters/controllers/schemas/modifier.schema'
 export type { TableResponse as DiningTable } from './modules/tables/adapters/controllers/schemas/table.schema'
+
+export type { MemberResponse as Member } from './modules/members/adapters/controllers/schemas/member.schema'

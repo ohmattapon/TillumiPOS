@@ -259,11 +259,104 @@ async function main() {
       await page.getByRole('alert').waitFor({ state: 'hidden' })
       await page.getByText('วันนี้ยังไม่มีบิลขาย', { exact: true }).and(page.locator(':visible')).waitFor()
       await shot('21-today-recovered')
+      await memberScreens(page, size, shot, size.name === chosen.at(-1)?.name)
       await context.close()
     }
   } finally {
     await browser.close()
   }
+}
+
+/** Member screens use the same isolated database and authenticated UI as the rest of this suite. */
+async function memberScreens(page: Page, size: typeof sizes[number], shot: (name: string) => Promise<void>, lifecycle: boolean) {
+  assert((await page.request.patch(`${WEB}/api/v1/settings`, { data: { locale: 'en' } })).ok())
+  await page.goto(`${WEB}/members`)
+  await page.getByRole('heading', { name: 'Members', exact: true }).waitFor()
+  const name = `Browser member ${size.name}`
+  const phone = `081234${String(sizes.indexOf(size)).padStart(4, '0')}`
+  await page.getByRole('button', { name: 'Add member', exact: true }).click()
+  await page.getByLabel('Member name', { exact: true }).fill(name)
+  await page.getByLabel('Phone number', { exact: true }).fill(phone)
+  await shot('30-member-create')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByRole('dialog').waitFor({ state: 'hidden' })
+  await page.getByRole('textbox', { name: 'Search name, phone or member code' }).fill(phone)
+  await page.getByText(name, { exact: true }).and(page.locator(':visible')).waitFor()
+  await shot('31-member-directory')
+  await page.getByText(name, { exact: true }).and(page.locator(':visible')).click()
+  await page.getByRole('heading', { name: 'Purchase history' }).waitFor()
+  const memberId = Number(new URL(page.url()).pathname.split('/').at(-1))
+  await shot('32-member-history')
+  await page.getByRole('button', { name: 'Edit member', exact: true }).click()
+  await page.getByLabel('Member name', { exact: true }).fill(`${name} edited`)
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByRole('dialog').waitFor({ state: 'hidden' })
+  const selectMember = async () => {
+    await page.getByRole('button', { name: 'Walk-in customer', exact: true }).and(page.locator(':visible')).click()
+    await page.getByRole('textbox', { name: 'Search name, phone or member code' }).fill(phone)
+    await page.getByRole('button', { name: new RegExp(`${name} edited`) }).click()
+  }
+  const openBasket = async () => {
+    if (size.width < 1024) await page.getByRole('button', { name: /items/ }).and(page.locator(':visible')).click()
+  }
+  await page.goto(WEB)
+  // A full navigation deliberately creates a fresh cart; add one item through the real picker.
+  await tryClick(page, page.getByRole('button', { name: /[$]| \d+\.\d\d/ }).first())
+  await openBasket()
+  await selectMember()
+  await page.getByRole('button', { name: `${name} edited`, exact: true }).and(page.locator(':visible')).waitFor()
+  await shot('33-member-pos')
+  await page.getByRole('button', { name: 'Remove', exact: true }).and(page.locator(':visible')).click()
+  await page.getByRole('button', { name: 'Walk-in customer', exact: true }).and(page.locator(':visible')).waitFor()
+  if (size.width < 1024) await page.getByRole('button', { name: 'Close cart', exact: true }).click()
+  if (lifecycle) {
+    await openBasket()
+    await selectMember()
+    await page.getByRole('button', { name: 'Save as open order', exact: true }).and(page.locator(':visible')).click()
+    await page.getByLabel('Label', { exact: true }).fill('Member browser order')
+    const opened = page.waitForResponse((response) => response.url().endsWith('/api/v1/orders') && response.request().method() === 'POST')
+    await page.getByRole('button', { name: 'Save order', exact: true }).click()
+    const order = await (await opened).json()
+    assert.equal(order.memberId, memberId, 'saved order carries selected membership')
+    await page.getByRole('dialog').waitFor({ state: 'hidden' })
+    // Resume the order through the UI, then exercise the order membership command.
+    await page.getByRole('button', { name: /^Open orders/ }).and(page.locator(':visible')).click()
+    const orderRow = page.getByRole('listitem').filter({ hasText: 'Member browser order' })
+    await orderRow.getByRole('button', { name: /Continue/ }).click()
+    await openBasket()
+    const removed = page.waitForResponse((response) => response.url().endsWith(`/orders/${order.id}/member`) && response.request().method() === 'PATCH')
+    await page.getByRole('button', { name: 'Remove', exact: true }).and(page.locator(':visible')).click()
+    assert.equal((await (await removed).json()).memberId, null)
+    await selectMember()
+    const paid = page.waitForResponse((response) => response.url().includes(`/orders/${order.id}/pay`) && response.request().method() === 'POST')
+    await page.getByRole('button', { name: /^Pay/ }).and(page.locator(':visible')).click()
+    await page.getByRole('button', { name: 'Exact', exact: true }).click()
+    await page.getByRole('button', { name: 'Confirm payment', exact: true }).click()
+    const sale = await (await paid).json()
+    assert.equal(sale.member.id, memberId)
+    assert.equal(sale.member.phone, undefined)
+    await page.getByText(`Members: ${sale.member.code} / ${sale.member.name}`, { exact: true }).waitFor()
+    await shot('34-member-receipt')
+    await page.getByRole('button', { name: 'Next sale', exact: true }).click()
+    await page.goto(`${WEB}/members/${memberId}`)
+    await page.getByText(sale.receiptNo, { exact: true }).and(page.locator(':visible')).waitFor()
+    await shot('35-member-purchases')
+    // Cashiers can create and inspect members, but owner-only management controls stay absent.
+    const username = 'member_browser_cashier'
+    assert((await page.request.post(`${WEB}/api/v1/users`, { data: { username, password: PASSWORD, displayName: 'Member cashier', role: 'cashier' } })).ok())
+    await page.request.post(`${WEB}/api/v1/auth/logout`)
+    await page.goto(WEB)
+    await page.getByLabel('Username', { exact: true }).fill(username)
+    await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    await page.goto(`${WEB}/members/${memberId}`)
+    await page.getByRole('heading', { name: 'Purchase history' }).waitFor()
+    assert.equal(await page.getByRole('button', { name: 'Edit member', exact: true }).count(), 0)
+    assert.equal(await page.getByRole('button', { name: 'Deactivate', exact: true }).count(), 0)
+    await shot('36-member-cashier')
+  }
+  // Keep the next viewport in Thai, as expected by the shared screenshots above.
+  if (!lifecycle) assert((await page.request.patch(`${WEB}/api/v1/settings`, { data: { locale: 'th' } })).ok())
 }
 
 async function tryClick(page: Page, locator: ReturnType<Page['locator']>) {

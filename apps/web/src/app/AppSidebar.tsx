@@ -87,6 +87,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
         { to: '/', label: t('nav.sell'), icon: ShoppingCart },
         { to: '/today', label: t('nav.today'), icon: CalendarCheck },
         ...(isOwner ? [{ to: '/reports', label: t('nav.reports'), icon: ChartNoAxesCombined }] : []),
+        { to: '/members', label: t('nav.members'), icon: UserRound },
         { to: '/shifts', label: t('nav.shifts'), icon: WalletCards },
       ],
     },
@@ -147,7 +148,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
                 <SidebarMenuItem key={item.to}>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === item.to}
+                    isActive={pathname === item.to || (item.to !== '/' && pathname.startsWith(`${item.to}/`))}
                     tooltip={item.label}
                     className={`h-11 ${activeItem}`}
                   >

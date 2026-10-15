@@ -41,6 +41,7 @@ export class PayOrderV2UseCase {
           unitPriceSatang,
           options,
         })),
+        memberId: order.memberId,
         discountSatang: dto.discountSatang ?? 0,
         payments: dto.payments,
         cashier: actor.user,
