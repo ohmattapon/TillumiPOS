@@ -12,6 +12,9 @@ beforeEach(async () => {
 
 const tenPercent = { name: 'ลด 10%', kind: 'percent' as const, value: 1000 }
 
+/** A promotion's day as YYYY-MM-DD, whether the client gives the string or a Date at midnight UTC. */
+const day = (value: unknown) => (value === null ? null : new Date(value as string).toISOString().slice(0, 10))
+
 describe('promotion management', () => {
   test('the owner creates a promotion with defaults and both roles read it', async () => {
     const created = ok(await owner.api.promotions.post(tenPercent))
@@ -33,15 +36,18 @@ describe('promotion management', () => {
       }),
     )
     expect(created).toMatchObject({
-      maxDiscountSatang: 2000, minSubtotalSatang: 30000, startsOn: '2026-10-01', endsOn: '2026-12-31',
+      maxDiscountSatang: 2000, minSubtotalSatang: 30000,
       weekdays: [5, 6], windowStartMinute: 1320, windowEndMinute: 120, audience: 'members',
     })
+    expect(day(created.startsOn)).toBe('2026-10-01')
+    expect(day(created.endsOn)).toBe('2026-12-31')
   })
 
   test('edits keep what was not sent, null clears a bound, and the promotion is switched off, never deleted', async () => {
     const created = ok(await owner.api.promotions.post({ ...tenPercent, maxDiscountSatang: 500, endsOn: '2026-12-31' }))
     const edited = ok(await owner.api.promotions({ id: created.id }).patch({ maxDiscountSatang: null, isActive: false }))
-    expect(edited).toMatchObject({ name: 'ลด 10%', maxDiscountSatang: null, endsOn: '2026-12-31', isActive: false })
+    expect(edited).toMatchObject({ name: 'ลด 10%', maxDiscountSatang: null, isActive: false })
+    expect(day(edited.endsOn)).toBe('2026-12-31')
     const remove = await fetch(`${baseUrl}/promotions/${created.id}`, { method: 'DELETE' })
     expect(remove.status).toBe(404)
     expect(ok(await owner.api.promotions.get({ query: { isActive: false } })).items.map((item) => item.id)).toEqual([created.id])
