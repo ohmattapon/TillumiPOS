@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { kitchenStationsQuery, kitchenTicketsQuery, useMarkTicketDone } from '../api'
+import { defaultStationId } from '../lib/stations'
 import { TicketCard } from './TicketCard'
 
 /** The kitchen screen: one station at a time, its open tickets oldest first, refreshed by the query. */
@@ -13,10 +14,9 @@ export function KitchenBoardPage() {
   const { t } = useTranslation('kitchen')
   const [params, setParams] = useSearchParams()
   const stations = useQuery(kitchenStationsQuery)
-  const active = (stations.data ?? []).filter((station) => station.isActive)
-  // A station in the address that is paused (or gone) is not on the screen, so the first open one is shown instead.
-  const requested = Number(params.get('station'))
-  const chosen = active.find((station) => station.id === requested)?.id ?? active[0]?.id ?? 0
+  const all = stations.data ?? []
+  // Every station is a tab: pausing a station stops new tickets only, so its open tickets must stay visible and completable.
+  const chosen = defaultStationId(all, Number(params.get('station')))
   const tickets = useQuery({ ...kitchenTicketsQuery(chosen), enabled: chosen > 0 })
   const markDone = useMarkTicketDone()
 
@@ -26,13 +26,13 @@ export function KitchenBoardPage() {
 
       {stations.isPending && <Skeleton className="m-4 h-11 w-64" />}
       {stations.error && <p role="alert" className="p-4 text-sm text-destructive">{stations.error.message}</p>}
-      {!stations.isPending && !stations.error && active.length === 0 && (
+      {!stations.isPending && !stations.error && all.length === 0 && (
         <p className="p-6 text-center text-sm text-muted-foreground">{t('noStations')}</p>
       )}
 
-      {active.length > 0 && (
+      {all.length > 0 && (
         <nav aria-label={t('stations')} className="flex flex-wrap gap-2 px-4 pt-3 pb-2">
-          {active.map((station) => (
+          {all.map((station) => (
             <Button
               key={station.id}
               variant={station.id === chosen ? 'default' : 'outline'}
@@ -40,7 +40,7 @@ export function KitchenBoardPage() {
               aria-pressed={station.id === chosen}
               onClick={() => setParams({ station: String(station.id) })}
             >
-              {station.name}
+              {station.isActive ? station.name : t('stationPaused', { name: station.name })}
             </Button>
           ))}
         </nav>

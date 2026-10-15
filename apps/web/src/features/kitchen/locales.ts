@@ -24,7 +24,8 @@ const th = {
   paused: 'พักใช้งาน',
   availability: 'การใช้งาน',
   pauseWarning:
-    'การพักสถานีจะหยุดใบสั่งของสถานีนั้น: สถานีที่พักไม่รับใบสั่งใหม่ และใบสั่งที่ค้างอยู่จะไม่แสดงบนจอครัว เปิดใช้งานอีกครั้งจึงจะเห็นใบสั่งที่ค้าง',
+    'การพักสถานีหยุดแค่ใบสั่งใหม่: สถานีที่พักไม่รับใบสั่งใหม่ แต่ใบสั่งที่ค้างอยู่ยังแสดงบนจอครัวจนกว่าจะกดทำเสร็จ',
+  stationPaused: '{{name}} (หยุดรับ)',
 }
 
 export const locales = {
@@ -55,6 +56,7 @@ export const locales = {
     paused: 'Paused',
     availability: 'Availability',
     pauseWarning:
-      'Pausing a station stops its tickets: a paused station receives no new tickets, and its open tickets stop being listed on the kitchen screen. Turn it back on to see the open tickets again.',
+      'Pausing a station stops new tickets only: a paused station receives no new tickets, but its open tickets stay on the kitchen screen until they are marked done.',
+    stationPaused: '{{name}} (paused)',
   } satisfies typeof th,
 }
