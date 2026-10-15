@@ -11,6 +11,7 @@ import type {
 import { CreateProductUseCase } from '../src/modules/products/applications/usecases/create-product.usecase'
 import { GetProductUseCase } from '../src/modules/products/applications/usecases/get-product.usecase'
 import type { IMediaStorage } from '../src/modules/shared/ports/media-storage.port'
+import { repositoryReadCacheToken, type IRepositoryReadCache } from '../src/modules/shared/ports/repository-read-cache.port'
 import { TOKENS } from '../src/modules/tokens'
 import { ReceiveStockUseCase } from '../src/modules/inventory/applications/usecases/receive-stock.usecase'
 import type { UserResponse as User } from '../src/modules/users/adapters/controllers/schemas/user.schema'
@@ -158,5 +159,9 @@ export async function resetDatabase(connection = sqlClient): Promise<void> {
     await transaction.unsafe(`insert into branches (code, name) values ('MAIN', 'สาขาหลัก')`)
     await transaction.unsafe(`insert into registers (branch_id, code, name) values (1, 'MAIN', 'เคาน์เตอร์หลัก')`)
   })
+  // Truncating with SQL bypasses the repositories, so an enabled Redis cache would keep serving the rows just
+  // removed. Rotate every cached group the same way a committed write does.
+  const readCache = container.resolve<IRepositoryReadCache>(repositoryReadCacheToken)
+  for (const group of ['categories', 'products', 'modifiers', 'settings'] as const) await readCache.changed(group)
   fakeMedia.reset()
 }
