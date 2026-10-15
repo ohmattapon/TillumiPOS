@@ -135,6 +135,7 @@ export const mockQrPaymentClaims = (): Mocked<IQrPaymentClaims> => ({
   isRequired: mock<IQrPaymentClaims['isRequired']>(() => false),
   assertClaimable: mock<IQrPaymentClaims['assertClaimable']>(async () => {}),
   consume: mock<IQrPaymentClaims['consume']>(async () => {}),
+  reference: mock<IQrPaymentClaims['reference']>(async () => 'QR0123456789ABCD'),
 })
 
 export const mockOrderRepository = (): Mocked<IOrderRepository> => ({
