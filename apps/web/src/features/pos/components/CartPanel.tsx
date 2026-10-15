@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { useCart } from '../hooks/use-cart'
 import { useCartActions } from '../hooks/use-cart-actions'
 import { useCartStore } from '../store/cart.store'
+import { CartMember } from './CartMember'
 import { OrderTools } from './OrderTools'
 
 /** The cart, its discount and the pay button. */
@@ -54,7 +55,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
         <Button
           variant="ghost"
           className="ml-auto h-11 text-muted-foreground"
-          disabled={storedLines.length === 0 && !isOrder}
+          disabled={storedLines.length === 0 && !isOrder && cart.memberId === null}
           onClick={clear}
         >
           <Trash2 />
@@ -64,6 +65,8 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
       </div>
 
       {cart.order && cart.order.status === 'open' && <OrderTools order={cart.order} />}
+
+      <CartMember />
 
       <ul className="min-h-0 flex-1 divide-y overflow-y-auto">
         {cart.isLoadingProducts && <li className="p-4"><Skeleton className="h-24 w-full" /></li>}

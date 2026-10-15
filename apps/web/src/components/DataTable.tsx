@@ -72,7 +72,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions,
             {rows.map((row) => (
               <TableRow
                 key={rowKey(row)}
-                className={cn(muted?.(row) && 'text-muted-foreground', onSelect && 'cursor-pointer')}
+                className={cn('hover:bg-muted/50', muted?.(row) && 'text-muted-foreground', onSelect && 'cursor-pointer')}
                 // A row that opens something is reachable from the keyboard as well as by the mouse.
                 tabIndex={onSelect ? 0 : undefined}
                 onClick={onSelect && (() => onSelect(row))}

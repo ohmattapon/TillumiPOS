@@ -6,6 +6,7 @@ import { api, apiV2, unwrap } from '@/lib/api'
 import type { PaymentInput } from '@/lib/money'
 
 export interface CheckoutInput {
+  memberId?: number | null
   items: { productId: number; quantity: number; options?: number[] }[]
   discountSatang: number
   payment: PaymentInput
@@ -18,18 +19,19 @@ export function useCheckout() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ items, discountSatang, payment, shiftId, idempotencyKey }: CheckoutInput): Promise<Sale> => {
+    mutationFn: async ({ items, discountSatang, payment, shiftId, idempotencyKey, memberId }: CheckoutInput): Promise<Sale> => {
       if (shiftId !== undefined) {
-        const sale = await unwrap(apiV2.sales.post({ items, discountSatang, payments: [payment], shiftId }, { headers: { 'idempotency-key': idempotencyKey ?? crypto.randomUUID() } }))
+        const sale = await unwrap(apiV2.sales.post({ items, discountSatang, payments: [payment], shiftId, memberId }, { headers: { 'idempotency-key': idempotencyKey ?? crypto.randomUUID() } }))
         return sale as unknown as Sale
       }
-      return unwrap(api.sales.post({ items, discountSatang, payments: [payment] }))
+      return unwrap(api.sales.post({ items, discountSatang, payments: [payment], memberId }))
     },
     // Stock changed on success, and a failure usually means our cached stock or prices are stale.
     onSettled: () =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: productKeys.all }),
         queryClient.invalidateQueries({ queryKey: saleKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ['members'] }),
       ]),
   })
 }
