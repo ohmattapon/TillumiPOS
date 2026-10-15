@@ -17,7 +17,7 @@ import { checkoutModeQuery, currentShiftQuery, registersQuery, useRegisterSelect
 import { meQuery } from '@/features/auth'
 import { useActiveBranch } from '@/features/branches'
 import { useNavigate } from 'react-router'
-import type { PaymentInput } from '@/lib/money'
+import type { PaymentInput, PaymentMethod } from '@/lib/money'
 import { useCreateQuote } from '@/features/promotions'
 import { useCheckout } from '../api'
 import { useCart } from '../hooks/use-cart'
@@ -66,6 +66,7 @@ export function PosPage() {
   // A cart without a typed discount is priced by the server first: the promotion it gets and the total it
   // pays are pinned in a quote, and the payment (and a QR) is made from that.
   const createQuote = useCreateQuote()
+  const [methodAfterQuote, setMethodAfterQuote] = useState<PaymentMethod>('cash')
   const usesQuote = cart.usesQuote
   const quote = usesQuote ? (createQuote.data ?? null) : null
   const quoteInput = () =>
@@ -75,9 +76,16 @@ export function PosPage() {
           lines: cart.lines.map((line) => ({ productId: line.productId, quantity: line.quantity, options: line.optionIds })),
           memberId: cart.memberId,
         }
+  // The price is asked again, e.g. after the QR holding it was cancelled. The dialog opens on the method chosen.
+  const requote = (method: PaymentMethod) => {
+    setMethodAfterQuote(method)
+    createQuote.reset()
+    createQuote.mutate(quoteInput())
+  }
   // Each time payment opens the cart is priced again, so an earlier quote never shows an old total.
   const startPayment = () => {
     createQuote.reset()
+    setMethodAfterQuote('cash')
     setIsPaying(true)
     if (usesQuote) createQuote.mutate(quoteInput())
   }
@@ -226,6 +234,8 @@ export function PosPage() {
           shiftId={needsShift ? currentShift.data?.id : undefined}
           isSubmitting={payment.isPending}
           error={payment.error?.message}
+          onRequote={requote}
+          initialMethod={methodAfterQuote}
           onConfirm={pay}
           onCancel={cancelPayment}
         />

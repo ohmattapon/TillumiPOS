@@ -36,13 +36,17 @@ interface Props {
   onCancel: () => void
   /** The open shift the payment is taken in. Set in shift mode, where a bank QR is asked for on its behalf. */
   shiftId?: number
+  /** Asks for the price again, under the method chosen, once a QR holding it has been cancelled. */
+  onRequote: (method: PaymentMethod) => void
+  /** The method the dialog opens on: the one chosen when the price was asked again. */
+  initialMethod?: PaymentMethod
 }
 
-export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfirm, onCancel, shiftId }: Props) {
+export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfirm, onCancel, shiftId, onRequote, initialMethod = 'cash' }: Props) {
   const { t } = useTranslation('pos')
   const { t: tc } = useTranslation()
   const { money, currency, date } = useFormat()
-  const [method, setMethod] = useState<PaymentMethod>('cash')
+  const [method, setMethod] = useState<PaymentMethod>(initialMethod)
   const [received, setReceived] = useState('')
 
   // With a bank QR set up, PromptPay is paid by scanning and confirmed by the bank, not by the cashier.
@@ -82,10 +86,14 @@ export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfi
   const unit = 10 ** money.fractionDigits
   const quickCash = (quickCashByCurrency[currency] ?? defaultQuickCash).filter((note) => note * unit >= totalSatang)
 
+  // A cancelled QR takes the price it held with it, so the price is asked again before another QR or method.
+  const reprice = async (next: PaymentMethod) => {
+    if (await qr.cancel()) onRequote(next)
+  }
+
   const chooseMethod = (next: PaymentMethod) => {
-    // Leaving PromptPay abandons its QR, unless the customer has already paid it.
-    if (usesQr && next !== 'promptpay') qr.cancel()
-    setMethod(next)
+    if (usesQr && next !== 'promptpay') void reprice(next)
+    else setMethod(next)
   }
 
   const cancel = () => {
@@ -119,7 +127,7 @@ export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfi
                 key={value}
                 type="button"
                 aria-pressed={method === value}
-                disabled={isSubmitting || (qr.paid !== null && value !== 'promptpay')}
+                disabled={isSubmitting || (qr.paid !== null && value !== 'promptpay') || (qr.isCreating && value !== 'promptpay')}
                 onClick={() => chooseMethod(value)}
                 className={cn(
                   'flex h-20 flex-col items-center justify-center gap-1.5 rounded-lg border text-sm font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50',
@@ -132,7 +140,7 @@ export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfi
             ))}
           </div>
 
-          {usesQr && <QrPaymentPanel qr={qr} isSaving={isSubmitting} />}
+          {usesQr && <QrPaymentPanel qr={qr} isSaving={isSubmitting} onRegenerate={() => void reprice('promptpay')} />}
           {usesQr && qr.cancelError && <p role="alert" className="text-sm text-destructive">{t('payment.qr.cancelFailed')}</p>}
           {usesQr && !qr.paid && ((unclaimed.data?.total ?? 0) > 0 || qrPaging.page > 0) && (
             <div className="space-y-2 rounded-lg border p-3">
