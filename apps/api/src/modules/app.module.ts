@@ -5,6 +5,7 @@ import { BranchElysiaController } from './branches/adapters/controllers/branch.c
 import { CategoryElysiaController } from './categories/adapters/controllers/category.controller'
 import './di-registrations'
 import { InventoryElysiaController } from './inventory/adapters/controllers/inventory.controller'
+import { KitchenCatalogElysiaController } from './kitchen/adapters/controllers/kitchen-catalog.controller'
 import { ModifierElysiaController } from './modifiers/adapters/controllers/modifier.controller'
 import { OrderElysiaController } from './orders/adapters/controllers/order.controller'
 import { QrPaymentElysiaController } from './qr-payments/adapters/controllers/qr-payment.controller'
@@ -23,6 +24,7 @@ const categoryController = container.resolve(CategoryElysiaController)
 const productController = container.resolve(ProductElysiaController)
 const modifierController = container.resolve(ModifierElysiaController)
 const tableController = container.resolve(TableElysiaController)
+const kitchenCatalogController = container.resolve(KitchenCatalogElysiaController)
 const inventoryController = container.resolve(InventoryElysiaController)
 const saleController = container.resolve(SaleElysiaController)
 const orderController = container.resolve(OrderElysiaController)
@@ -36,6 +38,7 @@ const catalog = new Elysia({ name: 'catalog', prefix: '/catalog', detail: { tags
   .use(productController.getRoutes())
   .use(modifierController.getRoutes())
   .use(tableController.getRoutes())
+  .use(kitchenCatalogController.getRoutes())
 
 // Chained in one expression on purpose: the Eden client's types come from the type of this value.
 export const appModule = new Elysia({ name: 'api', prefix: '/api/v1' })
