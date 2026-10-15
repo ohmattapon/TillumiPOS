@@ -20,6 +20,8 @@ export const kitchenSchemas = {
       isActive: t.Boolean(),
     }),
   ),
+  categoryStation: t.Object({ stationId: t.Nullable(t.Integer({ minimum: 1 })) }),
+  categoryStationResponse: t.Object({ categoryId: t.Integer(), stationId: t.Nullable(t.Integer()) }),
 }
 
 export type KitchenStationResponse = typeof kitchenSchemas.station.static
