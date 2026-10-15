@@ -8,6 +8,7 @@ export const mockSalesReportRepository = (): Mocked<ISalesReportRepository> => (
 })
 import type { IBranchRepository } from '../modules/branches/applications/ports/branch.repository'
 import type { ICategoryRepository } from '../modules/categories/applications/ports/category.repository'
+import type { IKitchenOrderRefs } from '../modules/kitchen/applications/ports/kitchen-order-refs.port'
 import type { IKitchenRoutingRepository } from '../modules/kitchen/applications/ports/kitchen-routing.repository'
 import type { IKitchenStationRepository } from '../modules/kitchen/applications/ports/kitchen-station.repository'
 import type { IKitchenTicketRepository } from '../modules/kitchen/applications/ports/kitchen-ticket.repository'
@@ -241,6 +242,10 @@ export const mockKitchenTicketRepository = (): Mocked<IKitchenTicketRepository> 
   findByIdForUpdate: mock<IKitchenTicketRepository['findByIdForUpdate']>(),
   save: mock<IKitchenTicketRepository['save']>(),
   findPending: mock<IKitchenTicketRepository['findPending']>(),
+})
+
+export const mockKitchenOrderRefs = (): Mocked<IKitchenOrderRefs> => ({
+  refsOf: mock<IKitchenOrderRefs['refsOf']>(async () => new Map()),
 })
 
 export const mockSetupCode = (): Mocked<ISetupCode> => ({
