@@ -1,4 +1,5 @@
 import { BranchEntity, type BranchEntityProps } from '../domains/branch.domain'
+import { PriceQuoteEntity, type PriceQuoteProps } from '../domains/price-quote.domain'
 import { DiningTableEntity, type DiningTableProps } from '../domains/dining-table.domain'
 import {
   ModifierGroupEntity,
@@ -167,5 +168,30 @@ export const makeTable = (overrides: Partial<DiningTableProps> = {}) =>
     height: 80,
     sortOrder: 0,
     isActive: true,
+    ...overrides,
+  })
+
+/** An open quote for 3 x 10.00 made at 12:00 on 2026-10-15 (Bangkok), good for 15 minutes. */
+export const makePriceQuote = (overrides: Partial<PriceQuoteProps> = {}) =>
+  new PriceQuoteEntity({
+    id: 5,
+    branchId: 1,
+    memberId: null,
+    member: null,
+    orderId: null,
+    lines: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 1000, quantity: 3, options: [] }],
+    promotion: null,
+    vatMode: 'inclusive',
+    vatRateBp: 700,
+    subtotalSatang: 3000,
+    discountSatang: 0,
+    vatSatang: 196,
+    totalSatang: 3000,
+    status: 'open',
+    qrReference: null,
+    saleId: null,
+    createdById: 1,
+    expiresAt: new Date('2026-10-15T05:15:00Z'),
+    createdAt: new Date('2026-10-15T05:00:00Z'),
     ...overrides,
   })
