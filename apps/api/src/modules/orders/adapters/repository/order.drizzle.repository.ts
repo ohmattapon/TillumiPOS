@@ -8,6 +8,7 @@ import { currentExecutor } from '../../../../libs/transaction-context'
 import type { IFindOrdersQuery, IOrderRepository } from '../../applications/ports/order.repository'
 
 const columns = {
+  memberId: orders.memberId,
   id: orders.id,
   branchId: orders.branchId,
   label: orders.label,

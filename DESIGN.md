@@ -1,55 +1,55 @@
 ---
 version: alpha
 name: EasyPOS
-description: ระบบขายหน้าร้านโทนขาวอุ่น เน้นส้มอิฐ ข้อมูลหนาแน่นแต่อ่านง่าย ใช้ได้ทั้งเมาส์ คีย์บอร์ด และจอสัมผัส
+description: ระบบขายหน้าร้านโทนมิ้นต์-ทีลบนพื้นขาว เน้นทีลเข้ม ข้อมูลหนาแน่นแต่อ่านง่าย ใช้ได้ทั้งเมาส์ คีย์บอร์ด และจอสัมผัส
 colors:
   background: "#ffffff"
-  canvas: "oklch(0.975 0.004 70)"
+  canvas: "#f7fbfa"
   foreground: "#1c1917"
-  primary: "#cb5300"
-  on-primary: "#fefbf8"
-  accent: "#fcefe5"
-  on-accent: "#983803"
+  primary: "#0f766e"
+  on-primary: "#ffffff"
+  accent: "#d9f2eb"
+  on-accent: "#0f766e"
   muted: "#f6f5f3"
   muted-foreground: "#79716b"
   border: "#e7e5e4"
-  sidebar: "#fbfaf9"
-  sidebar-accent: "#f2f0ed"
+  sidebar: "#ffffff"
+  sidebar-accent: "#d9f2eb"
   success: "#168b49"
   warning: "#c26f00"
   destructive: "#e7000b"
 typography:
   page-title:
-    fontFamily: Geist Variable, IBM Plex Sans Thai
+    fontFamily: Inter Variable, IBM Plex Sans Thai
     fontSize: 16px
     fontWeight: 600
   section-title:
-    fontFamily: Geist Variable, IBM Plex Sans Thai
+    fontFamily: Inter Variable, IBM Plex Sans Thai
     fontSize: 14px
     fontWeight: 600
   body:
-    fontFamily: Geist Variable, IBM Plex Sans Thai
+    fontFamily: Inter Variable, IBM Plex Sans Thai
     fontSize: 14px
     fontWeight: 400
   caption:
-    fontFamily: Geist Variable, IBM Plex Sans Thai
+    fontFamily: Inter Variable, IBM Plex Sans Thai
     fontSize: 12px
     fontWeight: 400
   table-header:
-    fontFamily: Geist Variable, IBM Plex Sans Thai
+    fontFamily: Inter Variable, IBM Plex Sans Thai
     fontSize: 11px
     fontWeight: 500
     letterSpacing: 0.05em
   stat-value:
-    fontFamily: Geist Variable
+    fontFamily: Inter Variable
     fontSize: 24px
     fontWeight: 600
   grand-total:
-    fontFamily: Geist Variable
+    fontFamily: Inter Variable
     fontSize: 30px
     fontWeight: 600
   payment-amount:
-    fontFamily: Geist Variable
+    fontFamily: Inter Variable
     fontSize: 36px
     fontWeight: 600
 rounded:
@@ -68,11 +68,11 @@ components:
   button-primary:
     backgroundColor: "{colors.primary}"
     textColor: "{colors.on-primary}"
-    rounded: "{rounded.lg}"
+    rounded: "{rounded.md}"
   card:
     backgroundColor: "{colors.background}"
     borderColor: "{colors.border}"
-    rounded: "{rounded.xl}"
+    rounded: "{rounded.lg}"
   status-pill:
     rounded: "{rounded.full}"
     height: 22px
@@ -89,10 +89,10 @@ components:
 EasyPOS เป็นเครื่องมือทำงาน ไม่ใช่หน้าโฆษณา พนักงานใช้หน้าขายซ้ำหลายร้อยครั้งต่อวัน การออกแบบจึงยึดสามข้อ:
 
 1. **เร็วก่อนสวย** งานที่ทำบ่อยที่สุด (สแกน เพิ่มสินค้า ชำระเงิน) ต้องจบได้โดยไม่ต้องเลื่อนหน้าจอและไม่ต้องละมือจากเครื่องสแกนหรือจอสัมผัส
-2. **สงบ** การ์ดขาวบนพื้นขาวอุ่น เส้นบาง สีเน้นสีเดียว สีอื่นปรากฏเมื่อมีความหมายเท่านั้น (สถานะ หมวดหมู่ หรือแยกตัวเลขในการ์ดสรุป)
+2. **สงบ** การ์ดขาวบนพื้นมิ้นต์จาง เส้นบาง สีเน้นสีเดียว (ทีล) สีอื่นปรากฏเมื่อมีความหมายเท่านั้น (สถานะ หมวดหมู่ หรือแยกตัวเลขในการ์ดสรุป)
 3. **กันพลาด** การกระทำที่ย้อนไม่ได้ต้องถามยืนยันและบอกผลที่จะเกิด ปุ่มที่กดไม่ได้ต้องดูออกว่ากดไม่ได้
 
-ที่มาของแนวทางคือ dashboard ร้านอาหาร "Plate" (โทนขาวอุ่น ส้มอิฐ sidebar แบ่งกลุ่ม) ปรับให้เข้ากับงานขายหน้าร้าน
+ที่มาของแนวทางคือความเรียบแบบ Attio ผสม Linear: sidebar ขาว เมนูที่เลือกเป็นพื้นมิ้นต์อ่อนตัวอักษรทีล หัวหน้าจอขาวมี breadcrumb นำทาง ตาราง compact อ่านหนาแน่นได้โดยไม่ต้องละมือจากเมาส์หรือคีย์บอร์ด
 
 ## Colors
 
@@ -101,14 +101,15 @@ EasyPOS เป็นเครื่องมือทำงาน ไม่ใ�
 | บทบาท | ค่า | ใช้กับ |
 |---|---|---|
 | `background` | `#ffffff` | การ์ด dialog หัวหน้าจอ และช่องกรอก |
-| `canvas` | `oklch(0.975 0.004 70)` | พื้นของพื้นที่เนื้อหาหลังการ์ด (`bg-canvas` ที่ `SidebarInset`) |
+| `canvas` | `#f7fbfa` | พื้นของพื้นที่เนื้อหาหลังการ์ด (`bg-canvas` ที่ `SidebarInset`) |
 | `foreground` | `#1c1917` | ข้อความหลัก |
-| `primary` | `#cb5300` | ปุ่มหลักหนึ่งปุ่มต่อหน้าจอ ตัวเลือกที่เลือกอยู่ วันที่ในหัวหน้าจอ และเมนูที่เปิดอยู่ |
-| `accent` | `#fcefe5` | พื้นของตัวเลือกที่เลือกอยู่ในกลุ่มปุ่ม และพื้นตอน hover การ์ดสินค้า |
+| `primary` | `#0f766e` | ปุ่มหลักหนึ่งปุ่มต่อหน้าจอ ตัวเลือกที่เลือกอยู่ วันที่ในหัวหน้าจอ และเมนูที่เปิดอยู่ |
+| `accent` | `#d9f2eb` | พื้นของเมนูที่เลือกใน sidebar และพื้นตอน hover การ์ดสินค้า |
 | `muted` | `#f6f5f3` | พื้นของช่องสรุป แถบตัวกรอง และรูปสินค้าที่ยังไม่มี |
 | `muted-foreground` | `#79716b` | ข้อความรอง คำอธิบาย หัวตาราง |
 | `border` | `#e7e5e4` | เส้นขอบและเส้นคั่นทุกชนิด |
-| `sidebar` | `#fbfaf9` | พื้น sidebar และแผงตะกร้า |
+| `sidebar` | `#ffffff` | พื้น sidebar (แผงตะกร้าใช้พื้นการ์ดขาวเช่นกัน) |
+| `chart-1` … `chart-3` | `#12b8a6` / `#5b8def` / `#a78bfa` | กราฟ: มิ้นต์เป็นหลัก น้ำเงินและม่วงเป็นรอง |
 | `success` | `#168b49` | สำเร็จ พร้อมขาย เงินทอน |
 | `warning` | `#c26f00` | ใกล้หมด ต้องดูแล |
 | `destructive` | `#e7000b` | ยกเลิกบิล หมดสต็อก ข้อผิดพลาด |
@@ -116,7 +117,9 @@ EasyPOS เป็นเครื่องมือทำงาน ไม่ใ�
 
 กฎการใช้สี:
 
-- สีเน้นส้มใช้ได้กับปุ่มหลักเพียงปุ่มเดียวต่อหน้าจอ ปุ่มอื่นใช้แบบ `outline` หรือ `ghost`
+- สีเน้นทีลใช้ได้กับปุ่มหลักเพียงปุ่มเดียวต่อหน้าจอ ปุ่มอื่นใช้แบบ `outline` หรือ `ghost`
+- sidebar พื้นขาว เมนูที่เลือกเป็นพื้น `accent` ตัวอักษร `accent-foreground` แบบเรียบ ไม่มีเงาหรือขอบ
+- ทุกหน้าหลักมี breadcrumb จางเหนือชื่อหน้าผ่าน prop `breadcrumb` ของ `PageHeader`
 - สีสถานะ (เขียว เหลือง แดง) ใช้คู่กับข้อความหรือไอคอนเสมอ ห้ามสื่อความหมายด้วยสีอย่างเดียว
 - พื้นของป้ายสถานะคือสีสถานะที่ความทึบ 10% (`bg-success/10`) ตัวอักษรเป็นสีสถานะเต็ม
 - สีของหมวดหมู่มาจาก `categoryColor(id)` (ส่งออกจาก `@/features/categories`) ซึ่งเลือกจากแปดโทนตามลำดับ id ไม่ได้เก็บในฐานข้อมูล ใช้เป็นแถบบนการ์ดสินค้า จุดหน้าแท็บหมวด (`dot` ของ `SegmentedTabs`) และ `CategoryDot` หน้าชื่อหมวดในรายการ ห้ามใช้เป็นพื้นเต็มการ์ดหรือสื่อสถานะ
@@ -125,7 +128,7 @@ EasyPOS เป็นเครื่องมือทำงาน ไม่ใ�
 
 ## Typography
 
-- **Geist Variable** ใช้กับตัวอักษรละตินและตัวเลข **IBM Plex Sans Thai** ใช้กับตัวอักษรไทย ทั้งสองติดตั้งในโปรเจกต์ผ่าน `@fontsource` จึงใช้ได้โดยไม่ต่ออินเทอร์เน็ต
+- **Inter Variable** ใช้กับตัวอักษรละตินและตัวเลข **IBM Plex Sans Thai** ใช้กับตัวอักษรไทย ทั้งสองติดตั้งในโปรเจกต์ผ่าน `@fontsource` จึงใช้ได้โดยไม่ต่ออินเทอร์เน็ต
 - น้ำหนักที่ใช้มีสามระดับ: 400 เนื้อความ, 500 ป้ายและปุ่ม, 600 หัวข้อและตัวเลขสำคัญ ห้ามใช้ตัวหนา 700 ยกเว้นในใบเสร็จ
 - ตัวเลขเงินและจำนวนทุกจุดต้องใส่คลาส `tabular-nums` เพื่อให้หลักตรงกันในคอลัมน์
 - เงินแสดงทศนิยมสองตำแหน่งเสมอ ผ่าน `formatBaht` ใน `apps/web/src/lib/money.ts` และนำหน้าด้วย `฿` เมื่ออยู่นอกตาราง
@@ -178,14 +181,13 @@ EasyPOS เป็นเครื่องมือทำงาน ไม่ใ�
 | ระดับ | ลักษณะ | ใช้กับ |
 |---|---|---|
 | 0 | ไม่มีเงา มีเส้นคั่น | แถวตาราง รายการในลิสต์ |
-| 1 | เส้นขอบ + `shadow-xs` | การ์ด แผงข้อมูล การ์ดสินค้า |
-| 2 | เส้นขอบ + `shadow-sm` | เมนูที่เปิดอยู่ใน sidebar |
-| 3 | เงาของ shadcn + พื้นหลังมืดโปร่ง | dialog และเมนูแบบ dropdown |
+| 1 | เส้นขอบ ไม่มีเงา | การ์ด แผงข้อมูล (`Panel`) การ์ดสินค้า |
+| 2 | เงาของ shadcn + พื้นหลังมืดโปร่ง | dialog และเมนูแบบ dropdown |
 
 ## Shapes
 
-- ปุ่มและช่องกรอก: มุมโค้ง 10px
-- การ์ดและแผงข้อมูล: มุมโค้ง 14px (`rounded-xl`)
+- ปุ่มและช่องกรอก: มุมโค้ง 8px
+- การ์ดและแผงข้อมูล: มุมโค้ง 10px ไม่มีเงา
 - ป้ายสถานะ ตัวนับ และรูปโปรไฟล์: วงรีเต็ม (`rounded-full`)
 - ไอคอนมาจาก `lucide-react` ชุดเดียว ขนาด 16px ในปุ่มและเมนู ห้ามผสมชุดไอคอนอื่นและห้ามใช้ emoji แทนไอคอน
 
@@ -195,8 +197,8 @@ EasyPOS เป็นเครื่องมือทำงาน ไม่ใ�
 
 | คอมโพเนนต์ | ไฟล์ | ใช้เมื่อ |
 |---|---|---|
-| `PageHeader` | `components/PageHeader.tsx` | หัวของทุกหน้า: ชื่อหน้า ข้อความเน้นสีส้ม คำอธิบายบรรทัดเดียว และปุ่มหลักทางขวา |
-| `Panel` | `components/Panel.tsx` | การ์ดที่มีหัว คำอธิบาย และตารางหรือรายการข้างใน |
+| `PageHeader` | `components/PageHeader.tsx` | หัวของทุกหน้า: breadcrumb จางด้านบน (prop `breadcrumb`) ชื่อหน้า คำอธิบายบรรทัดเดียว และปุ่มหลักทางขวา |
+| `Panel` | `components/Panel.tsx` | การ์ดที่มีหัว คำอธิบาย และตารางหรือรายการข้างใน มุม 10px เส้นขอบ ไม่มีเงา |
 | `tableHead`, `tableCell` | `components/Panel.tsx` | คลาสของหัวตารางและเซลล์ ใช้กับทุกตารางข้อมูล |
 | `StatusBadge` | `components/StatusBadge.tsx` | ป้ายสถานะที่มีจุดสีนำหน้า มีสี่โทน: `success`, `warning`, `danger`, `neutral` |
 | `SegmentedTabs` | `components/SegmentedTabs.tsx` | ตัวกรองแบบเลือกหนึ่งจากไม่กี่ตัวเลือก ใช้ `size="touch"` บนหน้าขาย |
@@ -210,6 +212,7 @@ EasyPOS เป็นเครื่องมือทำงาน ไม่ใ�
 | บริบท | ความสูง |
 |---|---|
 | ปุ่มในหน้าจัดการและหัวหน้าจอ | 36px |
+| แถวตารางในหน้าจัดการ (`DataTable`) | ประมาณ 40px มี hover |
 | ปุ่มใน dialog | 40px |
 | ทุกอย่างบนหน้าขายและ dialog ชำระเงิน | อย่างน้อย 44px |
 | ปุ่มชำระเงิน | 56px |
@@ -237,7 +240,7 @@ EasyPOS เป็นเครื่องมือทำงาน ไม่ใ�
 
 ไม่ควรทำ:
 
-- ใช้สีส้มกับปุ่มมากกว่าหนึ่งปุ่มในหน้าจอเดียว
+- ใช้สีทีลกับปุ่มมากกว่าหนึ่งปุ่มในหน้าจอเดียว
 - ใช้การไล่สี เงาหนา หรือภาพเคลื่อนไหวเพื่อตกแต่ง
 - ซ่อนยอดสุทธิหรือปุ่มชำระเงินไว้ใต้ส่วนที่ต้องเลื่อน
 - แสดงจำนวนเงินโดยไม่มีทศนิยม หรือคำนวณเงินเป็นทศนิยมในหน้าเว็บ (เงินเป็นจำนวนเต็มหน่วยสตางค์จนถึงจุดแสดงผล)
@@ -249,7 +252,7 @@ EasyPOS เป็นเครื่องมือทำงาน ไม่ใ�
 
 | เรื่อง | รายละเอียด |
 |---|---|
-| ความต่างสีของปุ่มหลัก | ตัวอักษร `#fefbf8` บนพื้น `#cb5300` ได้อัตราส่วนประมาณ 4.4:1 ต่ำกว่าเกณฑ์ WCAG AA (4.5:1) สำหรับตัวอักษรขนาดปกติเล็กน้อย แก้ได้โดยทำ `primary` ให้เข้มขึ้น |
+| ความต่างสีของปุ่มหลัก | ตัวอักษรขาวบนพื้น `#0f766e` ได้อัตราส่วน 5.47:1 บนพื้นขาว (5.25:1 บนพื้น canvas) ผ่านเกณฑ์ WCAG AA ตรวจด้วย `scripts/check-contrast.mjs` |
 | ความต่างสีของป้ายสถานะ | ตัวอักษร 12px สี `success` (ประมาณ 4.4:1) และ `warning` (ประมาณ 3.8:1) บนพื้นขาวต่ำกว่า 4.5:1 และต่ำลงอีกบนพื้นสีจาง |
 | ฟอร์มยาวบนมือถือ | ปุ่มยืนยันของ dialog ที่มี form ไม่ได้ติดล่างเสมอ ต้องเลื่อนลงไปถึง (ดูหัวข้อขนาดจอ) |
 | หลายภาษา | ข้อความไทยฝังอยู่ในคอมโพเนนต์ ยังไม่แยกเป็นไฟล์ภาษา (ชิ้นงานที่ 4 ใน roadmap) |

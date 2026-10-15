@@ -30,7 +30,7 @@ export async function buildReportWorkbook(data: ReportExportData) {
       if (moneyColumns.includes(index + 1)) column.numFmt = numberFormat
     })
     result.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
-    result.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF983803' } }
+    result.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } }
     result.autoFilter = { from: { row: 1, column: 1 }, to: { row: Math.max(1, result.rowCount), column: headers.length } }
     return result
   }

@@ -11,5 +11,6 @@ export {
   usePayOrder,
   useRemoveOrderLine,
   useSetOrderLineQuantity,
+  useSetOrderMember,
   useSplitOrder,
 } from './api'

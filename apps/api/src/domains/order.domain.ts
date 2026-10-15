@@ -23,6 +23,7 @@ export interface OrderItem {
 export type OrderedProduct = Pick<OrderItem, 'productId' | 'productName' | 'sku' | 'unitPriceSatang'>
 
 export interface NewOrder {
+  memberId?: number | null
   branchId: number
   label: string | null
   /** The table the order is on; null for an order without one. */
@@ -94,6 +95,7 @@ const lineWithId = (lineId: number) => (item: OrderItem) => item.lineId === line
  * refers to its sale) or cancelled. Every change returns a new entity.
  */
 export class OrderEntity {
+  public readonly memberId: number | null
   public readonly id: number
   public readonly branchId: number
   public readonly label: string | null
@@ -116,6 +118,7 @@ export class OrderEntity {
     if (props.status === 'merged' && props.mergedIntoId === null)
       throw invalid('ออเดอร์ที่รวมแล้วต้องบอกว่ารวมเข้าออเดอร์ไหน')
 
+    this.memberId = props.memberId ?? null
     this.id = props.id
     this.branchId = props.branchId
     this.label = props.label
@@ -190,7 +193,9 @@ export class OrderEntity {
     this.assertOpen()
     source.assertOpen()
     if (source.id === this.id) throw new DomainError('รวมออเดอร์เข้ากับตัวเองไม่ได้', 'ORDER_MERGE_SAME')
-    return this.change({ items: mergeLines([...this.items, ...source.items.map((item) => ({ ...item, lineId: 0 }))]) })
+    if (this.memberId !== null && source.memberId !== null && this.memberId !== source.memberId)
+      throw new DomainConflictError('สมาชิกของออเดอร์ไม่ตรงกัน กรุณาจัดสมาชิกก่อนรวมบิล', 'ORDER_MEMBER_CONFLICT')
+    return this.change({ memberId: this.memberId ?? source.memberId, items: mergeLines([...this.items, ...source.items.map((item) => ({ ...item, lineId: 0 }))]) })
   }
 
   /** Closes this order as merged into another: its lines have moved there. */
@@ -233,6 +238,7 @@ export class OrderEntity {
     return {
       remaining: this.change({ items: kept }),
       created: OrderEntity.open({
+        memberId: this.memberId,
         branchId: this.branchId,
         label: label ?? this.label,
         tableId: this.tableId,
@@ -241,6 +247,12 @@ export class OrderEntity {
         items: moved,
       }),
     }
+  }
+
+  setMember(memberId: number | null): OrderEntity {
+    this.assertOpen()
+    if (memberId !== null && (!Number.isSafeInteger(memberId) || memberId < 1)) throw invalid('รหัสสมาชิกไม่ถูกต้อง')
+    return this.change({ memberId })
   }
 
   /** A blank label clears it. */
@@ -270,8 +282,9 @@ export class OrderEntity {
     if (this.items.length === 0) throw new DomainError('ออเดอร์ยังไม่มีรายการ', 'ORDER_EMPTY')
   }
 
-  toSnapshot(): OrderEntityProps {
+  toSnapshot(): OrderEntityProps & { memberId: number | null } {
     return {
+      memberId: this.memberId,
       id: this.id,
       branchId: this.branchId,
       label: this.label,

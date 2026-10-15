@@ -272,3 +272,22 @@ describe('SaleEntity.complete with options', () => {
     expect(restored.items[0]!.options).toEqual([])
   })
 })
+
+
+describe('sale membership snapshot', () => {
+  test('copies only receipt identity without retaining mutable member data', () => {
+    const member = { id: 7, code: 'M000007', name: 'Original', phone: '0812345678' }
+    const priced = complete({ member })
+    member.name = 'Changed'
+    expect(priced.member).toEqual({ id: 7, code: 'M000007', name: 'Original' })
+    const sale = makeSale({ member: priced.member })
+    const snapshot = sale.toSnapshot()
+    snapshot.member!.name = 'Edited snapshot'
+    expect(sale.member!.name).toBe('Original')
+    expect(sale.void('reason', 1, new Date()).member).toEqual(sale.member)
+  })
+  test('old sales and anonymous checkout expose null membership', () => {
+    expect(complete().member).toBeNull()
+    expect(makeSale().member).toBeNull()
+  })
+})
