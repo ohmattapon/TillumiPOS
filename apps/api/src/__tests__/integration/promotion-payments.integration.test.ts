@@ -240,7 +240,10 @@ describe('a QR made from a quote', () => {
 
     ok(await cashier.api.payments.qr({ id: qr.id }).cancel.post())
     expect(await statusOf(quote.id)).toBe('cancelled')
-    ok(await cashier.api.sales.post({ items: lines(tea.id), payments: cash(5000), quoteId: quote.id }))
+    // A cancelled quote is not sold, even to the same cart: the till asks for a new price.
+    const late = await cashier.api.sales.post({ items: lines(tea.id), payments: cash(5000), quoteId: quote.id })
+    expect(late.error?.value).toMatchObject({ code: 'QUOTE_NOT_OPEN' })
+    ok(await cashier.api.sales.post({ items: lines(tea.id), payments: cash(5000), quoteId: (await quoteFor(tea.id)).id }))
   })
 
   test('a cash sale cannot use a quote that a QR is holding', async () => {
@@ -305,7 +308,7 @@ describe('an order at a pinned price', () => {
       expect(edit.status).toBe(409)
       expect(edit.error?.value).toMatchObject({ code: 'ORDER_LOCKED_BY_QR_PAYMENT' })
     }
-    expect(ok(await cashier.api.orders({ id: order.id }).get())).toMatchObject({ status: 'open', label: 'โต๊ะ 4' })
+    expect(ok(await cashier.api.orders({ id: order.id }).get())).toMatchObject({ status: 'open', label: null })
     expect(await stockOf(tea.id)).toBe(10)
 
     await customerPays(qr)
@@ -323,6 +326,6 @@ describe('an order at a pinned price', () => {
     expect(added.items[0]).toMatchObject({ quantity: 3 })
     // The quote no longer matches the order, which is how the till learns to ask for a new one.
     const stale = await cashier.api.orders({ id: order.id }).pay.post({ payments: cash(9000), quoteId: quote.id })
-    expect(stale.error?.value).toMatchObject({ code: 'QUOTE_MISMATCH' })
+    expect(stale.error?.value).toMatchObject({ code: 'QUOTE_NOT_OPEN' })
   })
 })

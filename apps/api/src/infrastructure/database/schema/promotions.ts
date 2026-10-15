@@ -17,8 +17,8 @@ export const promotions = pgTable(
     maxDiscountSatang: integer(),
     minSubtotalSatang: integer().notNull().default(0),
     // Dates in the shop's time zone, both included; null means unbounded.
-    startsOn: date(),
-    endsOn: date(),
+    startsOn: date({ mode: 'string' }),
+    endsOn: date({ mode: 'string' }),
     // 0 = Sunday ... 6 = Saturday; null means every day.
     weekdays: integer().array(),
     windowStartMinute: integer(),
