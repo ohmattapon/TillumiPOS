@@ -16,6 +16,7 @@ export interface CheckoutLine {
 }
 
 export interface CheckoutRequest {
+  memberId?: number | null
   lines: CheckoutLine[]
   discountSatang: number
   /** A `promptpay` payment may name the confirmed QR payment that backs it. */

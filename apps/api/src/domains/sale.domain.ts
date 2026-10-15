@@ -45,6 +45,15 @@ export interface SaleSeller {
 
 const UNKNOWN_SELLER: SaleSeller = { shopName: null, shopTaxId: null, branchName: null, shopAddress: null, shopPhone: null }
 
+export interface SaleMember {
+  id: number
+  code: string
+  name: string
+}
+
+const copyMember = (member?: SaleMember | null): SaleMember | null =>
+  member ? { id: member.id, code: member.code, name: member.name } : null
+
 interface SaleTotals {
   subtotalSatang: number
   discountSatang: number
@@ -57,6 +66,7 @@ interface SaleTotals {
 
 /** A priced and settled sale that has not been stored yet: it has no id, receipt number or timestamp. */
 export interface NewSale extends SaleTotals, SaleSeller {
+  member?: SaleMember | null
   /** How VAT was applied to this sale, kept so the receipt never changes when the shop settings do. */
   vatMode: VatMode
   /** The rate in basis points that was applied; 0 when no VAT was charged. */
@@ -82,6 +92,7 @@ export interface SaleEntityProps extends NewSale {
 }
 
 export interface CompleteSaleInput {
+  member?: SaleMember | null
   lines: { product: ProductEntity; quantity: number; options?: readonly LineOption[] }[]
   discountSatang: number
   payments: SalePayment[]
@@ -106,6 +117,7 @@ const isWholeAmount = (value: number) => Number.isInteger(value) && value >= 0
  * the only change it can go through is being voided, once.
  */
 export class SaleEntity {
+  public readonly member: Readonly<SaleMember> | null
   public readonly id: number
   public readonly receiptNo: string
   public readonly status: SaleStatus
@@ -138,6 +150,7 @@ export class SaleEntity {
     if (props.status === 'voided' && !props.voidedAt)
       throw new DomainError('บิลที่ยกเลิกต้องมีเวลาที่ยกเลิก', 'INVALID_SALE')
 
+    this.member = props.member ? Object.freeze(copyMember(props.member)!) : null
     this.id = props.id
     this.receiptNo = props.receiptNo
     this.status = props.status
@@ -172,7 +185,7 @@ export class SaleEntity {
    * Prices and settles a sale. All amounts are integer satang. Prices include VAT,
    * so VAT is extracted from the discounted total rather than added on top.
    */
-  static complete({ lines, discountSatang, payments, vatMode, vatRateBp, branchId, shiftId, cashier, seller }: CompleteSaleInput): NewSale {
+  static complete({ lines, discountSatang, payments, vatMode, vatRateBp, branchId, shiftId, cashier, seller, member }: CompleteSaleInput): NewSale {
     if (lines.length === 0) throw new DomainError('บิลต้องมีสินค้าอย่างน้อย 1 รายการ', 'EMPTY_SALE')
     if (lines.some((line) => !Number.isInteger(line.quantity) || line.quantity < 1))
       throw new DomainError('จำนวนสินค้าต้องเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป', 'INVALID_QUANTITY')
@@ -210,6 +223,7 @@ export class SaleEntity {
     if (changeSatang > cashSatang) throw new DomainError('ยอดชำระที่ไม่ใช่เงินสดเกินยอดที่ต้องจ่าย', 'OVERPAID')
 
     return {
+      member: copyMember(member),
       subtotalSatang,
       discountSatang,
       totalSatang,
@@ -237,8 +251,9 @@ export class SaleEntity {
     return new SaleEntity({ ...this.toSnapshot(), status: 'voided', voidedById, voidedAt: at, voidReason: reason })
   }
 
-  toSnapshot(): SaleEntityProps {
+  toSnapshot(): SaleEntityProps & { member: SaleMember | null } {
     return {
+      member: copyMember(this.member),
       id: this.id,
       receiptNo: this.receiptNo,
       status: this.status,

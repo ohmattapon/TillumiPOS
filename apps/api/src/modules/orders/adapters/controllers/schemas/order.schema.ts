@@ -42,6 +42,7 @@ const pay = t.Object({
 
 export const orderSchemas = {
   order: t.Object({
+    memberId: t.Nullable(t.Integer()),
     id: t.Integer(),
     branchId: t.Integer(),
     label: t.Nullable(t.String()),
@@ -61,7 +62,9 @@ export const orderSchemas = {
     itemCount: t.Integer(),
     subtotalSatang: t.Integer(),
   }),
+  member: t.Object({ memberId: t.Nullable(t.Integer({ minimum: 1 })) }),
   open: t.Object({
+    memberId: t.Optional(t.Nullable(t.Integer({ minimum: 1 }))),
     label: t.Optional(t.Nullable(t.String({ maxLength: 100 }))),
     tableId: t.Optional(t.Nullable(t.Integer({ minimum: 1 }))),
     items: t.Optional(

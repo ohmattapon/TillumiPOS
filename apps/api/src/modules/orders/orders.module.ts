@@ -40,3 +40,6 @@ container.registerSingleton(PayOrderUseCase)
 container.registerSingleton(PayOrderV2UseCase)
 container.registerSingleton(OrderElysiaController)
 container.registerSingleton(PayOrderV2ElysiaController)
+
+import { SetOrderMemberUseCase } from './applications/usecases/set-order-member.usecase'
+container.registerSingleton(SetOrderMemberUseCase)

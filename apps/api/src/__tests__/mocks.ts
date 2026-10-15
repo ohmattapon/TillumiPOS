@@ -221,3 +221,12 @@ export const mockFirstRunGuard = (): Mocked<IFirstRunGuard> => ({
   countUsers: mock<IFirstRunGuard['countUsers']>(async () => 0),
   lockAndCountUsers: mock<IFirstRunGuard['lockAndCountUsers']>(async () => 0),
 })
+
+import type { IMemberRepository } from '../modules/members/applications/ports/member.repository'
+export const mockMemberRepository = (): Mocked<IMemberRepository> => ({
+  find: mock<IMemberRepository['find']>(),
+  findById: mock<IMemberRepository['findById']>(),
+  findByIdForUpdate: mock<IMemberRepository['findByIdForUpdate']>(),
+  create: mock<IMemberRepository['create']>(),
+  update: mock<IMemberRepository['update']>(),
+})
