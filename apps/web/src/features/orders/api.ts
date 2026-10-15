@@ -84,7 +84,8 @@ export function useSetOrderLineQuantity() {
   })
 }
 
-const lineNoteMutationKey = ['orders', 'line-note'] as const
+/** Shared by the note mutation and by anyone who must know, synchronously, whether a note save is pending. */
+export const lineNoteMutationKey = ['orders', 'line-note'] as const
 
 /** True while any line note is being written, so a ticket is not sent ahead of the note it should carry. */
 export function useIsSavingLineNote() {
