@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
 import { makeOrder, makeProduct, makeSale, makeTable } from '../../../../__tests__/factories'
 import {
+  mockKitchenTickets,
   mockLineOptionsResolver,
   mockOrderRepository,
   mockProductRepository,
@@ -9,7 +10,7 @@ import {
   mockTableRepository,
   mockUnitOfWork,
 } from '../../../../__tests__/mocks'
-import { OrderEntity } from '../../../../domains/order.domain'
+import { identityOf, OrderEntity } from '../../../../domains/order.domain'
 import { AddOrderItemUseCase } from './add-order-item.usecase'
 import { CancelOrderUseCase } from './cancel-order.usecase'
 import { GetOrderUseCase } from './get-order.usecase'
@@ -31,6 +32,7 @@ let checkout: ReturnType<typeof mockSaleCheckout>
 let unitOfWork: ReturnType<typeof mockUnitOfWork>
 let lineOptions: ReturnType<typeof mockLineOptionsResolver>
 let tables: ReturnType<typeof mockTableRepository>
+let kitchen: ReturnType<typeof mockKitchenTickets>
 
 const actor = { user: { id: 7, displayName: 'สมชาย' }, branch: { id: 1, code: 'MAIN' } }
 const tea = makeProduct({ id: 1, name: 'ชา', sku: 'TEA', priceSatang: 2500 })
@@ -43,6 +45,7 @@ beforeEach(() => {
   unitOfWork = mockUnitOfWork()
   lineOptions = mockLineOptionsResolver()
   tables = mockTableRepository()
+  kitchen = mockKitchenTickets()
   tables.findById.mockResolvedValue(makeTable({ id: 3, branchId: 1 }))
   products.findById.mockImplementation(async (id) => [tea, cake].find((product) => product.id === id) ?? null)
   orders.save.mockImplementation(async (order) => order)
@@ -162,10 +165,10 @@ describe('editing an open order', () => {
   })
 
   test('sets and removes quantities', async () => {
-    const set = await new SetOrderItemQuantityUseCase(orders, unitOfWork).execute(3, 1, { quantity: 6 }, 1)
+    const set = await new SetOrderItemQuantityUseCase(orders, unitOfWork, kitchen).execute(3, 1, { quantity: 6 }, 1)
     expect(set.items[0]!.quantity).toBe(6)
 
-    const removed = await new RemoveOrderItemUseCase(orders, unitOfWork).execute(3, 1, 1)
+    const removed = await new RemoveOrderItemUseCase(orders, unitOfWork, kitchen).execute(3, 1, 1)
     expect(removed.items).toEqual([])
   })
 
@@ -181,7 +184,7 @@ describe('editing an open order', () => {
     await expect(
       new AddOrderItemUseCase(orders, products, unitOfWork, lineOptions).execute(3, { productId: 1, quantity: 1 }, 1),
     ).rejects.toMatchObject({ code: 'ORDER_NOT_FOUND' })
-    await expect(new RemoveOrderItemUseCase(orders, unitOfWork).execute(3, 1, 1)).rejects.toMatchObject({
+    await expect(new RemoveOrderItemUseCase(orders, unitOfWork, kitchen).execute(3, 1, 1)).rejects.toMatchObject({
       code: 'ORDER_NOT_FOUND',
     })
     expect(orders.save).not.toHaveBeenCalled()
@@ -191,7 +194,7 @@ describe('editing an open order', () => {
     orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 3, status: 'cancelled', cancelReason: 'x' }))
 
     await expect(
-      new SetOrderItemQuantityUseCase(orders, unitOfWork).execute(3, 1, { quantity: 1 }, 1),
+      new SetOrderItemQuantityUseCase(orders, unitOfWork, kitchen).execute(3, 1, { quantity: 1 }, 1),
     ).rejects.toMatchObject({ code: 'ORDER_NOT_OPEN' })
     expect(orders.save).not.toHaveBeenCalled()
   })
@@ -200,7 +203,7 @@ describe('editing an open order', () => {
     ['a quantity of zero', { quantity: 0 }],
     ['a missing quantity', {}],
   ])('rejects %s without touching the order', async (_label, bad) => {
-    await expect(new SetOrderItemQuantityUseCase(orders, unitOfWork).execute(3, 1, bad, 1)).rejects.toBeInstanceOf(
+    await expect(new SetOrderItemQuantityUseCase(orders, unitOfWork, kitchen).execute(3, 1, bad, 1)).rejects.toBeInstanceOf(
       ZodError,
     )
     expect(orders.findByIdForUpdate).not.toHaveBeenCalled()
@@ -211,19 +214,19 @@ describe('CancelOrderUseCase', () => {
   test('closes an open order with the reason and who did it', async () => {
     orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 3 }))
 
-    const cancelled = await new CancelOrderUseCase(orders, unitOfWork).execute(3, { reason: 'ลูกค้าไม่รอ' }, actor)
+    const cancelled = await new CancelOrderUseCase(orders, unitOfWork, kitchen).execute(3, { reason: 'ลูกค้าไม่รอ' }, actor)
 
     expect(cancelled).toMatchObject({ status: 'cancelled', cancelReason: 'ลูกค้าไม่รอ', cancelledById: 7 })
   })
 
   test('needs a reason', async () => {
-    await expect(new CancelOrderUseCase(orders, unitOfWork).execute(3, {}, actor)).rejects.toBeInstanceOf(ZodError)
+    await expect(new CancelOrderUseCase(orders, unitOfWork, kitchen).execute(3, {}, actor)).rejects.toBeInstanceOf(ZodError)
   })
 
   test('cannot cancel an order that is already paid', async () => {
     orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 3 }).markPaid(10))
 
-    await expect(new CancelOrderUseCase(orders, unitOfWork).execute(3, { reason: 'x' }, actor)).rejects.toMatchObject({
+    await expect(new CancelOrderUseCase(orders, unitOfWork, kitchen).execute(3, { reason: 'x' }, actor)).rejects.toMatchObject({
       code: 'ORDER_NOT_OPEN',
     })
   })
@@ -385,10 +388,10 @@ describe('options on order lines', () => {
       }),
     )
 
-    const changed = await new SetOrderLineQuantityUseCase(orders, unitOfWork).execute(1, 7, { quantity: 3 }, 1)
+    const changed = await new SetOrderLineQuantityUseCase(orders, unitOfWork, kitchen).execute(1, 7, { quantity: 3 }, 1)
     expect(changed.items[0]!.quantity).toBe(3)
 
-    const removed = await new RemoveOrderLineUseCase(orders, unitOfWork).execute(1, 7, 1)
+    const removed = await new RemoveOrderLineUseCase(orders, unitOfWork, kitchen).execute(1, 7, 1)
     expect(removed.items).toEqual([])
   })
 
@@ -506,5 +509,74 @@ describe('tables on orders', () => {
     expect(orders.save.mock.calls[0]![0].items.map((line) => line.quantity)).toEqual([2])
     expect(created).toMatchObject({ tableId: 3, openedById: 7 })
     expect(created.items.map((line) => line.quantity)).toEqual([1])
+  })
+})
+
+describe('การลดหรือยกเลิกหลังส่งครัว', () => {
+  test('ตั้งจำนวนบรรทัดให้ต่ำลงแจ้งครัวด้วยจำนวนที่ออเดอร์ถืออยู่ตอนนี้', async () => {
+    const order = makeOrder({ id: 1, items: [{ lineId: 5, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 3, options: [], note: null }] })
+    orders.findByIdForUpdate.mockResolvedValue(order)
+
+    await new SetOrderLineQuantityUseCase(orders, unitOfWork, kitchen).execute(1, 5, { quantity: 1 }, 1)
+
+    expect(kitchen.reconcile).toHaveBeenCalledWith(1, new Map([[identityOf(1, ''), 1]]))
+  })
+
+  test('ลบบรรทัดแจ้งครัวว่าไม่เหลือจำนวนของสินค้านั้น', async () => {
+    const order = makeOrder({ id: 1, items: [{ lineId: 5, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 3, options: [], note: null }, { lineId: 6, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [], note: null }] })
+    orders.findByIdForUpdate.mockResolvedValue(order)
+
+    await new RemoveOrderLineUseCase(orders, unitOfWork, kitchen).execute(1, 5, 1)
+
+    expect(kitchen.reconcile).toHaveBeenCalledWith(1, new Map([[identityOf(2, ''), 1]]))
+  })
+
+  test('ยกเลิกออเดอร์แจ้งครัวให้ยกเลิกทุกรายการ', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1, items: [] }))
+
+    await new CancelOrderUseCase(orders, unitOfWork, kitchen).execute(1, { reason: 'ลูกค้าไปแล้ว' }, actor)
+
+    expect(kitchen.reconcile).toHaveBeenCalledWith(1, new Map())
+  })
+
+  test('ตั้งจำนวนสินค้าให้ต่ำลงแจ้งครัวด้วยจำนวนที่ออเดอร์ถืออยู่ตอนนี้', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1 }))
+
+    await new SetOrderItemQuantityUseCase(orders, unitOfWork, kitchen).execute(1, 1, { quantity: 1 }, 1)
+
+    expect(kitchen.reconcile).toHaveBeenCalledWith(1, new Map([[identityOf(1, ''), 1]]))
+  })
+
+  test('เอาสินค้าออกแจ้งครัวว่าไม่เหลือจำนวนของสินค้านั้น', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1 }))
+
+    await new RemoveOrderItemUseCase(orders, unitOfWork, kitchen).execute(1, 1, 1)
+
+    expect(kitchen.reconcile).toHaveBeenCalledWith(1, new Map())
+  })
+
+  test('แจ้งครัวหลังบันทึกออเดอร์ ไม่ใช่ก่อน', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1 }))
+    const calls: string[] = []
+    orders.save.mockImplementation(async (order) => {
+      calls.push('save')
+      return order
+    })
+    kitchen.reconcile.mockImplementation(async () => {
+      calls.push('reconcile')
+    })
+
+    await new CancelOrderUseCase(orders, unitOfWork, kitchen).execute(1, { reason: 'ลูกค้าไปแล้ว' }, actor)
+
+    expect(calls).toEqual(['save', 'reconcile'])
+  })
+
+  test('แก้ออเดอร์ที่ปิดแล้วหรือของสาขาอื่นไม่แตะครัว', async () => {
+    orders.findByIdForUpdate.mockResolvedValueOnce(makeOrder({ id: 1, branchId: 2 })).mockResolvedValueOnce(makeOrder({ id: 1 }).markPaid(10))
+
+    await expect(new RemoveOrderLineUseCase(orders, unitOfWork, kitchen).execute(1, 1, 1)).rejects.toMatchObject({ code: 'ORDER_NOT_FOUND' })
+    await expect(new CancelOrderUseCase(orders, unitOfWork, kitchen).execute(1, { reason: 'x' }, actor)).rejects.toMatchObject({ code: 'ORDER_NOT_OPEN' })
+
+    expect(kitchen.reconcile).not.toHaveBeenCalled()
   })
 })

@@ -14,6 +14,7 @@ import type { IStockLedger } from '../modules/inventory/applications/ports/stock
 import type { IStockMovementRepository } from '../modules/inventory/applications/ports/stock-movement.repository'
 import type { ILineOptionsResolver } from '../modules/modifiers/applications/ports/line-options-resolver.port'
 import type { IModifierRepository } from '../modules/modifiers/applications/ports/modifier.repository'
+import type { IKitchenTickets } from '../modules/orders/applications/ports/kitchen-tickets.port'
 import type { IOrderRepository } from '../modules/orders/applications/ports/order.repository'
 import type { IFirstRunGuard } from '../modules/setup/applications/ports/first-run-guard.port'
 import type { ISetupCode } from '../modules/setup/applications/ports/setup-code.port'
@@ -145,6 +146,14 @@ export const mockOrderRepository = (): Mocked<IOrderRepository> => ({
   findByIdForUpdate: mock<IOrderRepository['findByIdForUpdate']>(),
   findAll: mock<IOrderRepository['findAll']>(),
   save: mock<IOrderRepository['save']>(),
+})
+
+/** Answers "nothing sent, nothing pending" unless a test says otherwise. */
+export const mockKitchenTickets = (): Mocked<IKitchenTickets> => ({
+  sentByLine: mock<IKitchenTickets['sentByLine']>(async () => new Map()),
+  hasPending: mock<IKitchenTickets['hasPending']>(async () => false),
+  reconcile: mock<IKitchenTickets['reconcile']>(async () => undefined),
+  moveTickets: mock<IKitchenTickets['moveTickets']>(async () => undefined),
 })
 
 export const mockSaleCheckout = (): Mocked<ISaleCheckout> => ({

@@ -24,6 +24,10 @@ const item = t.Object({
   quantity: t.Integer(),
   lineTotalSatang: t.Integer(),
   options: t.Array(lineOption),
+  // A note for the kitchen on this line, when there is one.
+  note: t.Nullable(t.String()),
+  // Units of this line already sent to the kitchen and not taken back.
+  sentQuantity: t.Integer(),
 })
 
 const optionIds = t.Optional(t.Array(t.Integer({ minimum: 1 }), { maxItems: 40 }))
