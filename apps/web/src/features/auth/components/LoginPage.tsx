@@ -4,13 +4,12 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
 import { useLogin } from '../api'
 
-/** The TillumiPOS logo, above the form on a narrow screen. */
-function BrandLogo({ className }: { className?: string }) {
+/** The TillumiPOS logo, above the form on every screen size. */
+function BrandLogo() {
   const { t } = useTranslation('auth')
-  return <img src="/tillumipos-logo.png" alt={t('brand.logoAlt')} className={cn('h-16 w-auto self-start', className)} />
+  return <img src="/tillumipos-logo.png" alt={t('brand.logoAlt')} className="h-16 w-auto self-start" />
 }
 
 /** The wide-screen left column: a photo of the till, then what it does in a few lines. Shown from 1024px up. */
@@ -60,7 +59,7 @@ export function LoginPage() {
     <div className="grid min-h-svh bg-canvas lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <BrandPanel />
       <main className="flex min-h-svh flex-col p-4 sm:p-8">
-        <BrandLogo className="lg:hidden" />
+        <BrandLogo />
         <div className="flex flex-1 items-center justify-center py-8">
           <div className="w-full max-w-sm space-y-6">
             <section className="rounded-[10px] border bg-card p-6 sm:p-8">
