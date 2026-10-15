@@ -15,7 +15,7 @@ const cash = (amountSatang: number) => [{ method: 'cash' as const, amountSatang 
 describe('shop settings', () => {
   test('a shop that was never configured runs with the defaults', async () => {
     expect(ok(await owner.api.settings.get())).toEqual({
-      shopName: 'EasyPOS',
+      shopName: 'TillumiPOS',
       taxId: null,
       address: null,
       phone: null,
@@ -26,6 +26,7 @@ describe('shop settings', () => {
       locale: 'th',
       receiptPaperMm: 80,
       receiptFooter: null,
+      homeView: 'till',
     })
   })
 
@@ -78,7 +79,7 @@ describe('shop settings', () => {
     const attempt = await cashier.api.settings.patch({ shopName: 'ร้านของฉัน' })
 
     expect(attempt.status).toBe(403)
-    expect(ok(await owner.api.settings.get()).shopName).toBe('EasyPOS')
+    expect(ok(await owner.api.settings.get()).shopName).toBe('TillumiPOS')
   })
 
   test.each([
@@ -93,7 +94,7 @@ describe('shop settings', () => {
     const result = await owner.api.settings.patch(body as never)
 
     expect(result.status).toBe(422)
-    expect(ok(await owner.api.settings.get()).shopName).toBe('EasyPOS')
+    expect(ok(await owner.api.settings.get()).shopName).toBe('TillumiPOS')
   })
 
   test('an unknown time zone is refused by the rules, with its own code', async () => {

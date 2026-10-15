@@ -50,6 +50,7 @@ export class OpenOrderUseCase {
           quantity: line.quantity,
           lineId: 0,
           options: chosen.options,
+          note: null,
         })
       }
 

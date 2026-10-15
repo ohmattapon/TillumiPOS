@@ -72,7 +72,7 @@ export const makeOrder = (overrides: Partial<OrderEntityProps> = {}) =>
     mergedIntoId: null,
     createdAt: new Date('2026-10-13T06:00:00Z'),
     updatedAt: new Date('2026-10-13T06:00:00Z'),
-    items: [{ lineId: 1, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [] }],
+    items: [{ lineId: 1, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [], note: null }],
     ...overrides,
   })
 
@@ -124,7 +124,7 @@ export const makeSale = (overrides: Partial<SaleEntityProps> = {}) =>
     vatRateBp: 700,
     cashierId: 1,
     cashierName: 'สมชาย',
-    shopName: 'EasyPOS',
+    shopName: 'TillumiPOS',
     shopTaxId: null,
     branchName: 'สาขาหลัก',
     shopAddress: null,

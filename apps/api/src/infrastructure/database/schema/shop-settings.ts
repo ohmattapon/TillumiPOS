@@ -2,6 +2,7 @@ import { check, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg
 import { sql } from 'drizzle-orm'
 
 export const vatMode = pgEnum('vat_mode', ['inclusive', 'exclusive', 'none'])
+export const shopHomeView = pgEnum('shop_home_view', ['till', 'tables'])
 
 // A shop has exactly one row of settings; the check keeps it that way.
 export const shopSettings = pgTable(
@@ -20,6 +21,8 @@ export const shopSettings = pgTable(
     // Width of the thermal paper receipts are laid out for: 58 or 80.
     receiptPaperMm: integer().notNull().default(80),
     receiptFooter: text(),
+    // What the sell screen opens on: the till itself, or the floor plan of tables.
+    homeView: shopHomeView().notNull().default('till'),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [check('shop_settings_single_row', sql`${table.id} = 1`)],

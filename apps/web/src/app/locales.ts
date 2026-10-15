@@ -6,6 +6,8 @@ const th = {
   nav: {
     sell: 'ขายสินค้า',
     today: 'วันนี้',
+    kitchen: 'ครัว',
+    kitchenStations: 'สถานีครัว',
     reports: 'รายงานย้อนหลัง',
     shifts: 'กะและลิ้นชัก',
     products: 'สินค้าและสต็อก',
@@ -45,6 +47,8 @@ const en = {
   nav: {
     sell: 'Sell',
     today: 'Today',
+    kitchen: 'Kitchen',
+    kitchenStations: 'Kitchen stations',
     reports: 'Sales reports',
     shifts: 'Shifts and drawer',
     products: 'Products & stock',

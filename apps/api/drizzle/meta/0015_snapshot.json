@@ -1,5 +1,5 @@
 {
-  "id": "7752d0e9-d7ef-4e44-a7a5-34bfeef18ba9",
+  "id": "6ff22a09-db75-482f-9f92-7397355253ee",
   "prevId": "5c2edf04-c403-42df-959c-994a3108b53d",
   "version": "7",
   "dialect": "postgresql",
@@ -369,6 +369,497 @@
           "columns": [
             "branch_id",
             "name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.kitchen_category_stations": {
+      "name": "kitchen_category_stations",
+      "schema": "",
+      "columns": {
+        "category_id": {
+          "name": "category_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "station_id": {
+          "name": "station_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "kitchen_category_stations_category_id_categories_id_fk": {
+          "name": "kitchen_category_stations_category_id_categories_id_fk",
+          "tableFrom": "kitchen_category_stations",
+          "tableTo": "categories",
+          "columnsFrom": [
+            "category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kitchen_category_stations_station_id_kitchen_stations_id_fk": {
+          "name": "kitchen_category_stations_station_id_kitchen_stations_id_fk",
+          "tableFrom": "kitchen_category_stations",
+          "tableTo": "kitchen_stations",
+          "columnsFrom": [
+            "station_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.kitchen_stations": {
+      "name": "kitchen_stations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "kitchen_stations_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "kitchen_stations_name_unique": {
+          "name": "kitchen_stations_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.kitchen_ticket_lines": {
+      "name": "kitchen_ticket_lines",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "kitchen_ticket_lines_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "ticket_id": {
+          "name": "ticket_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_id": {
+          "name": "product_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_name": {
+          "name": "product_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "options_key": {
+          "name": "options_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "option_names": {
+          "name": "option_names",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "voided_quantity": {
+          "name": "voided_quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "kitchen_ticket_lines_ticket_id_index": {
+          "name": "kitchen_ticket_lines_ticket_id_index",
+          "columns": [
+            {
+              "expression": "ticket_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "kitchen_ticket_lines_product_id_options_key_index": {
+          "name": "kitchen_ticket_lines_product_id_options_key_index",
+          "columns": [
+            {
+              "expression": "product_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "options_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "kitchen_ticket_lines_ticket_id_kitchen_tickets_id_fk": {
+          "name": "kitchen_ticket_lines_ticket_id_kitchen_tickets_id_fk",
+          "tableFrom": "kitchen_ticket_lines",
+          "tableTo": "kitchen_tickets",
+          "columnsFrom": [
+            "ticket_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "kitchen_ticket_lines_product_id_products_id_fk": {
+          "name": "kitchen_ticket_lines_product_id_products_id_fk",
+          "tableFrom": "kitchen_ticket_lines",
+          "tableTo": "products",
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "kitchen_ticket_lines_voided_range": {
+          "name": "kitchen_ticket_lines_voided_range",
+          "value": "\"kitchen_ticket_lines\".\"voided_quantity\" >= 0 and \"kitchen_ticket_lines\".\"voided_quantity\" <= \"kitchen_ticket_lines\".\"quantity\""
+        },
+        "kitchen_ticket_lines_quantity_positive": {
+          "name": "kitchen_ticket_lines_quantity_positive",
+          "value": "\"kitchen_ticket_lines\".\"quantity\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.kitchen_tickets": {
+      "name": "kitchen_tickets",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "kitchen_tickets_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "branch_id": {
+          "name": "branch_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "station_id": {
+          "name": "station_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "round_no": {
+          "name": "round_no",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "kitchen_ticket_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "sent_by_id": {
+          "name": "sent_by_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "done_by_id": {
+          "name": "done_by_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "done_at": {
+          "name": "done_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "kitchen_tickets_branch_id_station_id_status_index": {
+          "name": "kitchen_tickets_branch_id_station_id_status_index",
+          "columns": [
+            {
+              "expression": "branch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "station_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "kitchen_tickets_order_id_index": {
+          "name": "kitchen_tickets_order_id_index",
+          "columns": [
+            {
+              "expression": "order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "kitchen_tickets_branch_id_branches_id_fk": {
+          "name": "kitchen_tickets_branch_id_branches_id_fk",
+          "tableFrom": "kitchen_tickets",
+          "tableTo": "branches",
+          "columnsFrom": [
+            "branch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kitchen_tickets_order_id_orders_id_fk": {
+          "name": "kitchen_tickets_order_id_orders_id_fk",
+          "tableFrom": "kitchen_tickets",
+          "tableTo": "orders",
+          "columnsFrom": [
+            "order_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kitchen_tickets_station_id_kitchen_stations_id_fk": {
+          "name": "kitchen_tickets_station_id_kitchen_stations_id_fk",
+          "tableFrom": "kitchen_tickets",
+          "tableTo": "kitchen_stations",
+          "columnsFrom": [
+            "station_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kitchen_tickets_sent_by_id_users_id_fk": {
+          "name": "kitchen_tickets_sent_by_id_users_id_fk",
+          "tableFrom": "kitchen_tickets",
+          "tableTo": "users",
+          "columnsFrom": [
+            "sent_by_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kitchen_tickets_done_by_id_users_id_fk": {
+          "name": "kitchen_tickets_done_by_id_users_id_fk",
+          "tableFrom": "kitchen_tickets",
+          "tableTo": "users",
+          "columnsFrom": [
+            "done_by_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "kitchen_tickets_orderId_stationId_roundNo_unique": {
+          "name": "kitchen_tickets_orderId_stationId_roundNo_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "order_id",
+            "station_id",
+            "round_no"
           ]
         }
       },
@@ -748,6 +1239,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "''"
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -2164,18 +2661,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "promotion_id": {
-          "name": "promotion_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "promotion": {
-          "name": "promotion",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
         "receipt_no": {
           "name": "receipt_no",
           "type": "text",
@@ -2415,19 +2900,6 @@
           "tableTo": "members",
           "columnsFrom": [
             "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "sales_promotion_id_promotions_id_fk": {
-          "name": "sales_promotion_id_promotions_id_fk",
-          "tableFrom": "sales",
-          "tableTo": "promotions",
-          "columnsFrom": [
-            "promotion_id"
           ],
           "columnsTo": [
             "id"
@@ -3320,6 +3792,14 @@
           "primaryKey": false,
           "notNull": false
         },
+        "home_view": {
+          "name": "home_view",
+          "type": "shop_home_view",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'till'"
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp with time zone",
@@ -3532,434 +4012,17 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
-    },
-    "public.promotions": {
-      "name": "promotions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "identity": {
-            "type": "always",
-            "name": "promotions_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kind": {
-          "name": "kind",
-          "type": "promotion_kind",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "value": {
-          "name": "value",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "max_discount_satang": {
-          "name": "max_discount_satang",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "min_subtotal_satang": {
-          "name": "min_subtotal_satang",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "starts_on": {
-          "name": "starts_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "ends_on": {
-          "name": "ends_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "weekdays": {
-          "name": "weekdays",
-          "type": "integer[]",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "window_start_minute": {
-          "name": "window_start_minute",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "window_end_minute": {
-          "name": "window_end_minute",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "audience": {
-          "name": "audience",
-          "type": "promotion_audience",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'everyone'"
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "promotions_name_lower_unique": {
-          "name": "promotions_name_lower_unique",
-          "columns": [
-            {
-              "expression": "lower(\"name\")",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "promotions_is_active_idx": {
-          "name": "promotions_is_active_idx",
-          "columns": [
-            {
-              "expression": "is_active",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "promotions_value_positive": {
-          "name": "promotions_value_positive",
-          "value": "\"promotions\".\"value\" > 0"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.price_quotes": {
-      "name": "price_quotes",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "identity": {
-            "type": "always",
-            "name": "price_quotes_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
-        },
-        "branch_id": {
-          "name": "branch_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "member_id": {
-          "name": "member_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "member": {
-          "name": "member",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "order_id": {
-          "name": "order_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "lines": {
-          "name": "lines",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "promotion": {
-          "name": "promotion",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "subtotal_satang": {
-          "name": "subtotal_satang",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "discount_satang": {
-          "name": "discount_satang",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "vat_mode": {
-          "name": "vat_mode",
-          "type": "vat_mode",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "vat_rate_bp": {
-          "name": "vat_rate_bp",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "vat_satang": {
-          "name": "vat_satang",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "total_satang": {
-          "name": "total_satang",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "quote_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'open'"
-        },
-        "qr_reference": {
-          "name": "qr_reference",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "sale_id": {
-          "name": "sale_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by_id": {
-          "name": "created_by_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "price_quotes_qr_reference_unique": {
-          "name": "price_quotes_qr_reference_unique",
-          "columns": [
-            {
-              "expression": "qr_reference",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "price_quotes_sale_id_unique": {
-          "name": "price_quotes_sale_id_unique",
-          "columns": [
-            {
-              "expression": "sale_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "price_quotes_order_status_idx": {
-          "name": "price_quotes_order_status_idx",
-          "columns": [
-            {
-              "expression": "order_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "price_quotes_branch_id_branches_id_fk": {
-          "name": "price_quotes_branch_id_branches_id_fk",
-          "tableFrom": "price_quotes",
-          "tableTo": "branches",
-          "columnsFrom": [
-            "branch_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "price_quotes_member_id_members_id_fk": {
-          "name": "price_quotes_member_id_members_id_fk",
-          "tableFrom": "price_quotes",
-          "tableTo": "members",
-          "columnsFrom": [
-            "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "price_quotes_order_id_orders_id_fk": {
-          "name": "price_quotes_order_id_orders_id_fk",
-          "tableFrom": "price_quotes",
-          "tableTo": "orders",
-          "columnsFrom": [
-            "order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "price_quotes_sale_id_sales_id_fk": {
-          "name": "price_quotes_sale_id_sales_id_fk",
-          "tableFrom": "price_quotes",
-          "tableTo": "sales",
-          "columnsFrom": [
-            "sale_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "price_quotes_created_by_id_users_id_fk": {
-          "name": "price_quotes_created_by_id_users_id_fk",
-          "tableFrom": "price_quotes",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
     }
   },
   "enums": {
+    "public.kitchen_ticket_status": {
+      "name": "kitchen_ticket_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "done"
+      ]
+    },
     "public.order_status": {
       "name": "order_status",
       "schema": "public",
@@ -4035,6 +4098,14 @@
         "cash_refund"
       ]
     },
+    "public.shop_home_view": {
+      "name": "shop_home_view",
+      "schema": "public",
+      "values": [
+        "till",
+        "tables"
+      ]
+    },
     "public.vat_mode": {
       "name": "vat_mode",
       "schema": "public",
@@ -4050,32 +4121,6 @@
       "values": [
         "owner",
         "cashier"
-      ]
-    },
-    "public.promotion_audience": {
-      "name": "promotion_audience",
-      "schema": "public",
-      "values": [
-        "everyone",
-        "members"
-      ]
-    },
-    "public.promotion_kind": {
-      "name": "promotion_kind",
-      "schema": "public",
-      "values": [
-        "fixed",
-        "percent"
-      ]
-    },
-    "public.quote_status": {
-      "name": "quote_status",
-      "schema": "public",
-      "values": [
-        "open",
-        "reserved",
-        "consumed",
-        "cancelled"
       ]
     }
   },

@@ -1,8 +1,10 @@
 import { container } from 'tsyringe'
 import { OrderElysiaController } from './adapters/controllers/order.controller'
 import { GuardedOrderRepository } from './adapters/repository/guarded-order.repository'
+import { DrizzleKitchenOrderRefs } from './adapters/repository/kitchen-order-refs.drizzle.adapter'
 import { DrizzleTableOccupancy } from './adapters/repository/table-occupancy.drizzle.adapter'
 import { orderRepositoryToken } from './applications/ports/order.repository'
+import { kitchenOrderRefsToken } from '../kitchen/applications/ports/kitchen-order-refs.port'
 import { tableOccupancyToken } from '../tables/applications/ports/table-occupancy.port'
 import { orderQuoteSourceToken } from '../quotes/applications/ports/order-quote-source.port'
 import { OrderQuoteSource } from './applications/services/order-quote-source'
@@ -21,11 +23,13 @@ import { RemoveOrderLineUseCase } from './applications/usecases/remove-order-lin
 import { RenameOrderUseCase } from './applications/usecases/rename-order.usecase'
 import { SetOrderItemQuantityUseCase } from './applications/usecases/set-order-item-quantity.usecase'
 import { SplitOrderUseCase } from './applications/usecases/split-order.usecase'
+import { SetOrderLineNoteUseCase } from './applications/usecases/set-order-line-note.usecase'
 import { SetOrderLineQuantityUseCase } from './applications/usecases/set-order-line-quantity.usecase'
 
 container.register(orderRepositoryToken, { useClass: GuardedOrderRepository })
 container.register(tableOccupancyToken, { useClass: DrizzleTableOccupancy })
 container.register(orderQuoteSourceToken, { useClass: OrderQuoteSource })
+container.register(kitchenOrderRefsToken, { useClass: DrizzleKitchenOrderRefs })
 container.registerSingleton(ListOrdersUseCase)
 container.registerSingleton(GetOrderUseCase)
 container.registerSingleton(OpenOrderUseCase)
@@ -38,6 +42,7 @@ container.registerSingleton(MergeOrdersUseCase)
 container.registerSingleton(SplitOrderUseCase)
 container.registerSingleton(SetOrderLineQuantityUseCase)
 container.registerSingleton(RemoveOrderLineUseCase)
+container.registerSingleton(SetOrderLineNoteUseCase)
 container.registerSingleton(CancelOrderUseCase)
 container.registerSingleton(PayOrderUseCase)
 container.registerSingleton(PayOrderV2UseCase)

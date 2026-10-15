@@ -1,17 +1,24 @@
 import { ClipboardList, Minus, Plus, ShoppingCart, Trash2, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { toast } from 'sonner'
 import { Kbd } from '@/components/Kbd'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useSetOrderLineNote } from '@/features/orders'
 import { useFormat, useSettings } from '@/features/settings'
 import { tablesQuery } from '@/features/tables'
 import { cn } from '@/lib/utils'
 import { useCart } from '../hooks/use-cart'
 import { OrderQrHold } from './OrderQrHold'
 import { useCartActions } from '../hooks/use-cart-actions'
+import type { PricedLine } from '../lib/cart'
+import { noteToSave } from '../lib/note'
 import { useCartStore } from '../store/cart.store'
+import { KitchenSendButton } from './KitchenSendButton'
 import { CartMember } from './CartMember'
 import { OrderTools } from './OrderTools'
 
@@ -24,6 +31,48 @@ interface Props {
   /** side: the wide-screen panel. sheet: the same cart, shown from the bottom on a small screen. */
   variant?: 'side' | 'sheet'
   onClose?: () => void
+}
+
+/**
+ * The note for the kitchen on one order line. What is typed is kept here until the field is left;
+ * until then the field shows the note the order has. A line the kitchen already has keeps its note.
+ */
+function LineNote({ orderId, lineId, line }: { orderId: number; lineId: number; line: PricedLine }) {
+  const { t } = useTranslation('pos')
+  const setNote = useSetOrderLineNote()
+  const [draft, setDraft] = useState<string | null>(null)
+  const locked = line.sentQuantity > 0
+
+  // Only a changed note is sent. The typed text stays on screen until the answer is in, so the field never flashes the old note.
+  // If the save fails the text stays too, so the cashier can see it and leave the field again to retry.
+  const save = () => {
+    if (draft === null) return
+    const note = noteToSave(draft, line.note)
+    if (note === undefined) {
+      setDraft(null)
+      return
+    }
+    setNote.mutate(
+      { orderId, lineId, note },
+      { onError: (error) => toast.error(error.message), onSuccess: () => setDraft(null) },
+    )
+  }
+
+  return (
+    <div className="space-y-1">
+      <Input
+        className="h-11 bg-background text-sm"
+        aria-label={t('kitchen.noteFor', { name: line.name })}
+        placeholder={t('kitchen.notePlaceholder')}
+        maxLength={500}
+        disabled={locked}
+        value={locked ? (line.note ?? '') : (draft ?? line.note ?? '')}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={save}
+      />
+      {locked && <p className="text-xs text-muted-foreground">{t('kitchen.lockedNote')}</p>}
+    </div>
+  )
 }
 
 export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant = 'side', onClose }: Props) {
@@ -67,7 +116,12 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
       </div>
       {cart.orderId !== null && <OrderQrHold orderId={cart.orderId} />}
 
-      {cart.order && cart.order.status === 'open' && <OrderTools order={cart.order} />}
+      {cart.order && cart.order.status === 'open' && (
+        <>
+          <OrderTools order={cart.order} />
+          <KitchenSendButton order={cart.order} />
+        </>
+      )}
 
       <CartMember />
 
@@ -79,11 +133,14 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
           <li className="px-4 py-16 text-center text-sm text-muted-foreground">{t('cart.empty')}</li>
         )}
         {cart.lines.map((line) => {
-          const { lineKey, name, unitPriceSatang, stockQty, quantity, lineTotalSatang, exceedsStock, options, unavailable } = line
+          const { lineKey, lineId, name, unitPriceSatang, stockQty, quantity, lineTotalSatang, exceedsStock, options, unavailable, sentQuantity } = line
           return (
           <li key={lineKey} className="space-y-2 px-4 py-3">
             <div className="flex items-start justify-between gap-3">
-              <p className="min-w-0 text-base leading-snug font-medium">{name}</p>
+              <div className="min-w-0 space-y-1">
+                <p className="text-base leading-snug font-medium">{name}</p>
+                {sentQuantity > 0 && <Badge variant="secondary">{t('kitchen.sentBadge', { count: sentQuantity })}</Badge>}
+              </div>
               <p className="shrink-0 text-sm font-semibold tabular-nums">{money.plain(lineTotalSatang)}</p>
             </div>
             {options.length > 0 && (
@@ -137,6 +194,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
                   : `@ ${money.plain(unitPriceSatang)}`}
               </span>
             </div>
+            {cart.orderId !== null && lineId !== null && <LineNote orderId={cart.orderId} lineId={lineId} line={line} />}
           </li>
           )
         })}

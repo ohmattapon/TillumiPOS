@@ -110,8 +110,15 @@
     {
       "idx": 15,
       "version": "7",
-      "when": 1792065426057,
-      "tag": "0015_promotions",
+      "when": 1792106666072,
+      "tag": "0015_kitchen",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792107252340,
+      "tag": "0016_promotions",
       "breakpoints": true
     }
   ]

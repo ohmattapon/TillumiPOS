@@ -57,3 +57,6 @@ export const listOrdersSchema = z.object({
   limit: z.number().int().min(1).max(500).optional(),
   offset: z.number().int().min(0).optional(),
 })
+
+// The domain trims the note and refuses more than 200 characters after trimming.
+export const setOrderLineNoteSchema = z.object({ note: z.string().max(500).nullable() })

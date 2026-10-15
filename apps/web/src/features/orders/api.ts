@@ -1,5 +1,5 @@
 import type { Order } from '@pos/api/types'
-import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productKeys } from '@/features/products'
 import { saleKeys } from '@/features/sales'
 import { withHeldQuote } from '@/features/promotions'
@@ -82,6 +82,26 @@ export function useSetOrderLineQuantity() {
   return useMutation({
     mutationFn: ({ orderId, lineId, quantity }: { orderId: number; lineId: number; quantity: number }) =>
       unwrap(api.orders({ id: orderId }).lines({ lineId }).patch({ quantity })),
+    onSuccess: remember,
+  })
+}
+
+/** Shared by the note mutation and by anyone who must know, synchronously, whether a note save is pending. */
+export const lineNoteMutationKey = ['orders', 'line-note'] as const
+
+/** True while any line note is being written, so a ticket is not sent ahead of the note it should carry. */
+export function useIsSavingLineNote() {
+  return useIsMutating({ mutationKey: lineNoteMutationKey }) > 0
+}
+
+/** Writes or clears the note of one line. Refused by the API once the line has gone to the kitchen. */
+export function useSetOrderLineNote() {
+  const remember = useOrderCache()
+
+  return useMutation({
+    mutationKey: lineNoteMutationKey,
+    mutationFn: ({ orderId, lineId, note }: { orderId: number; lineId: number; note: string | null }) =>
+      unwrap(api.orders({ id: orderId }).lines({ lineId }).note.patch({ note })),
     onSuccess: remember,
   })
 }

@@ -86,6 +86,8 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     locale: form.locale,
     receiptPaperMm: form.receiptPaperMm,
     receiptFooter: form.receiptFooter.trim() || null,
+    // Not editable here yet: kept as it is so a save does not change it.
+    homeView: settings.homeView,
   }
   const isDirty = JSON.stringify(changes) !== JSON.stringify(settings)
   const canSave = isDirty && isRateValid && changes.shopName !== '' && !save.isPending

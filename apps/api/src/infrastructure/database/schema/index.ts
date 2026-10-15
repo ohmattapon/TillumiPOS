@@ -2,6 +2,7 @@
 export * from './branches'
 export * from './categories'
 export * from './dining-tables'
+export * from './kitchen'
 export * from './modifiers'
 export * from './orders'
 export * from './products'
