@@ -47,6 +47,7 @@ export class QuoteClaims implements IQuoteClaims {
       const unchanged = quote.matches({
         branchId,
         memberId: order.memberId,
+        orderId: quote.orderId,
         lines: order.items.map((item) => ({
           productId: item.productId,
           optionIds: item.options.map((option) => option.optionId),

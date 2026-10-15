@@ -71,7 +71,7 @@ describe('SaleCheckout with a pinned price', () => {
   test('hands the quote the cart it was asked for, and uses it up with the sale', async () => {
     await checkout.checkout(request)
 
-    expect(quotes.lockForCheckout).toHaveBeenCalledWith(7, { branchId: 1, memberId: null, lines: [cart] }, [])
+    expect(quotes.lockForCheckout).toHaveBeenCalledWith(7, { branchId: 1, memberId: null, orderId: null, lines: [cart] }, [])
     expect(quotes.consume).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }), 31)
   })
 
@@ -81,6 +81,11 @@ describe('SaleCheckout with a pinned price', () => {
 
     expect(members.findByIdForUpdate).not.toHaveBeenCalled()
     expect(sale.member).toEqual({ id: 8, code: 'M000008', name: 'ลูกค้าประจำ' })
+  })
+
+  test("an order's pinned price is held for that order, so it cannot be sold as a cart", async () => {
+    await checkout.checkout({ ...request, orderId: 4 })
+    expect(quotes.lockForCheckout).toHaveBeenCalledWith(7, { branchId: 1, memberId: null, orderId: 4, lines: [cart] }, [])
   })
 
   test('still refuses when there is not enough stock, and writes nothing', async () => {
