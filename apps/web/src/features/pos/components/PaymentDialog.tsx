@@ -33,9 +33,14 @@ interface Props {
   onCancel: () => void
   /** The open shift the payment is taken in. Set in shift mode, where a bank QR is asked for on its behalf. */
   shiftId?: number
+  /**
+   * Tells the till which bank QR is showing (or null), so the customer's screen can show the same one.
+   * Called again with null when the QR is paid, replaced or the dialog closes.
+   */
+  onQrChange?: (qr: { image: string; expiresAt: string } | null) => void
 }
 
-export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onCancel, shiftId }: Props) {
+export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onCancel, shiftId, onQrChange }: Props) {
   const { t } = useTranslation('pos')
   const { t: tc } = useTranslation()
   const { money, currency, date } = useFormat()
@@ -46,6 +51,16 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
   const qrEnabled = useQuery(qrConfigQuery).data?.enabled === true
   const usesQr = method === 'promptpay' && qrEnabled
   const qr = useQrPayment({ amountSatang: totalSatang, active: usesQr, shiftId })
+
+  // The customer's screen follows the QR on this dialog. It is keyed by the QR's id: a new QR is a new
+  // message, and a paid QR (or a closed dialog) clears it.
+  const shownQr = usesQr && qr.issued && !qr.paid ? qr.issued : null
+  useEffect(() => {
+    onQrChange?.(shownQr ? { image: shownQr.image, expiresAt: shownQr.expiresAt.toISOString() } : null)
+    return () => onQrChange?.(null)
+    // The callback is a state setter, stable by design; only another QR should send again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownQr?.id])
 
   // Money that already arrived for exactly this total and has no sale yet (a late payment, or a sale that
   // failed after the customer paid). Using it means the customer does not pay twice.

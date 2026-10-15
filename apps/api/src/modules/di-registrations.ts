@@ -15,3 +15,5 @@ import './orders/orders.module'
 import './kitchen/kitchen.module'
 import './qr-payments/qr-payments.module'
 import './settings/settings.module'
+
+import './members/members.module'

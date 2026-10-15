@@ -1,3 +1,4 @@
+import { mockMemberRepository } from '../../../../__tests__/mocks'
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
 import { makeOrder, makeProduct, makeSale, makeTable } from '../../../../__tests__/factories'
@@ -92,7 +93,7 @@ describe('OpenOrderUseCase', () => {
 
   beforeEach(() => {
     orders.create.mockImplementation(async (order) => new OrderEntity({ ...order, id: 5, status: 'open', saleId: null, cancelReason: null, cancelledById: null, mergedIntoId: null, createdAt: new Date(), updatedAt: new Date() }))
-    useCase = new OpenOrderUseCase(orders, products, unitOfWork, lineOptions, tables)
+    useCase = new OpenOrderUseCase(orders, products, unitOfWork, lineOptions, tables, mockMemberRepository())
   })
 
   test('opens an empty order for the branch and the person who opened it', async () => {
@@ -255,6 +256,7 @@ describe('PayOrderUseCase', () => {
 
     expect(unitOfWork.run).toHaveBeenCalledTimes(1)
     expect(checkout.checkout).toHaveBeenCalledWith({
+      memberId: null,
       lines: [
         { productId: 1, quantity: 2, unitPriceSatang: 2500, options: [] },
         { productId: 2, quantity: 1, unitPriceSatang: 5700, options: [] },
@@ -373,7 +375,7 @@ describe('options on order lines', () => {
         }),
     )
 
-    const opened = await new OpenOrderUseCase(orders, products, unitOfWork, lineOptions, tables).execute(
+    const opened = await new OpenOrderUseCase(orders, products, unitOfWork, lineOptions, tables, mockMemberRepository()).execute(
       { items: [{ productId: 1, quantity: 1, options: [20] }] },
       actor,
     )
@@ -429,7 +431,7 @@ describe('tables on orders', () => {
   test('an order is opened on a usable table of the branch', async () => {
     orders.create.mockImplementation(async (order) => stored(order))
 
-    const opened = await new OpenOrderUseCase(orders, products, unitOfWork, lineOptions, tables).execute(
+    const opened = await new OpenOrderUseCase(orders, products, unitOfWork, lineOptions, tables, mockMemberRepository()).execute(
       { tableId: 3 },
       spoken,
     )
@@ -438,7 +440,7 @@ describe('tables on orders', () => {
   })
 
   test("another branch's table, a closed table and an unknown table all stop the order", async () => {
-    const useCase = new OpenOrderUseCase(orders, products, unitOfWork, lineOptions, tables)
+    const useCase = new OpenOrderUseCase(orders, products, unitOfWork, lineOptions, tables, mockMemberRepository())
     tables.findById
       .mockResolvedValueOnce(makeTable({ id: 3, branchId: 2 }))
       .mockResolvedValueOnce(makeTable({ id: 3, branchId: 1, isActive: false }))

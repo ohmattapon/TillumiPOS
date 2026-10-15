@@ -1,6 +1,9 @@
 const th = {
   today: {
     title: 'วันนี้',
+    totals: 'สรุปยอดขายวันนี้',
+    retry: 'ลองใหม่',
+    refreshFailed: 'อัปเดตข้อมูลไม่สำเร็จ กำลังแสดงข้อมูลครั้งล่าสุด',
     summary_one: '{{count}} บิล · ยกเลิก {{voided}} บิล',
     summary_other: '{{count}} บิล · ยกเลิก {{voided}} บิล',
     lowStockBadge: 'สินค้าใกล้หมด {{items}}',
@@ -89,6 +92,9 @@ const th = {
 const en = {
   today: {
     title: 'Today',
+    totals: "Today's totals",
+    retry: 'Try again',
+    refreshFailed: 'Could not refresh. Showing the last available data.',
     summary_one: '{{count}} sale · {{voided}} voided',
     summary_other: '{{count}} sales · {{voided}} voided',
     lowStockBadge: 'Low stock: {{items}}',

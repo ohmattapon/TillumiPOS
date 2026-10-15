@@ -4,6 +4,7 @@ const th = {
   shiftReady: 'กะเปิดอยู่',
   shiftRequired: 'เปิดกะก่อนขาย',
   moreActions: 'การทำงานอื่น',
+  customerDisplay: 'จอลูกค้า',
   picker: {
     searchPlaceholder: 'สแกนบาร์โค้ด หรือพิมพ์ชื่อ / รหัสสินค้า แล้วกด Enter',
     searchLabel: 'ค้นหาสินค้า',
@@ -53,6 +54,7 @@ const th = {
     title: 'ตะกร้า',
     itemCount: '{{count}} ชิ้น',
     clear: 'ล้าง',
+    close: 'ปิดตะกร้า',
     empty: 'ยังไม่มีสินค้าในตะกร้า',
     decrease: 'ลดจำนวน {{name}}',
     increase: 'เพิ่มจำนวน {{name}}',
@@ -140,6 +142,7 @@ const en = {
   shiftReady: 'Shift open',
   shiftRequired: 'Open a shift to sell',
   moreActions: 'More actions',
+  customerDisplay: 'Customer screen',
   description: 'Scan a barcode, or tap a product to add it to the cart',
   picker: {
     searchPlaceholder: 'Scan a barcode, or type a name or SKU and press Enter',
@@ -190,6 +193,7 @@ const en = {
     title: 'Cart',
     itemCount: '{{count}} pcs',
     clear: 'Clear',
+    close: 'Close cart',
     empty: 'The cart is empty',
     decrease: 'Decrease {{name}}',
     increase: 'Increase {{name}}',

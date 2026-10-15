@@ -77,4 +77,11 @@ describe('createDateFormat', () => {
   test('accepts the ISO strings the API sends', () => {
     expect(createDateFormat('en').time('2026-10-13T06:30:00.000Z')).toMatch(/\d/)
   })
+
+  test('calendar values retain their day and use the locale year consistently', () => {
+    expect(createDateFormat('th').calendarDate('2026-01-01')).toContain('1 ม.ค. 2569')
+    expect(createDateFormat('th').calendarYear('2026-01-01')).toBe('2569')
+    expect(createDateFormat('en').calendarDate('2026-01-01')).toBe('Jan 1, 2026')
+    expect(createDateFormat('en').calendarYear('2026-01-01')).toBe('2026')
+  })
 })
