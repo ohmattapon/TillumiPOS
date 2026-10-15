@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { QR_POLL_MS, qrPaymentQuery, useCancelQrPayment, useCreateQrPayment } from '../api'
-import { runAfterRelease } from '../lib/qr-release'
 
 interface IssuedQr {
   id: number
@@ -63,8 +62,6 @@ export function useQrPayment({ amountSatang, quoteId, active, shiftId }: { amoun
     /** Set once the bank has confirmed the money. */
     paid: state === 'paid' && payment ? { id: payment.id, payerName: payment.payerName } : null,
     isWaiting: issued !== null && (state === undefined || state === 'pending'),
-    /** Gives up on the current QR and makes a fresh one, e.g. after it expired. The new one is asked for only once the old one is cancelled. */
-    regenerate: () => runAfterRelease(cancelIssued, issue),
     /**
      * Stops waiting. Resolves to whether the QR is cancelled. A payment made next waits for that, because its
      * price stays reserved until then. A payment that has already arrived is left alone (the server refuses to cancel it).
