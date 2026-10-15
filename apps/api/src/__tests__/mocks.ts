@@ -223,6 +223,15 @@ export const mockFirstRunGuard = (): Mocked<IFirstRunGuard> => ({
 })
 
 import type { IMemberRepository } from '../modules/members/applications/ports/member.repository'
+import type { IPromotionRepository } from '../modules/promotions/applications/ports/promotion.repository'
+export const mockPromotionRepository = (): Mocked<IPromotionRepository> => ({
+  find: mock<IPromotionRepository['find']>(),
+  findById: mock<IPromotionRepository['findById']>(),
+  findByIdForUpdate: mock<IPromotionRepository['findByIdForUpdate']>(),
+  create: mock<IPromotionRepository['create']>(),
+  update: mock<IPromotionRepository['update']>(),
+})
+
 export const mockMemberRepository = (): Mocked<IMemberRepository> => ({
   find: mock<IMemberRepository['find']>(),
   findById: mock<IMemberRepository['findById']>(),
