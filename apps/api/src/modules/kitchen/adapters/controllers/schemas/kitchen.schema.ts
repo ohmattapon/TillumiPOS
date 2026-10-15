@@ -80,3 +80,4 @@ export const kitchenSchemas = {
 }
 
 export type KitchenStationResponse = typeof kitchenSchemas.station.static
+export type KitchenBoardTicketResponse = typeof kitchenSchemas.boardTicket.static

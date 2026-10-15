@@ -17,3 +17,7 @@ export type {
   ModifierOptionResponse as ModifierOption,
 } from './modules/modifiers/adapters/controllers/schemas/modifier.schema'
 export type { TableResponse as DiningTable } from './modules/tables/adapters/controllers/schemas/table.schema'
+export type {
+  KitchenBoardTicketResponse as KitchenBoardTicket,
+  KitchenStationResponse as KitchenStation,
+} from './modules/kitchen/adapters/controllers/schemas/kitchen.schema'
