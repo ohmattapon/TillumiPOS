@@ -19,6 +19,7 @@ import { RemoveOrderLineUseCase } from './applications/usecases/remove-order-lin
 import { RenameOrderUseCase } from './applications/usecases/rename-order.usecase'
 import { SetOrderItemQuantityUseCase } from './applications/usecases/set-order-item-quantity.usecase'
 import { SplitOrderUseCase } from './applications/usecases/split-order.usecase'
+import { SetOrderLineNoteUseCase } from './applications/usecases/set-order-line-note.usecase'
 import { SetOrderLineQuantityUseCase } from './applications/usecases/set-order-line-quantity.usecase'
 
 container.register(orderRepositoryToken, { useClass: DrizzleOrderRepository })
@@ -35,6 +36,7 @@ container.registerSingleton(MergeOrdersUseCase)
 container.registerSingleton(SplitOrderUseCase)
 container.registerSingleton(SetOrderLineQuantityUseCase)
 container.registerSingleton(RemoveOrderLineUseCase)
+container.registerSingleton(SetOrderLineNoteUseCase)
 container.registerSingleton(CancelOrderUseCase)
 container.registerSingleton(PayOrderUseCase)
 container.registerSingleton(PayOrderV2UseCase)

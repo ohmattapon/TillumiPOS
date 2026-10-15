@@ -99,6 +99,7 @@ export const orderSchemas = {
     label: t.Optional(t.Nullable(t.String({ maxLength: 100 }))),
   }),
   lineParams: t.Object({ id: t.Numeric({ minimum: 1 }), lineId: t.Numeric({ minimum: 1 }) }),
+  lineNote: t.Object({ note: t.Nullable(t.String({ maxLength: 500 })) }),
 }
 
 export type OrderResponse = typeof orderSchemas.order.static
