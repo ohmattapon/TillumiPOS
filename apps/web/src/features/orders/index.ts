@@ -5,6 +5,7 @@ export {
   orderQuery,
   useAddOrderItem,
   useCancelOrder,
+  useIsSavingLineNote,
   useMergeOrders,
   useMoveOrder,
   useOpenOrder,
