@@ -254,4 +254,12 @@ describe('QrPaymentClaims', () => {
 
     expect(repo.save.mock.calls[0]![0].saleId).toBe(88)
   })
+
+  test('tells the reference 1 the bank was given, and not found for an unknown payment', async () => {
+    repo.findByIdForUpdate.mockResolvedValueOnce(makeQrPayment({ reference: 'QRABC' }))
+    expect(await claims().reference(1)).toBe('QRABC')
+
+    repo.findByIdForUpdate.mockResolvedValueOnce(null)
+    await expect(claims().reference(9)).rejects.toMatchObject({ code: 'QR_PAYMENT_NOT_FOUND' })
+  })
 })

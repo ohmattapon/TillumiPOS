@@ -29,6 +29,10 @@ export class QrPaymentClaims implements IQrPaymentClaims {
     await this.payments.save((await this.find(qrPaymentId)).consume(saleId))
   }
 
+  async reference(qrPaymentId: number) {
+    return (await this.find(qrPaymentId)).reference
+  }
+
   private async find(id: number): Promise<QrPaymentEntity> {
     const payment = await this.payments.findByIdForUpdate(id)
     if (!payment) throw notFound()
