@@ -1,4 +1,5 @@
 import type { Category, Product } from '@pos/api/types'
+import { useQuery } from '@tanstack/react-query'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -10,8 +11,9 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { ProductImage } from './ProductImage'
+import { modifierGroupsQuery } from '@/features/modifiers'
 import { useFormat, useSettings } from '@/features/settings'
-import { useSaveProduct } from '../api'
+import { imageStorageQuery, useSaveProduct } from '../api'
 
 // Radix Select cannot use an empty string as an item value.
 const NO_CATEGORY = 'none'
@@ -39,6 +41,14 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
   })
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm({ ...form, [key]: value })
 
+  const groups = useQuery(modifierGroupsQuery).data ?? []
+  // The groups already offered on this product; until the owner touches them, what is stored.
+  const [groupIds, setGroupIds] = useState<number[] | null>(null)
+  const chosenGroupIds =
+    groupIds ?? (product ? groups.filter((group) => group.productIds.includes(product.id)).map((group) => group.id) : [])
+  const toggleGroup = (id: number) =>
+    setGroupIds(chosenGroupIds.includes(id) ? chosenGroupIds.filter((value) => value !== id) : [...chosenGroupIds, id])
+
   // undefined = keep the current image, null = remove it, File = replace it.
   const [image, setImage] = useState<File | null | undefined>(undefined)
   const [preview, setPreview] = useState<string | null>(null)
@@ -58,6 +68,8 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
   const costSatang = form.cost.trim() === '' ? 0 : money.parse(form.cost)
 
   const save = useSaveProduct()
+  // Without an image store the upload is not offered: it would only fail.
+  const imageStorage = useQuery(imageStorageQuery).data
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -66,6 +78,8 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
       {
         id: product?.id,
         image,
+        // Only sent once the list has loaded, so a slow request never clears what a product offers.
+        modifierGroupIds: groups.length > 0 ? chosenGroupIds : undefined,
         input: {
           sku: form.sku.trim(),
           name: form.name.trim(),
@@ -94,36 +108,38 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
         </DialogHeader>
 
         <form onSubmit={submit} className="grid grid-cols-2 gap-4">
-          <div className="col-span-2 flex items-center gap-4">
-            <ProductImage src={shownImage} alt={t('form.imageAlt')} className="size-20 rounded-lg border" />
-            <div className="space-y-2">
-              <input
-                ref={fileInput}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="sr-only"
-                aria-label={t('form.imageInput')}
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (file) chooseImage(file)
-                  event.target.value = ''
-                }}
-              />
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" className="h-9" onClick={() => fileInput.current?.click()}>
-                  <ImagePlus />
-                  {shownImage ? t('form.changeImage') : t('form.pickImage')}
-                </Button>
-                {shownImage && (
-                  <Button type="button" variant="ghost" className="h-9 text-muted-foreground" onClick={() => chooseImage(null)}>
-                    <Trash2 />
-                    {t('form.removeImage')}
+          {imageStorage !== 'disabled' && (
+            <div className="col-span-2 flex items-center gap-4">
+              <ProductImage src={shownImage} alt={t('form.imageAlt')} className="size-20 rounded-lg border" />
+              <div className="space-y-2">
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  aria-label={t('form.imageInput')}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    if (file) chooseImage(file)
+                    event.target.value = ''
+                  }}
+                />
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" className="h-9" onClick={() => fileInput.current?.click()}>
+                    <ImagePlus />
+                    {shownImage ? t('form.changeImage') : t('form.pickImage')}
                   </Button>
-                )}
+                  {shownImage && (
+                    <Button type="button" variant="ghost" className="h-9 text-muted-foreground" onClick={() => chooseImage(null)}>
+                      <Trash2 />
+                      {t('form.removeImage')}
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">{t('form.imageHint')}</p>
               </div>
-              <p className="text-xs text-muted-foreground">{t('form.imageHint')}</p>
             </div>
-          </div>
+          )}
           <div className="col-span-2 space-y-2">
             <Label htmlFor="product-name">{t('form.name')}</Label>
             <Input id="product-name" className="h-10" value={form.name} onChange={(event) => set('name', event.target.value)} required autoFocus />
@@ -183,6 +199,29 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
             </span>
             <Switch checked={form.trackStock} onCheckedChange={(checked) => set('trackStock', checked)} />
           </label>
+
+          {groups.length > 0 && (
+            <fieldset className="col-span-2 space-y-2 rounded-lg border p-3">
+              <legend className="px-1 text-sm font-medium">{t('form.modifiers')}</legend>
+              <p className="text-xs text-muted-foreground">{t('form.modifiersHint')}</p>
+              <div className="flex flex-wrap gap-2">
+                {groups
+                  .filter((group) => group.isActive || chosenGroupIds.includes(group.id))
+                  .map((group) => (
+                    <button
+                      key={group.id}
+                      type="button"
+                      role="checkbox"
+                      aria-checked={chosenGroupIds.includes(group.id)}
+                      onClick={() => toggleGroup(group.id)}
+                      className="rounded-full border px-3 py-1.5 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50 aria-checked:border-primary aria-checked:bg-primary/10 aria-checked:text-primary"
+                    >
+                      {group.name}
+                    </button>
+                  ))}
+              </div>
+            </fieldset>
+          )}
 
           {save.error && (
             <p role="alert" className="col-span-2 text-sm text-destructive">

@@ -15,7 +15,7 @@ const cash = (amountSatang: number) => [{ method: 'cash' as const, amountSatang 
 describe('shop settings', () => {
   test('a shop that was never configured runs with the defaults', async () => {
     expect(ok(await owner.api.settings.get())).toEqual({
-      shopName: 'EasyPOS',
+      shopName: 'TillumiPOS',
       taxId: null,
       address: null,
       phone: null,
@@ -24,6 +24,8 @@ describe('shop settings', () => {
       vatRateBp: 700,
       timeZone: 'Asia/Bangkok',
       locale: 'th',
+      receiptPaperMm: 80,
+      receiptFooter: null,
     })
   })
 
@@ -41,6 +43,13 @@ describe('shop settings', () => {
       vatRateBp: 700,
     })
     expect(ok(await owner.api.settings.get())).toEqual(updated)
+  })
+
+  test('the owner sets the paper width and the line under every receipt, and clears the line by blanking it', async () => {
+    const updated = ok(await owner.api.settings.patch({ receiptPaperMm: 58, receiptFooter: '  ขอบคุณที่ใช้บริการ  ' }))
+    expect(updated).toMatchObject({ receiptPaperMm: 58, receiptFooter: 'ขอบคุณที่ใช้บริการ' })
+
+    expect(ok(await owner.api.settings.patch({ receiptFooter: '' }))).toMatchObject({ receiptPaperMm: 58, receiptFooter: null })
   })
 
   test('settings persist across further updates', async () => {
@@ -69,7 +78,7 @@ describe('shop settings', () => {
     const attempt = await cashier.api.settings.patch({ shopName: 'ร้านของฉัน' })
 
     expect(attempt.status).toBe(403)
-    expect(ok(await owner.api.settings.get()).shopName).toBe('EasyPOS')
+    expect(ok(await owner.api.settings.get()).shopName).toBe('TillumiPOS')
   })
 
   test.each([
@@ -78,12 +87,13 @@ describe('shop settings', () => {
     [{ vatMode: 'maybe' }],
     [{ shopName: '' }],
     [{ locale: 'fr' }],
+    [{ receiptPaperMm: 72 }],
     [{ currency: 'BAHT' }],
   ])('rejects %p as a validation error and changes nothing', async (body) => {
     const result = await owner.api.settings.patch(body as never)
 
     expect(result.status).toBe(422)
-    expect(ok(await owner.api.settings.get()).shopName).toBe('EasyPOS')
+    expect(ok(await owner.api.settings.get()).shopName).toBe('TillumiPOS')
   })
 
   test('an unknown time zone is refused by the rules, with its own code', async () => {

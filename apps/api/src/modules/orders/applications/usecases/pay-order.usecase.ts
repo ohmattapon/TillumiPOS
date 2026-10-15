@@ -29,7 +29,13 @@ export class PayOrderUseCase {
       order.assertPayable()
 
       const sale = await this.checkout.checkout({
-        lines: order.items.map(({ productId, quantity, unitPriceSatang }) => ({ productId, quantity, unitPriceSatang })),
+        lines: order.items.map(({ productId, quantity, unitPriceSatang, options }) => ({
+          productId,
+          quantity,
+          unitPriceSatang,
+          options,
+        })),
+        memberId: order.memberId,
         discountSatang: dto.discountSatang ?? 0,
         payments: dto.payments,
         cashier: actor.user,

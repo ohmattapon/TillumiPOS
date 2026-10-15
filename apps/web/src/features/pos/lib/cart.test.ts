@@ -30,8 +30,8 @@ describe('priceCart', () => {
   test('prices lines, counts items and totals the cart', () => {
     const cart = priceCart(
       [
-        { productId: 1, quantity: 2 },
-        { productId: 2, quantity: 1 },
+        { key: '1:', productId: 1, optionIds: [], quantity: 2 },
+        { key: '2:', productId: 2, optionIds: [], quantity: 1 },
       ],
       catalogue(tea, cake),
       '',
@@ -47,23 +47,23 @@ describe('priceCart', () => {
   })
 
   test('applies a discount typed in the shop currency', () => {
-    const cart = priceCart([{ productId: 1, quantity: 2 }], catalogue(tea), '7.50', inclusive)
+    const cart = priceCart([{ key: '1:', productId: 1, optionIds: [], quantity: 2 }], catalogue(tea), '7.50', inclusive)
 
     expect(cart).toMatchObject({ discountSatang: 750, totalSatang: 4250, isDiscountValid: true })
   })
 
   test('a discount above the subtotal is invalid, ignored in the total, and blocks payment', () => {
-    const cart = priceCart([{ productId: 1, quantity: 1 }], catalogue(tea), '25.01', inclusive)
+    const cart = priceCart([{ key: '1:', productId: 1, optionIds: [], quantity: 1 }], catalogue(tea), '25.01', inclusive)
 
     expect(cart).toMatchObject({ isDiscountValid: false, discountSatang: 0, totalSatang: 2500, canPay: false })
   })
 
   test.each(['abc', '-5', '1,2,x'])('a discount of %p is invalid', (discount) => {
-    expect(priceCart([{ productId: 1, quantity: 1 }], catalogue(tea), discount, inclusive).isDiscountValid).toBe(false)
+    expect(priceCart([{ key: '1:', productId: 1, optionIds: [], quantity: 1 }], catalogue(tea), discount, inclusive).isDiscountValid).toBe(false)
   })
 
   test('a discount that makes the sale free cannot be paid', () => {
-    const cart = priceCart([{ productId: 1, quantity: 1 }], catalogue(tea), '25', inclusive)
+    const cart = priceCart([{ key: '1:', productId: 1, optionIds: [], quantity: 1 }], catalogue(tea), '25', inclusive)
 
     expect(cart).toMatchObject({ isDiscountValid: true, totalSatang: 0, canPay: false })
   })
@@ -71,8 +71,8 @@ describe('priceCart', () => {
   test('a line over the stock is flagged and blocks payment', () => {
     const cart = priceCart(
       [
-        { productId: 1, quantity: 1 },
-        { productId: 2, quantity: 4 },
+        { key: '1:', productId: 1, optionIds: [], quantity: 1 },
+        { key: '2:', productId: 2, optionIds: [], quantity: 4 },
       ],
       catalogue(tea, cake),
       '',
@@ -88,8 +88,8 @@ describe('priceCart', () => {
 
     const cart = priceCart(
       [
-        { productId: 2, quantity: 3 },
-        { productId: 3, quantity: 50 },
+        { key: '2:', productId: 2, optionIds: [], quantity: 3 },
+        { key: '3:', productId: 3, optionIds: [], quantity: 50 },
       ],
       catalogue(cake, service),
       '',
@@ -102,8 +102,8 @@ describe('priceCart', () => {
   test('a product that is no longer in the catalogue is left out, not charged at an old price', () => {
     const cart = priceCart(
       [
-        { productId: 1, quantity: 1 },
-        { productId: 99, quantity: 5 },
+        { key: '1:', productId: 1, optionIds: [], quantity: 1 },
+        { key: '99:', productId: 99, optionIds: [], quantity: 5 },
       ],
       catalogue(tea),
       '',
@@ -115,7 +115,7 @@ describe('priceCart', () => {
   })
 
   test('uses the current price, so a repriced product changes the cart', () => {
-    const lines = [{ productId: 1, quantity: 2 }]
+    const lines = [{ key: '1:', productId: 1, optionIds: [], quantity: 2 }]
 
     const before = priceCart(lines, catalogue(tea), '', inclusive)
     const after = priceCart(lines, catalogue({ ...tea, priceSatang: 3000 }), '', inclusive)
@@ -127,7 +127,7 @@ describe('priceCart', () => {
 
 describe('priceCart: VAT', () => {
   const tea = product({ id: 1, priceSatang: 10_000 })
-  const one = [{ productId: 1, quantity: 1 }]
+  const one = [{ key: '1:', productId: 1, optionIds: [], quantity: 1 }]
 
   test('inclusive: VAT is inside the price, so the total is the price', () => {
     expect(priceCart(one, catalogue(tea), '', inclusive)).toMatchObject({ vatSatang: 654, totalSatang: 10_000 })
@@ -172,12 +172,14 @@ describe('priceCart: VAT', () => {
 
 describe('priceOrder', () => {
   const item = (overrides: Partial<Order['items'][number]> = {}): Order['items'][number] => ({
+    lineId: 1,
     productId: 1,
     productName: 'ชา',
     sku: 'SKU-1',
     unitPriceSatang: 2500,
     quantity: 2,
     lineTotalSatang: 5000,
+    options: [],
     ...overrides,
   })
   const catalogue = (...items: Product[]) => new Map(items.map((entry) => [entry.id, entry]))
@@ -213,5 +215,95 @@ describe('priceOrder', () => {
 
   test('an order with nothing on it cannot be paid', () => {
     expect(priceOrder([], catalogue(), '', inclusive)).toMatchObject({ totalSatang: 0, canPay: false })
+  })
+})
+
+describe('options on a line', () => {
+  const tea = product({ id: 1, priceSatang: 5000, stockQty: 4 })
+  const catalogue = (...items: Product[]) => new Map(items.map((entry) => [entry.id, entry]))
+  const optionsById = new Map([
+    [20, { id: 20, name: 'ไข่มุก', priceSatang: 1000 }],
+    [21, { id: 21, name: 'วุ้น', priceSatang: 500 }],
+  ])
+
+  test('a line is priced at the product plus its options, and lists them', () => {
+    const cart = priceCart(
+      [{ key: '1:20-21', productId: 1, optionIds: [20, 21], quantity: 2 }],
+      catalogue(tea),
+      '',
+      inclusive,
+      optionsById,
+    )
+
+    expect(cart.lines[0]).toMatchObject({
+      unitPriceSatang: 6500,
+      lineTotalSatang: 13000,
+      lineKey: '1:20-21',
+      lineId: null,
+      options: [
+        { name: 'ไข่มุก', priceSatang: 1000 },
+        { name: 'วุ้น', priceSatang: 500 },
+      ],
+      optionIds: [20, 21],
+      unavailable: false,
+    })
+    expect(cart.totalSatang).toBe(13000)
+  })
+
+  test('two lines of one product share its stock', () => {
+    const cart = priceCart(
+      [
+        { key: '1:20', productId: 1, optionIds: [20], quantity: 3 },
+        { key: '1:', productId: 1, optionIds: [], quantity: 2 },
+      ],
+      catalogue(tea),
+      '',
+      inclusive,
+      optionsById,
+    )
+
+    expect(cart.lines.map((line) => line.exceedsStock)).toEqual([true, true])
+    expect(cart.canPay).toBe(false)
+  })
+
+  test('an option that is no longer offered blocks payment instead of silently charging less', () => {
+    const cart = priceCart(
+      [{ key: '1:99', productId: 1, optionIds: [99], quantity: 1 }],
+      catalogue(tea),
+      '',
+      inclusive,
+      optionsById,
+    )
+
+    expect(cart.lines[0]).toMatchObject({ unavailable: true })
+    expect(cart.canPay).toBe(false)
+  })
+
+  test('an order line is priced as quoted, with the options it kept', () => {
+    const cart = priceOrder(
+      [
+        {
+          lineId: 9,
+          productId: 1,
+          productName: 'ชา',
+          sku: 'TEA',
+          unitPriceSatang: 6000,
+          quantity: 1,
+          lineTotalSatang: 6000,
+          options: [{ groupId: 2, groupName: 'ท็อปปิง', optionId: 20, name: 'ไข่มุก', priceSatang: 1000 }],
+        },
+      ],
+      catalogue(tea),
+      '',
+      inclusive,
+    )
+
+    expect(cart.lines[0]).toMatchObject({
+      lineId: 9,
+      lineKey: '9',
+      unitPriceSatang: 6000,
+      options: [{ name: 'ไข่มุก', priceSatang: 1000 }],
+      optionIds: [20],
+    })
   })
 })

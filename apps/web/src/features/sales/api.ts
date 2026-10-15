@@ -1,11 +1,12 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productKeys } from '@/features/products'
-import { api, unwrap } from '@/lib/api'
+import { api, apiV2, unwrap } from '@/lib/api'
+import { checkoutModeQuery, shiftKeys } from '@/features/shifts'
 
 export const saleKeys = {
   /** Prefix of every sales query: invalidate this after a sale is made or voided. */
   all: ['sales'] as const,
-  today: () => [...saleKeys.all, 'today'] as const,
+  today: (filters: object = {}) => [...saleKeys.all, 'today', filters] as const,
   todaySummary: () => [...saleKeys.all, 'today', 'summary'] as const,
   detail: (id: number) => [...saleKeys.all, 'detail', id] as const,
 }
@@ -19,9 +20,9 @@ export function todayRange() {
   return { from, to }
 }
 
-export const salesTodayQuery = queryOptions({
-  queryKey: saleKeys.today(),
-  queryFn: async () => (await unwrap(api.sales.get({ query: { ...todayRange(), limit: 500 } }))).items,
+export const salesTodayQuery = (filters: { status?: 'completed' | 'voided'; limit?: number; offset?: number } = {}) => queryOptions({
+  queryKey: saleKeys.today(filters),
+  queryFn: () => unwrap(api.sales.get({ query: { ...todayRange(), limit: 20, offset: 0, ...filters } })),
 })
 
 /** Owner only: the API refuses cashiers, so enable this query conditionally. */
@@ -40,11 +41,26 @@ export function useVoidSale(id: number) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (reason: string) => unwrap(api.sales({ id }).void.post({ reason })),
+    mutationFn: async (reason: string) => {
+      const mode = await queryClient.fetchQuery(checkoutModeQuery)
+      if (mode.checkoutMode === 'shifts')
+        return unwrap(apiV2.sales({ id }).void.post({ reason }, { headers: { 'idempotency-key': crypto.randomUUID() } }))
+      return unwrap(api.sales({ id }).void.post({ reason }))
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: saleKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['members'] })
       // Voiding returns the stock.
       queryClient.invalidateQueries({ queryKey: productKeys.all })
     },
+  })
+}
+
+export function useCashRefund(saleId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ shiftId, reason }: { shiftId: number; reason: string }) =>
+      unwrap(apiV2.sales({ id: saleId })['cash-refund'].post({ shiftId, reason }, { headers: { 'idempotency-key': crypto.randomUUID() } })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: shiftKeys.all }),
   })
 }

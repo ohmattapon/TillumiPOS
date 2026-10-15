@@ -13,7 +13,17 @@ import { qrPaymentSchemas, type QrPaymentResponse } from './schemas/qr-payment.s
 
 // The QR payload is shown once, in the answer that created it, and is not part of the stored view.
 function toResponse(payment: QrPaymentEntity): QrPaymentResponse {
-  const { qrRawData: _payload, createdById: _creator, lastCheckedAt: _checked, ...view } = payment.toSnapshot()
+  const {
+    qrRawData: _payload,
+    createdById: _creator,
+    lastCheckedAt: _checked,
+    // Shift and dismissal belong to the v2 contract; v1 answers exactly what it always has.
+    originShiftId: _shift,
+    dismissedAt: _dismissedAt,
+    dismissedById: _dismissedBy,
+    dismissReason: _dismissReason,
+    ...view
+  } = payment.toSnapshot()
   return view
 }
 

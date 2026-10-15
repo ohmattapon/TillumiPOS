@@ -4,6 +4,10 @@ import { VAT_MODES, type VatMode } from './pricing'
 export const LOCALES = ['th', 'en'] as const
 export type Locale = (typeof LOCALES)[number]
 
+/** Widths of thermal paper a receipt can be laid out for, in millimetres. */
+export const RECEIPT_PAPER_WIDTHS = [58, 80] as const
+export type ReceiptPaperMm = (typeof RECEIPT_PAPER_WIDTHS)[number]
+
 export interface ShopSettingsProps {
   shopName: string
   /** Tax identification number printed on receipts. */
@@ -18,11 +22,14 @@ export interface ShopSettingsProps {
   /** IANA time zone; decides where a business day, and its receipt numbering, starts. */
   timeZone: string
   locale: Locale
+  receiptPaperMm: ReceiptPaperMm
+  /** Printed under every receipt, such as a thank-you line or the return policy. */
+  receiptFooter: string | null
 }
 
 /** What a shop that has never been configured runs with. */
 export const DEFAULT_SHOP_SETTINGS: ShopSettingsProps = {
-  shopName: 'EasyPOS',
+  shopName: 'TillumiPOS',
   taxId: null,
   address: null,
   phone: null,
@@ -31,6 +38,8 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettingsProps = {
   vatRateBp: 700,
   timeZone: 'Asia/Bangkok',
   locale: 'th',
+  receiptPaperMm: 80,
+  receiptFooter: null,
 }
 
 export type ShopSettingsChanges = Partial<ShopSettingsProps>
@@ -57,6 +66,8 @@ export class ShopSettingsEntity {
   public readonly vatRateBp: number
   public readonly timeZone: string
   public readonly locale: Locale
+  public readonly receiptPaperMm: ReceiptPaperMm
+  public readonly receiptFooter: string | null
 
   constructor(props: ShopSettingsProps) {
     if (props.shopName.length < 1 || props.shopName.length > 100) throw invalid('ชื่อร้านต้องยาว 1 ถึง 100 ตัวอักษร')
@@ -69,6 +80,8 @@ export class ShopSettingsEntity {
       throw invalid('อัตราภาษีต้องเป็นจำนวนเต็ม 0 ถึง 10000 (700 = 7%)')
     if (!isTimeZone(props.timeZone)) throw invalid('เขตเวลาไม่ถูกต้อง')
     if (!LOCALES.includes(props.locale)) throw invalid('ภาษาไม่ถูกต้อง')
+    if (!RECEIPT_PAPER_WIDTHS.includes(props.receiptPaperMm)) throw invalid('ขนาดกระดาษใบเสร็จต้องเป็น 58 หรือ 80 มม.')
+    if (!within(props.receiptFooter, 200)) throw invalid('ข้อความท้ายใบเสร็จต้องไม่เกิน 200 ตัวอักษร')
 
     this.shopName = props.shopName
     this.taxId = props.taxId
@@ -79,6 +92,8 @@ export class ShopSettingsEntity {
     this.vatRateBp = props.vatRateBp
     this.timeZone = props.timeZone
     this.locale = props.locale
+    this.receiptPaperMm = props.receiptPaperMm
+    this.receiptFooter = props.receiptFooter
   }
 
   /**
@@ -106,6 +121,8 @@ export class ShopSettingsEntity {
       vatRateBp: this.vatRateBp,
       timeZone: this.timeZone,
       locale: this.locale,
+      receiptPaperMm: this.receiptPaperMm,
+      receiptFooter: this.receiptFooter,
     }
   }
 }

@@ -21,6 +21,8 @@ export interface NewQrPayment {
   qrRawData: string
   expiresAt: Date
   createdById: number
+  /** The shift that asked for the QR; null for a QR made before shifts were in use. */
+  originShiftId: number | null
 }
 
 export interface QrPaymentEntityProps extends NewQrPayment {
@@ -33,6 +35,10 @@ export interface QrPaymentEntityProps extends NewQrPayment {
   lastCheckedAt: Date | null
   /** The sale this payment was used for. A payment can be used once. */
   saleId: number | null
+  /** Set when an owner decides this money will never get a sale here. It can then no longer be used. */
+  dismissedAt: Date | null
+  dismissedById: number | null
+  dismissReason: string | null
   createdAt: Date
 }
 
@@ -58,6 +64,10 @@ export class QrPaymentEntity {
   public readonly paidAt: Date | null
   public readonly lastCheckedAt: Date | null
   public readonly saleId: number | null
+  public readonly originShiftId: number | null
+  public readonly dismissedAt: Date | null
+  public readonly dismissedById: number | null
+  public readonly dismissReason: string | null
   public readonly createdAt: Date
 
   constructor(props: QrPaymentEntityProps) {
@@ -82,6 +92,10 @@ export class QrPaymentEntity {
     this.paidAt = props.paidAt
     this.lastCheckedAt = props.lastCheckedAt
     this.saleId = props.saleId
+    this.originShiftId = props.originShiftId
+    this.dismissedAt = props.dismissedAt
+    this.dismissedById = props.dismissedById
+    this.dismissReason = props.dismissReason
     this.createdAt = props.createdAt
   }
 
@@ -125,8 +139,24 @@ export class QrPaymentEntity {
   assertClaimable(amountSatang: number): void {
     if (this.status !== 'paid') throw new DomainConflictError('ธนาคารยังไม่ยืนยันการชำระรายการนี้', 'QR_NOT_PAID')
     if (this.saleId !== null) throw new DomainConflictError('การชำระนี้ถูกใช้กับบิลอื่นแล้ว', 'QR_ALREADY_USED')
+    if (this.dismissedAt !== null) throw new DomainConflictError('การชำระนี้ถูกปิดรายการไปแล้ว ใช้กับบิลไม่ได้', 'QR_DISMISSED')
     if (amountSatang !== this.amountSatang)
       throw new DomainError('ยอดชำระต้องเท่ากับยอดของ QR พอดี', 'QR_AMOUNT_MISMATCH')
+  }
+
+  /** Money that arrived but has no sale yet: what an owner has to deal with before a shift can be counted. */
+  get isUnclaimed(): boolean {
+    return this.status === 'paid' && this.saleId === null && this.dismissedAt === null
+  }
+
+  /**
+   * An owner records that this money will never get a sale here, with the reason (for example, it was
+   * refunded at the bank). The payment stays on record as paid; it only stops waiting for a sale.
+   */
+  dismiss(reason: string, dismissedById: number, at: Date): QrPaymentEntity {
+    if (!this.isUnclaimed) throw new DomainConflictError('ปิดรายการได้เฉพาะการชำระที่จ่ายแล้วและยังไม่มีบิล', 'QR_NOT_UNCLAIMED')
+    if (reason.length < 1 || reason.length > 500) throw invalid('เหตุผลต้องยาว 1 ถึง 500 ตัวอักษร')
+    return this.change({ dismissedAt: at, dismissedById, dismissReason: reason })
   }
 
   /** Ties the payment to the sale it paid for. */
@@ -150,6 +180,10 @@ export class QrPaymentEntity {
       paidAt: this.paidAt,
       lastCheckedAt: this.lastCheckedAt,
       saleId: this.saleId,
+      originShiftId: this.originShiftId,
+      dismissedAt: this.dismissedAt,
+      dismissedById: this.dismissedById,
+      dismissReason: this.dismissReason,
       createdAt: this.createdAt,
     }
   }

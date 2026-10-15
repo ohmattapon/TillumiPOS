@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 
-const apiTarget = 'http://localhost:3000'
+// The API the dev server proxies to. The browser tests point it at their own throwaway API.
+const apiTarget = process.env.API_TARGET ?? 'http://localhost:3000'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -15,6 +16,6 @@ export default defineConfig({
     // Listen on the LAN so tablets and other tills can open the app.
     host: true,
     // Same-origin proxy keeps the session cookie first-party, so no CORS setup is needed.
-    proxy: { '/api': apiTarget, '/openapi': apiTarget },
+    proxy: { '/api': apiTarget, '/openapi': apiTarget, '/media': apiTarget },
   },
 })

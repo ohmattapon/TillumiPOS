@@ -1,9 +1,13 @@
-import { date, index, integer, pgEnum, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core'
+import { date, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core'
 import { createdAt, id } from '../columns'
 import { branches } from './branches'
+import type { StoredLineOption } from './modifiers'
 import { products } from './products'
 import { vatMode } from './shop-settings'
 import { users } from './users'
+import { shifts } from './shifts'
+import { members } from './members'
+import type { SaleMember } from '../../../domains/sale.domain'
 
 export const saleStatus = pgEnum('sale_status', ['completed', 'voided'])
 export const paymentMethod = pgEnum('payment_method', ['cash', 'promptpay', 'card'])
@@ -26,10 +30,13 @@ export const sales = pgTable(
   'sales',
   {
     id: id(),
+    memberId: integer().references(() => members.id),
+    member: jsonb().$type<SaleMember>(),
     receiptNo: text().notNull().unique(),
     branchId: integer()
       .notNull()
       .references(() => branches.id),
+    shiftId: integer().references(() => shifts.id),
     status: saleStatus().notNull().default('completed'),
     subtotalSatang: integer().notNull(),
     discountSatang: integer().notNull().default(0),
@@ -46,12 +53,18 @@ export const sales = pgTable(
       .notNull()
       .references(() => users.id),
     cashierName: text().notNull(),
+    // The receipt heading as it was when the sale was made. Null on sales recorded before these were kept.
+    shopName: text(),
+    shopTaxId: text(),
+    branchName: text(),
+    shopAddress: text(),
+    shopPhone: text(),
     voidedById: integer().references(() => users.id),
     voidedAt: timestamp({ withTimezone: true }),
     voidReason: text(),
     createdAt: createdAt(),
   },
-  (table) => [index().on(table.createdAt), index().on(table.branchId, table.createdAt)],
+  (table) => [index().on(table.memberId, table.branchId, table.createdAt), index().on(table.createdAt), index().on(table.branchId, table.createdAt), index().on(table.shiftId, table.createdAt)],
 )
 
 export const saleItems = pgTable(
@@ -71,6 +84,8 @@ export const saleItems = pgTable(
     unitCostSatang: integer().notNull(),
     quantity: integer().notNull(),
     lineTotalSatang: integer().notNull(),
+    // The options chosen, as they were when sold. Their price and cost are already in the unit price and cost.
+    options: jsonb().$type<StoredLineOption[]>().notNull().default([]),
   },
   (table) => [index().on(table.saleId), index().on(table.productId)],
 )

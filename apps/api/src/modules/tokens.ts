@@ -4,4 +4,8 @@ export const TOKENS = {
   PasswordHasher: Symbol('IPasswordHasher').toString(),
   MediaStorage: Symbol('IMediaStorage').toString(),
   Clock: Symbol('IClock').toString(),
+  CheckoutPolicy: Symbol('ICheckoutPolicy').toString(),
+  ShiftLedger: Symbol('IShiftLedger').toString(),
+  CommandReceipts: Symbol('ICommandReceipts').toString(),
+  Idempotency: Symbol('CommandIdempotency').toString(),
 } as const

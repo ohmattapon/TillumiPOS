@@ -1,4 +1,11 @@
 import { BranchEntity, type BranchEntityProps } from '../domains/branch.domain'
+import { DiningTableEntity, type DiningTableProps } from '../domains/dining-table.domain'
+import {
+  ModifierGroupEntity,
+  ModifierOptionEntity,
+  type ModifierGroupProps,
+  type ModifierOptionProps,
+} from '../domains/modifier.domain'
 import { OrderEntity, type OrderEntityProps } from '../domains/order.domain'
 import { QrPaymentEntity, type QrPaymentEntityProps } from '../domains/qr-payment.domain'
 import { CategoryEntity, type CategoryEntityProps } from '../domains/category.domain'
@@ -40,6 +47,10 @@ export const makeQrPayment = (overrides: Partial<QrPaymentEntityProps> = {}) =>
     paidAt: null,
     lastCheckedAt: null,
     saleId: null,
+    originShiftId: null,
+    dismissedAt: null,
+    dismissedById: null,
+    dismissReason: null,
     createdAt: new Date('2026-10-13T06:00:00Z'),
     ...overrides,
   })
@@ -50,15 +61,17 @@ export const makeOrder = (overrides: Partial<OrderEntityProps> = {}) =>
     id: 1,
     branchId: 1,
     label: 'โต๊ะ 4',
+    tableId: null,
     status: 'open',
     openedById: 1,
     openedByName: 'สมชาย',
     saleId: null,
     cancelReason: null,
     cancelledById: null,
+    mergedIntoId: null,
     createdAt: new Date('2026-10-13T06:00:00Z'),
     updatedAt: new Date('2026-10-13T06:00:00Z'),
-    items: [{ productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2 }],
+    items: [{ lineId: 1, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [] }],
     ...overrides,
   })
 
@@ -110,6 +123,11 @@ export const makeSale = (overrides: Partial<SaleEntityProps> = {}) =>
     vatRateBp: 700,
     cashierId: 1,
     cashierName: 'สมชาย',
+    shopName: 'TillumiPOS',
+    shopTaxId: null,
+    branchName: 'สาขาหลัก',
+    shopAddress: null,
+    shopPhone: null,
     voidedById: null,
     voidedAt: null,
     voidReason: null,
@@ -123,8 +141,31 @@ export const makeSale = (overrides: Partial<SaleEntityProps> = {}) =>
         unitCostSatang: 600,
         quantity: 3,
         lineTotalSatang: 3000,
+        options: [],
       },
     ],
     payments: [{ method: 'cash', amountSatang: 5000 }],
+    ...overrides,
+  })
+
+export const makeModifierGroup = (overrides: Partial<ModifierGroupProps> = {}) =>
+  new ModifierGroupEntity({ id: 1, name: 'ระดับความหวาน', required: true, maxSelections: 1, sortOrder: 0, isActive: true, ...overrides })
+
+export const makeModifierOption = (overrides: Partial<ModifierOptionProps> = {}) =>
+  new ModifierOptionEntity({ id: 10, groupId: 1, name: 'หวานน้อย', priceSatang: 0, costSatang: 0, sortOrder: 0, isActive: true, ...overrides })
+
+export const makeTable = (overrides: Partial<DiningTableProps> = {}) =>
+  new DiningTableEntity({
+    id: 1,
+    branchId: 1,
+    name: 'T1',
+    zone: null,
+    seats: 4,
+    x: 20,
+    y: 20,
+    width: 120,
+    height: 80,
+    sortOrder: 0,
+    isActive: true,
     ...overrides,
   })

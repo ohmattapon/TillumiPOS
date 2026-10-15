@@ -1,15 +1,32 @@
 import { mock, type Mock } from 'bun:test'
+import type { ISalesReportRepository } from '../modules/sales/applications/ports/sales-report.repository'
+
+export const mockSalesReportRepository = (): Mocked<ISalesReportRepository> => ({
+  overview: mock<ISalesReportRepository['overview']>(),
+  products: mock<ISalesReportRepository['products']>(),
+  branches: mock<ISalesReportRepository['branches']>(),
+})
 import type { IBranchRepository } from '../modules/branches/applications/ports/branch.repository'
 import type { ICategoryRepository } from '../modules/categories/applications/ports/category.repository'
 import type { IStockLedger } from '../modules/inventory/applications/ports/stock-ledger.port'
 import type { IStockMovementRepository } from '../modules/inventory/applications/ports/stock-movement.repository'
+import type { ILineOptionsResolver } from '../modules/modifiers/applications/ports/line-options-resolver.port'
+import type { IModifierRepository } from '../modules/modifiers/applications/ports/modifier.repository'
 import type { IOrderRepository } from '../modules/orders/applications/ports/order.repository'
+import type { IFirstRunGuard } from '../modules/setup/applications/ports/first-run-guard.port'
+import type { ISetupCode } from '../modules/setup/applications/ports/setup-code.port'
+import type { ITableOccupancy } from '../modules/tables/applications/ports/table-occupancy.port'
+import type { ITableRepository } from '../modules/tables/applications/ports/table.repository'
 import type { IQrPaymentGateway } from '../modules/qr-payments/applications/ports/qr-payment-gateway.port'
 import type { IQrPaymentRepository } from '../modules/qr-payments/applications/ports/qr-payment.repository'
 import type { IQrPaymentClaims } from '../modules/qr-payments/applications/ports/qr-payment-claims.port'
 import type { ISaleCheckout } from '../modules/sales/applications/ports/sale-checkout.port'
 import type { IProductRepository } from '../modules/products/applications/ports/product.repository'
 import type { IShopSettingsRepository } from '../modules/settings/applications/ports/shop-settings.repository'
+import type { ICheckoutPolicy } from '../modules/shared/ports/checkout-policy.port'
+import type { IShiftLedger } from '../modules/shared/ports/shift-ledger.port'
+import type { IShiftSettingsGuard } from '../modules/shifts/applications/ports/shift-settings-guard.port'
+import type { IRegisterRepository } from '../modules/shifts/applications/ports/register.repository'
 import type { ISaleRepository } from '../modules/sales/applications/ports/sale.repository'
 import type { IMediaStorage } from '../modules/shared/ports/media-storage.port'
 import type { IPasswordHasher } from '../modules/shared/ports/password-hasher.port'
@@ -63,6 +80,7 @@ export const mockProductRepository = (): Mocked<IProductRepository> => ({
 })
 
 export const mockMediaStorage = (): Mocked<IMediaStorage> => ({
+  isEnabled: mock<IMediaStorage['isEnabled']>(() => true),
   urlFor: mock<IMediaStorage['urlFor']>((key) => 'https://media.test/' + key),
   put: mock<IMediaStorage['put']>(async () => {}),
   delete: mock<IMediaStorage['delete']>(async () => {}),
@@ -101,6 +119,7 @@ export const mockQrPaymentRepository = (): Mocked<IQrPaymentRepository> => ({
   findById: mock<IQrPaymentRepository['findById']>(),
   findByIdForUpdate: mock<IQrPaymentRepository['findByIdForUpdate']>(),
   findByReferenceForUpdate: mock<IQrPaymentRepository['findByReferenceForUpdate']>(),
+  findUnclaimed: mock<IQrPaymentRepository['findUnclaimed']>(),
   save: mock<IQrPaymentRepository['save']>(async (payment) => payment),
 })
 
@@ -132,5 +151,82 @@ export const mockSaleCheckout = (): Mocked<ISaleCheckout> => ({
 
 export const mockShopSettingsRepository = (): Mocked<IShopSettingsRepository> => ({
   get: mock<IShopSettingsRepository['get']>(),
+  getForUpdate: mock<IShopSettingsRepository['getForUpdate']>(),
   save: mock<IShopSettingsRepository['save']>(),
+})
+
+export const mockRegisterRepository = (): Mocked<IRegisterRepository> => ({
+  findAll: mock<IRegisterRepository['findAll']>(),
+  findById: mock<IRegisterRepository['findById']>(),
+  findByIdForUpdate: mock<IRegisterRepository['findByIdForUpdate']>(),
+  create: mock<IRegisterRepository['create']>(),
+  update: mock<IRegisterRepository['update']>(),
+  hasOpenShift: mock<IRegisterRepository['hasOpenShift']>(),
+  createMainForBranch: mock<IRegisterRepository['createMainForBranch']>(async () => {}),
+})
+
+export const mockCheckoutPolicy = (): Mocked<ICheckoutPolicy> => ({
+  isShiftsEnabled: mock<ICheckoutPolicy['isShiftsEnabled']>(async () => false),
+  activateShifts: mock<ICheckoutPolicy['activateShifts']>(async () => {}),
+})
+
+export const mockShiftLedger = (): Mocked<IShiftLedger> => ({
+  assertOpenForCheckout: mock<IShiftLedger['assertOpenForCheckout']>(async () => {}),
+  recordSaleCash: mock<IShiftLedger['recordSaleCash']>(async () => {}),
+  recordSaleRefund: mock<IShiftLedger['recordSaleRefund']>(async () => {}),
+})
+
+export const mockShiftSettingsGuard = (): Mocked<IShiftSettingsGuard> => ({
+  assertCurrencyChangeAllowed: mock<IShiftSettingsGuard['assertCurrencyChangeAllowed']>(async () => {}),
+})
+
+export const mockModifierRepository = (): Mocked<IModifierRepository> => ({
+  findAllGroups: mock<IModifierRepository['findAllGroups']>(),
+  findGroupView: mock<IModifierRepository['findGroupView']>(),
+  findGroupById: mock<IModifierRepository['findGroupById']>(),
+  findGroupsByIds: mock<IModifierRepository['findGroupsByIds']>(),
+  findOptionById: mock<IModifierRepository['findOptionById']>(),
+  findGroupsForProduct: mock<IModifierRepository['findGroupsForProduct']>(),
+  createGroup: mock<IModifierRepository['createGroup']>(),
+  updateGroup: mock<IModifierRepository['updateGroup']>(),
+  createOption: mock<IModifierRepository['createOption']>(),
+  updateOption: mock<IModifierRepository['updateOption']>(),
+  setProductGroups: mock<IModifierRepository['setProductGroups']>(),
+})
+
+/** Resolves every choice to nothing by default: a product without option groups. */
+export const mockLineOptionsResolver = (): Mocked<ILineOptionsResolver> => ({
+  resolve: mock<ILineOptionsResolver['resolve']>(async () => ({ options: [], priceSatang: 0, costSatang: 0, key: '' })),
+})
+
+export const mockTableRepository = (): Mocked<ITableRepository> => ({
+  findAll: mock<ITableRepository['findAll']>(),
+  findById: mock<ITableRepository['findById']>(),
+  create: mock<ITableRepository['create']>(),
+  update: mock<ITableRepository['update']>(),
+})
+
+export const mockTableOccupancy = (): Mocked<ITableOccupancy> => ({
+  byTable: mock<ITableOccupancy['byTable']>(async () => new Map()),
+  openOrderCount: mock<ITableOccupancy['openOrderCount']>(async () => 0),
+})
+
+export const mockSetupCode = (): Mocked<ISetupCode> => ({
+  issue: mock<ISetupCode['issue']>(() => 'ABCDEFGHJKMN'),
+  verify: mock<ISetupCode['verify']>(() => 'accepted'),
+  retire: mock<ISetupCode['retire']>(),
+})
+
+export const mockFirstRunGuard = (): Mocked<IFirstRunGuard> => ({
+  countUsers: mock<IFirstRunGuard['countUsers']>(async () => 0),
+  lockAndCountUsers: mock<IFirstRunGuard['lockAndCountUsers']>(async () => 0),
+})
+
+import type { IMemberRepository } from '../modules/members/applications/ports/member.repository'
+export const mockMemberRepository = (): Mocked<IMemberRepository> => ({
+  find: mock<IMemberRepository['find']>(),
+  findById: mock<IMemberRepository['findById']>(),
+  findByIdForUpdate: mock<IMemberRepository['findByIdForUpdate']>(),
+  create: mock<IMemberRepository['create']>(),
+  update: mock<IMemberRepository['update']>(),
 })

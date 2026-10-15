@@ -1,32 +1,38 @@
-import { and, count, eq, inArray } from 'drizzle-orm'
+import { and, count, eq, inArray, ne, notInArray } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 import { OrderEntity, type NewOrder, type OrderItem } from '../../../../domains/order.domain'
+import { lineKey } from '../../../../domains/modifier.domain'
 import type { Page } from '../../../../domains/page'
 import { orderItems, orders } from '../../../../infrastructure/database/schema/orders'
 import { currentExecutor } from '../../../../libs/transaction-context'
 import type { IFindOrdersQuery, IOrderRepository } from '../../applications/ports/order.repository'
 
 const columns = {
+  memberId: orders.memberId,
   id: orders.id,
   branchId: orders.branchId,
   label: orders.label,
+  tableId: orders.tableId,
   status: orders.status,
   openedById: orders.openedById,
   openedByName: orders.openedByName,
   saleId: orders.saleId,
   cancelReason: orders.cancelReason,
   cancelledById: orders.cancelledById,
+  mergedIntoId: orders.mergedIntoId,
   createdAt: orders.createdAt,
   updatedAt: orders.updatedAt,
 }
 
 const itemColumns = {
+  lineId: orderItems.id,
   orderId: orderItems.orderId,
   productId: orderItems.productId,
   productName: orderItems.productName,
   sku: orderItems.sku,
   unitPriceSatang: orderItems.unitPriceSatang,
   quantity: orderItems.quantity,
+  options: orderItems.options,
 }
 
 @injectable()
@@ -50,6 +56,8 @@ export class DrizzleOrderRepository implements IOrderRepository {
     const matching = and(
       eq(orders.branchId, query.branchId),
       query.status ? eq(orders.status, query.status) : undefined,
+      query.tableId !== undefined ? eq(orders.tableId, query.tableId) : undefined,
+      query.excludeId !== undefined ? ne(orders.id, query.excludeId) : undefined,
     )
 
     const rows = await currentExecutor()
@@ -89,14 +97,31 @@ export class DrizzleOrderRepository implements IOrderRepository {
   async save(order: OrderEntity) {
     const { id, items, branchId: _fixed, openedById: _opener, openedByName: _name, createdAt: _created, ...values } =
       order.toSnapshot()
+    const executor = currentExecutor()
 
-    await currentExecutor()
+    await executor
       .update(orders)
       .set({ ...values, updatedAt: new Date() })
       .where(eq(orders.id, id))
-    // The entity is the whole truth about the lines, so they are replaced rather than patched.
-    await currentExecutor().delete(orderItems).where(eq(orderItems.orderId, id))
-    await this.writeItems(id, items)
+
+    // Lines are compared, not replaced, so a line keeps its id (the till and the kitchen refer to it).
+    const kept = items.filter((item) => item.lineId > 0).map((item) => item.lineId)
+    await executor
+      .delete(orderItems)
+      .where(
+        kept.length > 0
+          ? and(eq(orderItems.orderId, id), notInArray(orderItems.id, kept))
+          : eq(orderItems.orderId, id),
+      )
+    for (const item of items.filter((line) => line.lineId > 0))
+      await executor
+        .update(orderItems)
+        .set({ quantity: item.quantity })
+        .where(and(eq(orderItems.orderId, id), eq(orderItems.id, item.lineId)))
+    await this.writeItems(
+      id,
+      items.filter((item) => item.lineId === 0),
+    )
     return (await this.findById(id))!
   }
 
@@ -104,7 +129,14 @@ export class DrizzleOrderRepository implements IOrderRepository {
     if (items.length > 0)
       await currentExecutor()
         .insert(orderItems)
-        .values(items.map((item) => ({ ...item, orderId })))
+        .values(
+          items.map(({ lineId: _line, options, ...item }) => ({
+            ...item,
+            orderId,
+            options: [...options],
+            optionsKey: lineKey(options),
+          })),
+        )
   }
 
   private async load(id: number, lock: boolean): Promise<OrderEntity | null> {
