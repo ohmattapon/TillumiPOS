@@ -1,4 +1,4 @@
-import { ClipboardList, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react'
+import { ClipboardList, Minus, Plus, ShoppingCart, Trash2, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Kbd } from '@/components/Kbd'
@@ -21,9 +21,10 @@ interface Props {
   paymentAvailable?: boolean
   /** side: the wide-screen panel. sheet: the same cart, shown from the bottom on a small screen. */
   variant?: 'side' | 'sheet'
+  onClose?: () => void
 }
 
-export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant = 'side' }: Props) {
+export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant = 'side', onClose }: Props) {
   const { t } = useTranslation('pos')
   const { money, currency } = useFormat()
   const { vatMode, vatRateBp } = useSettings()
@@ -52,13 +53,14 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
         <span className="text-xs text-muted-foreground tabular-nums">{t('cart.itemCount', { count: cart.itemCount })}</span>
         <Button
           variant="ghost"
-          className="ml-auto h-9 text-muted-foreground"
+          className="ml-auto h-11 text-muted-foreground"
           disabled={storedLines.length === 0 && !isOrder}
           onClick={clear}
         >
           <Trash2 />
           {isOrder ? t('cart.leaveOrder') : t('cart.clear')}
         </Button>
+        {onClose && <Button variant="ghost" className="size-11 shrink-0" aria-label={t('cart.close')} onClick={onClose}><X /></Button>}
       </div>
 
       {cart.order && cart.order.status === 'open' && <OrderTools order={cart.order} />}
