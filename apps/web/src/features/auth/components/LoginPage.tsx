@@ -1,4 +1,4 @@
-import { Armchair, CircleAlert, Eye, EyeOff, Package, Receipt, Store, Wallet, type LucideIcon } from 'lucide-react'
+import { Armchair, CircleAlert, Eye, EyeOff, Package, Receipt, Wallet, type LucideIcon } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -7,16 +7,10 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { useLogin } from '../api'
 
-/** The shop icon and the product name, above the form on a narrow screen. */
-function BrandMark({ className }: { className?: string }) {
-  return (
-    <div className={cn('flex items-center gap-3', className)}>
-      <span className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-        <Store className="size-5" />
-      </span>
-      <span className="text-base font-semibold">TillumiPOS</span>
-    </div>
-  )
+/** The TillumiPOS logo, above the form on a narrow screen. */
+function BrandLogo({ className }: { className?: string }) {
+  const { t } = useTranslation('auth')
+  return <img src="/tillumipos-logo.png" alt={t('brand.logoAlt')} className={cn('h-16 w-auto self-start', className)} />
 }
 
 /** The wide-screen left column: a photo of the till, then what it does in a few lines. Shown from 1024px up. */
@@ -66,7 +60,7 @@ export function LoginPage() {
     <div className="grid min-h-svh bg-canvas lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <BrandPanel />
       <main className="flex min-h-svh flex-col p-4 sm:p-8">
-        <BrandMark className="lg:hidden" />
+        <BrandLogo className="lg:hidden" />
         <div className="flex flex-1 items-center justify-center py-8">
           <div className="w-full max-w-sm space-y-6">
             <section className="rounded-[10px] border bg-card p-6 sm:p-8">
