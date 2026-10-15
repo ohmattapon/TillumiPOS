@@ -1,0 +1,5 @@
+# Shell scripts and the container entrypoint must keep Unix line endings, whatever the checkout setting.
+*.sh text eol=lf
+docker/entrypoint.sh text eol=lf
+Caddyfile text eol=lf
+Dockerfile text eol=lf

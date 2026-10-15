@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm'
 import { id, timestamps } from '../columns'
 import { branches } from './branches'
 import { sales } from './sales'
+import { shifts } from './shifts'
 import { users } from './users'
 
 export const qrPaymentStatus = pgEnum('qr_payment_status', ['pending', 'paid', 'cancelled'])
@@ -27,6 +28,12 @@ export const qrPayments = pgTable(
     paidAt: timestamp({ withTimezone: true }),
     lastCheckedAt: timestamp({ withTimezone: true }),
     saleId: integer().references(() => sales.id),
+    // The shift that asked for the QR. Not the shift of the sale, which may be recorded later. Null before shifts.
+    originShiftId: integer().references(() => shifts.id),
+    // An owner's decision that this money will never get a sale here (e.g. refunded at the bank).
+    dismissedAt: timestamp({ withTimezone: true }),
+    dismissedById: integer().references(() => users.id),
+    dismissReason: text(),
     createdById: integer()
       .notNull()
       .references(() => users.id),
@@ -34,6 +41,7 @@ export const qrPayments = pgTable(
   },
   (table) => [
     index().on(table.branchId, table.status),
+    index().on(table.originShiftId),
     check('qr_payments_amount_positive', sql`${table.amountSatang} > 0`),
   ],
 )

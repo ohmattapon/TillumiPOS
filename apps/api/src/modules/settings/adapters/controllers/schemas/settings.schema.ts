@@ -13,6 +13,8 @@ const fields = {
   vatRateBp: t.Integer({ minimum: 0, maximum: 10_000 }),
   timeZone: t.String({ minLength: 1, maxLength: 64 }),
   locale,
+  receiptPaperMm: t.Union([t.Literal(58), t.Literal(80)]),
+  receiptFooter: t.Nullable(t.String({ maxLength: 200 })),
 }
 
 export const settingsSchemas = {

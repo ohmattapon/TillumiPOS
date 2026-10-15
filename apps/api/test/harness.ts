@@ -11,6 +11,7 @@ import type {
 import { CreateProductUseCase } from '../src/modules/products/applications/usecases/create-product.usecase'
 import { GetProductUseCase } from '../src/modules/products/applications/usecases/get-product.usecase'
 import type { IMediaStorage } from '../src/modules/shared/ports/media-storage.port'
+import { repositoryReadCacheToken, type IRepositoryReadCache } from '../src/modules/shared/ports/repository-read-cache.port'
 import { TOKENS } from '../src/modules/tokens'
 import { ReceiveStockUseCase } from '../src/modules/inventory/applications/usecases/receive-stock.usecase'
 import type { UserResponse as User } from '../src/modules/users/adapters/controllers/schemas/user.schema'
@@ -47,10 +48,21 @@ export const client = (cookie?: string, branchId?: number) => {
   return new Proxy(api, { get: (target, key) => key === 'then' ? undefined : Reflect.get(target, key) })
 }
 
+/** Typed client for the in-development v2 contract. */
+export const clientV2 = (cookie?: string, branchId?: number) => {
+  const headers: Record<string, string> = {}
+  if (cookie) headers.cookie = cookie
+  if (branchId !== undefined) headers['x-branch-id'] = String(branchId)
+  const api = treaty<App>(origin, { headers }).api.v2
+  return new Proxy(api, { get: (target, key) => key === 'then' ? undefined : Reflect.get(target, key) })
+}
+
 export type Api = ReturnType<typeof client>
+export type ApiV2 = ReturnType<typeof clientV2>
 
 export interface Session {
   api: Api
+  apiV2: ApiV2
   user: User
 }
 
@@ -58,13 +70,17 @@ export const PASSWORD = 'test-password-1'
 
 /** Logs in over HTTP and returns a client holding the session cookie. */
 export async function login(username: string, password = PASSWORD, branchId?: number): Promise<Api> {
+  return client(await loginCookie(username, password), branchId)
+}
+
+async function loginCookie(username: string, password: string): Promise<string> {
   const response = await fetch(`${baseUrl}/auth/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ username, password }),
   })
   if (!response.ok) throw new Error(`Login as "${username}" failed with ${response.status}`)
-  return client(response.headers.getSetCookie()[0]!.split(';')[0], branchId)
+  return response.headers.getSetCookie()[0]!.split(';')[0]!
 }
 
 /**
@@ -79,7 +95,8 @@ export async function signIn(
   const created = await container
     .resolve(CreateUserUseCase)
     .execute({ username, password: PASSWORD, displayName: username, role, branchId }, branchId)
-  return { api: await login(username, PASSWORD, workingBranchId), user: created.toSnapshot() }
+  const cookie = await loginCookie(username, PASSWORD)
+  return { api: client(cookie, workingBranchId), apiV2: clientV2(cookie, workingBranchId), user: created.toSnapshot() }
 }
 
 /** Creates another branch, e.g. to check that stock and receipts stay apart. */
@@ -131,10 +148,20 @@ export const pngFile = (name = 'image.png') =>
 /** Empties every table and the fake media store. Call in beforeEach. */
 export async function resetDatabase(connection = sqlClient): Promise<void> {
   await assertConnectedTestDatabase(connection)
-  const tables: { tablename: string }[] = await connection`select tablename from pg_tables where schemaname = 'public'`
-  const names = tables.map((table) => `"${table.tablename}"`).join(', ')
-  await connection.unsafe(`truncate table ${names} restart identity cascade`)
-  // The schema ships with one branch; truncating removed it, so put it back for the next test.
-  await connection.unsafe(`insert into branches (code, name) values ('MAIN', 'สาขาหลัก')`)
+  await connection.begin(async (transaction) => {
+    // Integration test files share one database; serialize resets so parallel files cannot truncate
+    // after another test seeds data or race while recreating MAIN.
+    await transaction`select pg_advisory_xact_lock(731092445)`
+    const tables: { tablename: string }[] = await transaction`select tablename from pg_tables where schemaname = 'public'`
+    const names = tables.map((table) => `"${table.tablename}"`).join(', ')
+    await transaction.unsafe(`truncate table ${names} restart identity cascade`)
+    // The schema ships with one branch; truncating removed it, so put it back for the next test.
+    await transaction.unsafe(`insert into branches (code, name) values ('MAIN', 'สาขาหลัก')`)
+    await transaction.unsafe(`insert into registers (branch_id, code, name) values (1, 'MAIN', 'เคาน์เตอร์หลัก')`)
+  })
+  // Truncating with SQL bypasses the repositories, so an enabled Redis cache would keep serving the rows just
+  // removed. Rotate every cached group the same way a committed write does.
+  const readCache = container.resolve<IRepositoryReadCache>(repositoryReadCacheToken)
+  for (const group of ['categories', 'products', 'modifiers', 'settings'] as const) await readCache.changed(group)
   fakeMedia.reset()
 }

@@ -15,3 +15,19 @@ export const scbConfirmationSchema = z
     transactionId: z.string().optional(),
   })
   .passthrough()
+
+export const createQrPaymentV2Schema = z.object({
+  amountSatang: z.number().int().min(1).max(MAX_AMOUNT_SATANG),
+  shiftId: z.number().int().positive(),
+})
+
+export const dismissQrPaymentSchema = z.object({ reason: z.string().trim().min(1).max(500) })
+
+export const qrPageSchema = z.object({
+  limit: z.number().int().min(1).max(200).default(50),
+  offset: z.number().int().min(0).default(0),
+})
+
+export const unclaimedQrPageSchema = qrPageSchema.extend({
+  amountSatang: z.number().int().min(1).max(MAX_AMOUNT_SATANG).optional(),
+})

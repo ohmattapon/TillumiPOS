@@ -1,0 +1,5 @@
+export type { DiningTable } from '@pos/api/types'
+export { tableKeys, tablesQuery } from './api'
+export { FloorPlan } from './components/FloorPlan'
+export { TablesPage } from './components/TablesPage'
+export { locales as tablesLocales } from './locales'

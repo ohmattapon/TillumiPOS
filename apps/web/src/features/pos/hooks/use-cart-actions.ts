@@ -1,5 +1,6 @@
 import { toast } from 'sonner'
-import { useAddOrderItem, useRemoveOrderItem, useSetOrderItemQuantity } from '@/features/orders'
+import { useAddOrderItem, useRemoveOrderLine, useSetOrderLineQuantity } from '@/features/orders'
+import type { PricedLine } from '../lib/cart'
 import { useCartStore } from '../store/cart.store'
 
 /**
@@ -11,21 +12,22 @@ export function useCartActions() {
   const addToCart = useCartStore((state) => state.add)
   const setCartQuantity = useCartStore((state) => state.setQuantity)
   const addItem = useAddOrderItem()
-  const setItem = useSetOrderItemQuantity()
-  const removeItem = useRemoveOrderItem()
+  const setLine = useSetOrderLineQuantity()
+  const removeLine = useRemoveOrderLine()
 
   const onError = (error: Error) => toast.error(error.message)
 
   return {
-    add(productId: number) {
-      if (orderId === null) addToCart(productId)
-      else addItem.mutate({ orderId, productId, quantity: 1 }, { onError })
+    add(productId: number, optionIds: number[] = []) {
+      if (orderId === null) addToCart(productId, optionIds)
+      else addItem.mutate({ orderId, productId, quantity: 1, options: optionIds }, { onError })
     },
-    /** A quantity below 1 takes the product off. */
-    setQuantity(productId: number, quantity: number) {
-      if (orderId === null) setCartQuantity(productId, quantity)
-      else if (quantity < 1) removeItem.mutate({ orderId, productId }, { onError })
-      else setItem.mutate({ orderId, productId, quantity }, { onError })
+    /** A quantity below 1 takes the line off. */
+    setQuantity(line: PricedLine, quantity: number) {
+      if (orderId === null) setCartQuantity(line.lineKey, quantity)
+      else if (line.lineId === null) return
+      else if (quantity < 1) removeLine.mutate({ orderId, lineId: line.lineId }, { onError })
+      else setLine.mutate({ orderId, lineId: line.lineId, quantity }, { onError })
     },
   }
 }

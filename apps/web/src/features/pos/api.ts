@@ -1,13 +1,17 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productKeys } from '@/features/products'
 import { saleKeys } from '@/features/sales'
-import { api, unwrap } from '@/lib/api'
+import type { Sale } from '@pos/api/types'
+import { api, apiV2, unwrap } from '@/lib/api'
 import type { PaymentInput } from '@/lib/money'
 
 export interface CheckoutInput {
-  items: { productId: number; quantity: number }[]
+  memberId?: number | null
+  items: { productId: number; quantity: number; options?: number[] }[]
   discountSatang: number
   payment: PaymentInput
+  shiftId?: number
+  idempotencyKey?: string
 }
 
 /** Records the sale. The receipt number, VAT and stock deduction are decided by the server. */
@@ -15,13 +19,19 @@ export function useCheckout() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ items, discountSatang, payment }: CheckoutInput) =>
-      unwrap(api.sales.post({ items, discountSatang, payments: [payment] })),
+    mutationFn: async ({ items, discountSatang, payment, shiftId, idempotencyKey, memberId }: CheckoutInput): Promise<Sale> => {
+      if (shiftId !== undefined) {
+        const sale = await unwrap(apiV2.sales.post({ items, discountSatang, payments: [payment], shiftId, memberId }, { headers: { 'idempotency-key': idempotencyKey ?? crypto.randomUUID() } }))
+        return sale as unknown as Sale
+      }
+      return unwrap(api.sales.post({ items, discountSatang, payments: [payment], memberId }))
+    },
     // Stock changed on success, and a failure usually means our cached stock or prices are stale.
     onSettled: () =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: productKeys.all }),
         queryClient.invalidateQueries({ queryKey: saleKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ['members'] }),
       ]),
   })
 }
@@ -42,21 +52,46 @@ export const qrConfigQuery = queryOptions({
 /** How often the till asks whether the customer has paid. The server will not ask the bank more often itself. */
 export const QR_POLL_MS = 3000
 
-export const qrPaymentQuery = (id: number) =>
+/**
+ * The state of a QR while the till waits. In a shift this is the v2 "refresh" command, which asks the bank
+ * and records the answer; the legacy read does the same behind a GET.
+ */
+export const qrPaymentQuery = (id: number, inShift = false) =>
   queryOptions({
     queryKey: qrKeys.detail(id),
-    queryFn: () => unwrap(api.payments.qr({ id }).get()),
+    queryFn: async (): Promise<{ id: number; status: 'pending' | 'paid' | 'cancelled'; payerName: string | null }> =>
+      inShift ? unwrap(apiV2.payments.qr({ id }).refresh.post()) : unwrap(api.payments.qr({ id }).get()),
   })
+
+export interface CreateQrInput {
+  amountSatang: number
+  /** The open shift the QR is asked for. Leave out in legacy mode. */
+  shiftId?: number
+  idempotencyKey?: string
+}
 
 /** Asks the bank for a QR for exactly this amount. */
 export function useCreateQrPayment() {
+  const queryClient = useQueryClient()
+
   return useMutation({
-    mutationFn: (amountSatang: number) => unwrap(api.payments.qr.post({ amountSatang })),
+    mutationFn: async ({ amountSatang, shiftId, idempotencyKey }: CreateQrInput): Promise<{ id: number; qrImage: string; expiresAt: Date }> => {
+      if (shiftId === undefined) return unwrap(api.payments.qr.post({ amountSatang }))
+      return unwrap(
+        apiV2.payments.qr.post(
+          { amountSatang, shiftId },
+          { headers: { 'idempotency-key': idempotencyKey ?? crypto.randomUUID() } },
+        ),
+      )
+    },
+    // A lost answer leaves a request to resolve on the shift page: make it show up there at once.
+    onError: () => queryClient.invalidateQueries({ queryKey: ['shifts'] }),
   })
 }
 
 export function useCancelQrPayment() {
   return useMutation({
-    mutationFn: (id: number) => unwrap(api.payments.qr({ id }).cancel.post()),
+    mutationFn: async ({ id, inShift }: { id: number; inShift: boolean }): Promise<unknown> =>
+      inShift ? unwrap(apiV2.payments.qr({ id }).cancel.post()) : unwrap(api.payments.qr({ id }).cancel.post()),
   })
 }

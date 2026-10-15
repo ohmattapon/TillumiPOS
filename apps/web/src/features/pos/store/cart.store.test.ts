@@ -17,8 +17,8 @@ describe('cart store', () => {
     cart().add(9)
 
     expect(cart().lines).toEqual([
-      { productId: 7, quantity: 2 },
-      { productId: 9, quantity: 1 },
+      { key: '7:', productId: 7, optionIds: [], quantity: 2 },
+      { key: '9:', productId: 9, optionIds: [], quantity: 1 },
     ])
   })
 
@@ -34,11 +34,11 @@ describe('cart store', () => {
     cart().add(7)
     cart().add(9)
 
-    cart().setQuantity(9, 5)
+    cart().setQuantity('9:', 5)
 
     expect(cart().lines).toEqual([
-      { productId: 7, quantity: 1 },
-      { productId: 9, quantity: 5 },
+      { key: '7:', productId: 7, optionIds: [], quantity: 1 },
+      { key: '9:', productId: 9, optionIds: [], quantity: 5 },
     ])
   })
 
@@ -46,17 +46,17 @@ describe('cart store', () => {
     cart().add(7)
     cart().add(9)
 
-    cart().setQuantity(7, quantity)
+    cart().setQuantity('7:', quantity)
 
-    expect(cart().lines).toEqual([{ productId: 9, quantity: 1 }])
+    expect(cart().lines).toEqual([{ key: '9:', productId: 9, optionIds: [], quantity: 1 }])
   })
 
   test('changing the quantity of a product that is not in the cart does nothing', () => {
     cart().add(7)
 
-    cart().setQuantity(99, 3)
+    cart().setQuantity('99:', 3)
 
-    expect(cart().lines).toEqual([{ productId: 7, quantity: 1 }])
+    expect(cart().lines).toEqual([{ key: '7:', productId: 7, optionIds: [], quantity: 1 }])
   })
 
   test('clear empties the lines and the discount', () => {
@@ -100,6 +100,53 @@ describe('cart store', () => {
     cart().add(7)
 
     expect(cart().lines).not.toBe(before)
-    expect(before).toEqual([{ productId: 7, quantity: 1 }])
+    expect(before).toEqual([{ key: '7:', productId: 7, optionIds: [], quantity: 1 }])
+  })
+})
+
+describe('cart store with options', () => {
+  test('the same product with other options is another line; the same options join, whatever the order', () => {
+    cart().add(7, [20])
+    cart().add(7, [10, 20])
+    cart().add(7, [20, 10])
+    cart().add(7)
+
+    expect(cart().lines.map((line) => [line.key, line.quantity])).toEqual([
+      ['7:20', 1],
+      ['7:10-20', 2],
+      ['7:', 1],
+    ])
+  })
+
+  test('quantity is set by the line key, and 0 removes only that line', () => {
+    cart().add(7, [20])
+    cart().add(7)
+
+    cart().setQuantity('7:20', 3)
+    expect(cart().lines.map((line) => line.quantity)).toEqual([3, 1])
+
+    cart().setQuantity('7:', 0)
+    expect(cart().lines.map((line) => line.key)).toEqual(['7:20'])
+  })
+})
+
+ describe('cart membership', () => {
+  test('selects only an identity and clears it for the next customer', () => {
+    cart().setMember(12)
+    expect(cart().memberId).toBe(12)
+    clearCart()
+    expect(cart().memberId).toBeNull()
+  })
+  test('switching to a saved order drops local membership', () => {
+    cart().setMember(12)
+    cart().workOnOrder(42)
+    expect(cart().memberId).toBeNull()
+  })
+  test('membership can be removed without emptying items', () => {
+    cart().add(7)
+    cart().setMember(12)
+    cart().setMember(null)
+    expect(cart().lines).toHaveLength(1)
+    expect(cart().memberId).toBeNull()
   })
 })

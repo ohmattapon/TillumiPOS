@@ -2,14 +2,26 @@ import type { User } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
 import {
   Building2,
+  ChartNoAxesCombined,
   CalendarCheck,
   ChevronsUpDown,
+  LayoutGrid,
   LogOut,
   Package,
+  Palette,
+  Sun,
+  Moon,
+  MoonStar,
+  Trees,
+  Flower2,
   Settings,
   ShoppingCart,
+  SlidersHorizontal,
+  WalletCards,
   Store,
+  Tags,
   UserRound,
+  Users,
   type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -20,6 +32,11 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -36,8 +53,10 @@ import {
 } from '@/components/ui/sidebar'
 import { BranchSwitcher, useActiveBranch } from '@/features/branches'
 import { clearCart } from '@/features/pos'
-import { isLowStock, productsQuery } from '@/features/products'
+import { useRegisterSelectionStore } from '@/features/shifts'
+import { LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
 import { useSettings } from '@/features/settings'
+import { themes, useTheme, type Theme } from './theme'
 
 interface NavItem {
   to: string
@@ -46,18 +65,20 @@ interface NavItem {
   badge?: number
 }
 
-// Active item reads as a raised white card with accent-coloured text.
+// Active item reads as a flat mint wash with deep-teal text.
 const activeItem =
-  'data-[active=true]:bg-background data-[active=true]:text-primary data-[active=true]:shadow-sm data-[active=true]:ring-1 data-[active=true]:ring-border'
+  'data-[active=true]:bg-accent data-[active=true]:text-accent-foreground'
 
 export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => void }) {
   const { t } = useTranslation('app')
   const { pathname } = useLocation()
   const { shopName } = useSettings()
+  const { theme, setTheme } = useTheme()
   const { branch, canSwitch } = useActiveBranch()
   const isOwner = user.role === 'owner'
-  const products = useQuery(productsQuery())
-  const lowStockCount = products.data?.filter(isLowStock).length ?? 0
+  const products = useQuery(productsQuery({ stockAtMost: LOW_STOCK_THRESHOLD, limit: 1 }))
+  const lowStockCount = products.data?.total ?? 0
+  const clearRegisterSelection = useRegisterSelectionStore((state) => state.clear)
 
   const groups: { label: string; items: NavItem[] }[] = [
     {
@@ -65,6 +86,9 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
       items: [
         { to: '/', label: t('nav.sell'), icon: ShoppingCart },
         { to: '/today', label: t('nav.today'), icon: CalendarCheck },
+        ...(isOwner ? [{ to: '/reports', label: t('nav.reports'), icon: ChartNoAxesCombined }] : []),
+        { to: '/members', label: t('nav.members'), icon: UserRound },
+        { to: '/shifts', label: t('nav.shifts'), icon: WalletCards },
       ],
     },
     ...(isOwner
@@ -73,7 +97,11 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
             label: t('groups.manage'),
             items: [
               { to: '/products', label: t('nav.products'), icon: Package, badge: lowStockCount },
+              { to: '/categories', label: t('nav.categories'), icon: Tags },
+              { to: '/modifiers', label: t('nav.modifiers'), icon: SlidersHorizontal },
+              { to: '/tables', label: t('nav.tables'), icon: LayoutGrid },
               { to: '/branches', label: t('nav.branches'), icon: Building2 },
+              { to: '/users', label: t('nav.users'), icon: Users },
               { to: '/settings', label: t('nav.settings'), icon: Settings },
             ],
           },
@@ -99,7 +127,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
         {canSwitch ? (
           <div className="px-2 group-data-[collapsible=icon]:hidden">
             {/* The cart is for the branch it was rung up in, so a switch starts a fresh one. */}
-            <BranchSwitcher onSwitched={clearCart} />
+            <BranchSwitcher onSwitched={() => { clearCart(); clearRegisterSelection() }} />
           </div>
         ) : (
           branch &&
@@ -120,9 +148,9 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
                 <SidebarMenuItem key={item.to}>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === item.to}
+                    isActive={pathname === item.to || (item.to !== '/' && pathname.startsWith(`${item.to}/`))}
                     tooltip={item.label}
-                    className={`h-9 ${activeItem}`}
+                    className={`h-11 ${activeItem}`}
                   >
                     <NavLink to={item.to}>
                       <item.icon />
@@ -159,6 +187,32 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="w-(--radix-dropdown-menu-trigger-width) min-w-48">
                 <DropdownMenuLabel className="font-normal text-muted-foreground">@{user.username}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Palette />
+                    {t('theme.label')}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)}>
+                      {themes.map((value) => {
+                        const Icon = {
+                          light: Sun,
+                          dark: Moon,
+                          midnight: MoonStar,
+                          forest: Trees,
+                          rose: Flower2,
+                        }[value]
+                        return (
+                          <DropdownMenuRadioItem key={value} value={value}>
+                            <Icon />
+                            {t(`theme.options.${value}`)}
+                          </DropdownMenuRadioItem>
+                        )
+                      })}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={onLogout}>
                   <LogOut />

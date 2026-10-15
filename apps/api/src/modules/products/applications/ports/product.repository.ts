@@ -6,8 +6,14 @@ export interface IFindProductsQuery {
   branchId: number
   /** Matches name or SKU case-insensitively, or the barcode exactly. `%` and `_` are literal. */
   q?: string
+  /** An exact barcode or case-insensitive SKU, used by scanners independently of catalogue pages. */
+  code?: string
   categoryId?: number
   includeInactive?: boolean
+  isActive?: boolean
+  /** Tracked stock at or below this quantity in the requested branch. */
+  stockAtMost?: number
+  sort?: 'name' | 'stock'
   limit?: number
   offset?: number
 }

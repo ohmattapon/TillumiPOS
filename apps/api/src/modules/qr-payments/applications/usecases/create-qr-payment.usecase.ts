@@ -40,6 +40,7 @@ export class CreateQrPaymentUseCase {
       qrRawData: qr.qrRawData,
       expiresAt: new Date(this.clock.now().getTime() + QR_VALID_FOR_MS),
       createdById: actor.userId,
+      originShiftId: null,
     })
     return { payment, qrImage: qr.qrImage }
   }

@@ -9,14 +9,26 @@ const payment = z.object({
 })
 
 export const completeSaleSchema = z.object({
-  items: z.array(z.object({ productId: z.number().int(), quantity: z.number().int().min(1) })).min(1),
+  memberId: z.number().int().positive().nullable().optional(),
+  items: z
+    .array(
+      z.object({
+        productId: z.number().int(),
+        quantity: z.number().int().min(1),
+        options: z.array(z.number().int().positive()).max(40).optional(),
+      }),
+    )
+    .min(1),
   discountSatang: z.number().int().min(0).optional(),
   payments: z.array(payment).min(1),
 })
 
+export const completeSaleV2Schema = completeSaleSchema.extend({ shiftId: z.number().int().positive() })
+
 export const voidSaleSchema = z.object({ reason: z.string().min(1).max(500) })
 
 export const listSalesSchema = z.object({
+  status: z.enum(['completed', 'voided']).optional(),
   from: z.date().optional(),
   to: z.date().optional(),
   limit: z.number().int().min(1).max(500).optional(),

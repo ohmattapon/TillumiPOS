@@ -1,5 +1,6 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, unwrap } from '@/lib/api'
+import { forgetSession } from './lib/forget-session'
 
 export const authKeys = {
   me: ['auth', 'me'] as const,
@@ -27,7 +28,7 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: () => unwrap(api.auth.logout.post()),
-    // Drop every cached query so the next user never sees the previous user's data.
-    onSuccess: () => queryClient.clear(),
+    // Back to the login page, with nothing of this user's left in the cache.
+    onSuccess: () => forgetSession(queryClient, authKeys.me),
   })
 }

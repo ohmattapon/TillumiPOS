@@ -2,10 +2,19 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import { authLocales } from '@/features/auth'
 import { branchesLocales } from '@/features/branches'
+import { categoriesLocales } from '@/features/categories'
+import { customerDisplayLocales } from '@/features/customer-display'
+import { membersLocales } from '@/features/members'
+import { modifiersLocales } from '@/features/modifiers'
 import { posLocales } from '@/features/pos'
 import { productsLocales } from '@/features/products'
 import { salesLocales } from '@/features/sales'
+import { reportsLocales } from '@/features/reports'
 import { settingsLocales } from '@/features/settings'
+import { setupLocales } from '@/features/setup'
+import { tablesLocales } from '@/features/tables'
+import { usersLocales } from '@/features/users'
+import { shiftsLocales } from '@/features/shifts'
 import { common } from '@/locales/common'
 import { errors } from '@/locales/errors'
 import type { Locale } from '@/lib/money'
@@ -21,20 +30,38 @@ export const resources = {
     app: appLocales.th,
     auth: authLocales.th,
     branches: branchesLocales.th,
+    categories: categoriesLocales.th,
+    customerDisplay: customerDisplayLocales.th,
+    modifiers: modifiersLocales.th,
+    members: membersLocales.th,
+    tables: tablesLocales.th,
+    users: usersLocales.th,
     pos: posLocales.th,
     products: productsLocales.th,
     sales: salesLocales.th,
+    reports: reportsLocales.th,
     settings: settingsLocales.th,
+    setup: setupLocales.th,
+    shifts: shiftsLocales.th,
   },
   en: {
     common: common.en,
     app: appLocales.en,
     auth: authLocales.en,
     branches: branchesLocales.en,
+    categories: categoriesLocales.en,
+    customerDisplay: customerDisplayLocales.en,
+    modifiers: modifiersLocales.en,
+    members: membersLocales.en,
+    tables: tablesLocales.en,
+    users: usersLocales.en,
     pos: posLocales.en,
     products: productsLocales.en,
     sales: salesLocales.en,
+    reports: reportsLocales.en,
     settings: settingsLocales.en,
+    setup: setupLocales.en,
+    shifts: shiftsLocales.en,
     errors: errors.en,
   },
 }

@@ -9,6 +9,7 @@ import type { IShopSettingsRepository } from '../../../settings/applications/por
 import type { IFindSalesQuery, ISaleHeader, ISaleRepository, ISalesTotals } from '../../applications/ports/sale.repository'
 
 const headerColumns = {
+  member: sales.member,
   id: sales.id,
   receiptNo: sales.receiptNo,
   status: sales.status,
@@ -19,10 +20,16 @@ const headerColumns = {
   vatMode: sales.vatMode,
   vatRateBp: sales.vatRateBp,
   branchId: sales.branchId,
+  shiftId: sales.shiftId,
   paidSatang: sales.paidSatang,
   changeSatang: sales.changeSatang,
   cashierId: sales.cashierId,
   cashierName: sales.cashierName,
+  shopName: sales.shopName,
+  shopTaxId: sales.shopTaxId,
+  branchName: sales.branchName,
+  shopAddress: sales.shopAddress,
+  shopPhone: sales.shopPhone,
   voidedAt: sales.voidedAt,
   voidReason: sales.voidReason,
   createdAt: sales.createdAt,
@@ -36,6 +43,7 @@ const itemColumns = {
   unitCostSatang: saleItems.unitCostSatang,
   quantity: saleItems.quantity,
   lineTotalSatang: saleItems.lineTotalSatang,
+  options: saleItems.options,
 }
 
 const total = (expression: SQL) => sql<number>`coalesce(sum(${expression}), 0)`.mapWith(Number)
@@ -64,11 +72,11 @@ export class DrizzleSaleRepository implements ISaleRepository {
 
     const [stored] = await executor
       .insert(sales)
-      .values({ receiptNo, ...totals })
+      .values({ receiptNo, ...totals, memberId: sale.member?.id ?? null })
       .returning({ id: sales.id })
     const saleId = stored!.id
 
-    await executor.insert(saleItems).values(items.map((item) => ({ ...item, saleId })))
+    await executor.insert(saleItems).values(items.map((item) => ({ ...item, options: [...item.options], saleId })))
     await executor.insert(payments).values(paid.map((payment) => ({ ...payment, saleId })))
 
     // Read back rather than assembled here, so defaults (status, created_at) come from the database.
@@ -92,6 +100,7 @@ export class DrizzleSaleRepository implements ISaleRepository {
 
   async findHeaders(query: IFindSalesQuery): Promise<Page<ISaleHeader>> {
     const matching = and(
+      query.status ? eq(sales.status, query.status) : undefined,
       eq(sales.branchId, query.branchId),
       query.from ? gte(sales.createdAt, query.from) : undefined,
       query.to ? lt(sales.createdAt, query.to) : undefined,
