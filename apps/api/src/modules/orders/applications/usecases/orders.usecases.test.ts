@@ -467,7 +467,7 @@ describe('tables on orders', () => {
       items: [{ lineId: 9, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [], note: null }],
     })
     orders.findByIdForUpdate.mockImplementation(async (id) => (id === 1 ? low : high))
-    const useCase = new MergeOrdersUseCase(orders, unitOfWork)
+    const useCase = new MergeOrdersUseCase(orders, unitOfWork, kitchen)
 
     // Into the higher id: the lock order must still be 1 then 2.
     const merged = await useCase.execute(2, { sourceOrderId: 1 }, 1)
@@ -483,7 +483,7 @@ describe('tables on orders', () => {
 
   test("merging an order into itself, or another branch's order, is refused", async () => {
     orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1, branchId: 2 }))
-    const useCase = new MergeOrdersUseCase(orders, unitOfWork)
+    const useCase = new MergeOrdersUseCase(orders, unitOfWork, kitchen)
 
     await expect(useCase.execute(1, { sourceOrderId: 1 }, 1)).rejects.toMatchObject({ code: 'ORDER_MERGE_SAME' })
     await expect(useCase.execute(1, { sourceOrderId: 2 }, 1)).rejects.toMatchObject({ code: 'ORDER_NOT_FOUND' })
@@ -500,7 +500,7 @@ describe('tables on orders', () => {
     )
     orders.create.mockImplementation(async (order) => stored(order))
 
-    const created = await new SplitOrderUseCase(orders, unitOfWork).execute(
+    const created = await new SplitOrderUseCase(orders, unitOfWork, kitchen).execute(
       1,
       { lines: [{ lineId: 4, quantity: 1 }] },
       spoken,
@@ -578,5 +578,52 @@ describe('การลดหรือยกเลิกหลังส่งค�
     await expect(new CancelOrderUseCase(orders, unitOfWork, kitchen).execute(1, { reason: 'x' }, actor)).rejects.toMatchObject({ code: 'ORDER_NOT_OPEN' })
 
     expect(kitchen.reconcile).not.toHaveBeenCalled()
+  })
+})
+
+describe('รวมและแยกบิลกับใบสั่งครัว', () => {
+  test('รวมบิลไม่ได้ถ้าปลายทางหรือต้นทางมีใบที่ยังไม่เสร็จ', async () => {
+    orders.findByIdForUpdate.mockImplementation(async (id) => makeOrder({ id, items: [] }))
+    kitchen.hasPending.mockImplementation(async (id) => id === 2)
+
+    await expect(new MergeOrdersUseCase(orders, unitOfWork, kitchen).execute(1, { sourceOrderId: 2 }, 1)).rejects.toMatchObject({
+      code: 'ORDER_KITCHEN_PENDING',
+    })
+    expect(kitchen.moveTickets).not.toHaveBeenCalled()
+  })
+
+  test('รวมบิลย้ายใบของต้นทางไปปลายทาง', async () => {
+    orders.findByIdForUpdate.mockImplementation(async (id) => makeOrder({ id, items: [] }))
+
+    await new MergeOrdersUseCase(orders, unitOfWork, kitchen).execute(1, { sourceOrderId: 2 }, 1)
+
+    expect(kitchen.moveTickets).toHaveBeenCalledWith(2, 1)
+  })
+
+  test('แยกบิลไม่ได้ถ้าออเดอร์มีใบที่ยังไม่เสร็จ', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1, items: [{ lineId: 5, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [], note: null }, { lineId: 6, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [], note: null }] }))
+    kitchen.hasPending.mockResolvedValue(true)
+
+    await expect(new SplitOrderUseCase(orders, unitOfWork, kitchen).execute(1, { lines: [{ lineId: 6, quantity: 1 }] }, actor)).rejects.toMatchObject({
+      code: 'ORDER_KITCHEN_PENDING',
+    })
+  })
+
+  test('แยกบิลไม่ได้ถ้ารายการที่เลือกเคยส่งครัวแล้ว', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1, items: [{ lineId: 5, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [], note: null }, { lineId: 6, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [], note: null }] }))
+    kitchen.sentByLine.mockResolvedValue(new Map([[1, new Map([[identityOf(1, ''), 1]])]]))
+
+    await expect(new SplitOrderUseCase(orders, unitOfWork, kitchen).execute(1, { lines: [{ lineId: 5, quantity: 1 }] }, actor)).rejects.toMatchObject({
+      code: 'ORDER_SPLIT_SENT',
+    })
+    expect(orders.create).not.toHaveBeenCalled()
+  })
+
+  test('แยกบิลได้เมื่อรายการที่เลือกยังไม่เคยส่งครัว', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1, items: [{ lineId: 5, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [], note: null }, { lineId: 6, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [], note: null }] }))
+
+    await new SplitOrderUseCase(orders, unitOfWork, kitchen).execute(1, { lines: [{ lineId: 6, quantity: 1 }] }, actor)
+
+    expect(orders.create).toHaveBeenCalled()
   })
 })
