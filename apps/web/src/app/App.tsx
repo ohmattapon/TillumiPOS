@@ -7,6 +7,7 @@ import { LoginPage, meQuery, useLogout } from '@/features/auth'
 import { BranchesPage, useActiveBranch } from '@/features/branches'
 import { CategoriesPage } from '@/features/categories'
 import { CustomerDisplayPage } from '@/features/customer-display'
+import { MembersPage, MemberDetailsPage } from '@/features/members'
 import { ModifiersPage } from '@/features/modifiers'
 import { SetupPage, setupStatusQuery } from '@/features/setup'
 import { TablesPage } from '@/features/tables'
@@ -53,6 +54,8 @@ function Shell({ user }: { user: User }) {
           {isOwner && <Route path="branches" element={<BranchesPage />} />}
           {isOwner && <Route path="users" element={<UsersPage />} />}
           {isOwner && <Route path="settings" element={<SettingsPage />} />}
+          <Route path="members" element={<MembersPage />} />
+          <Route path="members/:id" element={<MemberDetailsPage />} />
           <Route path="shifts" element={<ShiftsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

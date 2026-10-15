@@ -4,6 +4,7 @@ import { authLocales } from '@/features/auth'
 import { branchesLocales } from '@/features/branches'
 import { categoriesLocales } from '@/features/categories'
 import { customerDisplayLocales } from '@/features/customer-display'
+import { membersLocales } from '@/features/members'
 import { modifiersLocales } from '@/features/modifiers'
 import { posLocales } from '@/features/pos'
 import { productsLocales } from '@/features/products'
@@ -32,6 +33,7 @@ export const resources = {
     categories: categoriesLocales.th,
     customerDisplay: customerDisplayLocales.th,
     modifiers: modifiersLocales.th,
+    members: membersLocales.th,
     tables: tablesLocales.th,
     users: usersLocales.th,
     pos: posLocales.th,
@@ -50,6 +52,7 @@ export const resources = {
     categories: categoriesLocales.en,
     customerDisplay: customerDisplayLocales.en,
     modifiers: modifiersLocales.en,
+    members: membersLocales.en,
     tables: tablesLocales.en,
     users: usersLocales.en,
     pos: posLocales.en,

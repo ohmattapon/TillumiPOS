@@ -19,6 +19,7 @@ export class CompleteSaleUseCase {
     return this.unitOfWork.run(() =>
       this.checkout.checkout({
         lines: dto.items.map(({ productId, quantity, options }) => ({ productId, quantity, optionIds: options })),
+        memberId: dto.memberId ?? null,
         discountSatang: dto.discountSatang ?? 0,
         payments: dto.payments,
         cashier,

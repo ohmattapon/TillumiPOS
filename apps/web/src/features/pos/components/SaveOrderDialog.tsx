@@ -13,6 +13,7 @@ export function SaveOrderDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation('pos')
   const { t: tc } = useTranslation()
   const [label, setLabel] = useState('')
+  const memberId = useCartStore((state) => state.memberId)
   const lines = useCartStore((state) => state.lines)
   const clear = useCartStore((state) => state.clear)
   const openOrder = useOpenOrder()
@@ -21,6 +22,7 @@ export function SaveOrderDialog({ onClose }: { onClose: () => void }) {
     event.preventDefault()
     openOrder.mutate(
       {
+        memberId,
         label: label.trim() || null,
         items: lines.map(({ productId, quantity, optionIds }) => ({ productId, quantity, options: optionIds })),
       },

@@ -9,6 +9,7 @@ import { receiptHeading } from '../lib/receipt-heading'
 /** Receipt body used on screen and as the source for the downloaded PDF. */
 export function Receipt({ sale, elementRef }: { sale: Sale; elementRef?: Ref<HTMLDivElement> }) {
   const { t } = useTranslation('sales')
+  const { t: tm } = useTranslation('members')
   const { t: tc } = useTranslation()
   const { money, date } = useFormat()
   const shop = useSettings()
@@ -33,6 +34,7 @@ export function Receipt({ sale, elementRef }: { sale: Sale; elementRef?: Ref<HTM
         <p>{t('receipt.number', { receiptNo: sale.receiptNo })}</p>
         <p>{date.dateTime(sale.createdAt)}</p>
         <p>{t('receipt.cashier', { name: sale.cashierName })}</p>
+        {sale.member && <p>{tm('title')}: {sale.member.code} / {sale.member.name}</p>}
         {sale.status === 'voided' && <p className="font-bold">{t('receipt.voided', { reason: sale.voidReason })}</p>}
       </div>
       <hr className="border-dashed border-foreground/40" />

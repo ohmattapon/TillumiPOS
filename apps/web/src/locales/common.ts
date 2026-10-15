@@ -5,10 +5,15 @@ const th = {
   cancel: 'ยกเลิก',
   all: 'ทั้งหมด',
   noMatches: 'ไม่พบรายการที่ตรงเงื่อนไข',
+  datePicker: {
+    placeholder: 'เลือกวันที่', previousMonth: 'เดือนก่อนหน้า', nextMonth: 'เดือนถัดไป',
+    month: 'เลือกเดือน', year: 'เลือกปี', today: 'วันนี้', selected: 'เลือกอยู่', navigation: 'เปลี่ยนเดือน',
+  },
   pagination: {
     label: 'แบ่งหน้ารายการ',
     range: '{{from}}–{{to}} จาก {{total}} รายการ',
     page: '{{page}} / {{pages}}',
+    goTo: 'ไปหน้าที่ {{page}}',
     first: 'แรก',
     previous: 'ก่อนหน้า',
     next: 'ถัดไป',
@@ -30,10 +35,15 @@ const en = {
   cancel: 'Cancel',
   all: 'All',
   noMatches: 'No matching items',
+  datePicker: {
+    placeholder: 'Pick a date', previousMonth: 'Previous month', nextMonth: 'Next month',
+    month: 'Choose month', year: 'Choose year', today: 'Today', selected: 'Selected', navigation: 'Change month',
+  },
   pagination: {
     label: 'List pagination',
     range: '{{from}}–{{to}} of {{total}} items',
     page: '{{page}} / {{pages}}',
+    goTo: 'Go to page {{page}}',
     first: 'First',
     previous: 'Previous',
     next: 'Next',

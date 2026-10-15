@@ -8,15 +8,18 @@ import App from './app/App'
 import { Toaster } from './components/ui/sonner'
 import { TooltipProvider } from './components/ui/tooltip'
 import { queryClient } from './lib/query-client'
+import { ThemeProvider } from './app/theme'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <TooltipProvider>
-          <App />
-        </TooltipProvider>
-        <Toaster position="top-center" richColors />
+        <ThemeProvider>
+          <TooltipProvider>
+            <App />
+          </TooltipProvider>
+          <Toaster position="top-center" richColors />
+        </ThemeProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,
