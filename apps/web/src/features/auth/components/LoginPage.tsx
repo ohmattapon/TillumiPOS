@@ -6,10 +6,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useLogin } from '../api'
 
-/** The TillumiPOS logo, above the form on every screen size. */
+/** The TillumiPOS logo, centred at the top of the sign-in card. */
 function BrandLogo() {
   const { t } = useTranslation('auth')
-  return <img src="/tillumipos-logo.png" alt={t('brand.logoAlt')} className="h-16 w-auto self-start" />
+  return <img src="/tillumipos-logo.png" alt={t('brand.logoAlt')} className="mx-auto mb-6 block h-16 w-auto" />
 }
 
 /** The wide-screen left column: a photo of the till, then what it does in a few lines. Shown from 1024px up. */
@@ -59,12 +59,12 @@ export function LoginPage() {
     <div className="grid min-h-svh bg-canvas lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <BrandPanel />
       <main className="flex min-h-svh flex-col p-4 sm:p-8">
-        <BrandLogo />
         <div className="flex flex-1 items-center justify-center py-8">
           <div className="w-full max-w-sm space-y-6">
             <section className="rounded-[10px] border bg-card p-6 sm:p-8">
-              <h1 className="text-xl font-semibold">{t('title')}</h1>
-              <p className="mt-1 text-sm text-muted-foreground">{t('subtitle')}</p>
+              <BrandLogo />
+              <h1 className="text-center text-xl font-semibold">{t('title')}</h1>
+              <p className="mt-1 text-center text-sm text-muted-foreground">{t('subtitle')}</p>
               <form onSubmit={submit} className="mt-6 space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="username">{t('username')}</Label>
