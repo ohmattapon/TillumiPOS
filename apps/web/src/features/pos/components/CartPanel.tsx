@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { useCart } from '../hooks/use-cart'
 import { useCartActions } from '../hooks/use-cart-actions'
 import type { PricedLine } from '../lib/cart'
+import { noteToSave } from '../lib/note'
 import { useCartStore } from '../store/cart.store'
 import { KitchenSendButton } from './KitchenSendButton'
 import { OrderTools } from './OrderTools'
@@ -40,13 +41,17 @@ function LineNote({ orderId, lineId, line }: { orderId: number; lineId: number; 
   const locked = line.sentQuantity > 0
 
   // Only a changed note is sent. The typed text stays on screen until the answer is in, so the field never flashes the old note.
+  // If the save fails the text stays too, so the cashier can see it and leave the field again to retry.
   const save = () => {
     if (draft === null) return
-    const next = draft.trim()
-    if (next === (line.note ?? '')) return setDraft(null)
+    const note = noteToSave(draft, line.note)
+    if (note === undefined) {
+      setDraft(null)
+      return
+    }
     setNote.mutate(
-      { orderId, lineId, note: next === '' ? null : next },
-      { onError: (error) => toast.error(error.message), onSettled: () => setDraft(null) },
+      { orderId, lineId, note },
+      { onError: (error) => toast.error(error.message), onSuccess: () => setDraft(null) },
     )
   }
 
@@ -58,7 +63,7 @@ function LineNote({ orderId, lineId, line }: { orderId: number; lineId: number; 
         placeholder={t('kitchen.notePlaceholder')}
         maxLength={500}
         disabled={locked}
-        value={draft ?? line.note ?? ''}
+        value={locked ? (line.note ?? '') : (draft ?? line.note ?? '')}
         onChange={(event) => setDraft(event.target.value)}
         onBlur={save}
       />
