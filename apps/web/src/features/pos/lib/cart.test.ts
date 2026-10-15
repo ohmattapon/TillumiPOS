@@ -180,6 +180,8 @@ describe('priceOrder', () => {
     quantity: 2,
     lineTotalSatang: 5000,
     options: [],
+    note: null,
+    sentQuantity: 0,
     ...overrides,
   })
   const catalogue = (...items: Product[]) => new Map(items.map((entry) => [entry.id, entry]))
@@ -291,6 +293,8 @@ describe('options on a line', () => {
           quantity: 1,
           lineTotalSatang: 6000,
           options: [{ groupId: 2, groupName: 'ท็อปปิง', optionId: 20, name: 'ไข่มุก', priceSatang: 1000 }],
+          note: null,
+          sentQuantity: 0,
         },
       ],
       catalogue(tea),
