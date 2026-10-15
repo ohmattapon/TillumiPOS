@@ -6,6 +6,7 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { LoginPage, meQuery, useLogout } from '@/features/auth'
 import { BranchesPage, useActiveBranch } from '@/features/branches'
 import { CategoriesPage } from '@/features/categories'
+import { KitchenBoardPage, KitchenStationsPage } from '@/features/kitchen'
 import { ModifiersPage } from '@/features/modifiers'
 import { SetupPage, setupStatusQuery } from '@/features/setup'
 import { TablesPage } from '@/features/tables'
@@ -53,6 +54,8 @@ function Shell({ user }: { user: User }) {
           {isOwner && <Route path="users" element={<UsersPage />} />}
           {isOwner && <Route path="settings" element={<SettingsPage />} />}
           <Route path="shifts" element={<ShiftsPage />} />
+          <Route path="kitchen" element={<KitchenBoardPage />} />
+          {isOwner && <Route path="kitchen-stations" element={<KitchenStationsPage />} />}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </SidebarInset>

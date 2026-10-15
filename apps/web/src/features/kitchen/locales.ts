@@ -16,6 +16,15 @@ const th = {
   active: 'เปิดใช้งาน',
   save: 'บันทึก',
   orderNumber: 'ออเดอร์ #{{id}}',
+  stationsTitle: 'สถานีครัว',
+  stationsEmpty: 'ยังไม่มีสถานี กด "เพิ่มสถานี" เพื่อสร้างสถานีแรก',
+  stationDescription: 'ตั้งชื่อสถานีที่ทำอาหารหรือเครื่องดื่ม เช่น ครัวร้อน หรือ บาร์น้ำ',
+  stationCreated: 'เพิ่มสถานี "{{name}}" แล้ว',
+  status: 'สถานะ',
+  paused: 'พักใช้งาน',
+  availability: 'การใช้งาน',
+  pauseWarning:
+    'การพักสถานีจะหยุดใบสั่งของสถานีนั้น: สถานีที่พักไม่รับใบสั่งใหม่ และใบสั่งที่ค้างอยู่จะไม่แสดงบนจอครัว เปิดใช้งานอีกครั้งจึงจะเห็นใบสั่งที่ค้าง',
 }
 
 export const locales = {
@@ -38,5 +47,14 @@ export const locales = {
     active: 'Active',
     save: 'Save',
     orderNumber: 'Order #{{id}}',
+    stationsTitle: 'Kitchen stations',
+    stationsEmpty: 'No stations yet. Press "Add station" to create the first one.',
+    stationDescription: 'Name the place where food or drinks are made, for example Hot kitchen or Bar.',
+    stationCreated: 'Added station "{{name}}"',
+    status: 'Status',
+    paused: 'Paused',
+    availability: 'Availability',
+    pauseWarning:
+      'Pausing a station stops its tickets: a paused station receives no new tickets, and its open tickets stop being listed on the kitchen screen. Turn it back on to see the open tickets again.',
   } satisfies typeof th,
 }
