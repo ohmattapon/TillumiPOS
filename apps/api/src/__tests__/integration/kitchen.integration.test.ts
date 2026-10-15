@@ -31,13 +31,30 @@ describe('ส่งครัวและจอครัว', () => {
   })
 
   test('ส่งครัวแยกใบต่อสถานี และส่งซ้ำได้เฉพาะส่วนที่ยังไม่เคยส่ง', async () => {
-    const { station, product } = await kitchenProduct()
-    const order = ok(await cashier.api.orders.post({ items: [{ productId: product.id, quantity: 2 }] }))
+    const food = await kitchenProduct()
+    const drink = await kitchenProduct('บาร์')
+    const order = ok(
+      await cashier.api.orders.post({
+        items: [
+          { productId: food.product.id, quantity: 2 },
+          { productId: drink.product.id, quantity: 1 },
+        ],
+      }),
+    )
 
     const first = ok(await send(cashier, order.id))
-    expect(first.items).toHaveLength(1)
-    expect(first.items[0]!.stationId).toBe(station.id)
-    expect(first.items[0]!.roundNo).toBe(1)
+    expect(first.items).toHaveLength(2)
+    expect(first.items.map((ticket) => ticket.stationId).sort((a, b) => a - b)).toEqual(
+      [food.station.id, drink.station.id].sort((a, b) => a - b),
+    )
+    // Each station counts its own rounds, so both tickets are round 1 and each carries only its own line.
+    expect(first.items.map((ticket) => ticket.roundNo)).toEqual([1, 1])
+    expect(first.items.find((ticket) => ticket.stationId === food.station.id)?.lines).toMatchObject([
+      { productId: food.product.id, quantity: 2 },
+    ])
+    expect(first.items.find((ticket) => ticket.stationId === drink.station.id)?.lines).toMatchObject([
+      { productId: drink.product.id, quantity: 1 },
+    ])
 
     const again = await send(cashier, order.id)
     expect(again.status).toBe(400)
@@ -67,6 +84,7 @@ describe('ส่งครัวและจอครัว', () => {
     ok(await cashier.api.orders({ id: order.id }).lines({ lineId }).patch({ quantity: 2 }))
     const resent = ok(await send(cashier, order.id))
     expect(resent.items[0]!.lines[0]!.quantity).toBe(1)
+    expect(resent.items[0]!.roundNo).toBe(2)
   })
 
   test('ยกเลิกออเดอร์ทำให้ใบยังอยู่บนจอจนครัวกดเสร็จ และกดซ้ำไม่ได้', async () => {
@@ -82,6 +100,7 @@ describe('ส่งครัวและจอครัว', () => {
     ok(await cashier.api.kitchen.tickets({ id: sent.id }).done.post())
     const again = await cashier.api.kitchen.tickets({ id: sent.id }).done.post()
     expect(again.status).toBe(409)
+    expect(again.error?.value).toMatchObject({ code: 'KITCHEN_TICKET_NOT_PENDING' })
   })
 
   test('การส่งครัวไม่ตัดสต็อก', async () => {
@@ -99,12 +118,22 @@ describe('ส่งครัวและจอครัว', () => {
     const destination = ok(await cashier.api.orders.post({ items: [{ productId: product.id, quantity: 1 }] }))
     const source = ok(await cashier.api.orders.post({ items: [{ productId: product.id, quantity: 1 }] }))
     const pending = ok(await send(cashier, source.id)).items[0]!
+    // Nothing was sent from the destination, so before the merge none of its units are with the kitchen.
+    expect(ok(await cashier.api.orders({ id: destination.id }).get()).items[0]!.sentQuantity).toBe(0)
 
     const blocked = await cashier.api.orders({ id: destination.id }).merge.post({ sourceOrderId: source.id })
     expect(blocked.status).toBe(409)
+    expect(blocked.error?.value).toMatchObject({ code: 'ORDER_KITCHEN_PENDING' })
 
     ok(await cashier.api.kitchen.tickets({ id: pending.id }).done.post())
-    ok(await cashier.api.orders({ id: destination.id }).merge.post({ sourceOrderId: source.id }))
+    const merged = ok(await cashier.api.orders({ id: destination.id }).merge.post({ sourceOrderId: source.id }))
+
+    // The ticket moved with the line: the destination now holds both units and counts the source's unit as sent.
+    // Without moveTickets the sent count would stay 0.
+    expect(merged.items).toHaveLength(1)
+    expect(merged.items[0]).toMatchObject({ quantity: 2, sentQuantity: 1 })
+    const reread = ok(await cashier.api.orders({ id: destination.id }).get())
+    expect(reread.items[0]).toMatchObject({ quantity: 2, sentQuantity: 1 })
 
     const board = ok(await cashier.api.kitchen.tickets.get({ query: { stationId: station.id } }))
     expect(board.items).toHaveLength(0)
@@ -133,5 +162,6 @@ describe('ส่งครัวและจอครัว', () => {
     ok(await send(cashier, order.id))
     const late = await cashier.api.orders({ id: order.id }).lines({ lineId }).note.patch({ note: 'หวาน' })
     expect(late.status).toBe(409)
+    expect(late.error?.value).toMatchObject({ code: 'KITCHEN_LINE_SENT' })
   })
 })
