@@ -84,6 +84,17 @@ export function useSetOrderLineQuantity() {
   })
 }
 
+/** Writes or clears the note of one line. Refused by the API once the line has gone to the kitchen. */
+export function useSetOrderLineNote() {
+  const remember = useOrderCache()
+
+  return useMutation({
+    mutationFn: ({ orderId, lineId, note }: { orderId: number; lineId: number; note: string | null }) =>
+      unwrap(api.orders({ id: orderId }).lines({ lineId }).note.patch({ note })),
+    onSuccess: remember,
+  })
+}
+
 export function useRemoveOrderLine() {
   const remember = useOrderCache()
 
