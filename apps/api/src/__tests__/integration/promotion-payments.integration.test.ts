@@ -227,7 +227,7 @@ describe('a QR made from a quote', () => {
     expect(wrongQuote.error?.value).toMatchObject({ code: 'QUOTE_MISMATCH' })
   })
 
-  test('a quote is held by one QR at a time, and cancelling the QR gives it back', async () => {
+  test('a quote is held by one QR at a time, and cancelling the QR cancels the quote it held', async () => {
     const { tea } = await shop()
     const quote = await quoteFor(tea.id)
     const qr = await createQr(4500, quote.id)
@@ -239,7 +239,7 @@ describe('a QR made from a quote', () => {
     expect(cancelByTill.error?.value).toMatchObject({ code: 'QUOTE_NOT_OPEN' })
 
     ok(await cashier.api.payments.qr({ id: qr.id }).cancel.post())
-    expect(await statusOf(quote.id)).toBe('open')
+    expect(await statusOf(quote.id)).toBe('cancelled')
     ok(await cashier.api.sales.post({ items: lines(tea.id), payments: cash(5000), quoteId: quote.id }))
   })
 

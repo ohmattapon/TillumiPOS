@@ -180,10 +180,10 @@ export class PriceQuoteEntity {
   /**
    * Throws unless a sale for `request` may use this quote now. `claimedReferences` are the QR payments
    * backing the sale: a quote held by a QR is sold only with that QR, and a QR made without this quote
-   * cannot pay for it.
+   * cannot pay for it. A cancelled quote is sold only with the paid QR it held: that money still arrives.
    */
   assertSellable(request: QuoteRequest, now: Date, claimedReferences: readonly string[]): void {
-    if (this.status === 'consumed' || this.status === 'cancelled') throw notOpen()
+    if (this.status === 'consumed') throw notOpen()
     if (this.status === 'open') {
       if (now.getTime() >= this.expiresAt.getTime()) throw expired()
       if (claimedReferences.length > 0) throw mismatch()
@@ -226,8 +226,10 @@ export class PriceQuoteEntity {
     return this.change({ status: 'cancelled' })
   }
 
+  /** A sale uses it up. A cancelled quote can be used only when a paid QR still names it (see assertSellable). */
   consume(saleId: number): PriceQuoteEntity {
-    if (this.status !== 'open' && this.status !== 'reserved') throw notOpen()
+    const cancelledWithQr = this.status === 'cancelled' && this.qrReference !== null
+    if (this.status !== 'open' && this.status !== 'reserved' && !cancelledWithQr) throw notOpen()
     return this.change({ status: 'consumed', saleId })
   }
 

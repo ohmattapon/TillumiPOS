@@ -212,13 +212,14 @@ describe('CancelQrPaymentUseCase', () => {
     expect(gateway.findPayment).toHaveBeenCalled()
   })
 
-  test('gives back the quote the QR held', async () => {
+  test('closes the quote the QR held: money that still arrives on this QR keeps its price', async () => {
     repo.findByIdForUpdate.mockResolvedValue(makeQrPayment({ reference: 'QRABC' }))
     gateway.findPayment.mockResolvedValue(null)
 
     await new CancelQrPaymentUseCase(repo, refresher, mockUnitOfWork(), quotes).execute(1, 1)
 
-    expect(quotes.releaseByReference).toHaveBeenCalledWith('QRABC')
+    expect(quotes.cancelByReference).toHaveBeenCalledWith('QRABC')
+    expect(quotes.releaseByReference).not.toHaveBeenCalled()
   })
 
   test('keeps the quote when the money turned out to be there', async () => {

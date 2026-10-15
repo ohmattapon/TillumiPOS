@@ -107,7 +107,7 @@ describe('settling a QR', () => {
   test('cancelling closes it', async () => {
     quotes.findByQrReferenceForUpdate.mockResolvedValue(makePriceQuote({ status: 'reserved', qrReference: 'QRABC' }))
     await claims.cancelByReference('QRABC')
-    expect(quotes.save.mock.calls[0]![0]).toMatchObject({ status: 'cancelled' })
+    expect(quotes.save.mock.calls[0]![0]).toMatchObject({ status: 'cancelled', qrReference: 'QRABC' })
   })
 
   test('a QR that held no quote changes nothing', async () => {
@@ -123,12 +123,14 @@ describe('settling a QR', () => {
     expect(quotes.save).not.toHaveBeenCalled()
   })
 
-  test('says which quote a QR holds, only while it is held', async () => {
+  test('says which quote a QR holds, while it is held or after that QR was cancelled', async () => {
     quotes.findByQrReference.mockResolvedValueOnce(makePriceQuote({ status: 'reserved', qrReference: 'QRABC' }))
-    expect(await claims.findReservedByReference('QRABC')).toBe(5)
+    expect(await claims.findHeldByReference('QRABC')).toBe(5)
+    quotes.findByQrReference.mockResolvedValueOnce(makePriceQuote({ status: 'cancelled', qrReference: 'QRABC' }))
+    expect(await claims.findHeldByReference('QRABC')).toBe(5)
     quotes.findByQrReference.mockResolvedValueOnce(makePriceQuote({ status: 'consumed', saleId: 3, qrReference: 'QRABC' }))
-    expect(await claims.findReservedByReference('QRABC')).toBeNull()
-    expect(await claims.findReservedByReference('QRNONE')).toBeNull()
+    expect(await claims.findHeldByReference('QRABC')).toBeNull()
+    expect(await claims.findHeldByReference('QRNONE')).toBeNull()
   })
 
   test('consuming saves the quote with its sale', async () => {

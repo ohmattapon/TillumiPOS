@@ -138,7 +138,7 @@ describe('SaleCheckout with a pinned price', () => {
 
     test('a QR that holds a quote cannot be used without it', async () => {
       qr.reference.mockResolvedValue('QRABC')
-      quotes.findReservedByReference.mockResolvedValue(7)
+      quotes.findHeldByReference.mockResolvedValue(7)
 
       const refused = checkout.checkout({ ...withQr, quoteId: undefined })
 
