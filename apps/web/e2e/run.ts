@@ -296,6 +296,45 @@ async function main() {
       if ((await detail.getByText(/เลขประจำตัวผู้เสียภาษี/).count()) > 0) throw new Error('An old sale gained a tax ID')
     })
 
+    console.log('\nPromotions:')
+
+    await check('the owner sets up a 10% promotion, the till shows it, and the receipt names it', async () => {
+      await owner.goto(`${WEB}/promotions`)
+      await owner.getByRole('button', { name: 'เพิ่มโปรโมชัน' }).click()
+      const form = owner.getByRole('dialog')
+      await form.getByLabel('ชื่อโปรโมชัน').fill('ลดเปิดร้าน')
+      await form.getByLabel('ส่วนลด (%)').fill('10')
+      await form.getByRole('button', { name: 'บันทึก' }).click()
+      await owner.getByRole('dialog').waitFor({ state: 'detached' })
+      await owner.getByText('ลดเปิดร้าน').first().waitFor()
+
+      await owner.goto(WEB)
+      await owner.getByRole('button', { name: /น้ำดื่ม 600 มล\./ }).first().click()
+      await owner.getByText('โปรโมชัน: ลดเปิดร้าน').waitFor()
+      await owner.getByRole('button', { name: /^ชำระเงิน/ }).click()
+      await owner.getByRole('button', { name: 'พอดี' }).click()
+      await owner.getByRole('button', { name: 'ยืนยันการชำระ' }).click()
+      const receipt = owner.getByRole('dialog')
+      await receipt.getByText('โปรโมชัน: ลดเปิดร้าน').waitFor()
+      await receipt.getByRole('button', { name: 'ขายรายการต่อไป' }).waitFor()
+    })
+
+    await check('a cashier sees the promotion but cannot add one', async () => {
+      await cashier.goto(`${WEB}/promotions`)
+      await cashier.getByText('ลดเปิดร้าน').first().waitFor()
+      if ((await cashier.getByRole('button', { name: 'เพิ่มโปรโมชัน' }).count()) > 0)
+        throw new Error('A cashier can add promotions')
+    })
+
+    await check('the promotion is switched off so the checks after it price as before', async () => {
+      const listed = await owner.request.get(`${WEB}/api/v1/promotions`)
+      const { items } = (await listed.json()) as { items: { id: number }[] }
+      for (const { id } of items) {
+        const off = await owner.request.patch(`${WEB}/api/v1/promotions/${id}`, { data: { isActive: false } })
+        if (!off.ok()) throw new Error(`Could not switch the promotion off: ${off.status()}`)
+      }
+    })
+
     console.log('\nModifiers:')
 
     await check('the owner sets up a group with a priced option on the modifiers page', async () => {
@@ -495,7 +534,7 @@ async function main() {
         const screen = await signIn(browser, 'admin', OWNER_PASSWORD, size)
         try {
           const wide: string[] = []
-          for (const path of ['/', '/today', '/shifts', '/products', '/categories', '/modifiers', '/tables', '/branches', '/users', '/settings']) {
+          for (const path of ['/', '/today', '/shifts', '/products', '/categories', '/modifiers', '/tables', '/branches', '/users', '/promotions', '/settings']) {
             await screen.goto(`${WEB}${path}`)
             await screen.waitForLoadState('networkidle')
             const overflow = await screen.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
