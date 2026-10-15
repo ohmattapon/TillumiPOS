@@ -11,6 +11,6 @@ export async function announceSetupCode() {
   const code = container.resolve<ISetupCode>(setupCodeToken).issue()
   const line = '='.repeat(60)
   console.log(
-    `\n${line}\n EasyPOS: ร้านนี้ยังไม่ได้ตั้งค่า (first-run setup)\n SETUP CODE / รหัสตั้งค่า:  ${code}\n เปิดเว็บแล้วกรอกรหัสนี้ที่หน้าตั้งค่าครั้งแรก\n${line}\n`,
+    `\n${line}\n TillumiPOS: ร้านนี้ยังไม่ได้ตั้งค่า (first-run setup)\n SETUP CODE / รหัสตั้งค่า:  ${code}\n เปิดเว็บแล้วกรอกรหัสนี้ที่หน้าตั้งค่าครั้งแรก\n${line}\n`,
   )
 }

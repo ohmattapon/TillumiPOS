@@ -29,7 +29,7 @@ export interface ShopSettingsProps {
 
 /** What a shop that has never been configured runs with. */
 export const DEFAULT_SHOP_SETTINGS: ShopSettingsProps = {
-  shopName: 'EasyPOS',
+  shopName: 'TillumiPOS',
   taxId: null,
   address: null,
   phone: null,

@@ -290,7 +290,7 @@ async function shootCustomerDisplay(context: BrowserContext, name: string) {
     let seq = 0
     for (const [state, value] of states) {
       seq += 1
-      const envelope = { v: 1, sessionId: 'shots', seq, at: Date.now(), locale: 'th', currency: 'THB', shopName: 'EasyPOS', state: value }
+      const envelope = { v: 1, sessionId: 'shots', seq, at: Date.now(), locale: 'th', currency: 'THB', shopName: 'TillumiPOS', state: value }
       await sender.evaluate((message) => {
         const channel = new BroadcastChannel('easypos-customer-display')
         channel.postMessage(message)

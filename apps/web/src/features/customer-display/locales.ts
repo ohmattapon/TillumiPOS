@@ -1,5 +1,5 @@
 const th = {
-  brand: 'EasyPOS',
+  brand: 'TillumiPOS',
   fullscreen: 'คลิกที่จอเพื่อเต็มจอ',
   idle: {
     welcome: 'ยินดีต้อนรับ',
@@ -25,7 +25,7 @@ const th = {
 }
 
 const en = {
-  brand: 'EasyPOS',
+  brand: 'TillumiPOS',
   fullscreen: 'Click the screen for full screen',
   idle: {
     welcome: 'Welcome',
