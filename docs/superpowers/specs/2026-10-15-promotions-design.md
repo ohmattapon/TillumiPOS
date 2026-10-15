@@ -30,8 +30,7 @@ branch: `ohmattpon/promotions` แตกจาก `origin/main` หลังส�
 |---|---|
 | `name` | 1–80 ตัวอักษรหลังตัดช่องว่างหัวท้าย ห้ามซ้ำโดยไม่สนตัวพิมพ์ |
 | `kind` | `fixed` หรือ `percent` |
-| `valueSatang` (fixed) | จำนวนเต็ม 1 ถึง `MAX_AMOUNT_SATANG` |
-| `valueBp` (percent) | basis points จำนวนเต็ม 1–10000 (700 = 7%) แบบเดียวกับ `vatRateBp` |
+| `value` | ถ้า `fixed` เป็นสตางค์ จำนวนเต็ม 1 ถึง `MAX_AMOUNT_SATANG`; ถ้า `percent` เป็น basis points จำนวนเต็ม 1–10000 (700 = 7%) แบบเดียวกับ `vatRateBp` |
 | `maxDiscountSatang` | ใช้กับ `percent` เท่านั้น จำนวนเต็ม ≥ 1 หรือ null = ไม่มีเพดาน ห้ามตั้งกับ `fixed` |
 | `minSubtotalSatang` | จำนวนเต็ม ≥ 0 เทียบกับยอดสินค้ารวมตัวเลือก ก่อนส่วนลดและก่อน VAT ที่บวกเพิ่ม |
 | `startsOn`, `endsOn` | วันที่ตามเขตเวลาร้าน รวมวันสิ้นสุด ว่างได้ทั้งสองช่อง ถ้ามีทั้งคู่ต้อง start ≤ end |
@@ -49,8 +48,8 @@ branch: `ohmattpon/promotions` แตกจาก `origin/main` หลังส�
 - ต้องเปิดใช้ ผ่านวันเริ่ม/สิ้นสุด วันในสัปดาห์ ช่วงเวลา ยอดขั้นต่ำ และสิทธิ์ จึงถือว่าตรงเงื่อนไข
 - `at` แปลงเป็นวันที่และนาทีของวันในเขตเวลาร้านด้วย `Intl`
 - ช่วงที่ข้ามเที่ยงคืน (เช่น 22:00–02:00) นับตามวันที่ช่วงนั้นเริ่ม ดังนั้น 01:00 วันพุธเทียบ `weekdays` ด้วยวันอังคาร
-- `fixed`: ส่วนลด = `valueSatang`
-- `percent`: `Math.round(subtotal * valueBp / 10000)` แล้วจำกัดด้วย `maxDiscountSatang` ถ้ามี
+- `fixed`: ส่วนลด = `value`
+- `percent`: `Math.round(subtotal * value / 10000)` แล้วจำกัดด้วย `maxDiscountSatang` ถ้ามี
 - ส่วนลดไม่เกินยอดสินค้า และต้อง ≥ 1 ถ้าได้ 0 ถือว่าไม่ตรงเงื่อนไข
 - `pickBestPromotion` เลือกส่วนลดมากสุด ถ้าเท่ากันเลือก id ต่ำสุด ผลจึงคงที่
 - ยอดสุทธิและ VAT คำนวณต่อด้วย `calculateTotals` เดิม ไม่แก้สูตรนั้น
@@ -78,7 +77,7 @@ quote คือตะกร้าที่เซิร์ฟเวอร์ค�
 |---|---|
 | `open` | หมดอายุ 15 นาทีหลังสร้าง (`QUOTE_VALID_FOR_MS`) ใช้กับเงินสดและบัตร |
 | `reserved` | มี QR จองไว้ **ไม่หมดอายุ** จนกว่า QR จะถูก consume, cancel หรือ dismiss ซึ่งรองรับเงินที่มาถึงช้ากว่าเวลาที่หน้าจอรอ QR (`QR_VALID_FOR_MS` = 10 นาที ธนาคารไม่ได้ตั้งหมดอายุ) |
-| `consumed` | สร้างบิลแล้ว ใช้ซ้ำไม่ได้ (`sales.quote_id` ไม่ซ้ำ) |
+| `consumed` | สร้างบิลแล้ว ใช้ซ้ำไม่ได้ (`price_quotes.sale_id` ไม่ซ้ำ) |
 | `cancelled` | ถูกยกเลิก หรือ QR ที่จองถูกยกเลิก/ dismiss/ สร้างไม่สำเร็จ |
 
 `open` ที่หมดอายุถือเป็น `QUOTE_EXPIRED` ตอนใช้ ไม่ต้องมีงานตั้งเวลา quote ที่ค้างไม่มีผลต่อสต็อกหรือเงิน
@@ -94,13 +93,14 @@ quote คือตะกร้าที่เซิร์ฟเวอร์ค�
 - รายการ (หลังรวมสินค้า+ตัวเลือกซ้ำกันแบบเดียวกับที่ checkout ทำอยู่), `memberId` และสาขาในคำขอต้องตรงกับ quote ถ้าไม่ตรง `QUOTE_MISMATCH` โดย quote ยังใช้ได้
 - ใช้ราคาต่อหน่วย ส่วนลด `vatMode` และ `vatRateBp` จาก quote ผ่านทางที่ `SaleCheckout` ใช้กับราคาที่ออเดอร์ quote ไว้อยู่แล้ว (`unitPriceSatang` ต่อบรรทัด) และส่ง snapshot โปรโมชันให้ `SaleEntity.complete` ไม่แก้ `calculateTotals`
 - quote ที่มีสมาชิก ใช้ snapshot สมาชิกจาก quote และไม่ตรวจว่าสมาชิกยังเปิดใช้ เพราะตรวจตอนสร้าง quote แล้ว ไม่เช่นนั้นสมาชิกที่ถูกปิดระหว่างรอ QR จะทำให้เงินที่จ่ายแล้วสร้างบิลไม่ได้ (ข้อนี้ผ่อนกฎ "ตอนชำระตรวจว่าสมาชิกยังเปิดใช้" ของสมาชิกเฉพาะกรณีมี quote)
-- ลำดับล็อก: ออเดอร์ → quote (`findByIdForUpdate`) → สมาชิก → สินค้า (ลำดับสินค้าเดิม)
-- สร้างบิลแล้ว quote เป็น `consumed` และบิลเก็บ `quote_id`
+- ถ้าบิลใช้ QR ที่ quote จองไว้แต่คำขอไม่ส่ง `quoteId` (เช่น ใช้เงินที่มาถึงช้าจากรายการที่ยังไม่มีบิล) ตอบ `QUOTE_REQUIRED` พร้อม `quoteId` ใน `params` ให้ไคลเอนต์ส่งซ้ำด้วย quote นั้น QR ที่ quote จองไว้ใช้กับคำขอที่ไม่มี quote ไม่ได้ เพื่อไม่ให้ quote ค้างเป็น `reserved`
+- ลำดับล็อก: ออเดอร์ → quote (`findByIdForUpdate`) → รายการชำระด้วย QR → สมาชิก → สินค้า (ลำดับสินค้าเดิม) คำสั่งยกเลิก/ปิดรายการ QR ล็อก quote ก่อนล็อก QR ด้วยลำดับเดียวกัน
+- สร้างบิลแล้ว quote เป็น `consumed` และเก็บ `sale_id` ของบิลนั้น
 - การเรียก quote ทั้งหมดอยู่ใน unit of work ของผู้เรียก ผ่าน port `IQuoteClaims`
 
 ## 5. ผลต่อ QR
 
-- คำขอสร้าง QR (legacy และ v2) รับ `quoteId` ที่ไม่บังคับ เซิร์ฟเวอร์ใช้ `totalSatang` ของ quote เป็นยอด QR ถ้า `amountSatang` ที่ส่งมาไม่ตรง `QUOTE_AMOUNT_MISMATCH`
+- คำขอสร้าง QR (legacy และ v2) รับ `quoteId` ที่ไม่บังคับ ยอด QR ต้องไม่เกิน `totalSatang` ของ quote ถ้าเกิน `QUOTE_AMOUNT_MISMATCH` (ยอดน้อยกว่าได้ เพราะบิลแบ่งจ่ายหลายวิธีได้อยู่แล้ว) quote หนึ่งใบผูกกับ QR ได้ใบเดียว และ QR ที่สร้างจาก quote ใช้ได้เฉพาะกับ quote นั้น
 - ในโหมดกะ การจอง quote อยู่ในขั้นจองรายการใน `shift_qr_attempts` ภายใต้การล็อกกะ (ขั้นที่ 1 ของ `CreateQrPaymentV2UseCase`) แล้วเรียกธนาคารนอก transaction ตามเดิม
 - ธนาคารปฏิเสธหรือไม่ถึงธนาคาร (attempt `failed`) ปล่อย quote กลับเป็น `open` (ถ้ายังไม่หมดอายุ) หรือ `cancelled` ผลที่ไม่ทราบ (`unknown`) คง `reserved` จนกว่าจะ resolve
 - QR ถูก cancel หรือ dismiss: quote เป็น `cancelled`
@@ -113,12 +113,12 @@ quote คือตะกร้าที่เซิร์ฟเวอร์ค�
 
 - ขอ quote ด้วย `orderId` ได้ ระบบอ่านรายการ (ราคาที่ออเดอร์ quote ไว้) และสมาชิกจากออเดอร์ผ่าน port ของโมดูล orders ไม่รับ `lines` และ `memberId` ในคำขอนั้น
 - ออเดอร์ของสาขาอื่นตอบ `ORDER_NOT_FOUND`
-- ออเดอร์ที่มี quote ในสถานะ `reserved` แก้รายการ จำนวน สมาชิก ย้ายโต๊ะ รวมบิล แยกบิล หรือยกเลิกไม่ได้ จนกว่า QR จะถูก resolve: `ORDER_LOCKED_BY_QR_PAYMENT` use case ที่แก้ออเดอร์ล็อกแถวออเดอร์ก่อน แล้วถาม `IQuoteClaims.hasReservedQuoteForOrder`
+- ออเดอร์ที่มี quote ในสถานะ `reserved` แก้รายการ จำนวน สมาชิก ย้ายโต๊ะ รวมบิล แยกบิล หรือยกเลิกไม่ได้ จนกว่า QR จะถูก resolve: `ORDER_LOCKED_BY_QR_PAYMENT` ตรวจที่จุดเดียวคือ `save` ของ repository ออเดอร์ (decorator ที่ถามพอร์ต `IOrderEditLock` ซึ่งโมดูล quotes เป็นผู้ตอบ) หลัง use case ล็อกแถวออเดอร์แล้ว จึงครอบคลุมทุกคำสั่งที่แก้ออเดอร์ รวมถึงการเปลี่ยนป้ายชื่อ ส่วนการอ่านและการชำระ (ที่ใช้ quote นั้นเอง) ไม่ถูกกระทบ
 - quote ที่ยัง `open` ของออเดอร์ไม่ล็อกออเดอร์ แต่จะ `QUOTE_MISMATCH` ถ้าออเดอร์เปลี่ยนก่อนชำระ
 
 ## 7. บิล
 
-`sales` เพิ่ม `promotion_id` (FK nullable), `promotion` (jsonb snapshot: ชื่อ ชนิด ค่า เพดาน ยอดลด) และ `quote_id` (FK nullable ไม่ซ้ำ) ข้อมูลเดิมเป็น null บิลที่บันทึกแล้วห้ามแก้
+`sales` เพิ่ม `promotion_id` (FK nullable), และ `promotion` (jsonb snapshot: ชื่อ ชนิด ค่า เพดาน ยอดลด) ข้อมูลเดิมเป็น null (การผูกบิลกับ quote อยู่ที่ `price_quotes.sale_id`) บิลที่บันทึกแล้วห้ามแก้
 
 - `discountSatang` ยังเป็นยอดลดรวมที่ใช้ในรายงานเดิม และเท่ากับยอดลดของโปรโมชันเมื่อใช้ quote
 - ใบเสร็จและประวัติบิลแสดงชื่อโปรโมชันจาก snapshot ถ้าเป็น null ไม่แสดงอะไร
@@ -152,7 +152,8 @@ quote คือตะกร้าที่เซิร์ฟเวอร์ค�
 | `QUOTE_EXPIRED` | 409 | quote ที่ `open` หมดอายุ |
 | `QUOTE_NOT_OPEN` | 409 | quote ถูกใช้ ยกเลิก หรือถูกจองโดย QR อื่น |
 | `QUOTE_MISMATCH` | 409 | รายการ สมาชิก หรือสาขาไม่ตรง |
-| `QUOTE_AMOUNT_MISMATCH` | 409 | `amountSatang` ของ QR ไม่ตรง quote |
+| `QUOTE_AMOUNT_MISMATCH` | 409 | `amountSatang` ของ QR เกินยอดสุทธิของ quote |
+| `QUOTE_REQUIRED` | 409 | ใช้ QR ที่ quote จองไว้โดยไม่ส่ง `quoteId` (`params.quoteId` บอก quote) |
 | `PROMOTION_AND_DISCOUNT_CONFLICT` | 409 | ส่ง `quoteId` พร้อม `discountSatang > 0` |
 | `ORDER_LOCKED_BY_QR_PAYMENT` | 409 | แก้ออเดอร์ที่ quote ถูกจองโดย QR |
 
@@ -163,16 +164,16 @@ quote คือตะกร้าที่เซิร์ฟเวอร์ค�
 - `domains/promotion.domain.ts` (entity กฎ และสูตร) และ `domains/price-quote.domain.ts` ไม่ import ชั้นอื่น พร้อมไฟล์ทดสอบข้างกัน
 - โมดูล `promotions` ตามต้นแบบ `categories`: `CreatePromotionUseCase`, `UpdatePromotionUseCase` (command) และ `ListPromotionsUseCase`, `GetPromotionUseCase` (query)
 - โมดูล `quotes`: `CreateQuoteUseCase`, `CancelQuoteUseCase` (command), `GetQuoteUseCase` (query) อ่านโปรโมชันผ่าน port `IPromotionCatalog`, อ่านสินค้าและตัวเลือกผ่าน `IProductRepository` และ `ILineOptionsResolver`, อ่านออเดอร์ผ่าน port ของ orders
-- port `IQuoteClaims` (reserveForQr, releaseFromQr, consume, hasReservedQuoteForOrder) ให้ `SaleCheckout`, `qr-payments` และ `orders` ใช้ ตามแบบ `IQrPaymentClaims` แต่ละโมดูลไม่แตะตารางของโมดูลอื่น
+- port `IQuoteClaims` (lock, consume, reserveForQr, releaseByReference, cancelByReference, lockByReference, findReservedByReference) ให้ `SaleCheckout` และ `qr-payments` ใช้ ตามแบบ `IQrPaymentClaims`; port `IOrderEditLock` ของโมดูล orders ที่ quotes เป็นผู้ตอบ; port `IOrderQuoteSource` ของโมดูล quotes ที่ orders เป็นผู้ตอบ (ล็อกและอ่านรายการของออเดอร์) แต่ละโมดูลไม่แตะตารางของโมดูลอื่น
 - repository ใช้ `currentExecutor()` อ่านที่ต้องล็อกชื่อลงท้าย `ForUpdate` ทุกคำสั่งที่เขียนหลายตารางอยู่ใน `IUnitOfWork.run()`
-- ตาราง `promotions` และ `price_quotes` ใหม่ พร้อม migration คอลัมน์ใหม่ของ `sales`, `qr_payments` และ `shift_qr_attempts` (`quote_id` nullable) ข้อมูลเดิมไม่ถูกแตะ
+- ตาราง `promotions` และ `price_quotes` ใหม่ พร้อม migration และคอลัมน์ใหม่ของ `sales` (`promotion_id`, `promotion`) quote เก็บรหัสอ้างอิงของ QR ที่จองไว้เองใน `price_quotes.qr_reference` จึงไม่แก้ตาราง QR ข้อมูลเดิมไม่ถูกแตะ
 - ลงทะเบียน DI ที่ `modules/di-registrations.ts`
 
 ## 10. หน้าเว็บ
 
 - feature `promotions` ใหม่: หน้าจัดการสำหรับเจ้าของ ใช้ `DataTable` ทุกคอลัมน์ระบุ `priority` ฟอร์มใน dialog ช่วงวันใช้ `DatePicker` วันในสัปดาห์เป็นกลุ่มปุ่ม ช่วงเวลา และสวิตช์เปิด/ปิดใช้ แคชเชียร์เห็นรายการแต่แก้ไม่ได้ และ API ตรวจซ้ำเสมอ
 - `features/promotions/index.ts` ส่งออกเฉพาะที่ `pos` ใช้ (query ของรายการและสูตร) feature นี้ห้าม import `pos`
-- หน้าขาย: ตะกร้าแสดงโปรโมชันที่ตรงเงื่อนไขและยอดลดด้วยสูตรกลาง ปุ่ม "ยกเลิกโปรโมชัน" ก่อนกรอกส่วนลดเอง ถ้ายังไม่ยกเลิกแล้วกรอกส่วนลดเอง ให้ยืนยันก่อน
+- หน้าขาย: ตะกร้าแสดงโปรโมชันที่ตรงเงื่อนไขและยอดลดด้วยสูตรกลาง ปุ่ม "ยกเลิกโปรโมชัน" ก่อนกรอกส่วนลดเอง ช่องส่วนลดกรอกเองถูกปิดไว้จนกว่าจะกดปุ่มนี้ จึงไม่มีทางบวกซ้อนโดยไม่ตั้งใจ
 - ขอ quote ตอนเปิดหน้าชำระ ยอดจากเซิร์ฟเวอร์เป็นหลัก ถ้าต่างจากตัวอย่างในตะกร้า ให้แสดงยอดของเซิร์ฟเวอร์ ถ้าพนักงานกรอกส่วนลดเอง ไม่ขอ quote และใช้ทางเดิม
 - สร้าง QR ส่ง `quoteId` เมื่อมี และแสดงสถานะ "ล็อกเพราะรอ QR" ที่ตะกร้าและออเดอร์จนกว่าจะ resolve
 - zustand เก็บเฉพาะ `quoteId` กับสถานะ "ปฏิเสธโปรโมชันแล้ว" ไม่คัดลอกข้อมูลโปรโมชัน และล้างตอนออกจากระบบ สลับสาขา หรือเริ่มตะกร้าใหม่ พร้อมตะกร้า
