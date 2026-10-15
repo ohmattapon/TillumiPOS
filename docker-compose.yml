@@ -1,4 +1,4 @@
-# EasyPOS for a shop: `scripts/install.sh` writes .env and starts this. Developers add docker-compose.dev.yml
+# TillumiPOS for a shop: `scripts/install.sh` writes .env and starts this. Developers add docker-compose.dev.yml
 # (see `bun run db:up`) to reach the database from the host.
 services:
   db:
