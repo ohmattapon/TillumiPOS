@@ -224,6 +224,10 @@ export const mockFirstRunGuard = (): Mocked<IFirstRunGuard> => ({
 
 import type { IMemberRepository } from '../modules/members/applications/ports/member.repository'
 import type { IPromotionRepository } from '../modules/promotions/applications/ports/promotion.repository'
+import type { IPriceQuoteRepository } from '../modules/quotes/applications/ports/price-quote.repository'
+import type { IQuoteClaims } from '../modules/quotes/applications/ports/quote-claims.port'
+import type { IPromotionCatalog } from '../modules/quotes/applications/ports/promotion-catalog.port'
+import type { IOrderQuoteSource } from '../modules/quotes/applications/ports/order-quote-source.port'
 export const mockPromotionRepository = (): Mocked<IPromotionRepository> => ({
   find: mock<IPromotionRepository['find']>(),
   findById: mock<IPromotionRepository['findById']>(),
@@ -238,4 +242,33 @@ export const mockMemberRepository = (): Mocked<IMemberRepository> => ({
   findByIdForUpdate: mock<IMemberRepository['findByIdForUpdate']>(),
   create: mock<IMemberRepository['create']>(),
   update: mock<IMemberRepository['update']>(),
+})
+
+export const mockPriceQuoteRepository = (): Mocked<IPriceQuoteRepository> => ({
+  create: mock<IPriceQuoteRepository['create']>(),
+  findById: mock<IPriceQuoteRepository['findById']>(),
+  findByIdForUpdate: mock<IPriceQuoteRepository['findByIdForUpdate']>(),
+  findByQrReference: mock<IPriceQuoteRepository['findByQrReference']>(async () => null),
+  findByQrReferenceForUpdate: mock<IPriceQuoteRepository['findByQrReferenceForUpdate']>(async () => null),
+  hasReservedForOrder: mock<IPriceQuoteRepository['hasReservedForOrder']>(async () => false),
+  save: mock<IPriceQuoteRepository['save']>(async (quote) => quote),
+})
+
+/** No quote holds any QR by default, and every claim succeeds; a test sets what it is about. */
+export const mockQuoteClaims = (): Mocked<IQuoteClaims> => ({
+  lockForCheckout: mock<IQuoteClaims['lockForCheckout']>(),
+  findReservedByReference: mock<IQuoteClaims['findReservedByReference']>(async () => null),
+  consume: mock<IQuoteClaims['consume']>(async () => {}),
+  reserveForQr: mock<IQuoteClaims['reserveForQr']>(async () => {}),
+  releaseByReference: mock<IQuoteClaims['releaseByReference']>(async () => {}),
+  cancelByReference: mock<IQuoteClaims['cancelByReference']>(async () => {}),
+})
+
+export const mockPromotionCatalog = (): Mocked<IPromotionCatalog> => ({
+  activePromotions: mock<IPromotionCatalog['activePromotions']>(async () => []),
+})
+
+export const mockOrderQuoteSource = (): Mocked<IOrderQuoteSource> => ({
+  read: mock<IOrderQuoteSource['read']>(),
+  lockOpenOrder: mock<IOrderQuoteSource['lockOpenOrder']>(),
 })

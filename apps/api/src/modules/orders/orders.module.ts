@@ -4,6 +4,8 @@ import { DrizzleOrderRepository } from './adapters/repository/order.drizzle.repo
 import { DrizzleTableOccupancy } from './adapters/repository/table-occupancy.drizzle.adapter'
 import { orderRepositoryToken } from './applications/ports/order.repository'
 import { tableOccupancyToken } from '../tables/applications/ports/table-occupancy.port'
+import { orderQuoteSourceToken } from '../quotes/applications/ports/order-quote-source.port'
+import { OrderQuoteSource } from './applications/services/order-quote-source'
 import { AddOrderItemUseCase } from './applications/usecases/add-order-item.usecase'
 import { CancelOrderUseCase } from './applications/usecases/cancel-order.usecase'
 import { GetOrderUseCase } from './applications/usecases/get-order.usecase'
@@ -23,6 +25,7 @@ import { SetOrderLineQuantityUseCase } from './applications/usecases/set-order-l
 
 container.register(orderRepositoryToken, { useClass: DrizzleOrderRepository })
 container.register(tableOccupancyToken, { useClass: DrizzleTableOccupancy })
+container.register(orderQuoteSourceToken, { useClass: OrderQuoteSource })
 container.registerSingleton(ListOrdersUseCase)
 container.registerSingleton(GetOrderUseCase)
 container.registerSingleton(OpenOrderUseCase)
