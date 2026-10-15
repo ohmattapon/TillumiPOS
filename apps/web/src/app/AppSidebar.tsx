@@ -8,6 +8,12 @@ import {
   LayoutGrid,
   LogOut,
   Package,
+  Palette,
+  Sun,
+  Moon,
+  MoonStar,
+  Trees,
+  Flower2,
   Settings,
   ShoppingCart,
   SlidersHorizontal,
@@ -26,6 +32,11 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -45,6 +56,7 @@ import { clearCart } from '@/features/pos'
 import { useRegisterSelectionStore } from '@/features/shifts'
 import { LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
 import { useSettings } from '@/features/settings'
+import { themes, useTheme, type Theme } from './theme'
 
 interface NavItem {
   to: string
@@ -53,14 +65,15 @@ interface NavItem {
   badge?: number
 }
 
-// Active item reads as a raised white card with accent-coloured text.
+// Active item reads as a flat mint wash with deep-teal text.
 const activeItem =
-  'data-[active=true]:bg-background data-[active=true]:text-primary data-[active=true]:shadow-sm data-[active=true]:ring-1 data-[active=true]:ring-border'
+  'data-[active=true]:bg-accent data-[active=true]:text-accent-foreground'
 
 export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => void }) {
   const { t } = useTranslation('app')
   const { pathname } = useLocation()
   const { shopName } = useSettings()
+  const { theme, setTheme } = useTheme()
   const { branch, canSwitch } = useActiveBranch()
   const isOwner = user.role === 'owner'
   const products = useQuery(productsQuery({ stockAtMost: LOW_STOCK_THRESHOLD, limit: 1 }))
@@ -74,6 +87,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
         { to: '/', label: t('nav.sell'), icon: ShoppingCart },
         { to: '/today', label: t('nav.today'), icon: CalendarCheck },
         ...(isOwner ? [{ to: '/reports', label: t('nav.reports'), icon: ChartNoAxesCombined }] : []),
+        { to: '/members', label: t('nav.members'), icon: UserRound },
         { to: '/shifts', label: t('nav.shifts'), icon: WalletCards },
       ],
     },
@@ -134,7 +148,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
                 <SidebarMenuItem key={item.to}>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === item.to}
+                    isActive={pathname === item.to || (item.to !== '/' && pathname.startsWith(`${item.to}/`))}
                     tooltip={item.label}
                     className={`h-11 ${activeItem}`}
                   >
@@ -173,6 +187,32 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="w-(--radix-dropdown-menu-trigger-width) min-w-48">
                 <DropdownMenuLabel className="font-normal text-muted-foreground">@{user.username}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Palette />
+                    {t('theme.label')}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)}>
+                      {themes.map((value) => {
+                        const Icon = {
+                          light: Sun,
+                          dark: Moon,
+                          midnight: MoonStar,
+                          forest: Trees,
+                          rose: Flower2,
+                        }[value]
+                        return (
+                          <DropdownMenuRadioItem key={value} value={value}>
+                            <Icon />
+                            {t(`theme.options.${value}`)}
+                          </DropdownMenuRadioItem>
+                        )
+                      })}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={onLogout}>
                   <LogOut />

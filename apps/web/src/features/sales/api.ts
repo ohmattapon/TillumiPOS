@@ -49,6 +49,7 @@ export function useVoidSale(id: number) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: saleKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['members'] })
       // Voiding returns the stock.
       queryClient.invalidateQueries({ queryKey: productKeys.all })
     },

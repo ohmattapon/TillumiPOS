@@ -150,7 +150,7 @@ export function ProductPicker({ searchRef }: Props) {
             onClick={() => pick(product)}
             // A strip in the category's colour along the top, so a category can be found by colour at a glance.
             style={product.categoryId ? { borderTopColor: categoryColor(product.categoryId) } : undefined}
-            className="flex flex-col border-t-4 overflow-hidden rounded-xl border bg-card text-left shadow-xs transition-colors outline-none hover:border-primary/50 hover:bg-accent/40 focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-accent disabled:pointer-events-none disabled:opacity-45"
+            className="flex flex-col border-t-2 overflow-hidden rounded-md border bg-card text-left transition-colors outline-none hover:border-primary/50 hover:bg-accent/40 focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-accent disabled:pointer-events-none disabled:opacity-45"
           >
             {/* No picture, no empty box: the name and price take the space. */}
             {product.imageUrl && <ProductImage src={product.imageUrl} alt="" className="aspect-[4/3] w-full" />}
@@ -172,7 +172,7 @@ export function ProductPicker({ searchRef }: Props) {
             </span>
           </button>
         ))}
-        {!products.isPending && !searching && visibleProducts.length === 0 && (
+        {!products.isPending && !products.error && !searching && visibleProducts.length === 0 && (
           <p className="col-span-full py-12 text-center text-muted-foreground">{t('picker.noMatches')}</p>
         )}
       </div>

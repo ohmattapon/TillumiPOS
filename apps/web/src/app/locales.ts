@@ -13,6 +13,7 @@ const th = {
     modifiers: 'ตัวเลือกเสริม',
     tables: 'ผังโต๊ะ',
     branches: 'สาขา',
+    members: '\u0e2a\u0e21\u0e32\u0e0a\u0e34\u0e01',
     users: 'ผู้ใช้',
     settings: 'ตั้งค่าร้าน',
     more: 'เมนู',
@@ -21,6 +22,16 @@ const th = {
   roles: {
     owner: 'เจ้าของร้าน',
     cashier: 'แคชเชียร์',
+  },
+  theme: {
+    label: 'ธีมสี',
+    options: {
+      light: 'สว่าง',
+      dark: 'มืด',
+      midnight: 'น้ำเงินเที่ยงคืน',
+      forest: 'เขียวป่า',
+      rose: 'ชมพูกุหลาบ',
+    },
   },
   logout: 'ออกจากระบบ',
 }
@@ -41,6 +52,7 @@ const en = {
     tables: 'Floor plan',
     branches: 'Branches',
     users: 'Users',
+    members: 'Members',
     settings: 'Shop settings',
     more: 'Menu',
     bottom: 'Main menu',
@@ -48,6 +60,16 @@ const en = {
   roles: {
     owner: 'Owner',
     cashier: 'Cashier',
+  },
+  theme: {
+    label: 'Color theme',
+    options: {
+      light: 'Light',
+      dark: 'Dark',
+      midnight: 'Midnight blue',
+      forest: 'Forest green',
+      rose: 'Rose',
+    },
   },
   logout: 'Sign out',
 } satisfies typeof th

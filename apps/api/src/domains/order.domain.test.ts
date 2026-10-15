@@ -384,3 +384,24 @@ describe('OrderEntity split', () => {
     ).toBe('ORDER_NOT_OPEN')
   })
 })
+
+
+describe('order membership', () => {
+  test('inherits one member on merge and rejects different members', () => {
+    const anonymous = makeOrder({ id: 1 })
+    const member = makeOrder({ id: 2, memberId: 7 })
+    expect(anonymous.absorb(member).memberId).toBe(7)
+    expect(member.absorb(anonymous).memberId).toBe(7)
+    expect(member.absorb(makeOrder({ id: 3, memberId: 7 })).memberId).toBe(7)
+    expect(codeOf(() => member.absorb(makeOrder({ id: 3, memberId: 8 })))).toBe('ORDER_MEMBER_CONFLICT')
+  })
+  test('split retains membership on both orders', () => {
+    const split = makeOrder({ memberId: 7 }).splitOff([{lineId: 1,quantity: 1}], {id: 1,displayName: 'A'}, null)
+    expect(split.remaining.memberId).toBe(7)
+    expect(split.created.memberId).toBe(7)
+  })
+  test('membership can be cleared only while open', () => {
+    expect(makeOrder({ memberId: 7 }).setMember(null).memberId).toBeNull()
+    expect(codeOf(() => makeOrder({status: 'paid', saleId: 1}).setMember(7))).toBe('ORDER_NOT_OPEN')
+  })
+})
