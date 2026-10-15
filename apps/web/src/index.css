@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
-@import '@fontsource-variable/geist';
+@import '@fontsource-variable/inter';
 @import '@fontsource/ibm-plex-sans-thai/400.css';
 @import '@fontsource/ibm-plex-sans-thai/500.css';
 @import '@fontsource/ibm-plex-sans-thai/600.css';
@@ -10,8 +10,8 @@
 
 @theme inline {
   --font-heading: var(--font-sans);
-  /* Geist draws Latin and digits; Thai glyphs fall through to IBM Plex Sans Thai. */
-  --font-sans: 'Geist Variable', 'IBM Plex Sans Thai', sans-serif;
+  /* Inter draws Latin and digits; Thai glyphs fall through to IBM Plex Sans Thai. */
+  --font-sans: 'Inter Variable', 'IBM Plex Sans Thai', sans-serif;
   --color-success: var(--success);
   --color-canvas: var(--canvas);
   --color-category-1: var(--category-1);
@@ -63,7 +63,7 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Warm neutrals with a burnt-orange accent. */
+/* Light mint canvas with a deep-teal primary (Attio/Linear tone). */
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.216 0.006 56);
@@ -71,28 +71,28 @@
   --card-foreground: oklch(0.216 0.006 56);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.216 0.006 56);
-  --primary: oklch(0.59 0.17 45);
-  --primary-foreground: oklch(0.99 0.005 70);
+  --primary: #0f766e;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.97 0.003 70);
   --secondary-foreground: oklch(0.268 0.007 34);
   --muted: oklch(0.97 0.003 70);
   --muted-foreground: oklch(0.553 0.013 58);
-  --accent: oklch(0.96 0.02 60);
-  --accent-foreground: oklch(0.47 0.14 42);
+  --accent: #d9f2eb;
+  --accent-foreground: #0f766e;
   --destructive: oklch(0.577 0.245 27.325);
   --success: oklch(0.56 0.14 152);
   --warning: oklch(0.62 0.15 65);
   --border: oklch(0.923 0.003 48.7);
   --input: oklch(0.923 0.003 48.7);
-  --ring: oklch(0.59 0.17 45);
-  --chart-1: oklch(0.59 0.17 45);
-  --chart-2: oklch(0.56 0.14 152);
-  --chart-3: oklch(0.62 0.15 65);
+  --ring: #0f766e;
+  --chart-1: #12b8a6;
+  --chart-2: #5b8def;
+  --chart-3: #a78bfa;
   --chart-4: oklch(0.553 0.013 58);
   --chart-5: oklch(0.268 0.007 34);
-  --radius: 0.625rem;
-  /* Warm off-white behind the content, so white cards stand off it. */
-  --canvas: oklch(0.975 0.004 70);
+  --radius: 0.5rem;
+  /* Pale mint-tinted canvas behind the content, so white cards stand off it. */
+  --canvas: #f7fbfa;
   /* Category tones: hues spaced around the wheel, skipping the orange of primary and the red of destructive. */
   --category-1: oklch(0.62 0.13 245);
   --category-2: oklch(0.62 0.12 185);
@@ -102,14 +102,14 @@
   --category-6: oklch(0.62 0.13 140);
   --category-7: oklch(0.58 0.14 275);
   --category-8: oklch(0.65 0.11 215);
-  --sidebar: oklch(0.985 0.002 70);
+  --sidebar: #ffffff;
   --sidebar-foreground: oklch(0.268 0.007 34);
-  --sidebar-primary: oklch(0.59 0.17 45);
-  --sidebar-primary-foreground: oklch(0.99 0.005 70);
-  --sidebar-accent: oklch(0.955 0.004 70);
-  --sidebar-accent-foreground: oklch(0.216 0.006 56);
+  --sidebar-primary: #0f766e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #d9f2eb;
+  --sidebar-accent-foreground: #0f766e;
   --sidebar-border: oklch(0.923 0.003 48.7);
-  --sidebar-ring: oklch(0.59 0.17 45);
+  --sidebar-ring: #0f766e;
 }
 
 /* Neutral charcoal with the shop's existing warm orange action color. */
