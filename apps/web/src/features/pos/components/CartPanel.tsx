@@ -1,4 +1,4 @@
-import { ClipboardList, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react'
+import { ClipboardList, Minus, Plus, ShoppingCart, Trash2, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -18,6 +18,7 @@ import type { PricedLine } from '../lib/cart'
 import { noteToSave } from '../lib/note'
 import { useCartStore } from '../store/cart.store'
 import { KitchenSendButton } from './KitchenSendButton'
+import { CartMember } from './CartMember'
 import { OrderTools } from './OrderTools'
 
 /** The cart, its discount and the pay button. */
@@ -28,6 +29,7 @@ interface Props {
   paymentAvailable?: boolean
   /** side: the wide-screen panel. sheet: the same cart, shown from the bottom on a small screen. */
   variant?: 'side' | 'sheet'
+  onClose?: () => void
 }
 
 /**
@@ -72,7 +74,7 @@ function LineNote({ orderId, lineId, line }: { orderId: number; lineId: number; 
   )
 }
 
-export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant = 'side' }: Props) {
+export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant = 'side', onClose }: Props) {
   const { t } = useTranslation('pos')
   const { money, currency } = useFormat()
   const { vatMode, vatRateBp } = useSettings()
@@ -101,13 +103,14 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
         <span className="text-xs text-muted-foreground tabular-nums">{t('cart.itemCount', { count: cart.itemCount })}</span>
         <Button
           variant="ghost"
-          className="ml-auto h-9 text-muted-foreground"
-          disabled={storedLines.length === 0 && !isOrder}
+          className="ml-auto h-11 text-muted-foreground"
+          disabled={storedLines.length === 0 && !isOrder && cart.memberId === null}
           onClick={clear}
         >
           <Trash2 />
           {isOrder ? t('cart.leaveOrder') : t('cart.clear')}
         </Button>
+        {onClose && <Button variant="ghost" className="size-11 shrink-0" aria-label={t('cart.close')} onClick={onClose}><X /></Button>}
       </div>
 
       {cart.order && cart.order.status === 'open' && (
@@ -116,6 +119,8 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
           <KitchenSendButton order={cart.order} />
         </>
       )}
+
+      <CartMember />
 
       <ul className="min-h-0 flex-1 divide-y overflow-y-auto">
         {cart.isLoadingProducts && <li className="p-4"><Skeleton className="h-24 w-full" /></li>}

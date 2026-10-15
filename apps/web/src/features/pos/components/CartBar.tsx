@@ -38,10 +38,11 @@ export function CartBar({ onPay, onSaveOrder, paymentAvailable = true }: Props) 
         {t('cart.pay')}
       </Button>
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetContent side="bottom" className="flex max-h-[90svh] flex-col gap-0 p-0">
+        <SheetContent side="bottom" showCloseButton={false} className="flex max-h-[90svh] flex-col gap-0 p-0">
           <SheetTitle className="sr-only">{t('cart.title')}</SheetTitle>
           <CartPanel
             variant="sheet"
+            onClose={() => setIsOpen(false)}
             onPay={pay}
             onSaveOrder={() => {
               setIsOpen(false)

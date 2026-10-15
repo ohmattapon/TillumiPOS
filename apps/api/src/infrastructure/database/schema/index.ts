@@ -18,3 +18,5 @@ export * from './command-receipts'
 export * from './checkout-mode-state'
 export * from './shop-settings'
 export * from './users'
+
+export * from './members'

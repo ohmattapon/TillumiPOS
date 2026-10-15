@@ -6,6 +6,7 @@ import type { StoredLineOption } from './modifiers'
 import { products } from './products'
 import { sales } from './sales'
 import { users } from './users'
+import { members } from './members'
 
 export const orderStatus = pgEnum('order_status', ['open', 'paid', 'cancelled', 'merged'])
 
@@ -14,6 +15,7 @@ export const orders = pgTable(
   'orders',
   {
     id: id(),
+    memberId: integer().references(() => members.id),
     branchId: integer()
       .notNull()
       .references(() => branches.id),

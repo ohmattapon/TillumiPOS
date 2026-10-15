@@ -14,5 +14,6 @@ export {
   useRemoveOrderLine,
   useSetOrderLineNote,
   useSetOrderLineQuantity,
+  useSetOrderMember,
   useSplitOrder,
 } from './api'

@@ -123,7 +123,7 @@ export const makeSale = (overrides: Partial<SaleEntityProps> = {}) =>
     vatRateBp: 700,
     cashierId: 1,
     cashierName: 'สมชาย',
-    shopName: 'EasyPOS',
+    shopName: 'TillumiPOS',
     shopTaxId: null,
     branchName: 'สาขาหลัก',
     shopAddress: null,

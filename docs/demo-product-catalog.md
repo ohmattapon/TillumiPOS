@@ -4,7 +4,7 @@ The demo catalog contains 450 packaged food and drink products listed in Open Fo
 
 Open Food Facts recommends its public image dataset for bulk downloads. That bucket provides raw photos, and the sample showed that some are side or back-of-package shots rather than the selected front image. Since the POS needs recognizable shelf thumbnails, this demo uses the selected 400-pixel front images and downloads them one at a time from the official image host.
 
-Open Food Facts says its product data is contributed by volunteers and is not guaranteed to be accurate or complete. Names, barcodes, and packaging may change. The demo selling prices, costs, and starting stock in EasyPOS are generated for demonstration and are not taken from Open Food Facts or a retailer.
+Open Food Facts says its product data is contributed by volunteers and is not guaranteed to be accurate or complete. Names, barcodes, and packaging may change. The demo selling prices, costs, and starting stock in TillumiPOS are generated for demonstration and are not taken from Open Food Facts or a retailer.
 
 ## Attribution and licenses
 

@@ -24,6 +24,8 @@ interface CartState {
    * The open order the till is working on, or null for the one-step cart. Its lines live on the
    * server (they are read through TanStack Query); only which order is chosen is kept here.
    */
+  memberId: number | null
+  setMember: (memberId: number | null) => void
   orderId: number | null
   add: (productId: number, optionIds?: readonly number[]) => void
   /** A quantity of 0 or less removes the line. */
@@ -40,6 +42,8 @@ export const useCartStore = create<CartState>()((set) => ({
   lines: [],
   discount: '',
   orderId: null,
+  memberId: null,
+  setMember: (memberId) => set({ memberId }),
   add: (productId, optionIds = []) =>
     set((state) => {
       const key = cartLineKey(productId, optionIds)
@@ -56,8 +60,8 @@ export const useCartStore = create<CartState>()((set) => ({
         .filter((line) => line.quantity > 0),
     })),
   setDiscount: (discount) => set({ discount }),
-  workOnOrder: (orderId) => set({ orderId, lines: [], discount: '' }),
-  clear: () => set({ lines: [], discount: '', orderId: null }),
+  workOnOrder: (orderId) => set({ orderId, lines: [], discount: '', memberId: null }),
+  clear: () => set({ lines: [], discount: '', orderId: null, memberId: null }),
 }))
 
 /** For code outside React, such as the logout handler. */

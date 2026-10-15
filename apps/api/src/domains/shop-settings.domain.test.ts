@@ -8,7 +8,7 @@ const settings = (overrides: Partial<ShopSettingsProps> = {}) =>
 describe('ShopSettingsEntity', () => {
   test('the defaults are valid and describe a Thai shop with VAT-inclusive prices', () => {
     expect(settings().toSnapshot()).toEqual({
-      shopName: 'EasyPOS',
+      shopName: 'TillumiPOS',
       taxId: null,
       address: null,
       phone: null,
@@ -86,7 +86,7 @@ describe('ShopSettingsEntity', () => {
 
       expect(changed.taxId).toBeNull()
       expect(changed.phone).toBe('02-000-0000')
-      expect(changed.shopName).toBe('EasyPOS')
+      expect(changed.shopName).toBe('TillumiPOS')
     })
 
     test('enforces the same rules as the constructor', () => {
