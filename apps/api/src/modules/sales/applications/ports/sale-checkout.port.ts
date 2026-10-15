@@ -17,6 +17,8 @@ export interface CheckoutLine {
 
 export interface CheckoutRequest {
   memberId?: number | null
+  /** The open order being paid. Its quote can only be sold for this order, and a cart's quote never for one. */
+  orderId?: number | null
   /**
    * A price pinned earlier by a quote. The sale then charges that quote's prices, discount, promotion and
    * VAT rules, and the quote is used up with it. A sale without one prices the lines as they are now.

@@ -55,7 +55,7 @@ export class SaleCheckout implements ISaleCheckout {
     @inject(quoteClaimsToken) private readonly quotes: IQuoteClaims,
   ) {}
 
-  async checkout({ lines: requested, discountSatang, payments, cashier, branch, shiftId, memberId, quoteId }: CheckoutRequest) {
+  async checkout({ lines: requested, discountSatang, payments, cashier, branch, shiftId, memberId, quoteId, orderId }: CheckoutRequest) {
     const shiftsEnabled = await this.checkoutPolicy.isShiftsEnabled()
     if (shiftsEnabled && shiftId === undefined)
       throw new DomainConflictError('กรุณาระบุกะที่เปิดอยู่ก่อนรับชำระ', 'SHIFT_REQUIRED')
@@ -73,7 +73,7 @@ export class SaleCheckout implements ISaleCheckout {
       claimed = await this.claimQrPayments(payments, branch.id, quoteId)
       quote = await this.quotes.lockForCheckout(
         quoteId,
-        { branchId: branch.id, memberId: memberId ?? null, lines: requested.map(toQuoteLine) },
+        { branchId: branch.id, memberId: memberId ?? null, orderId: orderId ?? null, lines: requested.map(toQuoteLine) },
         claimed.map((qr) => qr.reference),
       )
     } else {

@@ -253,6 +253,7 @@ describe('PayOrderUseCase', () => {
 
     expect(unitOfWork.run).toHaveBeenCalledTimes(1)
     expect(checkout.checkout).toHaveBeenCalledWith({
+      orderId: 3,
       memberId: null,
       lines: [
         { productId: 1, quantity: 2, unitPriceSatang: 2500, options: [] },

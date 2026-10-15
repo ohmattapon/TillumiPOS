@@ -28,7 +28,7 @@ const stored = (overrides: Partial<PriceQuoteProps> = {}) =>
     ...PriceQuoteEntity.price(input(), now), id: 11, status: 'open', qrReference: null, saleId: null, createdAt: now, ...overrides,
   })
 const request = (overrides: Partial<QuoteRequest> = {}): QuoteRequest => ({
-  branchId: 1, memberId: null,
+  branchId: 1, memberId: null, orderId: null,
   lines: [{ productId: 2, optionIds: [], quantity: 1 }, { productId: 1, optionIds: [7], quantity: 2 }],
   ...overrides,
 })
@@ -75,6 +75,14 @@ describe('matching a request', () => {
     expect(quote.matches(request({ lines: [{ productId: 2, optionIds: [], quantity: 1 }, { productId: 1, optionIds: [7], quantity: 3 }] }))).toBe(false)
     expect(quote.matches(request({ lines: [{ productId: 2, optionIds: [], quantity: 1 }, { productId: 1, optionIds: [], quantity: 2 }] }))).toBe(false)
     expect(quote.matches(request({ lines: [{ productId: 2, optionIds: [], quantity: 1 }] }))).toBe(false)
+  })
+
+  test("an order quote matches only its own order, and a cart quote only a one-step sale", () => {
+    const orderQuote = stored({ orderId: 4 })
+    expect(orderQuote.matches(request({ orderId: 4 }))).toBe(true)
+    expect(orderQuote.matches(request({ orderId: 5 }))).toBe(false)
+    expect(orderQuote.matches(request({ orderId: null }))).toBe(false)
+    expect(stored().matches(request({ orderId: 4 }))).toBe(false)
   })
 })
 

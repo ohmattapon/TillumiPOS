@@ -30,6 +30,8 @@ export interface QuoteRequestLine {
 export interface QuoteRequest {
   branchId: number
   memberId: number | null
+  /** The open order being paid, or null for a one-step cart. A quote belongs to exactly one of these. */
+  orderId: number | null
   lines: readonly QuoteRequestLine[]
 }
 
@@ -167,7 +169,7 @@ export class PriceQuoteEntity {
 
   /** Whether a sale for this branch, member and cart is the one this quote was made for. */
   matches(request: QuoteRequest): boolean {
-    if (request.branchId !== this.branchId || request.memberId !== this.memberId) return false
+    if (request.branchId !== this.branchId || request.memberId !== this.memberId || request.orderId !== this.orderId) return false
     const wanted = quantities(request.lines)
     const own = quantities(this.lines.map((line) => ({ ...line, optionIds: line.options.map((option) => option.optionId) })))
     if (wanted.size !== own.size) return false

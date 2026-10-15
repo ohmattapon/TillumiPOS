@@ -5,7 +5,7 @@ import { mockClock, mockOrderQuoteSource, mockPriceQuoteRepository } from '../..
 import { QuoteClaims } from './quote-claims'
 
 const now = new Date('2026-10-15T05:05:00Z')
-const cart = { branchId: 1, memberId: null, lines: [{ productId: 1, optionIds: [], quantity: 3 }] }
+const cart = { branchId: 1, memberId: null, orderId: null, lines: [{ productId: 1, optionIds: [], quantity: 3 }] }
 
 let quotes: ReturnType<typeof mockPriceQuoteRepository>
 let orders: ReturnType<typeof mockOrderQuoteSource>
@@ -36,6 +36,13 @@ describe('lockForCheckout', () => {
     await expect(claims.lockForCheckout(5, cart, [])).rejects.toMatchObject({ code: 'QUOTE_EXPIRED' })
     quotes.findByIdForUpdate.mockResolvedValue(makePriceQuote())
     await expect(claims.lockForCheckout(5, { ...cart, memberId: 3 }, [])).rejects.toMatchObject({ code: 'QUOTE_MISMATCH' })
+  })
+
+  test("an order's quote is not sold as a one-step cart, and a cart's quote is not sold to an order", async () => {
+    quotes.findByIdForUpdate.mockResolvedValueOnce(makePriceQuote({ orderId: 4 }))
+    await expect(claims.lockForCheckout(5, cart, [])).rejects.toMatchObject({ code: 'QUOTE_MISMATCH' })
+    quotes.findByIdForUpdate.mockResolvedValueOnce(makePriceQuote())
+    await expect(claims.lockForCheckout(5, { ...cart, orderId: 4 }, [])).rejects.toMatchObject({ code: 'QUOTE_MISMATCH' })
   })
 })
 
