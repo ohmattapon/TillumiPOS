@@ -200,6 +200,7 @@ EasyPOS เป็นเครื่องมือทำงาน ไม่ใ�
 | `tableHead`, `tableCell` | `components/Panel.tsx` | คลาสของหัวตารางและเซลล์ ใช้กับทุกตารางข้อมูล |
 | `StatusBadge` | `components/StatusBadge.tsx` | ป้ายสถานะที่มีจุดสีนำหน้า มีสี่โทน: `success`, `warning`, `danger`, `neutral` |
 | `SegmentedTabs` | `components/SegmentedTabs.tsx` | ตัวกรองแบบเลือกหนึ่งจากไม่กี่ตัวเลือก ใช้ `size="touch"` บนหน้าขาย |
+| `DatePicker` | `components/DatePicker.tsx` | เลือกวันด้วย shadcn Calendar + Popover ปุ่มและวันสูงอย่างน้อย 44px ใช้ภาษาและปี พ.ศ./ค.ศ. จาก `useFormat()` ค่าในฟอร์มยังเป็น `YYYY-MM-DD` และแปลงผ่าน `lib/calendar-date.ts` โดยไม่เลื่อนวันจาก timezone |
 | `ProductImage` | `features/products/components/ProductImage.tsx` | รูปสินค้าทุกจุด แสดงไอคอนแทนเมื่อไม่มีรูปหรือโหลดไม่ได้ |
 | `Receipt` | `features/sales/components/Receipt.tsx` | เนื้อใบเสร็จ ทั้งบนจอและตอนพิมพ์ |
 | `SkeletonRows`, `SkeletonPanel`, `SkeletonCardGrid`, `SkeletonStatCards` | `components/Skeletons.tsx` | โครงร่างระหว่างโหลด รูปทรงตามรายการ การ์ดสินค้า และการ์ดสรุป |
