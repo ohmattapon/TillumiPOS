@@ -1,5 +1,6 @@
 export type { Order } from '@pos/api/types'
 export {
+  lineNoteMutationKey,
   openOrdersQuery,
   orderKeys,
   orderQuery,
