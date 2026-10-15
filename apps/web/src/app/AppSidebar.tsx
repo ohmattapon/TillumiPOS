@@ -65,9 +65,9 @@ interface NavItem {
   badge?: number
 }
 
-// Active item reads as a raised white card with accent-coloured text.
+// Active item reads as a flat mint wash with deep-teal text.
 const activeItem =
-  'data-[active=true]:bg-background data-[active=true]:text-primary data-[active=true]:shadow-sm data-[active=true]:ring-1 data-[active=true]:ring-border'
+  'data-[active=true]:bg-accent data-[active=true]:text-accent-foreground'
 
 export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => void }) {
   const { t } = useTranslation('app')
