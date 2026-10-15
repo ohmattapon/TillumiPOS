@@ -1,6 +1,16 @@
 # TillumiPOS for a shop: `scripts/install.sh` writes .env and starts this. Developers add docker-compose.dev.yml
 # (see `bun run db:up`) to reach the database from the host.
 services:
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   db:
     image: postgres:17-alpine
     restart: unless-stopped
@@ -22,8 +32,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
+        required: false
     environment:
       DATABASE_URL: postgres://pos:${POSTGRES_PASSWORD:-pos}@db:5432/pos
+      # The host's localhost URL cannot be used from inside this container.
+      REDIS_URL: ${REDIS_CONTAINER_URL-redis://redis:6379}
+      CACHE_KEY_PREFIX: ${CACHE_KEY_PREFIX:-}
+      CACHE_TIMEOUT_MS: ${CACHE_TIMEOUT_MS:-300}
       JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is not set - run scripts/install.sh, or copy .env.example to .env}"
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       CHECKOUT_MODE: ${CHECKOUT_MODE:-shifts}
