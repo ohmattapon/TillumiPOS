@@ -26,6 +26,7 @@ describe('shop settings', () => {
       locale: 'th',
       receiptPaperMm: 80,
       receiptFooter: null,
+      homeView: 'till',
     })
   })
 

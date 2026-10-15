@@ -15,6 +15,7 @@ const fields = {
   locale,
   receiptPaperMm: t.Union([t.Literal(58), t.Literal(80)]),
   receiptFooter: t.Nullable(t.String({ maxLength: 200 })),
+  homeView: t.Union([t.Literal('till'), t.Literal('tables')]),
 }
 
 export const settingsSchemas = {
