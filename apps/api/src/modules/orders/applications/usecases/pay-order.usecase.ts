@@ -36,6 +36,7 @@ export class PayOrderUseCase {
           options,
         })),
         memberId: order.memberId,
+        quoteId: dto.quoteId,
         discountSatang: dto.discountSatang ?? 0,
         payments: dto.payments,
         cashier: actor.user,
