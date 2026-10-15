@@ -23,6 +23,7 @@ const columns = {
   locale: shopSettings.locale,
   receiptPaperMm: shopSettings.receiptPaperMm,
   receiptFooter: shopSettings.receiptFooter,
+  homeView: shopSettings.homeView,
 }
 
 @injectable()
