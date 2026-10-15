@@ -97,6 +97,16 @@ describe('reserveForQr', () => {
   })
 })
 
+describe('the QR holding an order', () => {
+  test("says which QR holds the reserved quote of an order, in that order's branch only", async () => {
+    quotes.findReservedByOrder.mockResolvedValueOnce(makePriceQuote({ orderId: 4, status: 'reserved', qrReference: 'QRABC' }))
+    expect(await claims.findHeldByOrder(4, 1)).toBe('QRABC')
+    quotes.findReservedByOrder.mockResolvedValueOnce(makePriceQuote({ orderId: 4, status: 'reserved', qrReference: 'QRABC' }))
+    expect(await claims.findHeldByOrder(4, 2)).toBeNull()
+    expect(await claims.findHeldByOrder(4, 1)).toBeNull()
+  })
+})
+
 describe('settling a QR', () => {
   test('releasing reopens the quote the QR held', async () => {
     quotes.findByQrReferenceForUpdate.mockResolvedValue(makePriceQuote({ status: 'reserved', qrReference: 'QRABC' }))

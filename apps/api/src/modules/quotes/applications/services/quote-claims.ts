@@ -32,6 +32,12 @@ export class QuoteClaims implements IQuoteClaims {
     return quote?.status === 'reserved' || quote?.status === 'cancelled' ? quote.id : null
   }
 
+  /** The QR holding an order's price, so the till can show it and cancel it. Read only. */
+  async findHeldByOrder(orderId: number, branchId: number) {
+    const quote = await this.quotes.findReservedByOrder(orderId)
+    return quote && quote.branchId === branchId ? quote.qrReference : null
+  }
+
   async consume(quote: PriceQuoteEntity, saleId: number) {
     await this.quotes.save(quote.consume(saleId))
   }

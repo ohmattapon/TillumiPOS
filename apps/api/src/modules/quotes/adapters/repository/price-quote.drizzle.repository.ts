@@ -28,6 +28,15 @@ export class DrizzlePriceQuoteRepository implements IPriceQuoteRepository {
     return row ? new PriceQuoteEntity(row) : null
   }
 
+  async findReservedByOrder(orderId: number) {
+    const [row] = await currentExecutor()
+      .select()
+      .from(priceQuotes)
+      .where(and(eq(priceQuotes.orderId, orderId), eq(priceQuotes.status, 'reserved')))
+      .limit(1)
+    return row ? new PriceQuoteEntity(row) : null
+  }
+
   async findByQrReferenceForUpdate(reference: string) {
     const [row] = await currentExecutor()
       .select()
