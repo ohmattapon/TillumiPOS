@@ -6,7 +6,7 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { LoginPage, meQuery, useLogout } from '@/features/auth'
 import { BranchesPage, useActiveBranch } from '@/features/branches'
 import { CategoriesPage } from '@/features/categories'
-import { CustomerDisplayPage } from '@/features/customer-display'
+import { CustomerDisplayPage, isCustomerScreenPath } from '@/features/customer-display'
 import { MembersPage, MemberDetailsPage } from '@/features/members'
 import { ModifiersPage } from '@/features/modifiers'
 import { SetupPage, setupStatusQuery } from '@/features/setup'
@@ -80,6 +80,6 @@ export default function App() {
   const { pathname } = useLocation()
   // The customer's screen shows only what the till sends it over the browser channel, so it needs no
   // sign-in and asks the server for nothing: it must also work when the cashier's session has expired.
-  if (pathname === '/customer') return <CustomerDisplayPage />
+  if (isCustomerScreenPath(pathname)) return <CustomerDisplayPage />
   return <Gate />
 }
