@@ -10,6 +10,7 @@ const payment = z.object({
 
 export const completeSaleSchema = z.object({
   memberId: z.number().int().positive().nullable().optional(),
+  quoteId: z.number().int().positive().nullable().optional(),
   items: z
     .array(
       z.object({

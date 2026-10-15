@@ -3,7 +3,7 @@ import { makeBranch, makeProduct, makeSale } from '../../../../__tests__/factori
 import {
   mockBranchRepository, mockCheckoutPolicy, mockLineOptionsResolver, mockMemberRepository,
   mockProductRepository, mockQrPaymentClaims, mockSaleRepository, mockShiftLedger,
-  mockShopSettingsRepository, mockStockLedger,
+  mockShopSettingsRepository, mockStockLedger, mockQuoteClaims,
 } from '../../../../__tests__/mocks'
 import { MemberEntity } from '../../../../domains/member.domain'
 import { DEFAULT_SHOP_SETTINGS, ShopSettingsEntity } from '../../../../domains/shop-settings.domain'
@@ -40,7 +40,7 @@ describe('SaleCheckout membership', () => {
     members.findByIdForUpdate.mockResolvedValue(identity())
     sales.nextReceiptNo.mockResolvedValue('MAIN-20261015-00001')
     sales.create.mockImplementation(async (sale, receiptNo) => makeSale({ ...sale, id: 1, receiptNo }))
-    checkout = new SaleCheckout(sales, products, ledger, settings, qr, mockCheckoutPolicy(), mockShiftLedger(), branches, mockLineOptionsResolver(), members)
+    checkout = new SaleCheckout(sales, products, ledger, settings, qr, mockCheckoutPolicy(), mockShiftLedger(), branches, mockLineOptionsResolver(), members, mockQuoteClaims())
   })
 
   test('locks member before stock and persists only receipt identity', async () => {

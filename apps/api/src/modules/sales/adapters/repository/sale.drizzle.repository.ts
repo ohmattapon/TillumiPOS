@@ -10,6 +10,7 @@ import type { IFindSalesQuery, ISaleHeader, ISaleRepository, ISalesTotals } from
 
 const headerColumns = {
   member: sales.member,
+  promotion: sales.promotion,
   id: sales.id,
   receiptNo: sales.receiptNo,
   status: sales.status,
@@ -72,7 +73,7 @@ export class DrizzleSaleRepository implements ISaleRepository {
 
     const [stored] = await executor
       .insert(sales)
-      .values({ receiptNo, ...totals, memberId: sale.member?.id ?? null })
+      .values({ receiptNo, ...totals, memberId: sale.member?.id ?? null, promotionId: sale.promotion?.id ?? null })
       .returning({ id: sales.id })
     const saleId = stored!.id
 

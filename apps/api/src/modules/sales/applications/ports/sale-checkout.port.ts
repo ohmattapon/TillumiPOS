@@ -17,6 +17,11 @@ export interface CheckoutLine {
 
 export interface CheckoutRequest {
   memberId?: number | null
+  /**
+   * A price pinned earlier by a quote. The sale then charges that quote's prices, discount, promotion and
+   * VAT rules, and the quote is used up with it. A sale without one prices the lines as they are now.
+   */
+  quoteId?: number | null
   lines: CheckoutLine[]
   discountSatang: number
   /** A `promptpay` payment may name the confirmed QR payment that backs it. */
