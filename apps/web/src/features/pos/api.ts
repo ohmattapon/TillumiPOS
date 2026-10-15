@@ -52,6 +52,7 @@ export const qrKeys = {
   all: ['payments', 'qr'] as const,
   config: () => [...qrKeys.all, 'config'] as const,
   detail: (id: number) => [...qrKeys.all, 'detail', id] as const,
+  orderHold: (orderId: number) => [...qrKeys.all, 'order-hold', orderId] as const,
 }
 
 /** Whether the shop takes PromptPay through a bank QR that confirms itself. */
@@ -73,6 +74,14 @@ export const qrPaymentQuery = (id: number, inShift = false) =>
     queryKey: qrKeys.detail(id),
     queryFn: async (): Promise<{ id: number; status: 'pending' | 'paid' | 'cancelled'; payerName: string | null }> =>
       inShift ? unwrap(apiV2.payments.qr({ id }).refresh.post()) : unwrap(api.payments.qr({ id }).get()),
+  })
+
+/** The QR that holds the price of this open order, if any. Read only; the order is locked while it is pending. */
+export const orderQrHoldQuery = (orderId: number) =>
+  queryOptions({
+    queryKey: qrKeys.orderHold(orderId),
+    queryFn: () => unwrap(apiV2.payments.qr.hold.get({ query: { orderId } })),
+    refetchInterval: (query) => (query.state.data?.status === 'paid' ? false : QR_POLL_MS),
   })
 
 export interface CreateQrInput {

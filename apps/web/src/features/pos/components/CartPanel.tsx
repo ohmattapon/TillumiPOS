@@ -9,6 +9,7 @@ import { useFormat, useSettings } from '@/features/settings'
 import { tablesQuery } from '@/features/tables'
 import { cn } from '@/lib/utils'
 import { useCart } from '../hooks/use-cart'
+import { OrderQrHold } from './OrderQrHold'
 import { useCartActions } from '../hooks/use-cart-actions'
 import { useCartStore } from '../store/cart.store'
 import { CartMember } from './CartMember'
@@ -64,6 +65,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
         </Button>
         {onClose && <Button variant="ghost" className="size-11 shrink-0" aria-label={t('cart.close')} onClick={onClose}><X /></Button>}
       </div>
+      {cart.orderId !== null && <OrderQrHold orderId={cart.orderId} />}
 
       {cart.order && cart.order.status === 'open' && <OrderTools order={cart.order} />}
 
