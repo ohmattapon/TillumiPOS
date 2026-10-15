@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { SkeletonRows } from '@/components/Skeletons'
 import { useFormat } from '@/features/settings'
 import { createMoney } from '@/lib/money'
 import { shiftSummaryQuery } from '../api'
@@ -22,7 +23,7 @@ export function ShiftSummaryView({ shiftId, currency, live = false }: Props) {
   const report = useQuery({ ...shiftSummaryQuery(shiftId), refetchInterval: live ? 10_000 : false })
 
   if (report.error) return <p className="text-sm text-destructive">{report.error.message}</p>
-  if (!report.data) return <p className="text-sm text-muted-foreground">{tc('loading')}</p>
+  if (!report.data) return <SkeletonRows rows={6} />
 
   const { summary, frozen, capturedAt, voidedAfterCutoff } = report.data
   const rows: [string, string][] = [

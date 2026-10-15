@@ -7,7 +7,10 @@ const quantity = z.number().int().min(1)
 const label = z.string().max(100).nullable()
 const options = z.array(z.number().int().positive()).max(40)
 
+export const setOrderMemberSchema = z.object({ memberId: z.number().int().positive().nullable() })
+
 export const openOrderSchema = z.object({
+  memberId: z.number().int().positive().nullable().optional(),
   label: label.optional(),
   tableId: z.number().int().positive().nullable().optional(),
   items: z.array(z.object({ productId, quantity, options: options.optional() })).max(100).optional(),
@@ -47,6 +50,8 @@ export const payOrderSchema = z.object({
 })
 
 export const listOrdersSchema = z.object({
+  tableId: z.number().int().positive().optional(),
+  excludeId: z.number().int().positive().optional(),
   status: z.enum(ORDER_STATUSES).optional(),
   limit: z.number().int().min(1).max(500).optional(),
   offset: z.number().int().min(0).optional(),

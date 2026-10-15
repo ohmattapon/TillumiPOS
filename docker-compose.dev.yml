@@ -1,0 +1,10 @@
+# For developers: lets the host reach the database (the tests and `bun run dev` use localhost:5433).
+# Used by `bun run db:up`; the install kit (docker-compose.yml alone) never publishes the database.
+services:
+  redis:
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+  db:
+    ports:
+      # 5433 on the host: 5432 is often taken by a locally installed PostgreSQL.
+      - "5433:5432"

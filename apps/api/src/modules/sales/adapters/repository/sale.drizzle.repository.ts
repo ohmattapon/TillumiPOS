@@ -9,6 +9,7 @@ import type { IShopSettingsRepository } from '../../../settings/applications/por
 import type { IFindSalesQuery, ISaleHeader, ISaleRepository, ISalesTotals } from '../../applications/ports/sale.repository'
 
 const headerColumns = {
+  member: sales.member,
   id: sales.id,
   receiptNo: sales.receiptNo,
   status: sales.status,
@@ -71,7 +72,7 @@ export class DrizzleSaleRepository implements ISaleRepository {
 
     const [stored] = await executor
       .insert(sales)
-      .values({ receiptNo, ...totals })
+      .values({ receiptNo, ...totals, memberId: sale.member?.id ?? null })
       .returning({ id: sales.id })
     const saleId = stored!.id
 
@@ -99,6 +100,7 @@ export class DrizzleSaleRepository implements ISaleRepository {
 
   async findHeaders(query: IFindSalesQuery): Promise<Page<ISaleHeader>> {
     const matching = and(
+      query.status ? eq(sales.status, query.status) : undefined,
       eq(sales.branchId, query.branchId),
       query.from ? gte(sales.createdAt, query.from) : undefined,
       query.to ? lt(sales.createdAt, query.to) : undefined,

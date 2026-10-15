@@ -5,7 +5,11 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
-import { Panel, tableCell, tableHead } from '@/components/Panel'
+import { Panel } from '@/components/Panel'
+import { DataTable } from '@/components/DataTable'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
+import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { ProductFormDialog } from './ProductFormDialog'
 import { ProductImage } from './ProductImage'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
@@ -20,11 +24,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { categoriesQuery } from '@/features/categories'
+import { categoriesQuery, CategoryDot } from '@/features/categories'
 import { useFormat, useSettings } from '@/features/settings'
 import { productsQuery, useSetProductActive } from '../api'
-import { isLowStock } from '../lib/stock'
+import { isLowStock, LOW_STOCK_THRESHOLD } from '../lib/stock'
 
 type Filter = 'all' | 'low' | 'inactive'
 
@@ -35,12 +38,21 @@ export function ProductsPage() {
   const { t: tc } = useTranslation()
   const { money } = useFormat()
   const { vatMode } = useSettings()
-  const products = useQuery(productsQuery(true))
   const categories = useQuery(categoriesQuery)
 
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
   const [dialog, setDialog] = useState<OpenDialog>(null)
+  const term = useDebouncedValue(search.trim())
+  const paging = useListPagination(`${filter}:${search.trim()}`)
+  const products = useQuery(productsQuery({
+    includeInactive: true, q: term, limit: paging.pageSize, offset: paging.offset,
+    ...(filter === 'low' && { isActive: true, stockAtMost: LOW_STOCK_THRESHOLD }),
+    ...(filter === 'inactive' && { isActive: false }),
+  }))
+  const counts = useQuery(productsQuery({ includeInactive: true, limit: 1 }))
+  const lowCount = useQuery(productsQuery({ stockAtMost: LOW_STOCK_THRESHOLD, limit: 1 }))
+  const inactiveCount = useQuery(productsQuery({ includeInactive: true, isActive: false, limit: 1 }))
 
   const setActive = useSetProductActive()
   const toggleActive = (product: Product) =>
@@ -53,28 +65,24 @@ export function ProductsPage() {
       },
     )
 
-  const all = products.data ?? []
   const categoryName = new Map(categories.data?.map((category) => [category.id, category.name]))
-  const term = search.trim().toLowerCase()
-  const visible = all.filter(
-    (product) =>
-      (filter === 'all' || (filter === 'low' ? product.isActive && isLowStock(product) : !product.isActive)) &&
-      (term === '' ||
-        product.name.toLowerCase().includes(term) ||
-        product.sku.toLowerCase().includes(term) ||
-        product.barcode?.includes(term)),
-  )
+  const searching = term !== search.trim()
+  const visible = searching ? [] : products.data?.items ?? []
 
   return (
     <>
       <PageHeader
         title={t('title')}
-        description={t('pageDescription', {
-          items: tc('items', { count: all.length }),
-          priceNote: t(`priceNote.${vatMode}`),
-        })}
+        description={
+          counts.data === undefined
+            ? undefined
+            : t('pageDescription', {
+                items: tc('items', { count: counts.data.total }),
+                priceNote: t(`priceNote.${vatMode}`),
+              })
+        }
       >
-        <Button className="h-9 px-3" onClick={() => setDialog({ kind: 'form' })}>
+        <Button className="h-11 px-3" onClick={() => setDialog({ kind: 'form' })}>
           <Plus />
           {t('add')}
         </Button>
@@ -86,9 +94,9 @@ export function ProductsPage() {
             value={filter}
             onChange={setFilter}
             options={[
-              { value: 'all', label: t('filters.all'), count: all.length },
-              { value: 'low', label: t('filters.low'), count: all.filter((product) => product.isActive && isLowStock(product)).length },
-              { value: 'inactive', label: t('filters.inactive'), count: all.filter((product) => !product.isActive).length },
+              { value: 'all', label: t('filters.all'), count: counts.data?.total },
+              { value: 'low', label: t('filters.low'), count: lowCount.data?.total },
+              { value: 'inactive', label: t('filters.inactive'), count: inactiveCount.data?.total },
             ]}
           />
           <div className="relative ml-auto w-full max-w-xs">
@@ -103,101 +111,107 @@ export function ProductsPage() {
           </div>
         </div>
 
-        <Panel title={t('list.title')} description={t('list.description', { shown: visible.length, total: all.length })}>
+        <Panel title={t('list.title')} description={products.isPending ? undefined : t('list.description', { shown: visible.length, total: products.data?.total ?? 0 })}>
           {products.error && <p className="p-4 text-sm text-destructive">{products.error.message}</p>}
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className={tableHead}>{t('columns.product')}</TableHead>
-                <TableHead className={tableHead}>{t('columns.category')}</TableHead>
-                <TableHead className={tableHead}>{t('columns.barcode')}</TableHead>
-                <TableHead className={`${tableHead} text-right`}>{t('columns.price')}</TableHead>
-                <TableHead className={`${tableHead} text-right`}>{t('columns.cost')}</TableHead>
-                <TableHead className={`${tableHead} text-right`}>{t('columns.stock')}</TableHead>
-                <TableHead className={tableHead}>{t('columns.status')}</TableHead>
-                <TableHead className={`${tableHead} w-0`}>
-                  <span className="sr-only">{t('columns.actions')}</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible.map((product) => (
-                <TableRow key={product.id} className={product.isActive ? '' : 'text-muted-foreground'}>
-                  <TableCell className={tableCell}>
-                    <div className="flex items-center gap-3">
-                      <ProductImage src={product.imageUrl} alt="" className="size-10 rounded-md border" />
-                      <div>
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-xs text-muted-foreground">{product.sku}</p>
-                      </div>
+          <DataTable
+            rows={visible}
+            rowKey={(product) => product.id}
+            isPending={products.isPending || searching}
+            empty={t('list.empty')}
+            muted={(product) => !product.isActive}
+            columns={[
+              {
+                id: 'product',
+                header: t('columns.product'),
+                priority: 'primary',
+                cell: (product) => (
+                  <div className="flex items-center gap-3">
+                    <ProductImage src={product.imageUrl} alt="" className="size-10 rounded-md border" />
+                    <div className="min-w-0">
+                      <p className="font-medium">{product.name}</p>
+                      <p className="text-xs text-muted-foreground">{product.sku}</p>
                     </div>
-                  </TableCell>
-                  <TableCell className={tableCell}>
-                    {(product.categoryId && categoryName.get(product.categoryId)) || '—'}
-                  </TableCell>
-                  <TableCell className={`${tableCell} tabular-nums`}>{product.barcode ?? '—'}</TableCell>
-                  <TableCell className={`${tableCell} text-right tabular-nums`}>{money.plain(product.priceSatang)}</TableCell>
-                  <TableCell className={`${tableCell} text-right tabular-nums`}>{money.plain(product.costSatang)}</TableCell>
-                  <TableCell className={`${tableCell} text-right font-medium tabular-nums`}>
-                    {product.trackStock ? product.stockQty : '—'}
-                  </TableCell>
-                  <TableCell className={tableCell}>
-                    {!product.isActive ? (
-                      <StatusBadge tone="neutral">{t('status.inactive')}</StatusBadge>
-                    ) : !product.trackStock ? (
-                      <StatusBadge tone="neutral">{t('status.untracked')}</StatusBadge>
-                    ) : product.stockQty <= 0 ? (
-                      <StatusBadge tone="danger">{t('status.out')}</StatusBadge>
-                    ) : isLowStock(product) ? (
-                      <StatusBadge tone="warning">{t('status.low')}</StatusBadge>
-                    ) : (
-                      <StatusBadge tone="success">{t('status.ready')}</StatusBadge>
-                    )}
-                  </TableCell>
-                  <TableCell className={`${tableCell} text-right whitespace-nowrap`}>
+                  </div>
+                ),
+              },
+              {
+                id: 'category',
+                header: t('columns.category'),
+                priority: 'wide-only',
+                cell: (product) => {
+                  const name = product.categoryId && categoryName.get(product.categoryId)
+                  return name ? (
+                    <span className="inline-flex items-center gap-2">
+                      <CategoryDot categoryId={product.categoryId!} />
+                      {name}
+                    </span>
+                  ) : (
+                    '—'
+                  )
+                },
+              },
+              { id: 'barcode', header: t('columns.barcode'), priority: 'wide-only', className: 'tabular-nums', cell: (product) => product.barcode ?? '—' },
+              { id: 'price', header: t('columns.price'), priority: 'secondary', align: 'right', cell: (product) => money.plain(product.priceSatang) },
+              { id: 'cost', header: t('columns.cost'), priority: 'wide-only', align: 'right', cell: (product) => money.plain(product.costSatang) },
+              {
+                id: 'stock',
+                header: t('columns.stock'),
+                priority: 'secondary',
+                align: 'right',
+                className: 'font-medium',
+                cell: (product) => (product.trackStock ? product.stockQty : '—'),
+              },
+              {
+                id: 'status',
+                header: t('columns.status'),
+                priority: 'secondary',
+                cell: (product) =>
+                  !product.isActive ? (
+                    <StatusBadge tone="neutral">{t('status.inactive')}</StatusBadge>
+                  ) : !product.trackStock ? (
+                    <StatusBadge tone="neutral">{t('status.untracked')}</StatusBadge>
+                  ) : product.stockQty <= 0 ? (
+                    <StatusBadge tone="danger">{t('status.out')}</StatusBadge>
+                  ) : isLowStock(product) ? (
+                    <StatusBadge tone="warning">{t('status.low')}</StatusBadge>
+                  ) : (
+                    <StatusBadge tone="success">{t('status.ready')}</StatusBadge>
+                  ),
+              },
+            ]}
+            actions={(product) => (
+              <>
+                {product.trackStock && (
+                  <Button variant="outline" className="mr-2 h-11" onClick={() => setDialog({ kind: 'stock', product, mode: 'receive' })}>
+                    <PackagePlus />
+                    {t('actions.receive')}
+                  </Button>
+                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="size-11" aria-label={t('actions.more', { name: product.name })}>
+                      <MoreHorizontal />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => setDialog({ kind: 'form', product })}>
+                      {t('actions.edit')}
+                    </DropdownMenuItem>
                     {product.trackStock && (
-                      <Button
-                        variant="outline"
-                        className="mr-2 h-9"
-                        onClick={() => setDialog({ kind: 'stock', product, mode: 'receive' })}
-                      >
-                        <PackagePlus />
-                        {t('actions.receive')}
-                      </Button>
+                      <DropdownMenuItem onSelect={() => setDialog({ kind: 'stock', product, mode: 'adjust' })}>
+                        {t('actions.adjust')}
+                      </DropdownMenuItem>
                     )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="size-9" aria-label={t('actions.more', { name: product.name })}>
-                          <MoreHorizontal />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => setDialog({ kind: 'form', product })}>
-                          {t('actions.edit')}
-                        </DropdownMenuItem>
-                        {product.trackStock && (
-                          <DropdownMenuItem onSelect={() => setDialog({ kind: 'stock', product, mode: 'adjust' })}>
-                            {t('actions.adjust')}
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => toggleActive(product)}>
-                          {product.isActive ? t('actions.deactivate') : t('actions.activate')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!products.isPending && visible.length === 0 && (
-                <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                    {t('list.empty')}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => toggleActive(product)}>
+                      {product.isActive ? t('actions.deactivate') : t('actions.activate')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            )}
+          />
+          <PaginationBar {...paging} total={products.data?.total} isLoading={products.isFetching || searching} onPageChange={paging.setPage} />
         </Panel>
       </div>
 

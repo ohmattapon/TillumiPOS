@@ -1,44 +1,49 @@
 import { useQuery } from '@tanstack/react-query'
-import { Banknote, PackageX, Receipt as ReceiptIcon, ShoppingCart, TrendingUp, Wallet, type LucideIcon } from 'lucide-react'
+import { PackageX, ShoppingCart } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
-import { Panel, tableCell, tableHead } from '@/components/Panel'
+import { SkeletonRows } from '@/components/Skeletons'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Panel } from '@/components/Panel'
+import { DataTable } from '@/components/DataTable'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { SaleDetailDialog } from './SaleDetailDialog'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { isLowStock, LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
+import { LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
 import { useFormat } from '@/features/settings'
 import { salesTodayQuery, summaryTodayQuery } from '../api'
 
 type StatusFilter = 'all' | 'completed' | 'voided'
 
 interface StatProps {
-  icon: LucideIcon
   label: string
   value: string
   note?: ReactNode
   footer: string
 }
 
-function StatCard({ icon: Icon, label, value, note, footer }: StatProps) {
+function SummaryValue({ label, value, note, footer }: StatProps) {
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-xs">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span className="flex size-6 items-center justify-center rounded-md border">
-          <Icon className="size-3.5" />
-        </span>
-        {label}
-      </div>
-      <div className="mt-3 flex items-baseline justify-between gap-2">
-        <span className="text-2xl font-semibold tabular-nums">{value}</span>
-        <span className="text-xs">{note}</span>
-      </div>
-      <p className="mt-3 border-t pt-2.5 text-xs text-muted-foreground">{footer}</p>
+    <div className="min-w-0 bg-card p-3 sm:p-4">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-1 break-words text-xl font-semibold tabular-nums">{value}</dd>
+      <dd className="mt-1 text-xs text-muted-foreground">{footer}</dd>
+      {note && <dd className="mt-1 text-xs">{note}</dd>}
+    </div>
+  )
+}
+
+function RetryNotice({ error, stale, pending, onRetry }: { error: Error; stale: boolean; pending: boolean; onRetry: () => void }) {
+  const { t } = useTranslation('sales')
+  return (
+    <div role="alert" className="flex flex-wrap items-center justify-between gap-2 p-3">
+      <p className="text-sm text-destructive">{stale ? t('today.refreshFailed') : error.message}</p>
+      <Button variant="outline" className="h-11" disabled={pending} onClick={onRetry}>{t('today.retry')}</Button>
     </div>
   )
 }
@@ -47,20 +52,24 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
   const { t } = useTranslation('sales')
   const { t: tc } = useTranslation()
   const { money, date } = useFormat()
-  const sales = useQuery(salesTodayQuery)
   const summary = useQuery({ ...summaryTodayQuery, enabled: isOwner })
-  const products = useQuery(productsQuery())
 
   const [filter, setFilter] = useState<StatusFilter>('all')
+  const paging = useListPagination(filter)
+  const lowPaging = useListPagination('low-stock', 8)
+  const sales = useQuery(salesTodayQuery({
+    status: filter === 'all' ? undefined : filter, limit: paging.pageSize, offset: paging.offset,
+  }))
+  const saleCount = useQuery(salesTodayQuery({ limit: 1 }))
+  const voided = useQuery(salesTodayQuery({ status: 'voided', limit: 1 }))
+  const products = useQuery(productsQuery({ stockAtMost: LOW_STOCK_THRESHOLD, sort: 'stock', limit: lowPaging.pageSize, offset: lowPaging.offset }))
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [today] = useState(() => new Date())
 
-  const allSales = sales.data ?? []
-  const voidedCount = allSales.filter((sale) => sale.status === 'voided').length
-  const visibleSales = filter === 'all' ? allSales : allSales.filter((sale) => sale.status === filter)
-  const lowStock = (products.data ?? [])
-    .filter(isLowStock)
-    .sort((a, b) => a.stockQty - b.stockQty)
+  const voidedCount = voided.data?.total ?? 0
+  const visibleSales = sales.data?.items ?? []
+  const lowStock = products.data?.items ?? []
+  const lowStockCount = products.data?.total ?? 0
 
   const stats = summary.data
   const averageSatang = stats && stats.saleCount > 0 ? Math.round(stats.totalSatang / stats.saleCount) : 0
@@ -71,14 +80,18 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
       <PageHeader
         title={t('today.title')}
         highlight={date.longDate(today)}
-        description={t('today.summary', { count: allSales.length, voided: voidedCount })}
+        description={
+          saleCount.data === undefined || voided.data === undefined
+            ? undefined
+            : t('today.summary', { count: saleCount.data.total, voided: voidedCount })
+        }
       >
-        {lowStock.length > 0 && (
+        {lowStockCount > 0 && (
           <StatusBadge tone="warning" className="hidden h-7 px-3 sm:inline-flex">
-            {t('today.lowStockBadge', { items: tc('items', { count: lowStock.length }) })}
+            {t('today.lowStockBadge', { items: tc('items', { count: lowStockCount }) })}
           </StatusBadge>
         )}
-        <Button asChild className="h-9 px-3">
+        <Button asChild className="h-11 px-3">
           <Link to="/">
             <ShoppingCart />
             {t('today.openPos')}
@@ -88,48 +101,55 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
         {isOwner && (
-          <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+          <section aria-label={t('today.totals')} className="overflow-hidden rounded-md border bg-card">
+            {summary.error && (
+              <RetryNotice error={summary.error} stale={!!stats} pending={summary.isFetching} onRetry={() => void summary.refetch()} />
+            )}
+            {summary.isPending && <p role="status" className="sr-only">{tc('loading')}</p>}
+            <dl aria-busy={summary.isPending} className="grid grid-cols-2 gap-px bg-border xl:grid-cols-4">
             {stats ? (
               <>
-                <StatCard
-                  icon={Banknote}
+                <SummaryValue
                   label={t('stats.netSales')}
                   value={money.format(stats.totalSatang)}
                   footer={t('stats.totalDiscount', { amount: money.format(stats.discountSatang) })}
                 />
-                <StatCard
-                  icon={ReceiptIcon}
+                <SummaryValue
                   label={t('stats.saleCount')}
                   value={String(stats.saleCount)}
                   note={voidedCount > 0 && <span className="text-destructive">{t('stats.voided', { count: voidedCount })}</span>}
                   footer={t('stats.completedOnly')}
                 />
-                <StatCard
-                  icon={Wallet}
+                <SummaryValue
                   label={t('stats.average')}
                   value={money.format(averageSatang)}
                   footer={t('stats.vatTotal', { amount: money.format(stats.vatSatang) })}
                 />
-                <StatCard
-                  icon={TrendingUp}
+                <SummaryValue
                   label={t('stats.grossProfit')}
                   value={money.format(stats.profitSatang)}
                   note={<span className="text-success">{t('stats.margin', { percent: marginPercent })}</span>}
                   footer={t('stats.profitNote')}
                 />
               </>
-            ) : (
-              Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-30 rounded-xl" />)
-            )}
-          </div>
+            ) : summary.isPending ? (
+              <>
+                {Array.from({ length: 4 }, (_, index) => <div key={index} aria-hidden className="space-y-2 bg-card p-4"><Skeleton className="h-3 w-20" /><Skeleton className="h-6 w-24" /><Skeleton className="h-3 w-full" /></div>)}
+              </>
+            ) : null}
+            </dl>
+          </section>
         )}
 
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <Panel
+            className="rounded-md shadow-none"
             title={t('list.title')}
             description={t('list.description')}
-            action={
+          >
+            <div className="overflow-x-auto border-b px-3 py-2">
               <SegmentedTabs
+                size="touch"
                 value={filter}
                 onChange={setFilter}
                 options={[
@@ -138,66 +158,65 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
                   { value: 'voided', label: t('list.voided') },
                 ]}
               />
-            }
-          >
-            {sales.error && <p className="p-4 text-sm text-destructive">{sales.error.message}</p>}
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className={tableHead}>{t('columns.receiptNo')}</TableHead>
-                  <TableHead className={tableHead}>{t('columns.time')}</TableHead>
-                  <TableHead className={tableHead}>{t('columns.cashier')}</TableHead>
-                  <TableHead className={`${tableHead} text-right`}>{t('columns.total')}</TableHead>
-                  <TableHead className={tableHead}>{t('columns.status')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleSales.map((sale) => (
-                  <TableRow
-                    key={sale.id}
-                    tabIndex={0}
-                    className="cursor-pointer"
-                    onClick={() => setSelectedId(sale.id)}
-                    onKeyDown={(event) => event.key === 'Enter' && setSelectedId(sale.id)}
-                  >
-                    <TableCell className={`${tableCell} font-medium tabular-nums`}>{sale.receiptNo}</TableCell>
-                    <TableCell className={`${tableCell} text-muted-foreground tabular-nums`}>
-                      {date.time(sale.createdAt)}
-                    </TableCell>
-                    <TableCell className={tableCell}>{sale.cashierName}</TableCell>
-                    <TableCell className={`${tableCell} text-right font-medium tabular-nums`}>
-                      {money.plain(sale.totalSatang)}
-                    </TableCell>
-                    <TableCell className={tableCell}>
-                      {sale.status === 'voided' ? (
-                        <StatusBadge tone="danger">{t('list.voided')}</StatusBadge>
-                      ) : (
-                        <StatusBadge tone="success">{t('list.completed')}</StatusBadge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {!sales.isPending && visibleSales.length === 0 && (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                      {filter === 'all' ? t('list.empty') : t('list.emptyFiltered')}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            </div>
+            {sales.error && <RetryNotice error={sales.error} stale={!!sales.data} pending={sales.isFetching} onRetry={() => void sales.refetch()} />}
+            {(!sales.error || sales.data) && <>
+            <DataTable
+              rows={visibleSales}
+              rowKey={(sale) => sale.id}
+              isPending={sales.isPending}
+              empty={filter === 'all' ? t('list.empty') : t('list.emptyFiltered')}
+              onSelect={(sale) => setSelectedId(sale.id)}
+              rowLabel={(sale) => t('list.openReceipt', { receiptNo: sale.receiptNo })}
+              columns={[
+                { id: 'receiptNo', header: t('columns.receiptNo'), priority: 'primary', className: 'font-medium tabular-nums', cell: (sale) => sale.receiptNo },
+                {
+                  id: 'time',
+                  header: t('columns.time'),
+                  priority: 'secondary',
+                  className: 'text-muted-foreground tabular-nums',
+                  cell: (sale) => date.time(sale.createdAt),
+                },
+                { id: 'cashier', header: t('columns.cashier'), priority: 'wide-only', cell: (sale) => sale.cashierName },
+                {
+                  id: 'total',
+                  header: t('columns.total'),
+                  priority: 'secondary',
+                  align: 'right',
+                  className: 'font-medium',
+                  cell: (sale) => money.plain(sale.totalSatang),
+                },
+                {
+                  id: 'status',
+                  header: t('columns.status'),
+                  priority: 'secondary',
+                  cell: (sale) =>
+                    sale.status === 'voided' ? (
+                      <StatusBadge tone="danger">{t('list.voided')}</StatusBadge>
+                    ) : (
+                      <StatusBadge tone="success">{t('list.completed')}</StatusBadge>
+                    ),
+                },
+              ]}
+            />
+            <PaginationBar {...paging} total={sales.data?.total} isLoading={sales.isFetching} onPageChange={paging.setPage} />
+            </>}
           </Panel>
 
           <div className="space-y-4">
             <Panel
+              className="rounded-md shadow-none"
               title={t('attention.title')}
               description={t('attention.description', { count: LOW_STOCK_THRESHOLD })}
               action={
-                lowStock.length > 0 && <StatusBadge tone="warning">{tc('items', { count: lowStock.length })}</StatusBadge>
+                lowStockCount > 0 && <StatusBadge tone="warning">{tc('items', { count: lowStockCount })}</StatusBadge>
               }
             >
+              {products.isPending ? (
+                <SkeletonRows rows={3} />
+              ) : (
               <ul className="divide-y">
-                {lowStock.slice(0, 8).map((product) => (
+                {lowStock.map((product) => (
                   <li key={product.id} className="flex items-center gap-3 px-4 py-2.5">
                     <span className="flex size-8 shrink-0 items-center justify-center rounded-full border text-muted-foreground">
                       <PackageX className="size-4" />
@@ -211,14 +230,17 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
                     </StatusBadge>
                   </li>
                 ))}
-                {lowStock.length === 0 && (
+                {!products.isPending && !products.error && lowStockCount === 0 && (
                   <li className="px-4 py-6 text-center text-sm text-muted-foreground">{t('attention.allGood')}</li>
                 )}
               </ul>
+              )}
+              {products.error && <RetryNotice error={products.error} stale={!!products.data} pending={products.isFetching} onRetry={() => void products.refetch()} />}
+              <PaginationBar {...lowPaging} total={products.data?.total} isLoading={products.isFetching} onPageChange={lowPaging.setPage} />
             </Panel>
 
             {stats && (
-              <Panel title={t('payments.title')} description={t('payments.description')}>
+              <Panel className="rounded-md shadow-none" title={t('payments.title')} description={t('payments.description')}>
                 <ul className="divide-y">
                   {stats.byMethod.map((row) => (
                     <li key={row.method} className="flex items-center justify-between px-4 py-2.5 text-sm">

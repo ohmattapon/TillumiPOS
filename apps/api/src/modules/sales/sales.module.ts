@@ -1,4 +1,16 @@
 import { container } from 'tsyringe'
+import { salesReportRepositoryToken } from './applications/ports/sales-report.repository'
+import { DrizzleSalesReportRepository } from './adapters/repository/sales-report.drizzle.repository'
+import { GetSalesReportUseCase } from './applications/usecases/get-sales-report.usecase'
+import { ListReportProductsUseCase } from './applications/usecases/list-report-products.usecase'
+import { ListReportBranchesUseCase } from './applications/usecases/list-report-branches.usecase'
+import { SalesReportElysiaController } from './adapters/controllers/sales-report.controller'
+
+container.register(salesReportRepositoryToken, { useClass: DrizzleSalesReportRepository })
+container.registerSingleton(GetSalesReportUseCase)
+container.registerSingleton(ListReportProductsUseCase)
+container.registerSingleton(ListReportBranchesUseCase)
+container.registerSingleton(SalesReportElysiaController)
 import { SaleElysiaController } from './adapters/controllers/sale.controller'
 import { DrizzleSaleRepository } from './adapters/repository/sale.drizzle.repository'
 import { saleRepositoryToken } from './applications/ports/sale.repository'
@@ -29,3 +41,7 @@ container.registerSingleton(VoidSaleV2UseCase)
 container.registerSingleton(RecordCashRefundUseCase)
 container.registerSingleton(SaleElysiaController)
 container.registerSingleton(SaleV2ElysiaController)
+
+import { memberSalesHistoryToken } from '../members/applications/ports/member-sales-history.port'
+import { DrizzleMemberSalesHistory } from './adapters/repository/member-sales-history.drizzle.adapter'
+container.register(memberSalesHistoryToken, { useClass: DrizzleMemberSalesHistory })

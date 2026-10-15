@@ -7,10 +7,12 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
+import { SkeletonRows } from '@/components/Skeletons'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { tablesQuery, useCreateTable, useUpdateTable } from '../api'
@@ -190,26 +192,57 @@ export function TablesPage() {
 
   return (
     <>
-      <PageHeader title={t('title')} description={t('description', { items: tc('items', { count: all.length }) })}>
-        <Button className="h-9 px-3" onClick={() => setAdding(true)}>
+      <PageHeader title={t('title')} description={tables.isPending ? undefined : t('description', { items: tc('items', { count: all.length }) })}>
+        <Button className="h-11 px-3" onClick={() => setAdding(true)}>
           <Plus />
           {t('add')}
         </Button>
       </PageHeader>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto p-4 lg:grid-cols-[1fr_20rem]">
+      <div className="grid min-h-0 flex-1 content-start grid-cols-1 gap-4 overflow-y-auto p-4 lg:grid-cols-[1fr_20rem]">
         <div>
           {tables.error && <p className="mb-2 text-sm text-destructive">{tables.error.message}</p>}
+          {/* Phones list the tables; dragging them into place needs a screen that is big enough to drag on. */}
+          <div className="sm:hidden">
+            <p className="mb-2 text-sm text-muted-foreground">{t('phoneNote')}</p>
+            {tables.isPending ? (
+              <SkeletonRows rows={4} className="rounded-xl border bg-background" />
+            ) : (
+            <ul className="divide-y rounded-xl border bg-background">
+              {all.map((table) => (
+                <li key={table.id}>
+                  <button
+                    type="button"
+                    aria-pressed={selectedId === table.id}
+                    onClick={() => setSelectedId(table.id)}
+                    className={cn(
+                      'flex min-h-14 w-full items-center justify-between gap-3 px-4 text-left',
+                      selectedId === table.id && 'bg-accent/40',
+                      !table.isActive && 'text-muted-foreground',
+                    )}
+                  >
+                    <span className="truncate font-medium">{table.name}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {table.isActive ? t('seats', { count: table.seats }) : t('inactive')}
+                    </span>
+                  </button>
+                </li>
+              ))}
+              {!tables.isPending && all.length === 0 && <li className="p-6 text-center text-sm text-muted-foreground">{t('empty')}</li>}
+            </ul>
+            )}
+          </div>
           <div
             ref={canvas}
             aria-label={t('floor')}
-            className="relative w-full touch-none overflow-hidden rounded-xl border bg-muted/40 select-none"
+            className="relative hidden w-full touch-none overflow-hidden rounded-xl border bg-muted/40 select-none sm:block"
             style={{ aspectRatio: `${LAYOUT_WIDTH} / ${LAYOUT_HEIGHT}` }}
             onPointerMove={track}
             onPointerUp={release}
             onPointerCancel={release}
             onPointerDown={() => setSelectedId(null)}
           >
+            {tables.isPending && <Skeleton className="absolute inset-0 rounded-none" />}
             {!tables.isPending && all.length === 0 && (
               <p className="absolute inset-0 flex items-center justify-center p-6 text-center text-muted-foreground">
                 {t('empty')}

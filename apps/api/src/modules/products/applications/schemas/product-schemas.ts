@@ -26,8 +26,12 @@ export const updateProductSchema = z.object(fields).partial()
 
 export const listProductsSchema = z.object({
   q: z.string().optional(),
+  code: z.string().min(1).max(64).optional(),
   categoryId: z.number().int().optional(),
   includeInactive: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  stockAtMost: z.number().int().optional(),
+  sort: z.enum(['name', 'stock']).optional(),
   limit: z.number().int().min(1).max(1000).optional(),
   offset: z.number().int().min(0).optional(),
 })

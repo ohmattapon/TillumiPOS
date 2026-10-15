@@ -24,10 +24,18 @@
                         "shifts"
                       ],
                       "type": "string"
+                    },
+                    "imageStorage": {
+                      "enum": [
+                        "enabled",
+                        "disabled"
+                      ],
+                      "type": "string"
                     }
                   },
                   "required": [
-                    "checkoutMode"
+                    "checkoutMode",
+                    "imageStorage"
                   ],
                   "type": "object"
                 }
@@ -560,6 +568,38 @@
                       },
                       "type": "array"
                     },
+                    "member": {
+                      "nullable": true,
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "code",
+                        "name"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
                     "paidSatang": {
                       "anyOf": [
                         {
@@ -744,6 +784,7 @@
                     }
                   },
                   "required": [
+                    "member",
                     "id",
                     "receiptNo",
                     "status",
@@ -2541,6 +2582,25 @@
               ],
               "minimum": 0
             }
+          },
+          {
+            "in": "query",
+            "name": "amountSatang",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
           }
         ],
         "responses": {
@@ -3360,6 +3420,28 @@
                     "minItems": 1,
                     "type": "array"
                   },
+                  "memberId": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "nullable": true
+                  },
                   "payments": {
                     "items": {
                       "properties": {
@@ -3506,6 +3588,28 @@
                     "minItems": 1,
                     "type": "array"
                   },
+                  "memberId": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "nullable": true
+                  },
                   "payments": {
                     "items": {
                       "properties": {
@@ -3651,6 +3755,28 @@
                     },
                     "minItems": 1,
                     "type": "array"
+                  },
+                  "memberId": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "nullable": true
                   },
                   "payments": {
                     "items": {
@@ -3946,6 +4072,38 @@
                       },
                       "type": "array"
                     },
+                    "member": {
+                      "nullable": true,
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "code",
+                        "name"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
                     "paidSatang": {
                       "anyOf": [
                         {
@@ -4130,6 +4288,7 @@
                     }
                   },
                   "required": [
+                    "member",
                     "id",
                     "receiptNo",
                     "status",
@@ -4660,6 +4819,38 @@
                       },
                       "type": "array"
                     },
+                    "member": {
+                      "nullable": true,
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "code",
+                        "name"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
                     "paidSatang": {
                       "anyOf": [
                         {
@@ -4844,6 +5035,7 @@
                     }
                   },
                   "required": [
+                    "member",
                     "id",
                     "receiptNo",
                     "status",

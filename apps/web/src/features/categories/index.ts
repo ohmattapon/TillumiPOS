@@ -1,4 +1,6 @@
 export type { Category } from '@pos/api/types'
 export { categoriesQuery, categoryKeys } from './api'
 export { CategoriesPage } from './components/CategoriesPage'
+export { CategoryDot } from './components/CategoryDot'
+export { categoryColor } from './lib/category-color'
 export { locales as categoriesLocales } from './locales'

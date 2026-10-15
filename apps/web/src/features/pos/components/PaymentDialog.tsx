@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Banknote, CreditCard, QrCode, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -31,9 +33,14 @@ interface Props {
   onCancel: () => void
   /** The open shift the payment is taken in. Set in shift mode, where a bank QR is asked for on its behalf. */
   shiftId?: number
+  /**
+   * Tells the till which bank QR is showing (or null), so the customer's screen can show the same one.
+   * Called again with null when the QR is paid, replaced or the dialog closes.
+   */
+  onQrChange?: (qr: { image: string; expiresAt: string } | null) => void
 }
 
-export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onCancel, shiftId }: Props) {
+export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onCancel, shiftId, onQrChange }: Props) {
   const { t } = useTranslation('pos')
   const { t: tc } = useTranslation()
   const { money, currency, date } = useFormat()
@@ -45,10 +52,21 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
   const usesQr = method === 'promptpay' && qrEnabled
   const qr = useQrPayment({ amountSatang: totalSatang, active: usesQr, shiftId })
 
+  // The customer's screen follows the QR on this dialog. It is keyed by the QR's id: a new QR is a new
+  // message, and a paid QR (or a closed dialog) clears it.
+  const shownQr = usesQr && qr.issued && !qr.paid ? qr.issued : null
+  useEffect(() => {
+    onQrChange?.(shownQr ? { image: shownQr.image, expiresAt: shownQr.expiresAt.toISOString() } : null)
+    return () => onQrChange?.(null)
+    // The callback is a state setter, stable by design; only another QR should send again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownQr?.id])
+
   // Money that already arrived for exactly this total and has no sale yet (a late payment, or a sale that
   // failed after the customer paid). Using it means the customer does not pay twice.
-  const unclaimed = useQuery({ ...unclaimedQrQuery, enabled: usesQr && shiftId !== undefined })
-  const usable = (unclaimed.data?.items ?? []).filter((payment) => payment.amountSatang === totalSatang)
+  const qrPaging = useListPagination(`arrived:${totalSatang}`, 5)
+  const unclaimed = useQuery({ ...unclaimedQrQuery({ amountSatang: totalSatang, limit: qrPaging.pageSize, offset: qrPaging.offset }), enabled: usesQr && shiftId !== undefined })
+  const usable = unclaimed.data?.items ?? []
   const [confirmingId, setConfirmingId] = useState<number | null>(null)
 
   const payWithArrivedMoney = (qrPaymentId: number) => {
@@ -120,7 +138,7 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
           </div>
 
           {usesQr && <QrPaymentPanel qr={qr} isSaving={isSubmitting} />}
-          {usesQr && !qr.paid && usable.length > 0 && (
+          {usesQr && !qr.paid && ((unclaimed.data?.total ?? 0) > 0 || qrPaging.page > 0) && (
             <div className="space-y-2 rounded-lg border p-3">
               <p className="text-sm font-medium">{t('payment.qr.arrivedTitle')}</p>
               <ul className="space-y-2">
@@ -147,6 +165,7 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
                   </li>
                 ))}
               </ul>
+              <PaginationBar {...qrPaging} total={unclaimed.data?.total} isLoading={unclaimed.isFetching || isSubmitting} onPageChange={(page) => { setConfirmingId(null); qrPaging.setPage(page) }} />
               {confirmingId !== null && <p className="text-xs text-muted-foreground">{t('payment.qr.arrivedNote')}</p>}
             </div>
           )}

@@ -53,12 +53,13 @@ export class DrizzleQrPaymentRepository implements IQrPaymentRepository {
     return row ? new QrPaymentEntity(row) : null
   }
 
-  async findUnclaimed({ branchId, limit, offset }: { branchId: number; limit: number; offset: number }) {
+  async findUnclaimed({ branchId, limit, offset, amountSatang }: { branchId: number; limit: number; offset: number; amountSatang?: number }) {
     const matching = and(
       eq(qrPayments.branchId, branchId),
       eq(qrPayments.status, 'paid'),
       isNull(qrPayments.saleId),
       isNull(qrPayments.dismissedAt),
+      amountSatang !== undefined ? eq(qrPayments.amountSatang, amountSatang) : undefined,
     )
     const rows = await currentExecutor()
       .select(columns)

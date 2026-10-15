@@ -129,3 +129,24 @@ describe('cart store with options', () => {
     expect(cart().lines.map((line) => line.key)).toEqual(['7:20'])
   })
 })
+
+ describe('cart membership', () => {
+  test('selects only an identity and clears it for the next customer', () => {
+    cart().setMember(12)
+    expect(cart().memberId).toBe(12)
+    clearCart()
+    expect(cart().memberId).toBeNull()
+  })
+  test('switching to a saved order drops local membership', () => {
+    cart().setMember(12)
+    cart().workOnOrder(42)
+    expect(cart().memberId).toBeNull()
+  })
+  test('membership can be removed without emptying items', () => {
+    cart().add(7)
+    cart().setMember(12)
+    cart().setMember(null)
+    expect(cart().lines).toHaveLength(1)
+    expect(cart().memberId).toBeNull()
+  })
+})

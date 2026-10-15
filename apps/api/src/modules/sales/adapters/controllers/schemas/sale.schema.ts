@@ -3,7 +3,9 @@ import { satang } from '../../../../../libs/http-schemas'
 
 const method = t.Union([t.Literal('cash'), t.Literal('promptpay'), t.Literal('card')])
 
+const memberInput = t.Optional(t.Nullable(t.Integer({ minimum: 1 })))
 const header = {
+  member: t.Nullable(t.Object({ id: t.Integer(), code: t.String(), name: t.String() })),
   id: t.Integer(),
   receiptNo: t.String(),
   status: t.Union([t.Literal('completed'), t.Literal('voided')]),
@@ -79,11 +81,13 @@ export const saleSchemas = {
     }),
   ]),
   create: t.Object({
+    memberId: memberInput,
     items: t.Array(itemRequest, { minItems: 1 }),
     discountSatang: t.Optional(satang()),
     payments: t.Array(paymentRequest, { minItems: 1 }),
   }),
   createV2: t.Object({
+    memberId: memberInput,
     shiftId: t.Integer({ minimum: 1 }),
     ...t.Object({
       items: t.Array(itemRequest, { minItems: 1 }),
@@ -93,6 +97,7 @@ export const saleSchemas = {
   }),
   void: t.Object({ reason: t.String({ minLength: 1, maxLength: 500 }) }),
   listQuery: t.Object({
+    status: t.Optional(t.Union([t.Literal('completed'), t.Literal('voided')])),
     from: t.Optional(t.Date()),
     to: t.Optional(t.Date()),
     limit: t.Optional(t.Numeric({ minimum: 1, maximum: 500 })),

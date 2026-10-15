@@ -3,6 +3,8 @@ const th = {
   description: 'สแกนบาร์โค้ด หรือแตะสินค้าเพื่อเพิ่มลงตะกร้า',
   shiftReady: 'กะเปิดอยู่',
   shiftRequired: 'เปิดกะก่อนขาย',
+  moreActions: 'การทำงานอื่น',
+  customerDisplay: 'จอลูกค้า',
   picker: {
     searchPlaceholder: 'สแกนบาร์โค้ด หรือพิมพ์ชื่อ / รหัสสินค้า แล้วกด Enter',
     searchLabel: 'ค้นหาสินค้า',
@@ -47,10 +49,12 @@ const th = {
     add: 'เพิ่มลงตะกร้า',
   },
   cart: {
+    productUnavailable: 'สินค้าบางรายการปิดการขายแล้ว ล้างตะกร้าแล้วเลือกสินค้าใหม่',
     optionUnavailable: 'ตัวเลือกบางอย่างปิดใช้งานแล้ว ลบรายการนี้แล้วเลือกใหม่',
     title: 'ตะกร้า',
     itemCount: '{{count}} ชิ้น',
     clear: 'ล้าง',
+    close: 'ปิดตะกร้า',
     empty: 'ยังไม่มีสินค้าในตะกร้า',
     decrease: 'ลดจำนวน {{name}}',
     increase: 'เพิ่มจำนวน {{name}}',
@@ -121,7 +125,6 @@ const th = {
   },
   receipt: {
     saved: 'บันทึกการขายแล้ว · เงินทอน',
-    print: 'พิมพ์ใบเสร็จ',
     next: 'ขายรายการต่อไป',
   },
 }
@@ -130,6 +133,8 @@ const en = {
   title: 'Sell',
   shiftReady: 'Shift open',
   shiftRequired: 'Open a shift to sell',
+  moreActions: 'More actions',
+  customerDisplay: 'Customer screen',
   description: 'Scan a barcode, or tap a product to add it to the cart',
   picker: {
     searchPlaceholder: 'Scan a barcode, or type a name or SKU and press Enter',
@@ -175,10 +180,12 @@ const en = {
     add: 'Add to cart',
   },
   cart: {
+    productUnavailable: 'Some products are no longer for sale. Clear the cart and choose again.',
     optionUnavailable: 'Some options are no longer offered. Remove this line and choose again.',
     title: 'Cart',
     itemCount: '{{count}} pcs',
     clear: 'Clear',
+    close: 'Close cart',
     empty: 'The cart is empty',
     decrease: 'Decrease {{name}}',
     increase: 'Increase {{name}}',
@@ -249,7 +256,6 @@ const en = {
   },
   receipt: {
     saved: 'Sale recorded · change',
-    print: 'Print receipt',
     next: 'Next sale',
   },
 } satisfies typeof th
