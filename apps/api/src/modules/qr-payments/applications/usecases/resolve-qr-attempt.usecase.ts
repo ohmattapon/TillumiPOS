@@ -2,6 +2,7 @@ import { inject, injectable } from 'tsyringe'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import type { IClock } from '../../../shared/ports/clock.port'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
+import { quoteClaimsToken, type IQuoteClaims } from '../../../quotes/applications/ports/quote-claims.port'
 import { TOKENS } from '../../../tokens'
 import { qrAttemptRepositoryToken } from '../ports/qr-attempt.repository'
 import type { IQrAttemptRepository } from '../ports/qr-attempt.repository'
@@ -25,6 +26,7 @@ export class ResolveQrAttemptUseCase {
     @inject(qrPaymentGatewayToken) private readonly gateway: IQrPaymentGateway,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
     @inject(TOKENS.Clock) private readonly clock: IClock,
+    @inject(quoteClaimsToken) private readonly quotes: IQuoteClaims,
   ) {}
 
   async execute(id: number, actor: { id: number }, branchId: number) {
@@ -41,7 +43,11 @@ export class ResolveQrAttemptUseCase {
         amountSatang: attempt.amountSatang,
         since: attempt.createdAt,
       })
-      if (!found) return this.attempts.save(attempt.fail())
+      if (!found) {
+        // The QR was never shown to anyone, so the quote it held is open again.
+        await this.quotes.releaseByReference(attempt.reference)
+        return this.attempts.save(attempt.fail())
+      }
 
       const payment = await this.payments.create({
         branchId: attempt.branchId,

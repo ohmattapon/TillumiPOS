@@ -1,6 +1,8 @@
 import { inject, injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import type { IClock } from '../../../shared/ports/clock.port'
+import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
+import { quoteClaimsToken, type IQuoteClaims } from '../../../quotes/applications/ports/quote-claims.port'
 import { TOKENS } from '../../../tokens'
 import { qrPaymentGatewayToken } from '../ports/qr-payment-gateway.port'
 import type { IQrPaymentGateway } from '../ports/qr-payment-gateway.port'
@@ -18,6 +20,8 @@ export class CreateQrPaymentUseCase {
     @inject(qrPaymentGatewayToken) private readonly gateway: IQrPaymentGateway,
     @inject(qrPaymentRepositoryToken) private readonly payments: IQrPaymentRepository,
     @inject(TOKENS.Clock) private readonly clock: IClock,
+    @inject(quoteClaimsToken) private readonly quotes: IQuoteClaims,
+    @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
   ) {}
 
   async execute(input: unknown, actor: { userId: number; branch: { id: number; code: string } }) {
@@ -27,11 +31,26 @@ export class CreateQrPaymentUseCase {
 
     // Reference 1: 16 characters of A-Z and 0-9, unique, and unguessable.
     const reference = 'QR' + crypto.randomUUID().replaceAll('-', '').slice(0, 14).toUpperCase()
-    const qr = await this.gateway.createQr({
-      reference,
-      amountSatang: dto.amountSatang,
-      branchCode: actor.branch.code,
-    })
+    // A QR made from a pinned price holds that quote first, so the price cannot move while the customer pays.
+    if (dto.quoteId !== undefined) {
+      const quoteId = dto.quoteId
+      await this.unitOfWork.run(() =>
+        this.quotes.reserveForQr(quoteId, { branchId: actor.branch.id, reference, amountSatang: dto.amountSatang }),
+      )
+    }
+
+    let qr
+    try {
+      qr = await this.gateway.createQr({
+        reference,
+        amountSatang: dto.amountSatang,
+        branchCode: actor.branch.code,
+      })
+    } catch (error) {
+      // No QR was made, so nobody can pay: the quote goes back to being open.
+      if (dto.quoteId !== undefined) await this.unitOfWork.run(() => this.quotes.releaseByReference(reference))
+      throw error
+    }
 
     const payment = await this.payments.create({
       branchId: actor.branch.id,
