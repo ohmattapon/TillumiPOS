@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { VAT_MODES } from '../../../../domains/pricing'
-import { LOCALES, RECEIPT_PAPER_WIDTHS } from '../../../../domains/shop-settings.domain'
+import { HOME_VIEWS, LOCALES, RECEIPT_PAPER_WIDTHS } from '../../../../domains/shop-settings.domain'
 
 // An empty field means "not set", so an owner clears an optional detail by blanking it.
 const optionalText = (max: number) =>
@@ -24,5 +24,6 @@ export const updateShopSettingsSchema = z
     locale: z.enum(LOCALES),
     receiptPaperMm: z.union(RECEIPT_PAPER_WIDTHS.map((width) => z.literal(width))),
     receiptFooter: optionalText(200),
+    homeView: z.enum(HOME_VIEWS),
   })
   .partial()
