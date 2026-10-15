@@ -153,11 +153,88 @@ async function main() {
       for (const [name, path] of [
         ['11-today', '/today'], ['12-products', '/products'], ['13-categories', '/categories'], ['14-modifiers', '/modifiers'],
         ['15-tables', '/tables'], ['16-branches', '/branches'], ['17-users', '/users'], ['18-settings', '/settings'], ['19-shifts', '/shifts'],
+        ['22-reports', '/reports'],
       ] as const) {
         await page.goto(`${WEB}${path}`)
         await page.waitForTimeout(1000)
         await shot(name)
       }
+
+      // Date-only values survive the shadcn calendar without UTC conversion or premature submission.
+      await page.goto(`${WEB}/reports?from=2024-02-01&to=2024-02-29&scope=branch`)
+      const from = page.getByRole('button', { name: 'ตั้งแต่วันที่', exact: true })
+      const apply = page.getByRole('button', { name: 'แสดงรายงาน', exact: true })
+      await from.waitFor()
+      assert((await from.textContent())?.includes('2567'))
+      assert.equal(await page.locator('input[type="date"]').count(), 0)
+      await from.click()
+      const picker = page.getByRole('dialog', { name: 'ตั้งแต่วันที่', exact: true })
+      await picker.waitFor()
+      assert.equal(await picker.getByRole('combobox', { name: 'เลือกปี' }).inputValue(), '2024')
+      const leapDay = picker.getByRole('button', { name: '29 ก.พ. 2567', exact: true })
+      await shot('23-report-calendar')
+      const target = await leapDay.boundingBox()
+      assert(target && target.width >= 44 && target.height >= 44, `calendar days need 44px targets: ${JSON.stringify(target)}`)
+      await leapDay.click()
+      await picker.waitFor({ state: 'hidden' })
+      assert.equal(new URL(page.url()).searchParams.get('from'), '2024-02-01', 'choosing a day must not submit the form')
+      await apply.click()
+      await page.waitForURL('**/reports?from=2024-02-29&to=2024-02-29&scope=branch')
+
+      const to = page.getByRole('button', { name: 'ถึงวันที่', exact: true })
+      await to.click()
+      await page.keyboard.press('ArrowRight')
+      await page.keyboard.press('Enter')
+      await page.getByRole('dialog', { name: 'ถึงวันที่', exact: true }).waitFor({ state: 'hidden' })
+      assert((await to.textContent())?.includes('1 มี.ค. 2567'))
+      await apply.click()
+      await page.waitForURL('**/reports?from=2024-02-29&to=2024-03-01&scope=branch')
+
+      // Keyboard opening and Escape restore focus to the trigger.
+      await from.focus()
+      await from.press('Enter')
+      await picker.waitFor()
+      await page.keyboard.press('Escape')
+      await picker.waitFor({ state: 'hidden' })
+      assert(await from.evaluate((button) => document.activeElement === button))
+
+      // An inverted range is still rejected; the existing preset restores a valid range.
+      await from.click()
+      await picker.getByRole('combobox', { name: 'เลือกเดือน' }).selectOption('2')
+      await picker.getByRole('button', { name: '10 มี.ค. 2567', exact: true }).click()
+      assert(await apply.isDisabled())
+      await page.getByRole('alert').filter({ hasText: 'เลือกช่วงวัน' }).waitFor()
+      await shot('24-report-invalid-range')
+      await page.getByRole('button', { name: 'วันนี้', exact: true }).click()
+      await page.waitForURL((url) => url.searchParams.get('from') === url.searchParams.get('to'))
+      await apply.click({ trial: true })
+      assert(await apply.isEnabled())
+
+      // Switch only this isolated fixture's locale; Gregorian request values stay unchanged.
+      assert((await page.request.patch(`${WEB}/api/v1/settings`, { data: { locale: 'en' } })).ok())
+      await page.goto(`${WEB}/reports?from=2024-02-01&to=2024-02-29&scope=branch`)
+      const englishFrom = page.getByRole('button', { name: 'From', exact: true })
+      await englishFrom.waitFor()
+      assert((await englishFrom.textContent())?.includes('Feb 1, 2024'))
+      await englishFrom.click()
+      const englishPicker = page.getByRole('dialog', { name: 'From', exact: true })
+      assert.equal(await englishPicker.getByRole('combobox', { name: 'Choose year' }).inputValue(), '2024')
+      await shot('25-report-calendar-en')
+      await englishPicker.getByRole('button', { name: 'Feb 29, 2024', exact: true }).click()
+      await page.getByRole('button', { name: 'View report', exact: true }).click()
+      await page.waitForURL('**/reports?from=2024-02-29&to=2024-02-29&scope=branch')
+      assert((await page.request.patch(`${WEB}/api/v1/settings`, { data: { locale: 'th' } })).ok())
+
+      for (const theme of ['dark', 'midnight', 'forest', 'rose']) {
+        await page.evaluate((value) => localStorage.setItem('pos.theme', value), theme)
+        await page.reload()
+        await from.click()
+        await shot(`26-report-calendar-${theme}`)
+        const bounds = await picker.boundingBox()
+        assert(bounds && bounds.x >= 0 && bounds.y >= 0 && bounds.x + bounds.width <= size.width && bounds.y + bounds.height <= size.height, 'calendar must fit within the viewport')
+        await page.keyboard.press('Escape')
+      }
+      await page.evaluate(() => localStorage.setItem('pos.theme', 'light'))
 
       // A failed first read must not look like zero sales or keep totals loading forever.
       const salesReads = /\/api\/v1\/sales(?:\/summary)?\?/

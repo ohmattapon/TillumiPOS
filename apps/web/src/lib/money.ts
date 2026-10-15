@@ -60,6 +60,8 @@ export interface DateFormat {
   dateTime(value: Date | string): string
   time(value: Date | string): string
   longDate(value: Date | string): string
+  calendarDate(value: string): string
+  calendarYear(value: string): string
 }
 
 export function createDateFormat(locale: Locale): DateFormat {
@@ -67,10 +69,14 @@ export function createDateFormat(locale: Locale): DateFormat {
   const dateTime = new Intl.DateTimeFormat(intlLocale, { dateStyle: 'short', timeStyle: 'short' })
   const time = new Intl.DateTimeFormat(intlLocale, { timeStyle: 'short' })
   const longDate = new Intl.DateTimeFormat(intlLocale, { weekday: 'long', day: 'numeric', month: 'long' })
+  const calendarDate = new Intl.DateTimeFormat(intlLocale, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+  const calendarYear = new Intl.DateTimeFormat(intlLocale, { year: 'numeric', timeZone: 'UTC' })
 
   return {
     dateTime: (value) => dateTime.format(new Date(value)),
     time: (value) => time.format(new Date(value)),
     longDate: (value) => longDate.format(new Date(value)),
+    calendarDate: (value) => calendarDate.format(new Date(value)),
+    calendarYear: (value) => calendarYear.formatToParts(new Date(value)).find((part) => part.type === 'year')!.value,
   }
 }
