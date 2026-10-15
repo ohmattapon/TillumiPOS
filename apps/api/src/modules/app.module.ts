@@ -10,6 +10,7 @@ import { ModifierElysiaController } from './modifiers/adapters/controllers/modif
 import { OrderElysiaController } from './orders/adapters/controllers/order.controller'
 import { QrPaymentElysiaController } from './qr-payments/adapters/controllers/qr-payment.controller'
 import { ProductElysiaController } from './products/adapters/controllers/product.controller'
+import { PromotionElysiaController } from './promotions/adapters/controllers/promotion.controller'
 import { SaleElysiaController } from './sales/adapters/controllers/sale.controller'
 import { SalesReportElysiaController } from './sales/adapters/controllers/sales-report.controller'
 import { SettingsElysiaController } from './settings/adapters/controllers/settings.controller'
@@ -47,6 +48,7 @@ export const appModule = new Elysia({ name: 'api', prefix: '/api/v1' })
   .use(branchController.getRoutes())
   .use(catalog)
   .use(container.resolve(MemberElysiaController).getRoutes())
+  .use(container.resolve(PromotionElysiaController).getRoutes())
   .use(inventoryController.getRoutes())
   .use(saleController.getRoutes())
   .use(container.resolve(SalesReportElysiaController).getRoutes())
