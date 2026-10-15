@@ -102,8 +102,8 @@ describe('OpenOrderUseCase', () => {
     await useCase.execute({ items: [{ productId: 1, quantity: 2 }, { productId: 2, quantity: 1 }] }, actor)
 
     expect(orders.create.mock.calls[0]![0].items).toEqual([
-      { lineId: 0, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [] },
-      { lineId: 0, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [] },
+      { lineId: 0, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [], note: null },
+      { lineId: 0, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [], note: null },
     ])
   })
 
@@ -157,7 +157,7 @@ describe('editing an open order', () => {
 
     const order = await new AddOrderItemUseCase(orders, products, unitOfWork, lineOptions).execute(3, { productId: 1, quantity: 1 }, 1)
 
-    expect(order.items).toEqual([{ lineId: 1, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 3, options: [] }])
+    expect(order.items).toEqual([{ lineId: 1, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 3, options: [], note: null }])
     expect(products.findById).not.toHaveBeenCalled()
   })
 
@@ -238,8 +238,8 @@ describe('PayOrderUseCase', () => {
       makeOrder({
         id: 3,
         items: [
-          { lineId: 1, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [] },
-          { lineId: 2, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [] },
+          { lineId: 1, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [], note: null },
+          { lineId: 2, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [], note: null },
         ],
       }),
     )
@@ -323,14 +323,14 @@ describe('options on order lines', () => {
 
     expect(lineOptions.resolve).toHaveBeenCalledWith(1, [20])
     expect(saved.items).toEqual([
-      { lineId: 0, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 3500, quantity: 2, options: [pearls] },
+      { lineId: 0, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 3500, quantity: 2, options: [pearls], note: null },
     ])
   })
 
   test('adding the same choice again joins the line and keeps its quoted price', async () => {
     orders.findByIdForUpdate.mockResolvedValue(
       makeOrder({
-        items: [{ lineId: 7, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 3000, quantity: 1, options: [pearls] }],
+        items: [{ lineId: 7, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 3000, quantity: 1, options: [pearls], note: null }],
       }),
     )
 
@@ -381,7 +381,7 @@ describe('options on order lines', () => {
   test('a line is changed and removed by its id', async () => {
     orders.findByIdForUpdate.mockResolvedValue(
       makeOrder({
-        items: [{ lineId: 7, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 3500, quantity: 1, options: [pearls] }],
+        items: [{ lineId: 7, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 3500, quantity: 1, options: [pearls], note: null }],
       }),
     )
 
@@ -395,7 +395,7 @@ describe('options on order lines', () => {
   test('paying passes each line with its options and the price it was quoted', async () => {
     orders.findByIdForUpdate.mockResolvedValue(
       makeOrder({
-        items: [{ lineId: 7, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 3500, quantity: 2, options: [pearls] }],
+        items: [{ lineId: 7, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 3500, quantity: 2, options: [pearls], note: null }],
       }),
     )
     checkout.checkout.mockResolvedValue(makeSale({ id: 9 }))
@@ -461,7 +461,7 @@ describe('tables on orders', () => {
     const low = makeOrder({ id: 1 })
     const high = makeOrder({
       id: 2,
-      items: [{ lineId: 9, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [] }],
+      items: [{ lineId: 9, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [], note: null }],
     })
     orders.findByIdForUpdate.mockImplementation(async (id) => (id === 1 ? low : high))
     const useCase = new MergeOrdersUseCase(orders, unitOfWork)
@@ -492,7 +492,7 @@ describe('tables on orders', () => {
       makeOrder({
         id: 1,
         tableId: 3,
-        items: [{ lineId: 4, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 3, options: [] }],
+        items: [{ lineId: 4, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 3, options: [], note: null }],
       }),
     )
     orders.create.mockImplementation(async (order) => stored(order))

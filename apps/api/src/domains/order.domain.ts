@@ -17,6 +17,8 @@ export interface OrderItem {
   unitPriceSatang: number
   quantity: number
   options: readonly LineOption[]
+  /** A note for the kitchen, such as "no ice". Blank means none. */
+  note: string | null
 }
 
 /** What is needed to put a product on an order: the product as it is now. */
@@ -53,6 +55,7 @@ export interface SplitSelection {
 
 export const MAX_ORDER_LINES = 100
 export const MAX_LINE_QUANTITY = 9999
+export const MAX_NOTE_LENGTH = 200
 const MAX_LABEL_LENGTH = 100
 const MAX_REASON_LENGTH = 500
 
@@ -68,8 +71,21 @@ function assertQuantity(quantity: number) {
     throw invalid(`จำนวนสินค้าต้องเป็นจำนวนเต็มตั้งแต่ 1 ถึง ${MAX_LINE_QUANTITY}`)
 }
 
-/** The same product with the same options is the same line. */
-const identity = (item: OrderItem) => `${item.productId}:${lineKey(item.options)}`
+/** The identity of a line from its product and the stored key of its options. */
+export const identityOf = (productId: number, optionsKey: string) => `${productId}:${optionsKey}`
+
+/** The same product with the same options is the same line. The kitchen uses this same identity. */
+export const lineIdentity = (productId: number, options: readonly LineOption[]) =>
+  identityOf(productId, lineKey(options))
+
+function cleanNote(note: string | null): string | null {
+  const trimmed = note?.trim() || null
+  if (trimmed !== null && trimmed.length > MAX_NOTE_LENGTH)
+    throw invalid(`หมายเหตุต้องไม่เกิน ${MAX_NOTE_LENGTH} ตัวอักษร`)
+  return trimmed
+}
+
+const identity = (item: OrderItem) => lineIdentity(item.productId, item.options)
 
 /** The lines of an order, with repeated products and options merged into the first line of each. */
 function mergeLines(items: readonly OrderItem[]): OrderItem[] {
@@ -78,7 +94,12 @@ function mergeLines(items: readonly OrderItem[]): OrderItem[] {
     assertQuantity(item.quantity)
     const key = identity(item)
     const existing = merged.get(key)
-    merged.set(key, existing ? { ...existing, quantity: existing.quantity + item.quantity } : { ...item })
+    merged.set(
+      key,
+      existing
+        ? { ...existing, quantity: existing.quantity + item.quantity, note: existing.note ?? item.note }
+        : { ...item },
+    )
   }
   const lines = [...merged.values()]
   lines.forEach((line) => assertQuantity(line.quantity))
@@ -154,7 +175,9 @@ export class OrderEntity {
   addItem(product: OrderedProduct, quantity: number, options: readonly LineOption[] = []): OrderEntity {
     this.assertOpen()
     assertQuantity(quantity)
-    return this.change({ items: mergeLines([...this.items, { ...product, lineId: 0, options, quantity }]) })
+    return this.change({
+      items: mergeLines([...this.items, { ...product, lineId: 0, options, quantity, note: null }]),
+    })
   }
 
   /** Sets how many of a product, without options, are ordered. */
@@ -165,6 +188,19 @@ export class OrderEntity {
   /** Sets how many of one line are ordered, whatever options it has. */
   setLineQuantity(lineId: number, quantity: number): OrderEntity {
     return this.setQuantityOf(lineWithId(lineId), quantity)
+  }
+
+  /** Sets, or with null clears, the note of one line. The caller checks that the line has not been sent. */
+  setLineNote(lineId: number, note: string | null): OrderEntity {
+    this.assertOpen()
+    const value = cleanNote(note)
+    this.requireItem(lineWithId(lineId))
+    return this.change({ items: this.items.map((item) => (item.lineId === lineId ? { ...item, note: value } : item)) })
+  }
+
+  /** How many units of each line the order holds, by line identity (see lineIdentity). */
+  quantitiesByLine(): Map<string, number> {
+    return new Map(this.items.map((item) => [identity(item), item.quantity]))
   }
 
   /** Takes the line of a product without options off the order. */

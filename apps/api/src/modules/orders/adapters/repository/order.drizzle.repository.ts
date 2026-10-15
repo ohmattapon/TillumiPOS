@@ -86,7 +86,9 @@ export class DrizzleOrderRepository implements IOrderRepository {
         (row) =>
           new OrderEntity({
             ...row,
-            items: items.filter((item) => item.orderId === row.id).map(({ orderId: _order, ...item }) => item),
+            items: items
+              .filter((item) => item.orderId === row.id)
+              .map(({ orderId: _order, ...item }) => ({ ...item, note: null })),
           }),
       ),
       total: counted!.total,
@@ -149,6 +151,9 @@ export class DrizzleOrderRepository implements IOrderRepository {
       .where(eq(orderItems.orderId, id))
       .orderBy(orderItems.id)
 
-    return new OrderEntity({ ...header, items: items.map(({ orderId: _order, ...item }) => item) })
+    return new OrderEntity({
+      ...header,
+      items: items.map(({ orderId: _order, ...item }) => ({ ...item, note: null })),
+    })
   }
 }
