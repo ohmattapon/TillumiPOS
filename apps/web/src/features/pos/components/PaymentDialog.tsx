@@ -57,8 +57,9 @@ export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfi
   const usable = unclaimed.data?.items ?? []
   const [confirmingId, setConfirmingId] = useState<number | null>(null)
 
-  const payWithArrivedMoney = (qrPaymentId: number) => {
-    qr.cancel()
+  const payWithArrivedMoney = async (qrPaymentId: number) => {
+    // The QR on screen is cancelled first: a sale made before that would meet the price it still holds.
+    if (!(await qr.cancel())) return
     // Money that arrived earlier was made against whatever quote its QR had; the server names that quote if needed.
     onConfirm({ method: 'promptpay', amountSatang: totalSatang, qrPaymentId }, { arrived: true })
   }
@@ -76,7 +77,7 @@ export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfi
   // Non-cash methods always pay the exact total; only cash can be over-tendered.
   const amountSatang = method === 'cash' ? money.parse(received) : totalSatang
   const changeSatang = amountSatang === null ? null : amountSatang - totalSatang
-  const canConfirm = changeSatang !== null && changeSatang >= 0 && !isSubmitting && !usesQr
+  const canConfirm = changeSatang !== null && changeSatang >= 0 && !isSubmitting && !usesQr && !qr.isCancelling
 
   const unit = 10 ** money.fractionDigits
   const quickCash = (quickCashByCurrency[currency] ?? defaultQuickCash).filter((note) => note * unit >= totalSatang)
@@ -132,6 +133,7 @@ export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfi
           </div>
 
           {usesQr && <QrPaymentPanel qr={qr} isSaving={isSubmitting} />}
+          {usesQr && qr.cancelError && <p role="alert" className="text-sm text-destructive">{t('payment.qr.cancelFailed')}</p>}
           {usesQr && !qr.paid && ((unclaimed.data?.total ?? 0) > 0 || qrPaging.page > 0) && (
             <div className="space-y-2 rounded-lg border p-3">
               <p className="text-sm font-medium">{t('payment.qr.arrivedTitle')}</p>
@@ -147,12 +149,12 @@ export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfi
                         <Button type="button" variant="outline" className="h-10" onClick={() => setConfirmingId(null)}>
                           {tc('cancel')}
                         </Button>
-                        <Button type="button" className="h-10" disabled={isSubmitting} onClick={() => payWithArrivedMoney(payment.id)}>
+                        <Button type="button" className="h-10" disabled={isSubmitting || qr.isCancelling} onClick={() => payWithArrivedMoney(payment.id)}>
                           {t('payment.qr.arrivedConfirm')}
                         </Button>
                       </span>
                     ) : (
-                      <Button type="button" variant="outline" className="h-10" disabled={isSubmitting} onClick={() => setConfirmingId(payment.id)}>
+                      <Button type="button" variant="outline" className="h-10" disabled={isSubmitting || qr.isCancelling} onClick={() => setConfirmingId(payment.id)}>
                         {t('payment.qr.arrivedUse')}
                       </Button>
                     )}
