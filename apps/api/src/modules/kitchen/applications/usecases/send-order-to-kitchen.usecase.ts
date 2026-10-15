@@ -14,13 +14,16 @@ import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import { TOKENS } from '../../../tokens'
 import { kitchenRoutingRepositoryToken } from '../ports/kitchen-routing.repository'
 import type { IKitchenRoutingRepository } from '../ports/kitchen-routing.repository'
+import { kitchenStationRepositoryToken } from '../ports/kitchen-station.repository'
+import type { IKitchenStationRepository } from '../ports/kitchen-station.repository'
 import { kitchenTicketRepositoryToken } from '../ports/kitchen-ticket.repository'
 import type { IKitchenTicketRepository } from '../ports/kitchen-ticket.repository'
 
 /**
  * Command: sends the lines of an open order that have not gone to the kitchen yet, as one ticket per
  * station for this round. The order row is locked first, so two sends of the same order cannot both
- * count the same units. Stock is not touched: sending to the kitchen is not a sale.
+ * count the same units. Lines routed to a paused station are skipped like unrouted ones. Stock is not
+ * touched: sending to the kitchen is not a sale.
  */
 @injectable()
 export class SendOrderToKitchenUseCase {
@@ -28,6 +31,7 @@ export class SendOrderToKitchenUseCase {
     @inject(orderRepositoryToken) private readonly orders: IOrderRepository,
     @inject(productRepositoryToken) private readonly products: IProductRepository,
     @inject(kitchenRoutingRepositoryToken) private readonly routing: IKitchenRoutingRepository,
+    @inject(kitchenStationRepositoryToken) private readonly stations: IKitchenStationRepository,
     @inject(kitchenTicketRepositoryToken) private readonly tickets: IKitchenTicketRepository,
     @inject(kitchenTicketsToken) private readonly kitchen: IKitchenTickets,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
@@ -39,15 +43,19 @@ export class SendOrderToKitchenUseCase {
       order.assertOpen()
 
       const sent = (await this.kitchen.sentByLine([order.id])).get(order.id) ?? new Map<string, number>()
-      const stations = await this.routing.stationsByCategory()
+      const routes = await this.routing.stationsByCategory()
+      // A paused station keeps its routing but shows on no board, so a route to it counts as unrouted.
+      const activeStationIds = new Set(
+        (await this.stations.findAll()).filter((station) => station.isActive).map((station) => station.id),
+      )
       const byStation = new Map<number, NewKitchenLine[]>()
 
       for (const item of order.items) {
         const quantity = unsentQuantity(item.quantity, sent.get(lineIdentity(item.productId, item.options)) ?? 0)
         if (quantity === 0) continue
         const product = await this.products.findById(item.productId, actor.branchId)
-        const stationId = product?.categoryId == null ? undefined : stations.get(product.categoryId)
-        if (stationId === undefined) continue
+        const stationId = product?.categoryId == null ? undefined : routes.get(product.categoryId)
+        if (stationId === undefined || !activeStationIds.has(stationId)) continue
         const lines = byStation.get(stationId) ?? []
         lines.push({
           productId: item.productId,

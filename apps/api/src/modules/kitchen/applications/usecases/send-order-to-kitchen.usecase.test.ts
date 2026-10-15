@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 import { makeOrder, makeProduct } from '../../../../__tests__/factories'
 import {
   mockKitchenRoutingRepository,
+  mockKitchenStationRepository,
   mockKitchenTicketRepository,
   mockKitchenTickets,
   mockOrderRepository,
@@ -10,12 +11,14 @@ import {
 } from '../../../../__tests__/mocks'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
+import { KitchenStationEntity } from '../../../../domains/kitchen-station.domain'
 import { identityOf } from '../../../../domains/order.domain'
 import { SendOrderToKitchenUseCase } from './send-order-to-kitchen.usecase'
 
 let orders: ReturnType<typeof mockOrderRepository>
 let products: ReturnType<typeof mockProductRepository>
 let routing: ReturnType<typeof mockKitchenRoutingRepository>
+let stations: ReturnType<typeof mockKitchenStationRepository>
 let tickets: ReturnType<typeof mockKitchenTicketRepository>
 let kitchen: ReturnType<typeof mockKitchenTickets>
 
@@ -35,20 +38,25 @@ const item = (productId: number, quantity: number, lineId = productId) => ({
 
 const actor = { userId: 3, branchId: 1 }
 
+const station = (id: number, isActive = true) =>
+  new KitchenStationEntity({ id, name: `สถานี ${id}`, sortOrder: id, isActive })
+
 beforeEach(() => {
   orders = mockOrderRepository()
   products = mockProductRepository()
   routing = mockKitchenRoutingRepository()
+  stations = mockKitchenStationRepository()
   tickets = mockKitchenTicketRepository()
   kitchen = mockKitchenTickets()
   products.findById.mockImplementation(async (id) => [food, drink, loose].find((product) => product.id === id) ?? null)
   routing.stationsByCategory.mockResolvedValue(new Map([[10, 100], [20, 200]]))
+  stations.findAll.mockResolvedValue([station(100), station(200)])
   tickets.nextRoundNo.mockResolvedValue(1)
   tickets.create.mockImplementation(async (input) => ({ ...input, id: 1 }) as never)
   orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 7, branchId: 1, items: [item(1, 2), item(2, 1), item(3, 1)] }))
 })
 
-const useCase = () => new SendOrderToKitchenUseCase(orders, products, routing, tickets, kitchen, mockUnitOfWork())
+const useCase = () => new SendOrderToKitchenUseCase(orders, products, routing, stations, tickets, kitchen, mockUnitOfWork())
 
 describe('SendOrderToKitchenUseCase', () => {
   test('แยกใบหนึ่งใบต่อสถานีต่อรอบ และข้ามสินค้าที่หมวดไม่ได้ผูกสถานี', async () => {
@@ -60,6 +68,15 @@ describe('SendOrderToKitchenUseCase', () => {
       [100, [1]],
       [200, [2]],
     ])
+  })
+
+  test('สถานีที่ปิดใช้งานนับเป็นไม่ได้ผูก: ข้ามรายการนั้น และสถานีที่เปิดอยู่ยังได้ใบ', async () => {
+    stations.findAll.mockResolvedValue([station(100), station(200, false)])
+
+    await useCase().execute(7, actor)
+
+    const sentToStations = tickets.create.mock.calls.map(([ticket]) => [ticket.stationId, ticket.lines.map((line) => line.productId)])
+    expect(sentToStations).toEqual([[100, [1]]])
   })
 
   test('ส่งเฉพาะจำนวนที่ยังไม่เคยส่ง', async () => {
@@ -103,8 +120,9 @@ describe('SendOrderToKitchenUseCase', () => {
   })
 
   test('ไม่ใช้พอร์ตสต็อกเลย: การส่งครัวไม่ตัดสต็อก', () => {
-    // The constructor takes no stock port. A missing dependency would fail at compile time.
-    expect(SendOrderToKitchenUseCase.length).toBe(6)
+    // The constructor takes seven ports: orders, products, routing, stations, tickets, kitchen and the unit
+    // of work. None of them is a stock port, and a missing dependency would fail at compile time.
+    expect(SendOrderToKitchenUseCase.length).toBe(7)
   })
 
   test('ข้อผิดพลาดของการส่งเป็น DomainError ที่มีรหัส', async () => {
