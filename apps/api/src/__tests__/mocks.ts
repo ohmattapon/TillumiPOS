@@ -258,7 +258,7 @@ export const mockPriceQuoteRepository = (): Mocked<IPriceQuoteRepository> => ({
 /** No quote holds any QR by default, and every claim succeeds; a test sets what it is about. */
 export const mockQuoteClaims = (): Mocked<IQuoteClaims> => ({
   lockForCheckout: mock<IQuoteClaims['lockForCheckout']>(),
-  findReservedByReference: mock<IQuoteClaims['findReservedByReference']>(async () => null),
+  findHeldByReference: mock<IQuoteClaims['findHeldByReference']>(async () => null),
   consume: mock<IQuoteClaims['consume']>(async () => {}),
   reserveForQr: mock<IQuoteClaims['reserveForQr']>(async () => {}),
   releaseByReference: mock<IQuoteClaims['releaseByReference']>(async () => {}),

@@ -106,6 +106,13 @@ describe('whether it can be sold against', () => {
     expect(codeOf(() => held.assertSellable(request(), now, ['QROTHER']))).toBe('QUOTE_NOT_OPEN')
   })
 
+  test("a cancelled quote is sold only with the paid QR that held it, however long after it was cancelled", () => {
+    const cancelledHeld = stored({ status: 'cancelled', qrReference: 'QRABC' })
+    expect(() => cancelledHeld.assertSellable(request(), after(QUOTE_VALID_FOR_MS * 10), ['QRABC'])).not.toThrow()
+    expect(codeOf(() => cancelledHeld.assertSellable(request(), now, []))).toBe('QUOTE_NOT_OPEN')
+    expect(codeOf(() => cancelledHeld.assertSellable(request(), now, ['QROTHER']))).toBe('QUOTE_NOT_OPEN')
+  })
+
   test('a used or cancelled quote is not open', () => {
     // A consumed quote always has its sale; the entity refuses to build one without it.
     for (const status of ['consumed', 'cancelled'] as const)
@@ -120,6 +127,13 @@ describe('whether it can be sold against', () => {
 })
 
 describe('life of a quote', () => {
+  test('a sale uses up a quote that is open, held by a QR, or cancelled while its paid QR still holds it', () => {
+    expect(stored().consume(3)).toMatchObject({ status: 'consumed', saleId: 3 })
+    expect(stored({ status: 'reserved', qrReference: 'QRABC' }).consume(3)).toMatchObject({ status: 'consumed', saleId: 3 })
+    expect(stored({ status: 'cancelled', qrReference: 'QRABC' }).consume(3)).toMatchObject({ status: 'consumed', saleId: 3 })
+    expect(codeOf(() => stored({ status: 'cancelled' }).consume(3))).toBe('QUOTE_NOT_OPEN')
+  })
+
   test('reserving ties it to a QR reference and only works while it is open and fresh', () => {
     const held = stored().reserve('QRABC', now)
     expect(held).toMatchObject({ status: 'reserved', qrReference: 'QRABC' })
@@ -142,7 +156,7 @@ describe('life of a quote', () => {
   })
 
   test('cancelReserved closes a quote whose QR money will never be billed', () => {
-    expect(stored({ status: 'reserved', qrReference: 'QRABC' }).cancelReserved('QRABC').status).toBe('cancelled')
+    expect(stored({ status: 'reserved', qrReference: 'QRABC' }).cancelReserved('QRABC')).toMatchObject({ status: 'cancelled', qrReference: 'QRABC' })
     const open = stored()
     expect(open.cancelReserved('QRABC')).toBe(open)
   })

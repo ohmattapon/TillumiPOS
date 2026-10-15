@@ -29,8 +29,8 @@ export class CancelQrPaymentUseCase {
       const payment = await this.refresher.refresh(found, { force: true })
       // Throws QR_ALREADY_PAID when the check above found the money.
       const cancelled = await this.payments.save(payment.cancel())
-      // Nobody will pay this QR now, so the quote it held is open again.
-      await this.quotes.releaseByReference(cancelled.reference)
+      // Nobody will pay this QR as it was, so its quote is cancelled. Money that still arrives on this QR is sold at that price.
+      await this.quotes.cancelByReference(cancelled.reference)
       return cancelled
     })
   }

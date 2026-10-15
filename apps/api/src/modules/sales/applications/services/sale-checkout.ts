@@ -244,7 +244,7 @@ export class SaleCheckout implements ISaleCheckout {
       await this.qrPayments.assertClaimable(payment.qrPaymentId, { branchId, amountSatang: payment.amountSatang })
       const reference = await this.qrPayments.reference(payment.qrPaymentId)
       if (quoteId === null) {
-        const held = await this.quotes.findReservedByReference(reference)
+        const held = await this.quotes.findHeldByReference(reference)
         if (held !== null)
           throw new DomainConflictError(
             'QR นี้ถูกสร้างจากราคาที่ตรึงไว้ กรุณาชำระด้วยราคานั้น',

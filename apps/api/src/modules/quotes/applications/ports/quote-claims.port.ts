@@ -11,7 +11,7 @@ export interface IQuoteClaims {
    */
   lockForCheckout(quoteId: number, request: QuoteRequest, claimedReferences: readonly string[]): Promise<PriceQuoteEntity>
   /** The id of the quote a QR holds, or null. Not locked: used to refuse a sale that left the quote out. */
-  findReservedByReference(reference: string): Promise<number | null>
+  findHeldByReference(reference: string): Promise<number | null>
   /** Ties the (locked) quote to the sale it was used for. */
   consume(quote: PriceQuoteEntity, saleId: number): Promise<void>
   /**

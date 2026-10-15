@@ -26,9 +26,10 @@ export class QuoteClaims implements IQuoteClaims {
     return quote
   }
 
-  async findReservedByReference(reference: string) {
+  /** The quote a QR holds: while the QR is held, and after it was cancelled, when its money may still arrive. */
+  async findHeldByReference(reference: string) {
     const quote = await this.quotes.findByQrReference(reference)
-    return quote?.status === 'reserved' ? quote.id : null
+    return quote?.status === 'reserved' || quote?.status === 'cancelled' ? quote.id : null
   }
 
   async consume(quote: PriceQuoteEntity, saleId: number) {
