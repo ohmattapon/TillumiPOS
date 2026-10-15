@@ -19,6 +19,7 @@ import { RemoveOrderItemUseCase } from '../../applications/usecases/remove-order
 import { RemoveOrderLineUseCase } from '../../applications/usecases/remove-order-line.usecase'
 import { RenameOrderUseCase } from '../../applications/usecases/rename-order.usecase'
 import { SetOrderItemQuantityUseCase } from '../../applications/usecases/set-order-item-quantity.usecase'
+import { SetOrderLineNoteUseCase } from '../../applications/usecases/set-order-line-note.usecase'
 import { SetOrderLineQuantityUseCase } from '../../applications/usecases/set-order-line-quantity.usecase'
 import { SplitOrderUseCase } from '../../applications/usecases/split-order.usecase'
 import { orderSchemas, type OrderResponse } from './schemas/order.schema'
@@ -53,6 +54,7 @@ export class OrderElysiaController {
     @inject(PayOrderUseCase) private readonly payOrder: PayOrderUseCase,
     @inject(SetOrderLineQuantityUseCase) private readonly setLineQuantity: SetOrderLineQuantityUseCase,
     @inject(RemoveOrderLineUseCase) private readonly removeLine: RemoveOrderLineUseCase,
+    @inject(SetOrderLineNoteUseCase) private readonly setLineNote: SetOrderLineNoteUseCase,
     @inject(MoveOrderToTableUseCase) private readonly moveToTable: MoveOrderToTableUseCase,
     @inject(MergeOrdersUseCase) private readonly mergeOrders: MergeOrdersUseCase,
     @inject(SplitOrderUseCase) private readonly splitOrder: SplitOrderUseCase,
@@ -151,6 +153,17 @@ export class OrderElysiaController {
           params: orderSchemas.lineParams,
           response: orderSchemas.order,
           detail: { summary: 'เอาบรรทัดออกจากออเดอร์ (ระบุด้วยรหัสบรรทัด)' },
+        },
+      )
+      .patch(
+        '/:id/lines/:lineId/note',
+        async ({ params, body, branch }) =>
+          this.one(await this.setLineNote.execute(params.id, params.lineId, body, (await branch()).id)),
+        {
+          params: orderSchemas.lineParams,
+          body: orderSchemas.lineNote,
+          response: orderSchemas.order,
+          detail: { summary: 'หมายเหตุของบรรทัด (แก้ได้ก่อนส่งครัว)' },
         },
       )
       .post(

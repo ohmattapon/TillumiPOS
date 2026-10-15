@@ -32,6 +32,7 @@ const itemColumns = {
   unitPriceSatang: orderItems.unitPriceSatang,
   quantity: orderItems.quantity,
   options: orderItems.options,
+  note: orderItems.note,
 }
 
 @injectable()
@@ -88,7 +89,7 @@ export class DrizzleOrderRepository implements IOrderRepository {
             ...row,
             items: items
               .filter((item) => item.orderId === row.id)
-              .map(({ orderId: _order, ...item }) => ({ ...item, note: null })),
+              .map(({ orderId: _order, ...item }) => item),
           }),
       ),
       total: counted!.total,
@@ -117,7 +118,7 @@ export class DrizzleOrderRepository implements IOrderRepository {
     for (const item of items.filter((line) => line.lineId > 0))
       await executor
         .update(orderItems)
-        .set({ quantity: item.quantity })
+        .set({ quantity: item.quantity, note: item.note })
         .where(and(eq(orderItems.orderId, id), eq(orderItems.id, item.lineId)))
     await this.writeItems(
       id,
@@ -153,7 +154,7 @@ export class DrizzleOrderRepository implements IOrderRepository {
 
     return new OrderEntity({
       ...header,
-      items: items.map(({ orderId: _order, ...item }) => ({ ...item, note: null })),
+      items: items.map(({ orderId: _order, ...item }) => item),
     })
   }
 }
