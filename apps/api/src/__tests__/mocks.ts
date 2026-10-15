@@ -10,6 +10,7 @@ import type { IBranchRepository } from '../modules/branches/applications/ports/b
 import type { ICategoryRepository } from '../modules/categories/applications/ports/category.repository'
 import type { IKitchenRoutingRepository } from '../modules/kitchen/applications/ports/kitchen-routing.repository'
 import type { IKitchenStationRepository } from '../modules/kitchen/applications/ports/kitchen-station.repository'
+import type { IKitchenTicketRepository } from '../modules/kitchen/applications/ports/kitchen-ticket.repository'
 import type { IStockLedger } from '../modules/inventory/applications/ports/stock-ledger.port'
 import type { IStockMovementRepository } from '../modules/inventory/applications/ports/stock-movement.repository'
 import type { ILineOptionsResolver } from '../modules/modifiers/applications/ports/line-options-resolver.port'
@@ -232,6 +233,14 @@ export const mockKitchenStationRepository = (): Mocked<IKitchenStationRepository
 export const mockKitchenRoutingRepository = (): Mocked<IKitchenRoutingRepository> => ({
   stationsByCategory: mock<IKitchenRoutingRepository['stationsByCategory']>(async () => new Map()),
   setStation: mock<IKitchenRoutingRepository['setStation']>(async () => undefined),
+})
+
+export const mockKitchenTicketRepository = (): Mocked<IKitchenTicketRepository> => ({
+  nextRoundNo: mock<IKitchenTicketRepository['nextRoundNo']>(async () => 1),
+  create: mock<IKitchenTicketRepository['create']>(),
+  findByIdForUpdate: mock<IKitchenTicketRepository['findByIdForUpdate']>(),
+  save: mock<IKitchenTicketRepository['save']>(),
+  findPending: mock<IKitchenTicketRepository['findPending']>(),
 })
 
 export const mockSetupCode = (): Mocked<ISetupCode> => ({
