@@ -6,6 +6,8 @@ import { products } from './products'
 import { vatMode } from './shop-settings'
 import { users } from './users'
 import { shifts } from './shifts'
+import { members } from './members'
+import type { SaleMember } from '../../../domains/sale.domain'
 
 export const saleStatus = pgEnum('sale_status', ['completed', 'voided'])
 export const paymentMethod = pgEnum('payment_method', ['cash', 'promptpay', 'card'])
@@ -28,6 +30,8 @@ export const sales = pgTable(
   'sales',
   {
     id: id(),
+    memberId: integer().references(() => members.id),
+    member: jsonb().$type<SaleMember>(),
     receiptNo: text().notNull().unique(),
     branchId: integer()
       .notNull()
@@ -60,7 +64,7 @@ export const sales = pgTable(
     voidReason: text(),
     createdAt: createdAt(),
   },
-  (table) => [index().on(table.createdAt), index().on(table.branchId, table.createdAt), index().on(table.shiftId, table.createdAt)],
+  (table) => [index().on(table.memberId, table.branchId, table.createdAt), index().on(table.createdAt), index().on(table.branchId, table.createdAt), index().on(table.shiftId, table.createdAt)],
 )
 
 export const saleItems = pgTable(

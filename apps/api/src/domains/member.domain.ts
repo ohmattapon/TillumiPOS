@@ -1,0 +1,48 @@
+import { DomainConflictError } from './errors/domain-conflict.error'
+import { DomainError } from './errors/domain-error'
+import { MemberPhone } from './member-phone.vo'
+
+export interface MemberEntityProps {
+  id: number
+  name: string
+  phone: string
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+export interface MemberSnapshot extends MemberEntityProps { code: string }
+
+export class MemberEntity {
+  readonly id: number
+  readonly code: string
+  readonly name: string
+  readonly phone: string
+  readonly isActive: boolean
+  readonly createdAt: Date
+  readonly updatedAt: Date
+
+  constructor(props: MemberEntityProps) {
+    const name = props.name.trim()
+    if (name.length < 1 || name.length > 120)
+      throw new DomainError('ชื่อสมาชิกต้องยาว 1 ถึง 120 ตัวอักษร', 'INVALID_MEMBER')
+    this.id = props.id
+    this.code = `M${String(props.id).padStart(6, '0')}`
+    this.name = name
+    this.phone = new MemberPhone(props.phone).value
+    this.isActive = props.isActive
+    this.createdAt = props.createdAt
+    this.updatedAt = props.updatedAt
+  }
+
+  assertActive(): void {
+    if (!this.isActive) throw new DomainConflictError('สมาชิกนี้ปิดใช้งานแล้ว กรุณาเลือกสมาชิกใหม่หรือล้างสมาชิก', 'MEMBER_INACTIVE')
+  }
+
+  with(changes: Partial<Pick<MemberEntityProps, 'name' | 'phone' | 'isActive'>>, now: Date): MemberEntity {
+    return new MemberEntity({ ...this.toSnapshot(), name: changes.name ?? this.name, phone: changes.phone ?? this.phone, isActive: changes.isActive ?? this.isActive, updatedAt: now })
+  }
+
+  toSnapshot(): MemberSnapshot {
+    return { id: this.id, code: this.code, name: this.name, phone: this.phone, isActive: this.isActive, createdAt: this.createdAt, updatedAt: this.updatedAt }
+  }
+}

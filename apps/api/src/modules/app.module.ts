@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia'
+import { MemberElysiaController } from './members/adapters/controllers/member.controller'
 import { container } from 'tsyringe'
 import { AuthElysiaController } from './auth/adapters/controllers/auth.controller'
 import { BranchElysiaController } from './branches/adapters/controllers/branch.controller'
@@ -45,6 +46,7 @@ export const appModule = new Elysia({ name: 'api', prefix: '/api/v1' })
   .use(userController.getRoutes())
   .use(branchController.getRoutes())
   .use(catalog)
+  .use(container.resolve(MemberElysiaController).getRoutes())
   .use(inventoryController.getRoutes())
   .use(saleController.getRoutes())
   .use(container.resolve(SalesReportElysiaController).getRoutes())

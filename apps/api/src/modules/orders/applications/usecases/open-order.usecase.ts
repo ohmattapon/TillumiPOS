@@ -6,6 +6,8 @@ import type { ITableRepository } from '../../../tables/applications/ports/table.
 import type { IProductRepository } from '../../../products/applications/ports/product.repository'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import type { OrderActor } from '../services/order-access'
+import { memberRepositoryToken, type IMemberRepository } from '../../../members/applications/ports/member.repository'
+import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import { OrderEntity } from '../../../../domains/order.domain'
 import { TOKENS } from '../../../tokens'
 import { findOrderedProduct } from '../services/ordered-product'
@@ -24,6 +26,7 @@ export class OpenOrderUseCase {
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
     @inject(lineOptionsResolverToken) private readonly lineOptions: ILineOptionsResolver,
     @inject(tableRepositoryToken) private readonly tables: ITableRepository,
+    @inject(memberRepositoryToken) private readonly members: IMemberRepository,
   ) {}
 
   async execute(input: unknown, actor: OrderActor) {
@@ -32,6 +35,11 @@ export class OpenOrderUseCase {
     return this.unitOfWork.run(async () => {
       if (dto.tableId) await findUsableTable(this.tables, dto.tableId, actor.branch.id)
 
+      if (dto.memberId != null) {
+        const member = await this.members.findByIdForUpdate(dto.memberId)
+        if (!member) throw new DomainNotFoundError('ไม่พบสมาชิก', 'MEMBER_NOT_FOUND')
+        member.assertActive()
+      }
       const items = []
       for (const line of dto.items ?? []) {
         const product = await findOrderedProduct(this.products, line.productId, actor.branch.id)
@@ -47,6 +55,7 @@ export class OpenOrderUseCase {
 
       return this.orders.create(
         OrderEntity.open({
+          memberId: dto.memberId ?? null,
           branchId: actor.branch.id,
           label: dto.label ?? null,
           tableId: dto.tableId ?? null,
