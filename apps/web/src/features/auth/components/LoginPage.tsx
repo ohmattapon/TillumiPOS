@@ -7,24 +7,19 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { useLogin } from '../api'
 
-/** The shop icon and the product name. On the brand panel the tile is white, so the mark stays visible on teal. */
-function BrandMark({ inverted = false, className }: { inverted?: boolean; className?: string }) {
+/** The shop icon and the product name, above the form on a narrow screen. */
+function BrandMark({ className }: { className?: string }) {
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      <span
-        className={cn(
-          'flex size-10 items-center justify-center rounded-lg',
-          inverted ? 'bg-primary-foreground text-primary' : 'bg-primary text-primary-foreground',
-        )}
-      >
+      <span className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
         <Store className="size-5" />
       </span>
-      <span className="text-base font-semibold">EasyPOS</span>
+      <span className="text-base font-semibold">TillumiPOS</span>
     </div>
   )
 }
 
-/** The wide-screen left column: what the till does, in a few lines. Shown from 1024px up. */
+/** The wide-screen left column: a photo of the till, then what it does in a few lines. Shown from 1024px up. */
 function BrandPanel() {
   const { t } = useTranslation('auth')
   const points: { icon: LucideIcon; label: string }[] = [
@@ -35,9 +30,11 @@ function BrandPanel() {
   ]
 
   return (
-    <aside className="hidden flex-col justify-between bg-primary p-12 text-primary-foreground lg:flex">
-      <BrandMark inverted />
-      <div className="max-w-md space-y-8">
+    <aside className="hidden flex-col bg-primary text-primary-foreground lg:flex">
+      <div className="relative min-h-0 flex-1">
+        <img src="/login-hero.jpg" alt={t('brand.imageAlt')} loading="lazy" className="absolute inset-0 size-full object-cover" />
+      </div>
+      <div className="max-w-md space-y-6 p-12">
         <p className="text-2xl leading-snug font-semibold">{t('brand.headline')}</p>
         <ul className="divide-y divide-primary-foreground/20 border-y border-primary-foreground/20">
           {points.map(({ icon: Icon, label }) => (
