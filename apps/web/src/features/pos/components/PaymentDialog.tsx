@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input'
 import { useFormat } from '@/features/settings'
 import { unclaimedQrQuery } from '@/features/shifts'
+import type { Quote } from '@/features/promotions'
 import type { PaymentInput, PaymentMethod } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { qrConfigQuery } from '../api'
@@ -27,15 +28,17 @@ const defaultQuickCash = [5, 10, 20, 50, 100]
 
 interface Props {
   totalSatang: number
+  /** The pinned price this payment is made at: its promotion is shown and a QR is made from it. */
+  quote?: Quote | null
   isSubmitting: boolean
   error?: string
-  onConfirm: (payment: PaymentInput) => void
+  onConfirm: (payment: PaymentInput, options?: { arrived?: boolean }) => void
   onCancel: () => void
   /** The open shift the payment is taken in. Set in shift mode, where a bank QR is asked for on its behalf. */
   shiftId?: number
 }
 
-export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onCancel, shiftId }: Props) {
+export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfirm, onCancel, shiftId }: Props) {
   const { t } = useTranslation('pos')
   const { t: tc } = useTranslation()
   const { money, currency, date } = useFormat()
@@ -45,7 +48,7 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
   // With a bank QR set up, PromptPay is paid by scanning and confirmed by the bank, not by the cashier.
   const qrEnabled = useQuery(qrConfigQuery).data?.enabled === true
   const usesQr = method === 'promptpay' && qrEnabled
-  const qr = useQrPayment({ amountSatang: totalSatang, active: usesQr, shiftId })
+  const qr = useQrPayment({ amountSatang: totalSatang, quoteId: quote?.id, active: usesQr, shiftId })
 
   // Money that already arrived for exactly this total and has no sale yet (a late payment, or a sale that
   // failed after the customer paid). Using it means the customer does not pay twice.
@@ -56,7 +59,8 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
 
   const payWithArrivedMoney = (qrPaymentId: number) => {
     qr.cancel()
-    onConfirm({ method: 'promptpay', amountSatang: totalSatang, qrPaymentId })
+    // Money that arrived earlier was made against whatever quote its QR had; the server names that quote if needed.
+    onConfirm({ method: 'promptpay', amountSatang: totalSatang, qrPaymentId }, { arrived: true })
   }
 
   // The sale is recorded the moment the bank confirms, so a customer who has paid is never left waiting.
@@ -94,6 +98,11 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
         <DialogHeader className="items-center text-center">
           <DialogDescription>{t('payment.due')}</DialogDescription>
           <DialogTitle className="text-4xl font-semibold tabular-nums">{money.format(totalSatang)}</DialogTitle>
+          {quote?.promotion && (
+            <p className="text-sm text-muted-foreground">
+              {t('payment.promotion', { name: quote.promotion.name, amount: money.format(quote.promotion.discountSatang) })}
+            </p>
+          )}
         </DialogHeader>
 
         <form

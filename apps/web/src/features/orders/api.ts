@@ -2,6 +2,7 @@ import type { Order } from '@pos/api/types'
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productKeys } from '@/features/products'
 import { saleKeys } from '@/features/sales'
+import { withHeldQuote } from '@/features/promotions'
 import { tableKeys } from '@/features/tables'
 import { api, apiV2, unwrap } from '@/lib/api'
 import type { PaymentInput } from '@/lib/money'
@@ -108,6 +109,7 @@ export function useCancelOrder() {
 export interface PayOrderInput {
   orderId: number
   discountSatang: number
+  quoteId?: number
   payment: PaymentInput
   shiftId?: number
   idempotencyKey?: string
@@ -118,11 +120,18 @@ export function usePayOrder() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ orderId, discountSatang, payment, shiftId, idempotencyKey }: PayOrderInput) => {
-      if (shiftId !== undefined)
-        return unwrap(apiV2.orders({ id: orderId }).pay.post({ discountSatang, payments: [payment], shiftId }, { headers: { 'idempotency-key': idempotencyKey ?? crypto.randomUUID() } }))
-      return unwrap(api.orders({ id: orderId }).pay.post({ discountSatang, payments: [payment] }))
-    },
+    mutationFn: async ({ orderId, discountSatang, quoteId, payment, shiftId, idempotencyKey }: PayOrderInput) =>
+      withHeldQuote(quoteId, async (pinned) => {
+        const discount = pinned === undefined ? discountSatang : 0
+        if (shiftId !== undefined)
+          return unwrap(
+            apiV2.orders({ id: orderId }).pay.post(
+              { discountSatang: discount, payments: [payment], shiftId, quoteId: pinned },
+              { headers: { 'idempotency-key': idempotencyKey ?? crypto.randomUUID() } },
+            ),
+          )
+        return unwrap(api.orders({ id: orderId }).pay.post({ discountSatang: discount, payments: [payment], quoteId: pinned }))
+      }),
     onSettled: () =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: orderKeys.all }),

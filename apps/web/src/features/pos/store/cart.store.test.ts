@@ -149,4 +149,15 @@ describe('cart store with options', () => {
     expect(cart().lines).toHaveLength(1)
     expect(cart().memberId).toBeNull()
   })
+  test('a declined promotion is forgotten when the cart is cleared or an order is chosen', () => {
+    cart().setPromotionDeclined(true)
+    expect(cart().promotionDeclined).toBe(true)
+
+    cart().clear()
+    expect(cart().promotionDeclined).toBe(false)
+
+    cart().setPromotionDeclined(true)
+    cart().workOnOrder(5)
+    expect(cart().promotionDeclined).toBe(false)
+  })
 })

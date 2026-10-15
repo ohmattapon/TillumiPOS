@@ -18,6 +18,7 @@ import { meQuery } from '@/features/auth'
 import { useActiveBranch } from '@/features/branches'
 import { useNavigate } from 'react-router'
 import type { PaymentInput } from '@/lib/money'
+import { useCreateQuote } from '@/features/promotions'
 import { useCheckout } from '../api'
 import { useCart } from '../hooks/use-cart'
 import { hasKeyboard } from '../lib/focus'
@@ -26,6 +27,7 @@ import { CartBar } from './CartBar'
 import { CartPanel } from './CartPanel'
 import { FloorDialog } from './FloorDialog'
 import { PaymentDialog } from './PaymentDialog'
+import { QuotePendingDialog } from './QuotePendingDialog'
 import { OpenOrdersDialog } from './OpenOrdersDialog'
 import { ProductPicker } from './ProductPicker'
 import { ReceiptDialog } from './ReceiptDialog'
@@ -61,13 +63,37 @@ export function PosPage() {
   const searchRef = useRef<HTMLInputElement>(null)
   const paymentCommandKey = useRef<string | null>(null)
 
+  // A cart without a typed discount is priced by the server first: the promotion it gets and the total it
+  // pays are pinned in a quote, and the payment (and a QR) is made from that.
+  const createQuote = useCreateQuote()
+  const usesQuote = cart.usesQuote
+  const quote = usesQuote ? (createQuote.data ?? null) : null
+  const quoteInput = () =>
+    cart.orderId !== null
+      ? { orderId: cart.orderId }
+      : {
+          lines: cart.lines.map((line) => ({ productId: line.productId, quantity: line.quantity, options: line.optionIds })),
+          memberId: cart.memberId,
+        }
+  // Each time payment opens the cart is priced again, so an earlier quote never shows an old total.
+  const startPayment = () => {
+    createQuote.reset()
+    setIsPaying(true)
+    if (usesQuote) createQuote.mutate(quoteInput())
+  }
+  // The keyboard handler is set up once per `canPay`, so it reads the latest function through a ref.
+  const startPaymentRef = useRef(startPayment)
+  useEffect(() => {
+    startPaymentRef.current = startPayment
+  })
+
   // F9 opens payment from anywhere on the page, when the cart can be paid.
   const canPay = cart.canPay && shiftReady
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'F9') return
       event.preventDefault()
-      if (canPay) setIsPaying(true)
+      if (canPay) startPaymentRef.current()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -78,28 +104,31 @@ export function PosPage() {
       setReceipt(sale)
       setIsPaying(false)
       paymentCommandKey.current = null
+      createQuote.reset()
       clearCart()
     },
   }
 
-  const pay = (payment: PaymentInput) => {
+  const pay = (payment: PaymentInput, options: { arrived?: boolean } = {}) => {
+    // Money that arrived earlier belongs to whatever quote made its QR; the server names it if there is one.
+    const quoteId = options.arrived ? undefined : quote?.id
+    // A pinned price already holds the discount; the till never adds a typed one on top.
+    const discountSatang = quote ? 0 : cart.discountSatang
+    paymentCommandKey.current ??= crypto.randomUUID()
     // An open order is paid through the order, which sells it at the prices it quoted.
     if (cart.orderId !== null) {
-      paymentCommandKey.current ??= crypto.randomUUID()
-      payOrder.mutate({ orderId: cart.orderId, discountSatang: cart.discountSatang, payment, ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id, idempotencyKey: paymentCommandKey.current } : {}) }, paid)
-    }
-    else {
-      paymentCommandKey.current ??= crypto.randomUUID()
+      payOrder.mutate(
+        {
+          orderId: cart.orderId, discountSatang, quoteId, payment,
+          ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id, idempotencyKey: paymentCommandKey.current } : {}),
+        },
+        paid,
+      )
+    } else {
       checkout.mutate(
         {
-          items: cart.lines.map((line) => ({
-            productId: line.productId,
-            quantity: line.quantity,
-            options: line.optionIds,
-          })),
-          discountSatang: cart.discountSatang,
-          memberId: cart.memberId,
-          payment,
+          items: cart.lines.map((line) => ({ productId: line.productId, quantity: line.quantity, options: line.optionIds })),
+          discountSatang, quoteId, memberId: cart.memberId, payment,
           ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id } : {}),
           ...(needsShift ? { idempotencyKey: paymentCommandKey.current } : {}),
         },
@@ -113,6 +142,7 @@ export function PosPage() {
   const cancelPayment = () => {
     setIsPaying(false)
     paymentCommandKey.current = null
+    createQuote.reset()
     payment.reset()
   }
 
@@ -169,20 +199,30 @@ export function PosPage() {
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <ProductPicker searchRef={searchRef} />
         <CartPanel
-          onPay={() => setIsPaying(true)}
+          onPay={startPayment}
           onSaveOrder={() => setIsSavingOrder(true)}
           paymentAvailable={shiftReady === true}
         />
         <CartBar
-          onPay={() => setIsPaying(true)}
+          onPay={startPayment}
           onSaveOrder={() => setIsSavingOrder(true)}
           paymentAvailable={shiftReady === true}
         />
       </div>
 
-      {isPaying && (
+      {isPaying && usesQuote && !quote && (
+        <QuotePendingDialog
+          isPending={createQuote.isPending}
+          error={createQuote.error?.message}
+          onRetry={() => createQuote.mutate(quoteInput())}
+          onCancel={cancelPayment}
+        />
+      )}
+
+      {isPaying && (!usesQuote || quote) && (
         <PaymentDialog
-          totalSatang={cart.totalSatang}
+          totalSatang={quote ? quote.totalSatang : cart.totalSatang}
+          quote={quote}
           shiftId={needsShift ? currentShift.data?.id : undefined}
           isSubmitting={payment.isPending}
           error={payment.error?.message}

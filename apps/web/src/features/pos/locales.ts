@@ -49,6 +49,9 @@ const th = {
   },
   cart: {
     productUnavailable: 'สินค้าบางรายการปิดการขายแล้ว ล้างตะกร้าแล้วเลือกสินค้าใหม่',
+    promotion: 'โปรโมชัน: {{name}}',
+    promotionRemove: 'ยกเลิกโปรโมชัน',
+    promotionUse: 'ใช้โปรโมชัน "{{name}}"',
     optionUnavailable: 'ตัวเลือกบางอย่างปิดใช้งานแล้ว ลบรายการนี้แล้วเลือกใหม่',
     title: 'ตะกร้า',
     itemCount: '{{count}} ชิ้น',
@@ -95,6 +98,13 @@ const th = {
   },
   payment: {
     due: 'ยอดที่ต้องชำระ',
+    promotion: 'โปรโมชัน {{name}} ลด {{amount}}',
+    pricing: {
+      title: 'กำลังคิดราคา',
+      pending: 'ระบบกำลังคิดราคาและโปรโมชันของตะกร้านี้',
+      failed: 'คิดราคาไม่สำเร็จ',
+      retry: 'ลองอีกครั้ง',
+    },
     receivedPlaceholder: 'รับเงินมา ({{currency}})',
     receivedLabel: 'จำนวนเงินที่รับมา ({{currency}})',
     exact: 'พอดี',
@@ -179,6 +189,9 @@ const en = {
   },
   cart: {
     productUnavailable: 'Some products are no longer for sale. Clear the cart and choose again.',
+    promotion: 'Promotion: {{name}}',
+    promotionRemove: 'Remove promotion',
+    promotionUse: 'Use promotion "{{name}}"',
     optionUnavailable: 'Some options are no longer offered. Remove this line and choose again.',
     title: 'Cart',
     itemCount: '{{count}} pcs',
@@ -225,6 +238,13 @@ const en = {
   },
   payment: {
     due: 'Amount due',
+    promotion: 'Promotion {{name}}: {{amount}} off',
+    pricing: {
+      title: 'Pricing the cart',
+      pending: 'The system is working out the price and promotion of this cart.',
+      failed: 'The price could not be worked out.',
+      retry: 'Try again',
+    },
     receivedPlaceholder: 'Amount received ({{currency}})',
     receivedLabel: 'Amount received ({{currency}})',
     exact: 'Exact',

@@ -31,6 +31,8 @@ export interface PricedCart {
   /** The discount that applies: 0 while the field is empty or invalid. */
   discountSatang: number
   isDiscountValid: boolean
+  /** The promotion that gives this discount; it replaces a typed discount. Null when there is none. */
+  promotion: { id: number; name: string; discountSatang: number } | null
   /** VAT charged on this cart, whether included in the total or added on top. */
   vatSatang: number
   /** What the customer owes: exactly what the server will charge. */
@@ -43,6 +45,8 @@ export interface PricingOptions {
   vatRateBp: number
   /** Reads the discount the cashier typed into minor units; null when it is not a valid amount. */
   parseAmount: (input: string) => number | null
+  /** The promotion the till will be given. It sets the discount, so a typed one is ignored. */
+  promotion?: { id: number; name: string; discountSatang: number } | null
 }
 
 /** What the till needs to know about an option to price it. */
@@ -134,14 +138,19 @@ export function priceOrder(
 function summarize(
   priced: PricedLine[],
   discountInput: string,
-  { vatMode, vatRateBp, parseAmount }: PricingOptions,
+  { vatMode, vatRateBp, parseAmount, promotion = null }: PricingOptions,
 ): PricedCart {
   const subtotalSatang = priced.reduce((sum, line) => sum + line.lineTotalSatang, 0)
   const itemCount = priced.reduce((sum, line) => sum + line.quantity, 0)
 
-  const typed = discountInput.trim() === '' ? 0 : parseAmount(discountInput)
+  // A promotion and a typed discount are never added together: the promotion wins while it applies.
+  const typed = promotion || discountInput.trim() === '' ? 0 : parseAmount(discountInput)
   const isDiscountValid = typed !== null && typed <= subtotalSatang
-  const discountSatang = isDiscountValid ? typed : 0
+  const discountSatang = promotion
+    ? Math.min(promotion.discountSatang, subtotalSatang)
+    : isDiscountValid
+      ? typed
+      : 0
   const { vatSatang, totalSatang } = calculateTotals({ subtotalSatang, discountSatang, vatMode, vatRateBp })
 
   return {
@@ -150,6 +159,7 @@ function summarize(
     subtotalSatang,
     discountSatang,
     isDiscountValid,
+    promotion,
     vatSatang,
     totalSatang,
     canPay:
