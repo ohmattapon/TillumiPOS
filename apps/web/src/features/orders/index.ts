@@ -10,6 +10,7 @@ export {
   useOpenOrder,
   usePayOrder,
   useRemoveOrderLine,
+  useSetOrderLineNote,
   useSetOrderLineQuantity,
   useSplitOrder,
 } from './api'
