@@ -1,6 +1,7 @@
 import { container } from 'tsyringe'
 import { OrderElysiaController } from './adapters/controllers/order.controller'
 import { DrizzleOrderRepository } from './adapters/repository/order.drizzle.repository'
+import { GuardedOrderRepository } from './adapters/repository/guarded-order.repository'
 import { DrizzleTableOccupancy } from './adapters/repository/table-occupancy.drizzle.adapter'
 import { orderRepositoryToken } from './applications/ports/order.repository'
 import { tableOccupancyToken } from '../tables/applications/ports/table-occupancy.port'
@@ -23,7 +24,7 @@ import { SetOrderItemQuantityUseCase } from './applications/usecases/set-order-i
 import { SplitOrderUseCase } from './applications/usecases/split-order.usecase'
 import { SetOrderLineQuantityUseCase } from './applications/usecases/set-order-line-quantity.usecase'
 
-container.register(orderRepositoryToken, { useClass: DrizzleOrderRepository })
+container.register(orderRepositoryToken, { useClass: GuardedOrderRepository })
 container.register(tableOccupancyToken, { useClass: DrizzleTableOccupancy })
 container.register(orderQuoteSourceToken, { useClass: OrderQuoteSource })
 container.registerSingleton(ListOrdersUseCase)
