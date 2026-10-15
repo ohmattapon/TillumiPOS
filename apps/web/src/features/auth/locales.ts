@@ -8,6 +8,7 @@ const th = {
   submitting: 'กำลังเข้าสู่ระบบ…',
   forgotPassword: 'ลืมรหัสผ่าน ให้เจ้าของร้านตั้งรหัสใหม่ให้',
   brand: {
+    imageAlt: 'หน้าจอเครื่องขาย TillumiPOS',
     headline: 'ระบบขายหน้าร้านที่ใช้ได้ทั้งเมาส์ คีย์บอร์ด และจอสัมผัส',
     sales: 'ขายและรับชำระเงิน',
     stock: 'สินค้าและสต็อก',
@@ -26,6 +27,7 @@ const en = {
   submitting: 'Signing in…',
   forgotPassword: 'Forgot your password? The shop owner can set a new one for you.',
   brand: {
+    imageAlt: 'TillumiPOS on a point-of-sale screen',
     headline: 'Point of sale that works with a mouse, a keyboard or a touch screen',
     sales: 'Sales and payments',
     stock: 'Products and stock',
