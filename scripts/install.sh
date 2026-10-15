@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs EasyPOS with Docker Compose: writes .env with fresh secrets, starts it, and prints the setup code.
+# Installs TillumiPOS with Docker Compose: writes .env with fresh secrets, starts it, and prints the setup code.
 #
 #   scripts/install.sh                      http://localhost:3000
 #   scripts/install.sh --domain pos.my.shop  HTTPS on that domain (ports 80 and 443 must be free and reach this machine)
@@ -62,7 +62,7 @@ curl -fsS "http://localhost:${PORT}/api/v1/health" >/dev/null 2>&1 || {
 URL="http://localhost:${PORT}"
 [ -n "$DOMAIN" ] && URL="https://${DOMAIN}"
 echo
-echo "EasyPOS is running: ${URL}"
+echo "TillumiPOS is running: ${URL}"
 CODE="$(docker compose -f docker-compose.yml logs app 2>/dev/null | grep -o 'SETUP CODE[^:]*:  *[A-Z0-9]*' | tail -1 | grep -o '[A-Z0-9]*$' || true)"
 if [ -n "$CODE" ]; then
   echo "First-time setup code: ${CODE}"

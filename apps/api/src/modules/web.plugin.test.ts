@@ -14,7 +14,7 @@ beforeAll(async () => {
   parent = await mkdtemp(join(tmpdir(), 'easypos-web-'))
   root = join(parent, 'dist')
   await mkdir(join(root, 'assets'), { recursive: true })
-  await writeFile(join(root, 'index.html'), '<html>EasyPOS</html>')
+  await writeFile(join(root, 'index.html'), '<html>TillumiPOS</html>')
   await writeFile(join(root, 'assets', 'app.js'), 'console.log(1)')
   // A file beside the web root that must never be reachable.
   secretName = 'secret.txt'
@@ -31,7 +31,7 @@ describe('webPlugin', () => {
     for (const path of ['/', '/today', '/products/12']) {
       const response = await get(path)
       expect(response.status).toBe(200)
-      expect(await response.text()).toBe('<html>EasyPOS</html>')
+      expect(await response.text()).toBe('<html>TillumiPOS</html>')
     }
   })
 
@@ -47,7 +47,7 @@ describe('webPlugin', () => {
 
     const unknown = await get('/api/v1/nope')
     expect(unknown.status).toBe(404)
-    expect(await unknown.text()).not.toContain('EasyPOS')
+    expect(await unknown.text()).not.toContain('TillumiPOS')
   })
 
   test('cannot read outside the web root', async () => {

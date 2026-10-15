@@ -1,4 +1,4 @@
-# Installs EasyPOS with Docker Compose on Windows: writes .env with fresh secrets, starts it, prints the setup code.
+# Installs TillumiPOS with Docker Compose on Windows: writes .env with fresh secrets, starts it, prints the setup code.
 #   .\scripts\install.ps1
 #   .\scripts\install.ps1 -Domain pos.my.shop
 param([string]$Domain = '')
@@ -50,7 +50,7 @@ if (-not $up) { Write-Error 'The system did not start. See: docker compose logs 
 
 $url = if ($Domain) { "https://$Domain" } else { "http://localhost:$port" }
 Write-Host ''
-Write-Host "EasyPOS is running: $url"
+Write-Host "TillumiPOS is running: $url"
 $log = docker compose -f docker-compose.yml logs app 2>$null | Out-String
 $match = [regex]::Matches($log, 'SETUP CODE[^:]*:\s+([A-Z0-9]+)') | Select-Object -Last 1
 if ($match) {
