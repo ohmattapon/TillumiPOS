@@ -2,8 +2,13 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/PageHeader'
+import { SkeletonRows } from '@/components/Skeletons'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { meQuery } from '@/features/auth'
 import { useActiveBranch } from '@/features/branches'
 import { useFormat } from '@/features/settings'
@@ -12,7 +17,8 @@ import { selectedRegisterId, useRegisterSelectionStore } from '../store/register
 import { QrRecoveryPanel } from './QrRecoveryPanel'
 import { ShiftHistoryPanel } from './ShiftHistoryPanel'
 import { ShiftSummaryView } from './ShiftSummaryView'
-import { checkoutModeQuery, currentShiftQuery, registersQuery, shiftEntriesQuery, useCancelClosing, useCloseShift, useCreateRegister, useOpenShift, useRecordCashMovement, useStartClosing, useUpdateRegister } from '../api'
+import { ShiftEntriesPanel } from './ShiftEntriesPanel'
+import { checkoutModeQuery, currentShiftQuery, registersQuery, useCancelClosing, useCloseShift, useCreateRegister, useOpenShift, useRecordCashMovement, useStartClosing, useUpdateRegister } from '../api'
 
 export function ShiftsPage() {
   const { t } = useTranslation('shifts')
@@ -21,6 +27,7 @@ export function ShiftsPage() {
   const { branch } = useActiveBranch()
   const mode = useQuery(checkoutModeQuery)
   const registers = useQuery(registersQuery)
+  const registerPaging = useListPagination('registers')
   const selections = useRegisterSelectionStore((state) => state.selections)
   const selectRegister = useRegisterSelectionStore((state) => state.select)
   const [openingAmount, setOpeningAmount] = useState('0')
@@ -39,6 +46,8 @@ export function ShiftsPage() {
   const currentId = (rememberedRegisterId && registers.data?.items.some((register) => register.id === rememberedRegisterId && register.isActive)
     ? rememberedRegisterId : registers.data?.items.find((register) => register.isActive)?.id) ?? null
   const current = useQuery({ ...currentShiftQuery(currentId ?? 0), enabled: currentId !== null })
+  // Until the register and its shift are known, "no shift" would be a lie and would offer to open one.
+  const shiftLoading = registers.isPending || (currentId !== null && current.isPending)
   const detailsId = current.data?.id
   const activeShift = useQuery({
     queryKey: ['shifts', 'detail', detailsId],
@@ -54,9 +63,8 @@ export function ShiftsPage() {
   const movement = useRecordCashMovement()
   const createRegister = useCreateRegister()
   const updateRegister = useUpdateRegister()
-  const entries = useQuery({ ...shiftEntriesQuery(detailsId ?? 0), enabled: detailsId !== undefined })
   const registerName = useMemo(() => registers.data?.items.find((item) => item.id === currentId)?.name ?? '', [registers.data, currentId])
-  const error = [mode.error, registers.error, current.error, entries.error, open.error, startClosing.error, cancelClosing.error, close.error, movement.error, createRegister.error, updateRegister.error].find(Boolean)
+  const error = [mode.error, registers.error, current.error, open.error, startClosing.error, cancelClosing.error, close.error, movement.error, createRegister.error, updateRegister.error].find(Boolean)
   const errorCode = error instanceof ApiError ? error.code : null
 
   return (
@@ -65,15 +73,31 @@ export function ShiftsPage() {
       <main className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 md:p-6">
         {mode.data?.checkoutMode === 'legacy' && <p role="status" className="mx-auto w-full max-w-3xl rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">{t('legacyMode')}</p>}
         <section className="mx-auto w-full max-w-3xl space-y-5 rounded-xl border bg-card p-5 shadow-sm">
-          <label className="grid gap-2 text-sm font-medium">
-            {t('register')}
-            <select className="h-11 rounded-md border bg-background px-3" value={currentId ?? ''} onChange={(event) => { if (me && branch) selectRegister(me.id, branch.id, Number(event.target.value)) }}>
-              <option value="" disabled>{t('chooseRegister')}</option>
-              {registers.data?.items.filter((item) => item.isActive).map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}
-            </select>
-          </label>
+          <div className="grid min-w-0 gap-2">
+            <Label htmlFor="shift-register">{t('register')}</Label>
+            <Select
+              value={currentId === null ? '' : String(currentId)}
+              disabled={registers.isPending || currentId === null || !me || !branch}
+              onValueChange={(value) => { if (value && me && branch) selectRegister(me.id, branch.id, Number(value)) }}
+            >
+              <SelectTrigger id="shift-register" className="h-11! w-full min-w-0">
+                <SelectValue placeholder={t('chooseRegister')} />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <SelectGroup>
+                  {registers.data?.items.filter((item) => item.isActive).map((item) => (
+                    <SelectItem key={item.id} value={String(item.id)}>{item.code} · {item.name}</SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
 
-          {current.data ? (
+          {shiftLoading ? (
+            <div className="border-t pt-5">
+              <SkeletonRows rows={3} />
+            </div>
+          ) : current.data ? (
             <div className="space-y-4 border-t pt-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -93,7 +117,25 @@ export function ShiftsPage() {
                     })
                   }
                 }}>
-                  <label className="grid gap-2 text-sm font-medium">{t('cashMovement')}<select className="h-10 rounded-md border bg-background px-3" value={movementKind} onChange={(e) => { movementCommandKey.current = null; setMovementKind(e.target.value as 'cash_in' | 'cash_out') }}><option value="cash_in">{t('cashIn')}</option><option value="cash_out">{t('cashOut')}</option></select></label>
+                  <div className="grid min-w-0 gap-2">
+                    <Label htmlFor="shift-movement-kind">{t('cashMovement')}</Label>
+                    <Select value={movementKind} onValueChange={(value) => {
+                      if (value === 'cash_in' || value === 'cash_out') {
+                        movementCommandKey.current = null
+                        setMovementKind(value)
+                      }
+                    }}>
+                      <SelectTrigger id="shift-movement-kind" className="h-10! w-full min-w-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent position="popper">
+                        <SelectGroup>
+                          <SelectItem value="cash_in">{t('cashIn')}</SelectItem>
+                          <SelectItem value="cash_out">{t('cashOut')}</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <label className="grid gap-2 text-sm font-medium">{t('amount')}<Input inputMode="decimal" value={movementAmount} onChange={(e) => { movementCommandKey.current = null; setMovementAmount(e.target.value) }} /></label>
                   <label className="grid gap-2 text-sm font-medium">{t('reason')}<Input value={movementReason} onChange={(e) => { movementCommandKey.current = null; setMovementReason(e.target.value) }} /></label>
                   <Button type="submit" variant="outline" className="h-10 md:col-span-3" disabled={movement.isPending || !movementReason.trim() || money.parse(movementAmount) === null}>{t('saveMovement')}</Button>
@@ -163,12 +205,7 @@ export function ShiftsPage() {
             </div>
           )}
           {error && <p role="alert" className="text-sm text-destructive">{errorCode ? t(`errors.${errorCode}`, { defaultValue: error.message }) : error.message || t('error')}</p>}
-          {current.data && (
-            <div className="border-t pt-4">
-              <h3 className="mb-3 text-sm font-semibold">{t('entries')}</h3>
-              {entries.data?.items.length ? <ul className="divide-y">{entries.data.items.map((entry) => <li key={entry.id} className="flex flex-wrap items-center gap-2 py-2 text-sm"><span>{t(`entry_${entry.kind}`)}</span><span className="font-medium tabular-nums">{money.format(entry.amountSatang)}</span><span className="text-muted-foreground">{entry.actorName} · {date.dateTime(entry.createdAt)}{entry.reason ? ` · ${entry.reason}` : ''}</span></li>)}</ul> : <p className="text-sm text-muted-foreground">{t('noEntries')}</p>}
-            </div>
-          )}
+          {current.data && <ShiftEntriesPanel shiftId={current.data.id} />}
         </section>
 
         {mode.data?.checkoutMode === 'shifts' && <QrRecoveryPanel isOwner={me?.role === 'owner'} />}
@@ -181,7 +218,8 @@ export function ShiftsPage() {
               <label className="grid gap-2 text-sm">{t('registerName')}<Input value={newRegisterName} onChange={(event) => setNewRegisterName(event.target.value)} maxLength={100} required /></label>
               <Button className="h-10 self-end" disabled={createRegister.isPending}>{t('createRegister')}</Button>
             </form>
-            <ul className="divide-y">{registers.data?.items.map((register) => <li key={register.id} className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm"><span className="font-medium">{register.code}</span><Input className="h-9 max-w-64" aria-label={t('registerName')} value={registerNames[register.id] ?? register.name} onChange={(event) => setRegisterNames((names) => ({ ...names, [register.id]: event.target.value }))} maxLength={100} /><div className="flex gap-2"><Button variant="outline" className="h-9" disabled={updateRegister.isPending || !(registerNames[register.id]?.trim()) || (registerNames[register.id]?.trim() ?? register.name) === register.name} onClick={() => updateRegister.mutate({ id: register.id, name: registerNames[register.id]!.trim() })}>{t('saveName')}</Button><Button variant="outline" className="h-9" disabled={updateRegister.isPending || (!!current.data && current.data.registerId === register.id)} onClick={() => updateRegister.mutate({ id: register.id, isActive: !register.isActive })}>{register.isActive ? t('deactivate') : t('activate')}</Button></div></li>)}</ul>
+            {registers.isPending ? <SkeletonRows rows={3} /> : <ul className="divide-y">{registers.data?.items.slice(registerPaging.offset, registerPaging.offset + registerPaging.pageSize).map((register) => <li key={register.id} className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm"><span className="font-medium">{register.code}</span><Input className="h-9 max-w-64" aria-label={t('registerName')} value={registerNames[register.id] ?? register.name} onChange={(event) => setRegisterNames((names) => ({ ...names, [register.id]: event.target.value }))} maxLength={100} /><div className="flex gap-2"><Button variant="outline" className="h-9" disabled={updateRegister.isPending || !(registerNames[register.id]?.trim()) || (registerNames[register.id]?.trim() ?? register.name) === register.name} onClick={() => updateRegister.mutate({ id: register.id, name: registerNames[register.id]!.trim() })}>{t('saveName')}</Button><Button variant="outline" className="h-9" disabled={updateRegister.isPending || (!!current.data && current.data.registerId === register.id)} onClick={() => updateRegister.mutate({ id: register.id, isActive: !register.isActive })}>{register.isActive ? t('deactivate') : t('activate')}</Button></div></li>)}</ul>}
+            <PaginationBar {...registerPaging} total={registers.data?.total} isLoading={registers.isFetching} onPageChange={registerPaging.setPage} />
           </section>
         )}
 

@@ -1,6 +1,9 @@
 const th = {
   today: {
     title: 'วันนี้',
+    totals: 'สรุปยอดขายวันนี้',
+    retry: 'ลองใหม่',
+    refreshFailed: 'อัปเดตข้อมูลไม่สำเร็จ กำลังแสดงข้อมูลครั้งล่าสุด',
     summary_one: '{{count}} บิล · ยกเลิก {{voided}} บิล',
     summary_other: '{{count}} บิล · ยกเลิก {{voided}} บิล',
     lowStockBadge: 'สินค้าใกล้หมด {{items}}',
@@ -20,12 +23,13 @@ const th = {
   },
   list: {
     title: 'บิลขายวันนี้',
-    description: 'แตะที่บิลเพื่อดูรายละเอียด พิมพ์ซ้ำ หรือยกเลิก',
+    description: 'แตะบิลเพื่อดูรายละเอียด ดาวน์โหลด PDF หรือยกเลิก',
     all: 'ทั้งหมด',
     completed: 'สำเร็จ',
     voided: 'ยกเลิก',
     empty: 'วันนี้ยังไม่มีบิลขาย',
     emptyFiltered: 'ไม่มีบิลในสถานะนี้',
+    openReceipt: 'เปิดใบเสร็จ {{receiptNo}}',
   },
   columns: {
     receiptNo: 'เลขที่',
@@ -56,7 +60,6 @@ const th = {
     confirmVoid: 'ยืนยันยกเลิกบิล',
     voiding: 'กำลังยกเลิก…',
     voidSale: 'ยกเลิกบิล',
-    print: 'พิมพ์',
     voidedToast: 'ยกเลิกบิล {{receiptNo}} และคืนสต็อกแล้ว',
     cashRefund: 'คืนเงินสด',
     refundReason: 'เหตุผลที่คืนเงิน',
@@ -79,12 +82,19 @@ const th = {
     vatAdded: 'ภาษีมูลค่าเพิ่ม {{rate}}%',
     total: 'ยอดสุทธิ',
     change: 'เงินทอน',
+    downloadPdf: 'บันทึกใบเสร็จ PDF',
+    pdfSaving: 'กำลังสร้าง PDF…',
+    pdfSaved: 'บันทึกใบเสร็จ PDF แล้ว',
+    pdfFailed: 'สร้างใบเสร็จ PDF ไม่สำเร็จ',
   },
 }
 
 const en = {
   today: {
     title: 'Today',
+    totals: "Today's totals",
+    retry: 'Try again',
+    refreshFailed: 'Could not refresh. Showing the last available data.',
     summary_one: '{{count}} sale · {{voided}} voided',
     summary_other: '{{count}} sales · {{voided}} voided',
     lowStockBadge: 'Low stock: {{items}}',
@@ -104,12 +114,13 @@ const en = {
   },
   list: {
     title: "Today's sales",
-    description: 'Tap a sale to view, reprint or void it',
+    description: 'Tap a sale to view, download its PDF or void it',
     all: 'All',
     completed: 'Completed',
     voided: 'Voided',
     empty: 'No sales yet today',
     emptyFiltered: 'No sales with this status',
+    openReceipt: 'Open receipt {{receiptNo}}',
   },
   columns: {
     receiptNo: 'Receipt',
@@ -140,7 +151,6 @@ const en = {
     confirmVoid: 'Confirm void',
     voiding: 'Voiding…',
     voidSale: 'Void sale',
-    print: 'Print',
     voidedToast: 'Voided {{receiptNo}} and returned its stock',
     cashRefund: 'Refund cash',
     refundReason: 'Reason for refund',
@@ -163,6 +173,10 @@ const en = {
     vatAdded: 'VAT {{rate}}%',
     total: 'Total',
     change: 'Change',
+    downloadPdf: 'Save receipt PDF',
+    pdfSaving: 'Creating PDF…',
+    pdfSaved: 'Receipt PDF saved',
+    pdfFailed: 'Could not create the receipt PDF',
   },
 } satisfies typeof th
 

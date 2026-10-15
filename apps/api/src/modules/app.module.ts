@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia'
+import { MemberElysiaController } from './members/adapters/controllers/member.controller'
 import { container } from 'tsyringe'
 import { AuthElysiaController } from './auth/adapters/controllers/auth.controller'
 import { BranchElysiaController } from './branches/adapters/controllers/branch.controller'
@@ -10,7 +11,9 @@ import { OrderElysiaController } from './orders/adapters/controllers/order.contr
 import { QrPaymentElysiaController } from './qr-payments/adapters/controllers/qr-payment.controller'
 import { ProductElysiaController } from './products/adapters/controllers/product.controller'
 import { SaleElysiaController } from './sales/adapters/controllers/sale.controller'
+import { SalesReportElysiaController } from './sales/adapters/controllers/sales-report.controller'
 import { SettingsElysiaController } from './settings/adapters/controllers/settings.controller'
+import { SetupElysiaController } from './setup/adapters/controllers/setup.controller'
 import { TableElysiaController } from './tables/adapters/controllers/table.controller'
 import { UserElysiaController } from './users/adapters/controllers/user.controller'
 
@@ -26,6 +29,7 @@ const saleController = container.resolve(SaleElysiaController)
 const orderController = container.resolve(OrderElysiaController)
 const qrPaymentController = container.resolve(QrPaymentElysiaController)
 const settingsController = container.resolve(SettingsElysiaController)
+const setupController = container.resolve(SetupElysiaController)
 
 // Categories and products are separate modules that share the /catalog namespace.
 const catalog = new Elysia({ name: 'catalog', prefix: '/catalog', detail: { tags: ['Catalog'] } })
@@ -38,11 +42,14 @@ const catalog = new Elysia({ name: 'catalog', prefix: '/catalog', detail: { tags
 export const appModule = new Elysia({ name: 'api', prefix: '/api/v1' })
   .get('/health', () => ({ status: 'ok' }), { detail: { tags: ['System'], summary: 'ตรวจสอบสถานะระบบ' } })
   .use(authController.getRoutes())
+  .use(setupController.getRoutes())
   .use(userController.getRoutes())
   .use(branchController.getRoutes())
   .use(catalog)
+  .use(container.resolve(MemberElysiaController).getRoutes())
   .use(inventoryController.getRoutes())
   .use(saleController.getRoutes())
+  .use(container.resolve(SalesReportElysiaController).getRoutes())
   .use(orderController.getRoutes())
   .use(qrPaymentController.getRoutes())
   .use(settingsController.getRoutes())

@@ -1,13 +1,15 @@
 import type { Sale } from '@pos/api/types'
+import type { Ref } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { branchesQuery } from '@/features/branches'
 import { useFormat, useSettings } from '@/features/settings'
 import { receiptHeading } from '../lib/receipt-heading'
 
-/** Receipt body. Shown inside a dialog on screen and printed on its own (see the print rules in index.css). */
-export function Receipt({ sale }: { sale: Sale }) {
+/** Receipt body used on screen and as the source for the downloaded PDF. */
+export function Receipt({ sale, elementRef }: { sale: Sale; elementRef?: Ref<HTMLDivElement> }) {
   const { t } = useTranslation('sales')
+  const { t: tm } = useTranslation('members')
   const { t: tc } = useTranslation()
   const { money, date } = useFormat()
   const shop = useSettings()
@@ -21,7 +23,7 @@ export function Receipt({ sale }: { sale: Sale }) {
   const vatIncluded = sale.vatMode === 'inclusive'
 
   return (
-    <div data-receipt-paper={shop.receiptPaperMm} className="space-y-2 font-mono text-sm tabular-nums">
+    <div ref={elementRef} data-receipt-paper={shop.receiptPaperMm} className="space-y-2 font-mono text-sm tabular-nums">
       <div className="text-center">
         <p className="text-base font-bold">{heading.shopName}</p>
         {heading.branchName && <p>{heading.branchName}</p>}
@@ -32,6 +34,7 @@ export function Receipt({ sale }: { sale: Sale }) {
         <p>{t('receipt.number', { receiptNo: sale.receiptNo })}</p>
         <p>{date.dateTime(sale.createdAt)}</p>
         <p>{t('receipt.cashier', { name: sale.cashierName })}</p>
+        {sale.member && <p>{tm('title')}: {sale.member.code} / {sale.member.name}</p>}
         {sale.status === 'voided' && <p className="font-bold">{t('receipt.voided', { reason: sale.voidReason })}</p>}
       </div>
       <hr className="border-dashed border-foreground/40" />

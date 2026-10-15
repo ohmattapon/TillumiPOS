@@ -16,6 +16,6 @@ export default defineConfig({
     // Listen on the LAN so tablets and other tills can open the app.
     host: true,
     // Same-origin proxy keeps the session cookie first-party, so no CORS setup is needed.
-    proxy: { '/api': apiTarget, '/openapi': apiTarget },
+    proxy: { '/api': apiTarget, '/openapi': apiTarget, '/media': apiTarget },
   },
 })

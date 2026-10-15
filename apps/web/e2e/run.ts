@@ -2,17 +2,25 @@
 //
 //   bun run e2e            (from the repo root; the database container must be up)
 //
-// It never touches the development database or the real bank: it creates its own database (pos_e2e),
-// starts its own API and web server on spare ports, with no SCB settings, and removes nothing of yours.
+// It never touches the development database or the real bank: it creates its own databases (pos_e2e, and
+// pos_e2e_setup for the first-run setup page), starts its own API and web servers on spare ports, with no
+// SCB settings, and removes nothing of yours.
 // It drives the Chrome that is already installed, headless.
 import { SQL } from 'bun'
+import { mkdtemp } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { chromium, type Browser, type Page } from 'playwright-core'
 
 const DB_ADMIN = 'postgres://pos:pos@localhost:5433/postgres'
 const DB_NAME = 'pos_e2e'
+const SETUP_DB_NAME = 'pos_e2e_setup'
 const API_PORT = 3190
 const WEB_PORT = 5290
+const SETUP_API_PORT = API_PORT + 10
+const SETUP_WEB_PORT = WEB_PORT + 10
 const WEB = `http://localhost:${WEB_PORT}`
+const SETUP_WEB = `http://localhost:${SETUP_WEB_PORT}`
 const OWNER_PASSWORD = 'e2e-owner-password'
 const CASHIER_PASSWORD = 'e2e-cashier-password'
 const root = new URL('../../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
@@ -22,9 +30,9 @@ const apiEnv = {
   PORT: String(API_PORT),
   DATABASE_URL: `postgres://pos:pos@localhost:5433/${DB_NAME}`,
   JWT_SECRET: 'e2e-only-secret-e2e-only-secret-e2e-only',
-  // Unroutable on purpose: these checks never store an image.
-  MEDIA_URL: 'http://127.0.0.1:9',
-  MEDIA_TOKEN: 'e2e-media-token',
+  // Images go to a throwaway folder on this machine, so the checks never reach a real bucket.
+  MEDIA_STORAGE: 'local',
+  MEDIA_DIR: await mkdtemp(join(tmpdir(), 'easypos-e2e-media-')),
   COOKIE_SECURE: 'false',
   SEED_OWNER_PASSWORD: OWNER_PASSWORD,
   CHECKOUT_MODE: 'shifts',
@@ -35,21 +43,29 @@ const apiEnv = {
   SCB_REF3_PREFIX: '',
 }
 
+// The same settings, pointed at a database nobody has an account in: what a fresh install looks like.
+const setupApiEnv = {
+  ...apiEnv,
+  PORT: String(SETUP_API_PORT),
+  DATABASE_URL: `postgres://pos:pos@localhost:5433/${SETUP_DB_NAME}`,
+  SEED_OWNER_PASSWORD: undefined,
+}
+
 const children: ReturnType<typeof Bun.spawn>[] = []
 const results: { name: string; ok: boolean; detail?: string }[] = []
 
-async function freshDatabase() {
+async function freshDatabase(name: string) {
   const admin = new SQL(DB_ADMIN)
   try {
-    await admin.unsafe(`drop database if exists "${DB_NAME}" with (force)`)
-    await admin.unsafe(`create database "${DB_NAME}"`)
+    await admin.unsafe(`drop database if exists "${name}" with (force)`)
+    await admin.unsafe(`create database "${name}"`)
   } finally {
     await admin.close()
   }
 }
 
-async function runOnce(args: string[]) {
-  const child = Bun.spawn(['bun', ...args], { cwd: `${root}/apps/api`, env: apiEnv, stdout: 'pipe', stderr: 'pipe' })
+async function runOnce(args: string[], env: Record<string, string | undefined> = apiEnv) {
+  const child = Bun.spawn(['bun', ...args], { cwd: `${root}/apps/api`, env, stdout: 'pipe', stderr: 'pipe' })
   if ((await child.exited) !== 0) throw new Error(`${args.join(' ')} failed: ${await new Response(child.stderr).text()}`)
 }
 
@@ -77,8 +93,8 @@ async function check(name: string, run: () => Promise<void>) {
   }
 }
 
-async function signIn(browser: Browser, username: string, password: string): Promise<Page> {
-  const context = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: 'th-TH' })
+async function signIn(browser: Browser, username: string, password: string, viewport = { width: 1366, height: 900 }): Promise<Page> {
+  const context = await browser.newContext({ viewport, locale: 'th-TH' })
   const page = await context.newPage()
   page.setDefaultTimeout(15_000)
   await page.goto(WEB)
@@ -99,26 +115,105 @@ async function sellOneForCash(page: Page) {
   await page.getByRole('button', { name: 'ขายรายการต่อไป' }).waitFor()
 }
 
-async function main() {
-  console.log('Preparing a throwaway database, API and web server…')
-  await freshDatabase()
-  await runOnce(['src/infrastructure/database/migrate.ts'])
-  await runOnce(['src/infrastructure/database/seed.ts'])
-
-  children.push(Bun.spawn(['bun', 'src/index.ts'], { cwd: `${root}/apps/api`, env: apiEnv, stdout: 'ignore', stderr: 'inherit' }))
+/** Starts an API and a web server on their own ports; returns what the API has printed so far. */
+function startServers(env: Record<string, string | undefined>, apiPort: number, webPort: number): () => string {
+  const api = Bun.spawn(['bun', 'src/index.ts'], { cwd: `${root}/apps/api`, env, stdout: 'pipe', stderr: 'inherit' })
+  let printed = ''
+  void (async () => {
+    const decoder = new TextDecoder()
+    for await (const chunk of api.stdout) printed += decoder.decode(chunk, { stream: true })
+  })()
+  children.push(api)
   children.push(
-    Bun.spawn(['bun', 'x', 'vite', '--port', String(WEB_PORT), '--strictPort'], {
+    Bun.spawn(['bun', 'x', 'vite', '--port', String(webPort), '--strictPort'], {
       cwd: `${root}/apps/web`,
-      env: { ...process.env, API_TARGET: `http://localhost:${API_PORT}` },
+      env: { ...process.env, API_TARGET: `http://localhost:${apiPort}` },
       stdout: 'ignore',
       stderr: 'inherit',
     }),
   )
+  return () => printed
+}
+
+/** The first-run setup page on an empty database: the code comes from what the API prints, as it would in `docker compose logs`. */
+async function runSetupFlow(browser: Browser) {
+  console.log('\nFirst-run setup, empty database:')
+  await freshDatabase(SETUP_DB_NAME)
+  await runOnce(['src/infrastructure/database/migrate.ts'], setupApiEnv)
+  const printed = startServers(setupApiEnv, SETUP_API_PORT, SETUP_WEB_PORT)
+  await waitFor(`http://localhost:${SETUP_API_PORT}/api/v1/health`, 'Setup API')
+  await waitFor(SETUP_WEB, 'Setup web')
+
+  const context = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: 'th-TH' })
+  const page = await context.newPage()
+  page.setDefaultTimeout(15_000)
+
+  const fillForm = async (code: string) => {
+    const fields: [string, string][] = [
+      ['รหัสตั้งค่า', code],
+      ['ชื่อร้าน', 'ร้านทดสอบ'],
+      ['ชื่อสาขาแรก', 'สาขาหลัก'],
+      ['ชื่อผู้ใช้ของเจ้าของ', 'shopowner'],
+      ['ชื่อที่แสดง', 'เจ้าของร้าน'],
+      ['รหัสผ่าน', 'e2e-first-owner-password'],
+      ['ยืนยันรหัสผ่าน', 'e2e-first-owner-password'],
+    ]
+    for (const [label, value] of fields) await page.getByLabel(label, { exact: true }).fill(value)
+  }
+
+  try {
+    await check('with nobody registered, the page asks for first-time setup instead of a sign-in', async () => {
+      await page.goto(SETUP_WEB)
+      await page.getByText('ตั้งค่าร้านครั้งแรก', { exact: true }).waitFor()
+      if ((await page.getByRole('button', { name: 'เข้าสู่ระบบ', exact: true }).count()) > 0)
+        throw new Error('The sign-in form is shown while nobody has an account')
+    })
+
+    await check('a wrong setup code is refused with a message, and nothing is created', async () => {
+      await fillForm('AAAAAAAAAAAA')
+      await page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' }).click()
+      await page.getByRole('alert').getByText(/รหัสตั้งค่าไม่ถูกต้อง/).waitFor()
+      const status = await (await fetch(`http://localhost:${SETUP_API_PORT}/api/v1/setup`)).json()
+      if (status.needsSetup !== true) throw new Error('A wrong code ended the setup')
+    })
+
+    await check('the code printed by the API creates the owner and signs in', async () => {
+      let code: string | undefined
+      for (let attempt = 0; attempt < 30 && code === undefined; attempt++) {
+        code = /SETUP CODE[^:]*:\s+([A-Z0-9]{12})/.exec(printed())?.[1]
+        if (code === undefined) await Bun.sleep(500)
+      }
+      if (code === undefined) throw new Error('The API did not print a setup code')
+      await page.getByLabel('รหัสตั้งค่า', { exact: true }).fill(code)
+      await page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' }).click()
+      await page.getByRole('heading', { name: /ขายสินค้า/ }).waitFor()
+    })
+
+    await check('after a reload the owner is still signed in and the setup page is gone', async () => {
+      await page.reload()
+      await page.getByRole('heading', { name: /ขายสินค้า/ }).waitFor()
+      if ((await page.getByText('ตั้งค่าร้านครั้งแรก', { exact: true }).count()) > 0)
+        throw new Error('The setup page is still shown after setup')
+    })
+  } finally {
+    await context.close()
+  }
+}
+
+async function main() {
+  console.log('Preparing a throwaway database, API and web server…')
+  await freshDatabase(DB_NAME)
+  await runOnce(['src/infrastructure/database/migrate.ts'])
+  await runOnce(['src/infrastructure/database/seed.ts'])
+
+  startServers(apiEnv, API_PORT, WEB_PORT)
   await waitFor(`http://localhost:${API_PORT}/api/v1/health`, 'API')
   await waitFor(WEB, 'Web')
 
   const browser = await chromium.launch({ channel: 'chrome', headless: true })
   try {
+    await runSetupFlow(browser)
+
     const owner = await signIn(browser, 'admin', OWNER_PASSWORD)
 
     // A second person, with their own account, on their own "till".
@@ -152,6 +247,63 @@ async function main() {
 
     await check('the owner sells in the same shift from their own account', async () => {
       await sellOneForCash(owner)
+    })
+
+    await check('on a phone the cashier sells with the cart bar: open the cart, change the quantity both ways, pay', async () => {
+      const phone = await signIn(browser, 'cashier', CASHIER_PASSWORD, { width: 390, height: 844 })
+      try {
+        await phone.getByRole('button', { name: /น้ำดื่ม 600 มล\./ }).first().click()
+        // The bar shows the count and the total; a tap opens the whole cart. Up then down leaves one bottle.
+        await phone.getByRole('button', { name: /1 ชิ้น/ }).click()
+        await phone.getByRole('dialog').getByRole('button', { name: 'เพิ่มจำนวน น้ำดื่ม 600 มล.' }).click()
+        await phone.getByRole('dialog').getByRole('button', { name: 'ลดจำนวน น้ำดื่ม 600 มล.' }).click()
+        await phone.getByRole('dialog').getByRole('button', { name: /^ชำระเงิน/ }).click()
+        await phone.getByRole('button', { name: 'พอดี' }).click()
+        await phone.getByRole('button', { name: 'ยืนยันการชำระ' }).click()
+        await phone.getByRole('button', { name: 'ขายรายการต่อไป' }).waitFor()
+      } finally {
+        await phone.context().close()
+      }
+    })
+
+    await check('the customer screen needs no sign-in, then follows the cashier: the item and total, then paid, then idle', async () => {
+      // A stranger's browser: no session. The screen must neither show a login page nor ask the API for anything.
+      const stranger = await browser.newContext({ viewport: { width: 1366, height: 768 }, locale: 'th-TH' })
+      try {
+        const bare = await stranger.newPage()
+        bare.setDefaultTimeout(15_000)
+        const apiCalls: string[] = []
+        bare.on('request', (request) => {
+          if (new URL(request.url()).pathname.startsWith('/api/')) apiCalls.push(request.url())
+        })
+        await bare.goto(`${WEB}/customer`)
+        await bare.getByText('ยินดีต้อนรับ').waitFor()
+        if (apiCalls.length > 0) throw new Error(`The customer screen called the API: ${apiCalls[0]}`)
+      } finally {
+        await stranger.close()
+      }
+
+      // In the cashier's own browser the screen follows what is on the counter.
+      const display = await cashier.context().newPage()
+      display.setDefaultTimeout(15_000)
+      try {
+        await display.goto(`${WEB}/customer`)
+        await cashier.goto(WEB)
+        await cashier.getByRole('button', { name: /น้ำดื่ม 600 มล\./ }).first().click()
+        await display.getByText('น้ำดื่ม 600 มล.').waitFor()
+        await display.getByText('ยอดสุทธิ').waitFor()
+        await cashier.getByRole('button', { name: /^ชำระเงิน/ }).click()
+        // Not cash: the checks that close the shift assert exactly what the drawer should hold (฿160.00, and
+        // a difference of -฿25.00), so this sale must not add to it.
+        await cashier.getByRole('button', { name: 'พร้อมเพย์' }).click()
+        await cashier.getByRole('button', { name: 'ยืนยันการชำระ' }).click()
+        await display.getByText('ชำระแล้ว').waitFor()
+        await cashier.getByRole('button', { name: 'ขายรายการต่อไป' }).click()
+        // The till ends the paid screen itself after a few seconds.
+        await display.getByText('ยินดีต้อนรับ').waitFor({ timeout: 10_000 })
+      } finally {
+        await display.close()
+      }
     })
 
     await check('with a tax ID the receipt is an abbreviated tax invoice, ends with the footer and prints 48 mm wide on 58 mm paper', async () => {
@@ -286,9 +438,9 @@ async function main() {
     await check('the owner starts counting: the report is frozen and shows what the drawer should hold', async () => {
       await owner.getByRole('button', { name: 'เริ่มนับปิดกะ' }).click()
       await owner.getByText(/ยอดที่หยุดไว้ตอนเริ่มนับ/).waitFor()
-      // 100.00 opening + three sales of 10.00 + one of 20.00 (10.00 and a 10.00 topping).
+      // 100.00 opening + four sales of 10.00 (one of them on a phone) + one of 20.00 (10.00 and a 10.00 topping).
       await owner.getByText('เงินสดที่ควรมี').first().waitFor()
-      await owner.getByText('฿150.00').first().waitFor()
+      await owner.getByText('฿160.00').first().waitFor()
     })
 
     await check('the other till can no longer take payment once counting has started', async () => {
@@ -302,7 +454,7 @@ async function main() {
     })
 
     await check('a count that differs needs a reason before the shift can be closed', async () => {
-      await owner.getByLabel('เงินสดที่นับได้').fill('125')
+      await owner.getByLabel('เงินสดที่นับได้').fill('135')
       const close = owner.getByRole('button', { name: 'ยืนยันปิดกะ' })
       if (!(await close.isDisabled())) throw new Error('Close is enabled without a reason for the difference')
       await owner.getByLabel('เหตุผลของยอดเงินที่ต่างกัน').fill('ทอนเงินผิด')
@@ -355,12 +507,76 @@ async function main() {
       await row.getByText('ปิดใช้งาน').waitFor()
     })
 
+    await check('the owner uploads a product image from the product form, and the till shows it after a reload', async () => {
+      await owner.goto(`${WEB}/products`)
+      const row = owner.getByRole('row', { name: /น้ำดื่ม 600 มล\./ })
+      await row.getByRole('button', { name: /การทำงานอื่นของ น้ำดื่ม 600 มล\./ }).click()
+      await owner.getByRole('menuitem', { name: 'แก้ไขสินค้า' }).click()
+      const form = owner.getByRole('dialog')
+      // A 1x1 PNG: the smallest real image.
+      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+      await form.locator('input[type=file]').setInputFiles({ name: 'p.png', mimeType: 'image/png', buffer: png })
+      await form.getByRole('button', { name: 'บันทึก' }).click()
+      await form.waitFor({ state: 'detached' })
+
+      await owner.goto(WEB)
+      await owner.reload()
+      const image = owner.locator('img[src^="/media/products/"]').first()
+      await image.waitFor()
+      const loaded = await image.evaluate((element) => (element as HTMLImageElement).complete && (element as HTMLImageElement).naturalWidth > 0)
+      if (!loaded) throw new Error('The product image did not load from /media')
+    })
+
+    console.log('\nScreens:')
+
+    // Each check gets its own browser context and closes it, so the many page loads do not exhaust the browser's sockets.
+    for (const size of [{ width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1366, height: 900 }]) {
+      await check(`no page scrolls sideways at ${size.width} px`, async () => {
+        const screen = await signIn(browser, 'admin', OWNER_PASSWORD, size)
+        try {
+          const wide: string[] = []
+          for (const path of ['/', '/today', '/shifts', '/products', '/categories', '/modifiers', '/tables', '/branches', '/users', '/settings']) {
+            await screen.goto(`${WEB}${path}`)
+            await screen.waitForLoadState('networkidle')
+            const overflow = await screen.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+            if (overflow > 0) wide.push(`${path} (+${overflow}px)`)
+          }
+          if (wide.length) throw new Error(`Pages wider than the screen at ${size.width} px: ${wide.join(', ')}`)
+        } finally {
+          await screen.context().close()
+        }
+      })
+    }
+
+    await check('every control in the main area of the sell screen is at least 44 px tall at 768 px', async () => {
+      const screen = await signIn(browser, 'admin', OWNER_PASSWORD, { width: 768, height: 1024 })
+      try {
+        await screen.goto(WEB)
+        await screen.waitForLoadState('networkidle')
+        const small = await screen.evaluate(() =>
+          [...document.querySelectorAll('main button, main input, main [role="tab"]')]
+            .filter((element) => (element as HTMLElement).offsetParent !== null)
+            .map((element) => ({
+              name: element.getAttribute('aria-label') ?? element.textContent?.trim() ?? element.tagName,
+              height: element.getBoundingClientRect().height,
+            }))
+            .filter((control) => control.height < 43.5)
+            .map((control) => `${control.name} (${Math.round(control.height)}px)`),
+        )
+        if (small.length) throw new Error(`Too small to tap: ${small.join(', ')}`)
+      } finally {
+        await screen.context().close()
+      }
+    })
+
     await check('in English the same screens read in English', async () => {
       const changed = await owner.request.patch(`${WEB}/api/v1/settings`, { data: { locale: 'en' } })
       if (!changed.ok()) throw new Error(`Could not switch language: ${changed.status()}`)
       await owner.goto(`${WEB}/shifts`)
+      await owner.waitForLoadState('networkidle')
       await owner.getByRole('button', { name: 'Open shift and start selling' }).waitFor()
       await owner.goto(WEB)
+      await owner.waitForLoadState('networkidle')
       await owner.getByRole('button', { name: 'Open a shift to sell' }).waitFor()
     })
   } finally {

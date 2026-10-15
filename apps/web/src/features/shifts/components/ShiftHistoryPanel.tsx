@@ -1,7 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
+import { SkeletonRows } from '@/components/Skeletons'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { PaginationBar } from '@/components/PaginationBar'
+import { useListPagination } from '@/hooks/use-list-pagination'
 import { useFormat } from '@/features/settings'
 import { createMoney } from '@/lib/money'
 import { shiftHistoryQuery, type ShiftStatusFilter } from '../api'
@@ -16,12 +20,11 @@ export function ShiftHistoryPanel({ registers }: { registers: { id: number; code
   const { date, locale } = useFormat()
   const [registerId, setRegisterId] = useState<number | null>(null)
   const [status, setStatus] = useState<ShiftStatusFilter>('all')
-  const [page, setPage] = useState(0)
+  const { page, setPage } = useListPagination(`${registerId}:${status}`, PAGE_SIZE)
   const [openId, setOpenId] = useState<number | null>(null)
 
   const history = useQuery(shiftHistoryQuery({ registerId, status, limit: PAGE_SIZE, offset: page * PAGE_SIZE }))
   const total = history.data?.total ?? 0
-  const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1)
   const registerName = useMemo(() => new Map(registers.map((item) => [item.id, item.name])), [registers])
 
   const filter = (change: () => void) => {
@@ -34,41 +37,58 @@ export function ShiftHistoryPanel({ registers }: { registers: { id: number; code
     <section className="mx-auto w-full max-w-3xl space-y-4 rounded-xl border bg-card p-5">
       <h2 className="font-semibold">{t('history')}</h2>
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="grid gap-2 text-sm font-medium">
-          {t('register')}
-          <select
-            className="h-10 rounded-md border bg-background px-3"
-            value={registerId ?? ''}
-            onChange={(event) => filter(() => setRegisterId(event.target.value === '' ? null : Number(event.target.value)))}
+        <div className="grid min-w-0 gap-2">
+          <Label htmlFor="shift-history-register">{t('register')}</Label>
+          <Select
+            value={registerId === null ? 'all' : String(registerId)}
+            onValueChange={(value) => filter(() => setRegisterId(value === 'all' ? null : Number(value)))}
           >
-            <option value="">{t('historyAllRegisters')}</option>
-            {registers.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.code} · {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-2 text-sm font-medium">
-          {t('status')}
-          <select
-            className="h-10 rounded-md border bg-background px-3"
+            <SelectTrigger id="shift-history-register" className="h-10! w-full min-w-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectGroup>
+                <SelectItem value="all">{t('historyAllRegisters')}</SelectItem>
+                {registers.map((item) => (
+                  <SelectItem key={item.id} value={String(item.id)}>
+                    {item.code} · {item.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid min-w-0 gap-2">
+          <Label htmlFor="shift-history-status">{t('status')}</Label>
+          <Select
             value={status}
-            onChange={(event) => filter(() => setStatus(event.target.value as ShiftStatusFilter))}
+            onValueChange={(value) => filter(() => setStatus(value as ShiftStatusFilter))}
           >
-            {statuses.map((value) => (
-              <option key={value} value={value}>
-                {value === 'all' ? t('historyAllStatuses') : t(`status_${value}`)}
-              </option>
-            ))}
-          </select>
-        </label>
+            <SelectTrigger id="shift-history-status" className="h-10! w-full min-w-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectGroup>
+                {statuses.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {value === 'all' ? t('historyAllStatuses') : t(`status_${value}`)}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {history.error && <p className="text-sm text-destructive">{history.error.message}</p>}
       {!history.isPending && total === 0 && <p className="text-sm text-muted-foreground">{t('historyEmpty')}</p>}
 
       <ul className="divide-y">
+        {history.isPending && (
+          <li>
+            <SkeletonRows rows={3} />
+          </li>
+        )}
         {history.data?.items.map((shift) => {
           const money = createMoney(shift.currency, locale)
           const isOpen = openId === shift.id
@@ -127,19 +147,7 @@ export function ShiftHistoryPanel({ registers }: { registers: { id: number; code
         })}
       </ul>
 
-      {total > PAGE_SIZE && (
-        <div className="flex items-center justify-between gap-3 text-sm">
-          <Button variant="outline" className="h-10" disabled={page === 0} onClick={() => setPage(page - 1)}>
-            {t('historyPrevious')}
-          </Button>
-          <span className="text-muted-foreground tabular-nums">
-            {t('historyPage', { page: page + 1, pages: lastPage + 1 })}
-          </span>
-          <Button variant="outline" className="h-10" disabled={page >= lastPage} onClick={() => setPage(page + 1)}>
-            {t('historyNext')}
-          </Button>
-        </div>
-      )}
+      <PaginationBar page={page} pageSize={PAGE_SIZE} total={history.data?.total} isLoading={history.isFetching} onPageChange={(next) => { setOpenId(null); setPage(next) }} />
     </section>
   )
 }

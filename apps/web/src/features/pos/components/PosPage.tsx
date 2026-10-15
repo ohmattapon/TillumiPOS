@@ -1,20 +1,30 @@
 import type { Sale } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, LayoutGrid } from 'lucide-react'
+import { ClipboardList, LayoutGrid, Monitor, MoreHorizontal } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { openOrdersQuery, usePayOrder } from '@/features/orders'
-import { useFormat } from '@/features/settings'
+import { useFormat, useSettings } from '@/features/settings'
+import { isCustomerDisplaySupported, openCustomerDisplay, PAID_SHOWN_MS, useCustomerDisplayPublisher } from '@/features/customer-display'
 import { checkoutModeQuery, currentShiftQuery, registersQuery, useRegisterSelectionStore } from '@/features/shifts'
 import { meQuery } from '@/features/auth'
 import { useActiveBranch } from '@/features/branches'
+import { useNavigate } from 'react-router'
 import type { PaymentInput } from '@/lib/money'
 import { useCheckout } from '../api'
 import { useCart } from '../hooks/use-cart'
 import { hasKeyboard } from '../lib/focus'
+import { toDisplayState } from '../lib/customer-display'
 import { useCartStore } from '../store/cart.store'
+import { CartBar } from './CartBar'
 import { CartPanel } from './CartPanel'
 import { FloorDialog } from './FloorDialog'
 import { PaymentDialog } from './PaymentDialog'
@@ -26,12 +36,14 @@ import { SaveOrderDialog } from './SaveOrderDialog'
 /** The sell screen: pick products, review the cart, take payment, show the receipt. */
 export function PosPage() {
   const { t } = useTranslation('pos')
+  const navigate = useNavigate()
   const { date } = useFormat()
   const cart = useCart()
   const clearCart = useCartStore((state) => state.clear)
   const checkout = useCheckout()
   const payOrder = usePayOrder()
-  const openOrders = useQuery(openOrdersQuery)
+  const openOrders = useQuery(openOrdersQuery({ limit: 1 }))
+  const openCount = openOrders.data?.total ?? 0
   const checkoutMode = useQuery(checkoutModeQuery)
   const registers = useQuery(registersQuery)
   const me = useQuery(meQuery).data
@@ -47,6 +59,24 @@ export function PosPage() {
 
   const [isPaying, setIsPaying] = useState(false)
   const [receipt, setReceipt] = useState<Sale | null>(null)
+  const settings = useSettings()
+  // The bank QR the payment dialog is showing, and the sale just paid, for the customer's screen.
+  const [shownQr, setShownQr] = useState<{ image: string; expiresAt: string } | null>(null)
+  const [paidSale, setPaidSale] = useState<{ totalSatang: number; changeSatang: number } | null>(null)
+
+  // "Paid" stays on the customer's screen for a few seconds, then the idle screen returns.
+  useEffect(() => {
+    if (paidSale === null) return
+    const timer = window.setTimeout(() => setPaidSale(null), PAID_SHOWN_MS)
+    return () => window.clearTimeout(timer)
+  }, [paidSale])
+
+  useCustomerDisplayPublisher({
+    locale: settings.locale,
+    currency: settings.currency,
+    shopName: settings.shopName,
+    state: toDisplayState({ cart, vatMode: settings.vatMode, isPaying, qr: shownQr, paidSale }),
+  })
   const [today] = useState(() => new Date())
   const searchRef = useRef<HTMLInputElement>(null)
   const paymentCommandKey = useRef<string | null>(null)
@@ -66,6 +96,7 @@ export function PosPage() {
   const paid = {
     onSuccess: (sale: Sale) => {
       setReceipt(sale)
+      setPaidSale({ totalSatang: sale.totalSatang, changeSatang: sale.changeSatang })
       setIsPaying(false)
       paymentCommandKey.current = null
       clearCart()
@@ -88,6 +119,7 @@ export function PosPage() {
             options: line.optionIds,
           })),
           discountSatang: cart.discountSatang,
+          memberId: cart.memberId,
           payment,
           ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id } : {}),
           ...(needsShift ? { idempotencyKey: paymentCommandKey.current } : {}),
@@ -113,25 +145,68 @@ export function PosPage() {
   return (
     <>
       <PageHeader title={t('title')} highlight={date.longDate(today)} description={t('description')}>
-        {needsShift && <Button variant="outline" className="h-9 px-3" onClick={() => { window.location.href = '/shifts' }}>{shiftReady ? t('shiftReady') : t('shiftRequired')}</Button>}
-        <Button variant="outline" className="h-9 px-3" onClick={() => setIsChoosingTable(true)}>
-          <LayoutGrid />
-          {t('floor.button')}
-        </Button>
-        <Button variant="outline" className="h-9 px-3" onClick={() => setIsListingOrders(true)}>
-          <ClipboardList />
-          {t('orders.button')}
-          {!!openOrders.data?.length && (
-            <span className="rounded-full bg-primary/10 px-1.5 text-xs text-primary tabular-nums">
-              {openOrders.data.length}
-            </span>
+        {/* Wide screens keep the buttons in the header; smaller screens put the same actions in one menu. */}
+        <div className="hidden items-center gap-2 sm:flex">
+          {needsShift && (
+            <Button variant="outline" className="h-11 px-3" onClick={() => navigate('/shifts')}>
+              {shiftReady ? t('shiftReady') : t('shiftRequired')}
+            </Button>
           )}
-        </Button>
+          <Button variant="outline" className="h-11 px-3" onClick={() => setIsChoosingTable(true)}>
+            <LayoutGrid />
+            {t('floor.button')}
+          </Button>
+          <Button variant="outline" className="h-11 px-3" onClick={() => setIsListingOrders(true)}>
+            <ClipboardList />
+            {t('orders.button')}
+            {openCount > 0 && <span className="rounded-full bg-primary/10 px-1.5 text-xs text-primary tabular-nums">{openCount}</span>}
+          </Button>
+          {isCustomerDisplaySupported() && (
+            <Button variant="outline" className="h-11 px-3" onClick={openCustomerDisplay}>
+              <Monitor />
+              {t('customerDisplay')}
+            </Button>
+          )}
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="size-11 sm:hidden" aria-label={t('moreActions')}>
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {needsShift && (
+              <DropdownMenuItem onSelect={() => navigate('/shifts')}>
+                {shiftReady ? t('shiftReady') : t('shiftRequired')}
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onSelect={() => setIsChoosingTable(true)}>
+              <LayoutGrid />
+              {t('floor.button')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setIsListingOrders(true)}>
+              <ClipboardList />
+              {t('orders.button')}
+              {openCount > 0 && <span className="ml-auto rounded-full bg-primary/10 px-1.5 text-xs text-primary tabular-nums">{openCount}</span>}
+            </DropdownMenuItem>
+            {isCustomerDisplaySupported() && (
+              <DropdownMenuItem onSelect={openCustomerDisplay}>
+                <Monitor />
+                {t('customerDisplay')}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </PageHeader>
 
-      <div className="flex min-h-0 flex-1 print:hidden">
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <ProductPicker searchRef={searchRef} />
         <CartPanel
+          onPay={() => setIsPaying(true)}
+          onSaveOrder={() => setIsSavingOrder(true)}
+          paymentAvailable={shiftReady === true}
+        />
+        <CartBar
           onPay={() => setIsPaying(true)}
           onSaveOrder={() => setIsSavingOrder(true)}
           paymentAvailable={shiftReady === true}
@@ -146,6 +221,7 @@ export function PosPage() {
           error={payment.error?.message}
           onConfirm={pay}
           onCancel={cancelPayment}
+          onQrChange={setShownQr}
         />
       )}
 

@@ -2,6 +2,7 @@ import type { DiningTable } from '@pos/api/types'
 import { LAYOUT_HEIGHT, LAYOUT_WIDTH } from '@pos/api/dining-table'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -10,11 +11,27 @@ interface Props {
   onSelect?: (table: DiningTable) => void
   /** What is shown inside a table under its name; defaults to the open orders. */
   renderBadge?: (table: DiningTable) => ReactNode
+  /** The tables have not arrived yet: draw the floor's shape without guessing where anything is. */
+  isPending?: boolean
 }
 
 /** The floor of a branch: each table where the owner put it, with whether anyone is sitting at it. */
-export function FloorPlan({ tables, selectedId = null, onSelect, renderBadge }: Props) {
+export function FloorPlan({ tables, selectedId = null, onSelect, renderBadge, isPending = false }: Props) {
   const { t } = useTranslation('tables')
+  const { t: tc } = useTranslation()
+
+  if (isPending)
+    return (
+      <div
+        role="status"
+        aria-busy="true"
+        className="relative w-full overflow-hidden rounded-xl"
+        style={{ aspectRatio: `${LAYOUT_WIDTH} / ${LAYOUT_HEIGHT}` }}
+      >
+        <span className="sr-only">{tc('loading')}</span>
+        <Skeleton className="absolute inset-0 rounded-xl" />
+      </div>
+    )
 
   return (
     <div

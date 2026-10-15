@@ -9,6 +9,7 @@ const payment = z.object({
 })
 
 export const completeSaleSchema = z.object({
+  memberId: z.number().int().positive().nullable().optional(),
   items: z
     .array(
       z.object({
@@ -27,6 +28,7 @@ export const completeSaleV2Schema = completeSaleSchema.extend({ shiftId: z.numbe
 export const voidSaleSchema = z.object({ reason: z.string().min(1).max(500) })
 
 export const listSalesSchema = z.object({
+  status: z.enum(['completed', 'voided']).optional(),
   from: z.date().optional(),
   to: z.date().optional(),
   limit: z.number().int().min(1).max(500).optional(),

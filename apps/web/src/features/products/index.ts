@@ -1,5 +1,5 @@
 export type { Product } from '@pos/api/types'
-export { productKeys, productsQuery } from './api'
+export { productKeys, productsQuery, productQuery } from './api'
 export { ProductImage } from './components/ProductImage'
 export { ProductsPage } from './components/ProductsPage'
 export { isLowStock, isOutOfStock, LOW_STOCK_THRESHOLD } from './lib/stock'
