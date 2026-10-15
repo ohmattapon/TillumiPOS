@@ -1,6 +1,5 @@
 import { container } from 'tsyringe'
 import { OrderElysiaController } from './adapters/controllers/order.controller'
-import { DrizzleOrderRepository } from './adapters/repository/order.drizzle.repository'
 import { GuardedOrderRepository } from './adapters/repository/guarded-order.repository'
 import { DrizzleTableOccupancy } from './adapters/repository/table-occupancy.drizzle.adapter'
 import { orderRepositoryToken } from './applications/ports/order.repository'
