@@ -119,6 +119,7 @@ export const mockQrPaymentRepository = (): Mocked<IQrPaymentRepository> => ({
   findById: mock<IQrPaymentRepository['findById']>(),
   findByIdForUpdate: mock<IQrPaymentRepository['findByIdForUpdate']>(),
   findByReferenceForUpdate: mock<IQrPaymentRepository['findByReferenceForUpdate']>(),
+  findByReference: mock<IQrPaymentRepository['findByReference']>(),
   findUnclaimed: mock<IQrPaymentRepository['findUnclaimed']>(),
   save: mock<IQrPaymentRepository['save']>(async (payment) => payment),
 })
@@ -251,6 +252,7 @@ export const mockPriceQuoteRepository = (): Mocked<IPriceQuoteRepository> => ({
   findByIdForUpdate: mock<IPriceQuoteRepository['findByIdForUpdate']>(),
   findByQrReference: mock<IPriceQuoteRepository['findByQrReference']>(async () => null),
   findByQrReferenceForUpdate: mock<IPriceQuoteRepository['findByQrReferenceForUpdate']>(async () => null),
+  findReservedByOrder: mock<IPriceQuoteRepository['findReservedByOrder']>(async () => null),
   hasReservedForOrder: mock<IPriceQuoteRepository['hasReservedForOrder']>(async () => false),
   save: mock<IPriceQuoteRepository['save']>(async (quote) => quote),
 })
@@ -259,6 +261,7 @@ export const mockPriceQuoteRepository = (): Mocked<IPriceQuoteRepository> => ({
 export const mockQuoteClaims = (): Mocked<IQuoteClaims> => ({
   lockForCheckout: mock<IQuoteClaims['lockForCheckout']>(),
   findHeldByReference: mock<IQuoteClaims['findHeldByReference']>(async () => null),
+  findHeldByOrder: mock<IQuoteClaims['findHeldByOrder']>(async () => null),
   consume: mock<IQuoteClaims['consume']>(async () => {}),
   reserveForQr: mock<IQuoteClaims['reserveForQr']>(async () => {}),
   releaseByReference: mock<IQuoteClaims['releaseByReference']>(async () => {}),

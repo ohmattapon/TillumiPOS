@@ -8,6 +8,8 @@ export interface IPriceQuoteRepository {
   /** The quote a QR holds, by the reference 1 sent to the bank. */
   findByQrReference(reference: string): Promise<PriceQuoteEntity | null>
   findByQrReferenceForUpdate(reference: string): Promise<PriceQuoteEntity | null>
+  /** The quote of this open order that a QR holds, if any. Read only: nothing is locked. */
+  findReservedByOrder(orderId: number): Promise<PriceQuoteEntity | null>
   /** Whether a quote of this order is held by a QR that has not been settled yet. */
   hasReservedForOrder(orderId: number): Promise<boolean>
   /** Writes the status, QR reference and sale of an existing quote. */

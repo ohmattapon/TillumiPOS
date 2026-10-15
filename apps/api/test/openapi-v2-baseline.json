@@ -2731,6 +2731,107 @@
         ]
       }
     },
+    "/api/v2/payments/qr/hold": {
+      "get": {
+        "operationId": "getApiV2PaymentsQrHold",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "orderId",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "integer",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "nullable": true,
+                  "properties": {
+                    "amountSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "status": {
+                      "enum": [
+                        "pending",
+                        "paid",
+                        "cancelled"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "status",
+                    "amountSatang",
+                    "expiresAt"
+                  ],
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "v2: QR ที่ถือราคาของออเดอร์นี้อยู่ (null เมื่อไม่มี) ใช้แสดงว่าออเดอร์ถูกล็อกเพราะ QR",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
     "/api/v2/payments/qr/unclaimed": {
       "get": {
         "operationId": "getApiV2PaymentsQrUnclaimed",
