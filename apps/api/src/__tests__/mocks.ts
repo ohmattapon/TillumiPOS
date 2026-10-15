@@ -8,6 +8,7 @@ export const mockSalesReportRepository = (): Mocked<ISalesReportRepository> => (
 })
 import type { IBranchRepository } from '../modules/branches/applications/ports/branch.repository'
 import type { ICategoryRepository } from '../modules/categories/applications/ports/category.repository'
+import type { IKitchenStationRepository } from '../modules/kitchen/applications/ports/kitchen-station.repository'
 import type { IStockLedger } from '../modules/inventory/applications/ports/stock-ledger.port'
 import type { IStockMovementRepository } from '../modules/inventory/applications/ports/stock-movement.repository'
 import type { ILineOptionsResolver } from '../modules/modifiers/applications/ports/line-options-resolver.port'
@@ -209,6 +210,13 @@ export const mockTableRepository = (): Mocked<ITableRepository> => ({
 export const mockTableOccupancy = (): Mocked<ITableOccupancy> => ({
   byTable: mock<ITableOccupancy['byTable']>(async () => new Map()),
   openOrderCount: mock<ITableOccupancy['openOrderCount']>(async () => 0),
+})
+
+export const mockKitchenStationRepository = (): Mocked<IKitchenStationRepository> => ({
+  findAll: mock<IKitchenStationRepository['findAll']>(),
+  findById: mock<IKitchenStationRepository['findById']>(),
+  create: mock<IKitchenStationRepository['create']>(),
+  update: mock<IKitchenStationRepository['update']>(),
 })
 
 export const mockSetupCode = (): Mocked<ISetupCode> => ({
