@@ -1,4 +1,6 @@
-# TillumiPOS
+<h1 align="center">
+  <img src="apps/web/public/tillumipos-logo.png" alt="TillumiPOS" width="360" />
+</h1>
 
 <p align="center">
   ระบบขายหน้าร้านสำหรับร้านค้าปลีกและร้านอาหาร รองรับการทำงานหลายสาขา
