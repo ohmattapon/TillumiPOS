@@ -90,6 +90,9 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     receiptPaperMm: form.receiptPaperMm,
     receiptFooter: form.receiptFooter.trim() || null,
     homeView: form.homeView,
+    tablesEnabled: settings.tablesEnabled,
+    kitchenEnabled: settings.kitchenEnabled,
+    modifiersEnabled: settings.modifiersEnabled,
   }
   const isDirty = JSON.stringify(changes) !== JSON.stringify(settings)
   const canSave = isDirty && isRateValid && changes.shopName !== '' && !save.isPending
