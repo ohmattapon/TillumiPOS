@@ -23,6 +23,8 @@ import {
   Tags,
   UserRound,
   Users,
+  ShieldCheck,
+  History,
   Utensils,
   type LucideIcon,
 } from 'lucide-react'
@@ -58,6 +60,7 @@ import { clearCart } from '@/features/pos'
 import { useRegisterSelectionStore } from '@/features/shifts'
 import { LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
 import { useSettings } from '@/features/settings'
+import { useAuthorization } from '@/features/auth'
 import { themes, useTheme, type Theme } from './theme'
 
 interface NavItem {
@@ -78,7 +81,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
   const { shopName } = useSettings()
   const { theme, setTheme } = useTheme()
   const { branch, canSwitch } = useActiveBranch()
-  const isOwner = user.role === 'owner'
+  const { can, user: currentUser } = useAuthorization()
   const products = useQuery(productsQuery({ stockAtMost: LOW_STOCK_THRESHOLD, limit: 1 }))
   const lowStockCount = products.data?.total ?? 0
   const clearRegisterSelection = useRegisterSelectionStore((state) => state.clear)
@@ -90,29 +93,27 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
         { to: '/', label: t('nav.sell'), icon: ShoppingCart },
         { to: '/kitchen', label: t('nav.kitchen'), icon: ChefHat },
         { to: '/today', label: t('nav.today'), icon: CalendarCheck },
-        ...(isOwner ? [{ to: '/reports', label: t('nav.reports'), icon: ChartNoAxesCombined }] : []),
+        ...(can('reports.read') ? [{ to: '/reports', label: t('nav.reports'), icon: ChartNoAxesCombined }] : []),
         { to: '/members', label: t('nav.members'), icon: UserRound },
         { to: '/promotions', label: t('nav.promotions'), icon: BadgePercent },
         { to: '/shifts', label: t('nav.shifts'), icon: WalletCards },
       ],
     },
-    ...(isOwner
-      ? [
           {
             label: t('groups.manage'),
             items: [
-              { to: '/products', label: t('nav.products'), icon: Package, badge: lowStockCount },
-              { to: '/categories', label: t('nav.categories'), icon: Tags },
-              { to: '/modifiers', label: t('nav.modifiers'), icon: SlidersHorizontal },
-              { to: '/tables', label: t('nav.tables'), icon: LayoutGrid },
-              { to: '/kitchen-stations', label: t('nav.kitchenStations'), icon: Utensils },
-              { to: '/branches', label: t('nav.branches'), icon: Building2 },
-              { to: '/users', label: t('nav.users'), icon: Users },
-              { to: '/settings', label: t('nav.settings'), icon: Settings },
+              ...((can('products.write') || can('inventory.receive') || can('inventory.adjust')) ? [{ to: '/products', label: t('nav.products'), icon: Package, badge: lowStockCount }] : []),
+              ...(can('categories.write') ? [{ to: '/categories', label: t('nav.categories'), icon: Tags }] : []),
+              ...(can('modifiers.write') ? [{ to: '/modifiers', label: t('nav.modifiers'), icon: SlidersHorizontal }] : []),
+              ...(can('tables.write') ? [{ to: '/tables', label: t('nav.tables'), icon: LayoutGrid }] : []),
+              ...(can('kitchen.write') ? [{ to: '/kitchen-stations', label: t('nav.kitchenStations'), icon: Utensils }] : []),
+              ...(can('branches.manage') ? [{ to: '/branches', label: t('nav.branches'), icon: Building2 }] : []),
+              ...(can('users.manage') ? [{ to: '/users', label: t('nav.users'), icon: Users }] : []),
+              ...(can('settings.write') ? [{ to: '/settings', label: t('nav.settings'), icon: Settings }] : []),
+              ...(can('roles.manage') ? [{ to: '/roles', label: t('nav.roles'), icon: ShieldCheck }] : []),
+              ...(can('audit.read') ? [{ to: '/audit', label: t('nav.audit'), icon: History }] : []),
             ],
           },
-        ]
-      : []),
   ]
 
   return (
@@ -145,7 +146,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
       </SidebarHeader>
 
       <SidebarContent>
-        {groups.map((group) => (
+        {groups.filter((group) => group.items.length > 0).map((group) => (
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel className="text-[11px] tracking-wider uppercase">{group.label}</SidebarGroupLabel>
             <SidebarMenu className="gap-1">
@@ -185,7 +186,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
                   </span>
                   <span className="grid flex-1 text-left leading-tight">
                     <span className="truncate text-sm font-medium">{user.displayName}</span>
-                    <span className="truncate text-xs text-muted-foreground">{t(`roles.${user.role}`)}</span>
+                    <span className="truncate text-xs text-muted-foreground">{currentUser?.roleName ?? t(`roles.${user.role}`)}</span>
                   </span>
                   <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
                 </SidebarMenuButton>

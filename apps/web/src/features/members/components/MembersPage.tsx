@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { meQuery } from '@/features/auth'
+import { useCan } from '@/features/auth'
 import { useActiveBranch } from '@/features/branches'
 import { Receipt } from '@/features/sales'
 import { useFormat, useSettings } from '@/features/settings'
@@ -138,7 +138,7 @@ export function MemberDetailsPage() {
   const id = Number(useParams().id)
   const navigate = useNavigate()
   const member = useQuery(memberQuery(id))
-  const me = useQuery(meQuery).data
+  const canEdit = useCan('members.write')
   const update = useUpdateMember()
   const { money, date, locale } = useFormat()
   const shop = useSettings()
@@ -205,7 +205,7 @@ export function MemberDetailsPage() {
             <Badge variant={member.data.isActive ? 'secondary' : 'outline'}>
               {t(member.data.isActive ? 'active' : 'inactive')}
             </Badge>
-            {me?.role === 'owner' && (
+            {canEdit && (
               <>
                 <Button variant="outline" className="h-11" onClick={() => setEditing(true)}>
                   {t('edit')}

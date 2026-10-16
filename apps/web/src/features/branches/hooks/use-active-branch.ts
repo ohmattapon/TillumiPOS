@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { meQuery } from '@/features/auth'
+import { meQuery, useCan } from '@/features/auth'
 import { useActiveBranchStore } from '@/lib/active-branch'
 import { branchesQuery } from '../api'
 import { pickBranch } from '../lib/pick-branch'
@@ -13,6 +13,7 @@ const BRANCH_INDEPENDENT = new Set(['settings', 'branches', 'auth', 'categories'
  * branch; an owner may choose any open one, and the choice survives a reload.
  */
 export function useActiveBranch() {
+  const canSwitch = useCan('branches.switch')
   const queryClient = useQueryClient()
   const me = useQuery(meQuery).data
   const branches = useQuery(branchesQuery).data
@@ -35,5 +36,5 @@ export function useActiveBranch() {
     void queryClient.resetQueries({ predicate: (query) => !BRANCH_INDEPENDENT.has(String(query.queryKey[0])) })
   }
 
-  return { branch, branches: open, canSwitch: me?.role === 'owner' && open.length > 1, switchTo }
+  return { branch, branches: open, canSwitch: canSwitch && open.length > 1, switchTo }
 }

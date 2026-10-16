@@ -1,4 +1,5 @@
-import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { canDo, isPermission, type Permission } from '@pos/api/permissions'
 import { api, unwrap } from '@/lib/api'
 import { forgetSession } from './lib/forget-session'
 
@@ -11,7 +12,8 @@ export const meQuery = queryOptions({
   queryKey: authKeys.me,
   queryFn: () => unwrap(api.auth.me.get()),
   retry: false,
-  staleTime: Infinity,
+  staleTime: 0,
+  refetchInterval: 30_000,
 })
 
 export function useLogin() {
@@ -19,9 +21,17 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: (credentials: { username: string; password: string }) => unwrap(api.auth.login.post(credentials)),
-    onSuccess: (user) => queryClient.setQueryData(authKeys.me, user),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: authKeys.me }),
   })
 }
+
+/** Permission data stays in the current-session query, and is refreshed on focus and role edits. */
+export function useAuthorization() {
+  const user = useQuery(meQuery).data
+  return { user, can: (permission: Permission) => Boolean(user && canDo({ role: user.role, permissions: user.permissions.filter(isPermission) }, permission)) }
+}
+
+export const useCan = (permission: Permission) => useAuthorization().can(permission)
 
 export function useLogout() {
   const queryClient = useQueryClient()

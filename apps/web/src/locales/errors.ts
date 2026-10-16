@@ -5,6 +5,12 @@
  */
 export const errors = {
   en: {
+    PERMISSION_DENIED: 'You do not have permission to perform this action ({{permission}}).',
+    ROLE_IN_USE: 'This role is assigned to a user and cannot be deleted.',
+    ROLE_NAME_TAKEN: 'This role name is already used.',
+    ROLE_PROTECTED: 'This system role cannot be changed or deleted.',
+    ROLE_NOT_FOUND: 'Role not found.',
+    INVALID_ROLE: 'The role name or permissions are not valid.',
     UNAUTHORIZED: 'Please sign in.',
     FORBIDDEN: 'You do not have permission to do this.',
     NOT_FOUND: 'Not found.',

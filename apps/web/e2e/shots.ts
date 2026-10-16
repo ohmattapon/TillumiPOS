@@ -155,12 +155,18 @@ async function main() {
         ['15-tables', '/tables'], ['16-branches', '/branches'], ['17-users', '/users'], ['18-settings', '/settings'], ['19-shifts', '/shifts'],
         ['22-reports', '/reports'],
         ['23-promotions', '/promotions'],
+        ['24-roles', '/roles'], ['25-audit', '/audit'],
       ] as const) {
         await page.goto(`${WEB}${path}`)
         await page.waitForTimeout(1000)
         await shot(name)
       }
       await shootCustomerDisplay(context, size.name)
+      await page.goto(`${WEB}/roles`)
+      await page.getByRole('button', { name: 'เพิ่มบทบาท', exact: true }).click()
+      await page.getByRole('dialog').waitFor()
+      await shot('26-role-form')
+      await page.keyboard.press('Escape')
 
       // Date-only values survive the shadcn calendar without UTC conversion or premature submission.
       await page.goto(`${WEB}/reports?from=2024-02-01&to=2024-02-29&scope=branch`)
