@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="apps/web/public/tillumipos-logo.png" alt="TillumiPOS" width="360" />
+  <img src="docs/brand/logo-with-white.jpg" alt="TillumiPOS" width="360" />
 </h1>
 
 <p align="center">
