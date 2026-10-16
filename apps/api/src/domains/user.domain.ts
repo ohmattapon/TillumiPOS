@@ -7,12 +7,13 @@ export interface UserEntityProps {
   username: string
   displayName: string
   role: UserRole
+  roleId?: number | null
   /** The branch this person works in. An owner may act in any branch. */
   branchId: number
   isActive: boolean
 }
 
-export type UserChanges = Partial<Pick<UserEntityProps, 'displayName' | 'role' | 'branchId' | 'isActive'>>
+export type UserChanges = Partial<Pick<UserEntityProps, 'displayName' | 'role' | 'roleId' | 'branchId' | 'isActive'>>
 
 const USERNAME_PATTERN = /^[a-z0-9_.-]{3,32}$/
 const MAX_DISPLAY_NAME_LENGTH = 100
@@ -23,6 +24,7 @@ export class UserEntity {
   public readonly username: string
   public readonly displayName: string
   public readonly role: UserRole
+  public readonly roleId: number | null
   public readonly branchId: number
   public readonly isActive: boolean
 
@@ -37,6 +39,7 @@ export class UserEntity {
     this.username = props.username
     this.displayName = props.displayName
     this.role = props.role
+    this.roleId = props.roleId ?? null
     this.branchId = props.branchId
     this.isActive = props.isActive
   }
@@ -53,6 +56,7 @@ export class UserEntity {
       username: this.username,
       displayName: changes.displayName ?? this.displayName,
       role: changes.role ?? this.role,
+      roleId: changes.roleId === undefined ? this.roleId : changes.roleId,
       branchId: changes.branchId ?? this.branchId,
       isActive: changes.isActive ?? this.isActive,
     })
