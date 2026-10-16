@@ -28,20 +28,20 @@ export class PromotionElysiaController {
           return { items: result.items.map(snapshotOf), total: result.total }
         },
         {
-          auth: ['owner', 'cashier'],
+          auth: true,
           query: promotionSchemas.listQuery,
           response: page(promotionSchemas.promotion),
           detail: { summary: 'รายการโปรโมชัน' },
         },
       )
       .get('/:id', async ({ params }) => snapshotOf(await this.getPromotion.execute(params)), {
-        auth: ['owner', 'cashier'],
+        auth: true,
         params: idParams,
         response: promotionSchemas.promotion,
         detail: { summary: 'รายละเอียดโปรโมชัน' },
       })
       .post('/', async ({ body, user }) => snapshotOf(await this.createPromotion.execute(body, user)), {
-        auth: ['owner'],
+        auth: { can: 'promotions.write' },
         body: promotionSchemas.create,
         response: promotionSchemas.promotion,
         detail: { summary: 'สร้างโปรโมชัน' },
@@ -50,7 +50,7 @@ export class PromotionElysiaController {
         '/:id',
         async ({ params, body, user }) => snapshotOf(await this.updatePromotion.execute(params.id, body, user)),
         {
-          auth: ['owner'],
+          auth: { can: 'promotions.write' },
           params: idParams,
           body: promotionSchemas.update,
           response: promotionSchemas.promotion,

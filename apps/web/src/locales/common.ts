@@ -3,6 +3,7 @@ const th = {
   loading: 'กำลังโหลด…',
   connectionFailed: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้',
   cancel: 'ยกเลิก',
+  close: 'ปิด',
   all: 'ทั้งหมด',
   noMatches: 'ไม่พบรายการที่ตรงเงื่อนไข',
   datePicker: {
@@ -33,6 +34,7 @@ const en = {
   loading: 'Loading…',
   connectionFailed: 'Cannot reach the server',
   cancel: 'Cancel',
+  close: 'Close',
   all: 'All',
   noMatches: 'No matching items',
   datePicker: {

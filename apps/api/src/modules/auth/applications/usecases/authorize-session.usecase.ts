@@ -1,21 +1,21 @@
 import { inject, injectable } from 'tsyringe'
-import { DomainForbiddenError } from '../../../../domains/errors/domain-forbidden.error'
+import { canDo, requirePermission } from '../../../../domains/authorization'
+import { PERMISSIONS, type Permission } from '../../../../domains/permission.vo'
 import { DomainUnauthorizedError } from '../../../../domains/errors/domain-unauthorized.error'
-import type { UserRole } from '../../../../domains/user-role.vo'
-import { userRepositoryToken } from '../../../users/applications/ports/user.repository'
-import type { IUserRepository } from '../../../users/applications/ports/user.repository'
+import { sessionAuthorizationReaderToken, type ISessionAuthorizationReader } from '../ports/session-authorization-reader.port'
 
-/** Query: resolves the user behind a session and checks their role. `true` allows any signed-in user. */
+/** Query: reads the current active user and grants together on every request. */
 @injectable()
 export class AuthorizeSessionUseCase {
-  constructor(@inject(userRepositoryToken) private readonly users: IUserRepository) {}
+  constructor(@inject(sessionAuthorizationReaderToken) private readonly sessions: ISessionAuthorizationReader) {}
 
-  async execute(userId: number, roles: readonly UserRole[] | true) {
-    // Looked up on every request, so deactivating a user takes effect immediately.
-    const user = Number.isInteger(userId) ? await this.users.findActiveById(userId) : null
-    if (!user) throw new DomainUnauthorizedError('กรุณาเข้าสู่ระบบ')
-    if (roles !== true && !roles.includes(user.role)) throw new DomainForbiddenError('ไม่มีสิทธิ์ใช้งานส่วนนี้')
-
-    return user
+  async execute(userId: number, requirement: true | { can: Permission }) {
+    const session = Number.isInteger(userId) ? await this.sessions.findActiveById(userId) : null
+    if (!session) throw new DomainUnauthorizedError('กรุณาเข้าสู่ระบบ')
+    const { user, roleName } = session
+    const actor = { role: user.role, permissions: session.permissions }
+    const permissions = PERMISSIONS.filter((permission) => canDo(actor, permission))
+    if (requirement !== true) requirePermission({ role: user.role, permissions }, requirement.can)
+    return { user, roleName, permissions }
   }
 }

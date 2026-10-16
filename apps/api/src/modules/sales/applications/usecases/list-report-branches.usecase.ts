@@ -1,6 +1,5 @@
 import { inject, injectable } from 'tsyringe'
-import type { UserEntity } from '../../../../domains/user.domain'
-import { DomainForbiddenError } from '../../../../domains/errors/domain-forbidden.error'
+import { requirePermission, type Actor } from '../../../../domains/authorization'
 import { calculateReportMetrics } from '../../../../domains/sales-report'
 import { branchRepositoryToken, type IBranchRepository } from '../../../branches/applications/ports/branch.repository'
 import { shopSettingsRepositoryToken, type IShopSettingsRepository } from '../../../settings/applications/ports/shop-settings.repository'
@@ -15,9 +14,9 @@ export class ListReportBranchesUseCase {
     @inject(shopSettingsRepositoryToken) private readonly settings: IShopSettingsRepository,
     @inject(branchRepositoryToken) private readonly branches: IBranchRepository,
   ) {}
-  async execute(input: unknown, actor: Pick<UserEntity, 'role'>, branchId: number) {
+  async execute(input: unknown, actor: Actor, branchId: number) {
     const query = salesReportPageSchema.parse(input)
-    if (actor.role !== 'owner') throw new DomainForbiddenError('เฉพาะเจ้าของร้านดูรายงานได้', 'REPORT_FORBIDDEN')
+    requirePermission(actor, 'reports.read', 'เฉพาะเจ้าของร้านดูรายงานได้')
     const { timeZone } = await this.settings.get()
     const [result, branches] = await Promise.all([
       this.reports.branches({ ...query, timeZone, branchId: query.scope === 'all' ? null : branchId }),

@@ -38,7 +38,7 @@ export class KitchenCatalogElysiaController {
         { auth: true, response: page(kitchenSchemas.station), detail: { summary: 'สถานีครัว (รวมที่ปิดอยู่)' } },
       )
       .post('/kitchen-stations', async ({ body }) => toStationResponse(await this.createStation.execute(body)), {
-        auth: ['owner'],
+        auth: { can: 'kitchen.write' },
         body: kitchenSchemas.createStation,
         response: kitchenSchemas.station,
         detail: { summary: 'เพิ่มสถานีครัว' },
@@ -47,7 +47,7 @@ export class KitchenCatalogElysiaController {
         '/kitchen-stations/:id',
         async ({ params, body }) => toStationResponse(await this.updateStation.execute(params.id, body)),
         {
-          auth: ['owner'],
+          auth: { can: 'kitchen.write' },
           params: idParams,
           body: kitchenSchemas.updateStation,
           response: kitchenSchemas.station,
@@ -58,7 +58,7 @@ export class KitchenCatalogElysiaController {
         '/categories/:id/kitchen-station',
         async ({ params, body }) => this.setCategoryStation.execute(params.id, body),
         {
-          auth: ['owner'],
+          auth: { can: 'kitchen.write' },
           params: idParams,
           body: kitchenSchemas.categoryStation,
           response: kitchenSchemas.categoryStationResponse,

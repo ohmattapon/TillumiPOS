@@ -25,8 +25,8 @@ export class SettingsElysiaController {
           response: settingsSchemas.settings,
           detail: { summary: 'การตั้งค่าร้าน' },
         })
-        .patch('/', async ({ body }) => toResponse(await this.updateSettings.execute(body)), {
-          auth: ['owner'],
+        .patch('/', async ({ body, user }) => toResponse(await this.updateSettings.execute(body, user)), {
+          auth: { can: 'settings.write' },
           body: settingsSchemas.update,
           response: settingsSchemas.settings,
           detail: { summary: 'แก้ไขการตั้งค่าร้าน (มีผลกับบิลใหม่เท่านั้น)' },

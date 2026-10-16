@@ -31,13 +31,13 @@ export class CategoryElysiaController {
         { auth: true, response: page(categorySchemas.category), detail: { summary: 'รายการหมวดหมู่' } },
       )
       .post('/', async ({ body }) => toResponse(await this.createCategory.execute(body)), {
-        auth: ['owner'],
+        auth: { can: 'categories.write' },
         body: categorySchemas.create,
         response: categorySchemas.category,
         detail: { summary: 'เพิ่มหมวดหมู่' },
       })
       .patch('/:id', async ({ params, body }) => toResponse(await this.updateCategory.execute(params.id, body)), {
-        auth: ['owner'],
+        auth: { can: 'categories.write' },
         params: idParams,
         body: categorySchemas.update,
         response: categorySchemas.category,

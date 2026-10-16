@@ -161,6 +161,15 @@ apps/api/src/
 - ค่าของ SCB ใช้ทดสอบกับ SCB จำลองใน `apps/api/test/scb-server.ts` เท่านั้น ห้ามให้ชุดทดสอบเรียก SCB จริง
 - ความลับห้ามอยู่ในไฟล์ที่ commit: `.env.example` ต้องเป็นค่า placeholder (ขึ้นต้น `your-`) เสมอ ถ้าเผลอ commit คีย์จริงต้องแจ้งเจ้าของโครงการให้ออกคีย์ใหม่ เพราะแก้ประวัติ git ไม่พอ
 
+### สิทธิ์และบันทึกการกระทำ (permissions, audit)
+
+- สิทธิ์เป็นรายการตายตัวที่ `domains/permission.vo.ts` ที่เดียว (`PERMISSION_GROUPS`) บทบาท (`roles`, `role_permissions`) ตั้งเองได้ ส่วนบทบาทระบบ `owner` (ได้ทุกสิทธิ์ รวมที่เพิ่มทีหลัง แก้ไม่ได้) กับ `cashier` ลบไม่ได้ เพิ่มสิทธิ์ใหม่ต้องเพิ่มคำแปลในเว็บด้วย
+- ห้ามเขียนเงื่อนไข `role === 'owner'` ใหม่ ใช้ `auth: { can: '<สิทธิ์>' }` ที่เส้นทาง และ `requirePermission(actor, '<สิทธิ์>')` / `canDo` ใน `domains/authorization.ts` ที่ use case การขายปกติใช้ `auth: true`
+- สิทธิ์โหลดจากฐานข้อมูลทุกคำขอใน `AuthorizeSessionUseCase` ห้ามฝังสิทธิ์ใน JWT หรือแคช เพื่อให้การเปลี่ยนบทบาทมีผลทันที
+- `users.role` (enum เดิม) ยังถูกเขียนตามบทบาทเพื่อความเข้ากันได้ของ v1: เป็น `owner` เมื่อบทบาทคือ `owner` นอกนั้นเป็น `cashier` ส่วน `users.role_id` คือของจริง เจ้าของที่ใช้งานได้คนสุดท้ายถอดบทบาท `owner` ไม่ได้
+- คำสั่งที่เปลี่ยนเงิน สต็อก ผู้ใช้ บทบาท หรือการตั้งค่าร้าน ต้องเรียก `IAuditLog.record` ภายใน unit of work เดียวกับคำสั่ง (ถอยพร้อมกัน) `audit_logs` เขียนอย่างเดียว ห้ามมี update/delete ทั้งใน port และ adapter และห้ามเก็บรหัสผ่านหรือ hash (`buildAuditEntry` ตัดช่องลับให้) ข้อยกเว้นคือ `auth.login_failed` ที่เขียนนอกธุรกรรมและห้ามทำให้การล็อกอินพัง
+- ชุดทดสอบที่ truncate ทุกตาราง (`resetDatabase`) ต้องใส่บทบาทระบบกลับ ไม่เช่นนั้น `signIn()` ล้มทุกเทสต์
+
 ### จอลูกค้าผ่าน server (customer-display)
 
 - จอลูกค้าฟังได้สองทางเข้า receiver ตัวเดียว: `BroadcastChannel` (เบราว์เซอร์เดียวกัน ยังเป็นทางสำรอง) และสตรีม SSE `GET /api/v1/customer-display/stream?token=` ของ server ห้ามถอด BroadcastChannel

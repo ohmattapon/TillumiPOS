@@ -1,10 +1,11 @@
-import { and, count, eq } from 'drizzle-orm'
+import { and, count, eq, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
+import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import { UserEntity } from '../../../../domains/user.domain'
 import { users } from '../../../../infrastructure/database/schema/users'
-import { isUniqueViolation } from '../../../../libs/pg-error'
+import { isForeignKeyViolation, isUniqueViolation } from '../../../../libs/pg-error'
 import { currentExecutor } from '../../../../libs/transaction-context'
 import type { IUserRepository } from '../../applications/ports/user.repository'
 
@@ -14,6 +15,7 @@ const columns = {
   username: users.username,
   displayName: users.displayName,
   role: users.role,
+  roleId: users.roleId,
   branchId: users.branchId,
   isActive: users.isActive,
 }
@@ -22,6 +24,9 @@ const duplicate = () => new DomainConflictError('ข้อมูลซ้ำก�
 
 @injectable()
 export class DrizzleUserRepository implements IUserRepository {
+  async lockOwnerChangesForUpdate(): Promise<void> {
+    await currentExecutor().execute(sql`select pg_advisory_xact_lock(731092447)`)
+  }
   async findAll() {
     const rows = await currentExecutor().select(columns).from(users).orderBy(users.id)
     return rows.map((row) => new UserEntity(row))
@@ -57,29 +62,37 @@ export class DrizzleUserRepository implements IUserRepository {
   }
 
   async create(entity: UserEntity, passwordHash: string) {
+    if (entity.roleId === null) throw new DomainError('ต้องระบุบทบาท', 'INVALID_USER')
     const { id: _unassigned, ...values } = entity.toSnapshot()
     try {
       const [row] = await currentExecutor()
         .insert(users)
-        .values({ ...values, passwordHash })
+        .values({ ...values, roleId: entity.roleId, passwordHash })
         .returning(columns)
       return new UserEntity(row!)
     } catch (error) {
       if (isUniqueViolation(error)) throw duplicate()
+      if (isForeignKeyViolation(error)) throw new DomainConflictError('บทบาทหรือสาขาถูกเปลี่ยน กรุณาลองใหม่', 'IN_USE')
       throw error
     }
   }
 
   async update(entity: UserEntity, passwordHash?: string) {
+    if (entity.roleId === null) throw new DomainError('ต้องระบุบทบาท', 'INVALID_USER')
     // The username is not updatable, so it is left out of the SET clause.
     const { id, username: _fixed, ...values } = entity.toSnapshot()
+    try {
     const [row] = await currentExecutor()
       .update(users)
-      .set({ ...values, ...(passwordHash && { passwordHash }) })
+      .set({ ...values, roleId: entity.roleId, ...(passwordHash && { passwordHash }) })
       .where(eq(users.id, id))
       .returning(columns)
     if (!row) throw new DomainNotFoundError('ไม่พบผู้ใช้')
     return new UserEntity(row)
+    } catch (error) {
+      if (isForeignKeyViolation(error)) throw new DomainConflictError('บทบาทหรือสาขาถูกเปลี่ยน กรุณาลองใหม่', 'IN_USE')
+      throw error
+    }
   }
 
   async countActiveOwners() {

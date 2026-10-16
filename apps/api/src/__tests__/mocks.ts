@@ -1,4 +1,14 @@
+import type { IAuditLog } from '../modules/audit/applications/ports/audit-log.port'
 import { mock, type Mock } from 'bun:test'
+import type { IRoleRepository } from '../modules/roles/applications/ports/role.repository'
+export const mockRoleRepository = (): Mocked<IRoleRepository> => ({
+  findAll: mock<IRoleRepository['findAll']>(),
+  findById: mock<IRoleRepository['findById']>(),
+  findByIdForUpdate: mock<IRoleRepository['findByIdForUpdate']>(),
+  create: mock<IRoleRepository['create']>(),
+  update: mock<IRoleRepository['update']>(),
+  delete: mock<IRoleRepository['delete']>(),
+})
 import type { ISalesReportRepository } from '../modules/sales/applications/ports/sales-report.repository'
 
 export const mockSalesReportRepository = (): Mocked<ISalesReportRepository> => ({
@@ -36,6 +46,7 @@ import type { ISaleRepository } from '../modules/sales/applications/ports/sale.r
 import type { IMediaStorage } from '../modules/shared/ports/media-storage.port'
 import type { IPasswordHasher } from '../modules/shared/ports/password-hasher.port'
 import type { IUnitOfWork } from '../modules/shared/ports/unit-of-work.port'
+import type { IRoleDirectory } from '../modules/users/applications/ports/role-directory.port'
 import type { IUserRepository } from '../modules/users/applications/ports/user.repository'
 
 /** A port whose every method is a bun mock with that method's signature. */
@@ -50,6 +61,7 @@ export const mockCategoryRepository = (): Mocked<ICategoryRepository> => ({
 })
 
 export const mockUserRepository = (): Mocked<IUserRepository> => ({
+  lockOwnerChangesForUpdate: mock(async () => {}),
   findAll: mock<IUserRepository['findAll']>(),
   findById: mock<IUserRepository['findById']>(),
   findByIdForUpdate: mock<IUserRepository['findByIdForUpdate']>(),
@@ -313,3 +325,11 @@ export const mockOrderQuoteSource = (): Mocked<IOrderQuoteSource> => ({
   read: mock<IOrderQuoteSource['read']>(),
   lockOpenOrder: mock<IOrderQuoteSource['lockOpenOrder']>(),
 })
+
+export const mockRoleDirectory = (): Mocked<IRoleDirectory> => {
+ const findById = mock<IRoleDirectory['findById']>(async () => null)
+ return { findById, findByIdForUpdate: mock((id: number) => findById(id)),
+  findBySystemKey: mock(async (key: 'owner' | 'cashier') => ({ id: key === 'owner' ? 1 : 2, name: key, systemKey: key })) }
+}
+
+export const mockAuditLog = (): Mocked<IAuditLog> => ({ record: mock(async () => {}), list: mock<IAuditLog['list']>() })

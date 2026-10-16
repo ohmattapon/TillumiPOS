@@ -1,5 +1,5 @@
 import { inject, injectable } from 'tsyringe'
-import { DomainForbiddenError } from '../../../../domains/errors/domain-forbidden.error'
+import { requirePermission, type Actor } from '../../../../domains/authorization'
 import { PromotionEntity } from '../../../../domains/promotion.domain'
 import type { IClock } from '../../../shared/ports/clock.port'
 import { TOKENS } from '../../../tokens'
@@ -14,9 +14,9 @@ export class CreatePromotionUseCase {
     @inject(TOKENS.Clock) private readonly clock: IClock,
   ) {}
 
-  async execute(input: unknown, actor: { role: string }) {
+  async execute(input: unknown, actor: Actor) {
     const dto = createPromotionSchema.parse(input)
-    if (actor.role !== 'owner') throw new DomainForbiddenError('เฉพาะเจ้าของร้านจัดการโปรโมชันได้', 'FORBIDDEN')
+    requirePermission(actor, 'promotions.write', 'เฉพาะเจ้าของร้านจัดการโปรโมชันได้')
     const now = this.clock.now()
     return this.promotions.create(
       new PromotionEntity({

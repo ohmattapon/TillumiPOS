@@ -37,9 +37,9 @@ export class InventoryElysiaController {
       .post(
         '/receive',
         async ({ body, user, branch }) =>
-          toResponse(await this.receiveStock.execute(body, user.id, (await branch()).id)),
+          toResponse(await this.receiveStock.execute(body, user, (await branch()).id)),
         {
-          auth: ['owner'],
+          auth: { can: 'inventory.receive' },
           body: inventorySchemas.receive,
           response: inventorySchemas.movement,
           detail: { summary: 'รับสินค้าเข้าสต็อก' },
@@ -48,9 +48,9 @@ export class InventoryElysiaController {
       .post(
         '/adjust',
         async ({ body, user, branch }) =>
-          toResponse(await this.adjustStock.execute(body, user.id, (await branch()).id)),
+          toResponse(await this.adjustStock.execute(body, user, (await branch()).id)),
         {
-          auth: ['owner'],
+          auth: { can: 'inventory.adjust' },
           body: inventorySchemas.adjust,
           response: inventorySchemas.movement,
           detail: { summary: 'ปรับยอดสต็อกให้ตรงกับที่นับได้จริง' },

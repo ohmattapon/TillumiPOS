@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { meQuery } from '@/features/auth'
+import { meQuery, useAuthorization } from '@/features/auth'
 import { useActiveBranch } from '@/features/branches'
 import { useFormat } from '@/features/settings'
 import { ApiError } from '@/lib/api'
@@ -21,6 +21,7 @@ import { ShiftEntriesPanel } from './ShiftEntriesPanel'
 import { checkoutModeQuery, currentShiftQuery, registersQuery, useCancelClosing, useCloseShift, useCreateRegister, useOpenShift, useRecordCashMovement, useStartClosing, useUpdateRegister } from '../api'
 
 export function ShiftsPage() {
+  const { can } = useAuthorization()
   const { t } = useTranslation('shifts')
   const { money, date } = useFormat()
   const me = useQuery(meQuery).data
@@ -141,7 +142,7 @@ export function ShiftsPage() {
                   <Button type="submit" variant="outline" className="h-10 md:col-span-3" disabled={movement.isPending || !movementReason.trim() || money.parse(movementAmount) === null}>{t('saveMovement')}</Button>
                 </form>
               )}
-              {activeShift.data?.status === 'closing' && (
+              {activeShift.data?.status === 'closing' && (activeShift.data.closingStartedById === me?.id || can('shifts.override')) && (
                 <div className="space-y-3 rounded-lg bg-muted/60 p-4">
                   <ShiftSummaryView shiftId={activeShift.data.id} currency={activeShift.data.currency} />
                   <p className="text-sm">{t('expected')}: <strong className="tabular-nums">{money.format(activeShift.data.closingExpectedCashSatang ?? 0)}</strong></p>
@@ -208,9 +209,9 @@ export function ShiftsPage() {
           {current.data && <ShiftEntriesPanel shiftId={current.data.id} />}
         </section>
 
-        {mode.data?.checkoutMode === 'shifts' && <QrRecoveryPanel isOwner={me?.role === 'owner'} />}
+        {mode.data?.checkoutMode === 'shifts' && <QrRecoveryPanel isOwner={can('qr.dismiss')} />}
 
-        {me?.role === 'owner' && (
+        {can('registers.manage') && (
           <section className="mx-auto w-full max-w-3xl space-y-4 rounded-xl border bg-card p-5">
             <h2 className="font-semibold">{t('manageRegisters')}</h2>
             <form className="grid gap-3 md:grid-cols-[1fr_1fr_auto]" onSubmit={(event) => { event.preventDefault(); createRegister.mutate({ code: newRegisterCode.trim().toUpperCase(), name: newRegisterName.trim() }, { onSuccess: () => { setNewRegisterCode(''); setNewRegisterName('') } }) }}>

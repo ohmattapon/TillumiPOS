@@ -1,4 +1,5 @@
 import type { Branch, User } from '@pos/api/types'
+import { canDo, isPermission } from '@pos/api/permissions'
 
 export interface BranchChoice {
   /** The branch requests are made for; undefined while the list has not arrived. */
@@ -13,13 +14,13 @@ export interface BranchChoice {
  * branch the user belongs to.
  */
 export function pickBranch(
-  user: Pick<User, 'role' | 'branchId'>,
+  user: Pick<User, 'role' | 'branchId'> & { permissions?: readonly string[] },
   branches: readonly Branch[],
   chosen: number | null,
 ): BranchChoice {
   const own = branches.find((branch) => branch.id === user.branchId)
   if (chosen === null) return { branch: own, chosenIsUsable: true }
 
-  const usable = user.role === 'owner' ? branches.find((branch) => branch.id === chosen && branch.isActive) : undefined
+  const usable = canDo({ role: user.role, permissions: user.permissions?.filter(isPermission) }, 'branches.switch') ? branches.find((branch) => branch.id === chosen && branch.isActive) : undefined
   return { branch: usable ?? own, chosenIsUsable: usable !== undefined }
 }

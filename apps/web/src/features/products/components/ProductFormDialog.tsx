@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { ProductImage } from './ProductImage'
 import { modifierGroupsQuery } from '@/features/modifiers'
+import { useCan } from '@/features/auth'
 import { useFormat, useSettings } from '@/features/settings'
 import { imageStorageQuery, useSaveProduct } from '../api'
 
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export function ProductFormDialog({ product, categories, onClose }: Props) {
+  const canEditModifiers = useCan('modifiers.write')
   const { t } = useTranslation('products')
   const { t: tc } = useTranslation()
   const { money, currency } = useFormat()
@@ -79,7 +81,7 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
         id: product?.id,
         image,
         // Only sent once the list has loaded, so a slow request never clears what a product offers.
-        modifierGroupIds: groups.length > 0 ? chosenGroupIds : undefined,
+        modifierGroupIds: canEditModifiers && groups.length > 0 ? chosenGroupIds : undefined,
         input: {
           sku: form.sku.trim(),
           name: form.name.trim(),

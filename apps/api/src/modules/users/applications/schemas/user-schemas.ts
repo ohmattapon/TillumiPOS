@@ -14,15 +14,17 @@ export const createUserSchema = z.object({
     .regex(/^[a-zA-Z0-9_.-]+$/),
   password,
   displayName,
-  role,
+  role: role.optional(),
+  roleId: z.number().int().positive().optional(),
   branchId: z.number().int().positive().optional(),
-})
+}).refine((value) => value.roleId !== undefined || value.role !== undefined, 'ต้องระบุบทบาท')
 
 export const updateUserSchema = z
   .object({
     password,
     displayName,
     role,
+    roleId: z.number().int().positive(),
     branchId: z.number().int().positive(),
     isActive: z.boolean(),
   })

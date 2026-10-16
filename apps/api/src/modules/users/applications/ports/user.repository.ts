@@ -6,6 +6,8 @@ export interface IUserCredentials {
 }
 
 export interface IUserRepository {
+  /** Serializes owner demotion/deactivation before locking any individual user. */
+  lockOwnerChangesForUpdate(): Promise<void>
   /** Every user, ordered by id. */
   findAll(): Promise<UserEntity[]>
   findById(id: number): Promise<UserEntity | null>

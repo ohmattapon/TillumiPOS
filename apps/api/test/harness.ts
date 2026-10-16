@@ -94,9 +94,22 @@ export async function signIn(
 ): Promise<Session> {
   const created = await container
     .resolve(CreateUserUseCase)
-    .execute({ username, password: PASSWORD, displayName: username, role, branchId }, branchId)
+    .execute({ username, password: PASSWORD, displayName: username, role, branchId }, branchId, { id: null, displayName: 'Test fixture' })
   const cookie = await loginCookie(username, PASSWORD)
-  return { api: client(cookie, workingBranchId), apiV2: clientV2(cookie, workingBranchId), user: created.toSnapshot() }
+  return { api: client(cookie, workingBranchId), apiV2: clientV2(cookie, workingBranchId), user: { ...created.toSnapshot(), roleId: created.roleId! } }
+}
+
+/** Creates and signs in a user of a custom role, using the public command. */
+export async function signInWithRole(
+  username: string,
+  roleId: number,
+  { branchId = MAIN_BRANCH_ID, workingBranchId }: { branchId?: number; workingBranchId?: number } = {},
+): Promise<Session> {
+  const created = await container.resolve(CreateUserUseCase)
+    .execute({ username, password: PASSWORD, displayName: username, roleId, branchId }, branchId, { id: null, displayName: 'Test fixture' })
+  const cookie = await loginCookie(username, PASSWORD)
+  return { api: client(cookie, workingBranchId), apiV2: clientV2(cookie, workingBranchId),
+    user: { ...created.toSnapshot(), roleId: created.roleId! } }
 }
 
 /** Creates another branch, e.g. to check that stock and receipts stay apart. */
@@ -118,9 +131,9 @@ export async function seedProduct(
     priceSatang: 1000,
     costSatang: 600,
     ...input,
-  }, branchId)
+  }, branchId, by.user)
   if (stock > 0)
-    await container.resolve(ReceiveStockUseCase).execute({ productId: product.id, quantity: stock }, by.user.id, branchId)
+    await container.resolve(ReceiveStockUseCase).execute({ productId: product.id, quantity: stock }, by.user, branchId)
   return toProductResponse(
     await container.resolve(GetProductUseCase).execute(product.id, branchId),
     container.resolve<IMediaStorage>(TOKENS.MediaStorage),
@@ -158,6 +171,7 @@ export async function resetDatabase(connection = sqlClient): Promise<void> {
     // The schema ships with one branch; truncating removed it, so put it back for the next test.
     await transaction.unsafe(`insert into branches (code, name) values ('MAIN', 'สาขาหลัก')`)
     await transaction.unsafe(`insert into registers (branch_id, code, name) values (1, 'MAIN', 'เคาน์เตอร์หลัก')`)
+    await transaction.unsafe(`insert into roles (name, system_key) values ('เจ้าของร้าน', 'owner'), ('แคชเชียร์', 'cashier')`)
   })
   // Truncating with SQL bypasses the repositories, so an enabled Redis cache would keep serving the rows just
   // removed. Rotate every cached group the same way a committed write does.

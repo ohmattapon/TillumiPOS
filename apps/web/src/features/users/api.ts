@@ -1,6 +1,8 @@
 import type { User } from '@pos/api/types'
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, unwrap } from '@/lib/api'
+import { authKeys } from '@/features/auth'
+import { roleKeys } from '@/features/roles'
 
 export const userKeys = {
   all: ['users'] as const,
@@ -16,13 +18,14 @@ export interface NewUserInput {
   username: string
   password: string
   displayName: string
-  role: User['role']
+  roleId: number
   branchId: number
 }
 
 export interface UserChanges {
   displayName?: string
   role?: User['role']
+  roleId?: number
   branchId?: number
   isActive?: boolean
   /** Sets a new password. Leave out to keep the current one. */
@@ -34,7 +37,7 @@ export function useCreateUser() {
 
   return useMutation({
     mutationFn: (input: NewUserInput) => unwrap(api.users.post(input)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: userKeys.all }),
+    onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: userKeys.all }), queryClient.invalidateQueries({ queryKey: roleKeys.all })]) },
   })
 }
 
@@ -43,7 +46,7 @@ export function useUpdateUser() {
 
   return useMutation({
     mutationFn: ({ id, changes }: { id: number; changes: UserChanges }) => unwrap(api.users({ id }).patch(changes)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: userKeys.all }),
+    onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: userKeys.all }), queryClient.invalidateQueries({ queryKey: roleKeys.all }), queryClient.invalidateQueries({ queryKey: authKeys.me })]) },
   })
 }
 

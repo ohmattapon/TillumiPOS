@@ -1,6 +1,8 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import { authLocales } from '@/features/auth'
+import { rolesLocales } from '@/features/roles'
+import { auditLocales } from '@/features/audit'
 import { branchesLocales } from '@/features/branches'
 import { categoriesLocales } from '@/features/categories'
 import { kitchenLocales } from '@/features/kitchen'
@@ -31,6 +33,8 @@ export const resources = {
     common: common.th,
     app: appLocales.th,
     auth: authLocales.th,
+    roles: rolesLocales.th,
+    audit: auditLocales.th,
     branches: branchesLocales.th,
     categories: categoriesLocales.th,
     customerDisplay: customerDisplayLocales.th,
@@ -52,6 +56,8 @@ export const resources = {
     common: common.en,
     app: appLocales.en,
     auth: authLocales.en,
+    roles: rolesLocales.en,
+    audit: auditLocales.en,
     branches: branchesLocales.en,
     categories: categoriesLocales.en,
     customerDisplay: customerDisplayLocales.en,
