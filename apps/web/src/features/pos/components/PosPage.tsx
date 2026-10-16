@@ -1,6 +1,6 @@
 import type { Sale } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, LayoutGrid, Monitor, MoreHorizontal } from 'lucide-react'
+import { ClipboardList, LayoutGrid, Monitor, MonitorSmartphone, MoreHorizontal } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/PageHeader'
@@ -13,7 +13,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { openOrdersQuery, usePayOrder } from '@/features/orders'
 import { useFormat, useSettings } from '@/features/settings'
-import { isCustomerDisplaySupported, openCustomerDisplay, PAID_SHOWN_MS, useCustomerDisplayPublisher } from '@/features/customer-display'
+import {
+  isCustomerDisplaySupported,
+  openCustomerDisplay,
+  PAID_SHOWN_MS,
+  PairDisplayDialog,
+  useCustomerDisplayPublisher,
+} from '@/features/customer-display'
 import { checkoutModeQuery, currentShiftQuery, registersQuery, useRegisterSelectionStore } from '@/features/shifts'
 import { meQuery } from '@/features/auth'
 import { useActiveBranch } from '@/features/branches'
@@ -73,12 +79,16 @@ export function PosPage() {
     return () => window.clearTimeout(timer)
   }, [paidSale])
 
-  useCustomerDisplayPublisher({
-    locale: settings.locale,
-    currency: settings.currency,
-    shopName: settings.shopName,
-    state: toDisplayState({ cart, vatMode: settings.vatMode, isPaying, qr: shownQr, paidSale }),
-  })
+  const [isPairingDisplay, setIsPairingDisplay] = useState(false)
+  useCustomerDisplayPublisher(
+    {
+      locale: settings.locale,
+      currency: settings.currency,
+      shopName: settings.shopName,
+      state: toDisplayState({ cart, vatMode: settings.vatMode, isPaying, qr: shownQr, paidSale }),
+    },
+    { registerId: selectedRegisterId },
+  )
   const [today] = useState(() => new Date())
   const searchRef = useRef<HTMLInputElement>(null)
   const paymentCommandKey = useRef<string | null>(null)
@@ -205,6 +215,10 @@ export function PosPage() {
               {t('customerDisplay')}
             </Button>
           )}
+          <Button variant="outline" className="h-11 px-3" onClick={() => setIsPairingDisplay(true)}>
+            <MonitorSmartphone />
+            {t('pairDisplay')}
+          </Button>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -233,6 +247,10 @@ export function PosPage() {
                 {t('customerDisplay')}
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem onSelect={() => setIsPairingDisplay(true)}>
+              <MonitorSmartphone />
+              {t('pairDisplay')}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </PageHeader>
@@ -277,6 +295,7 @@ export function PosPage() {
 
       {receipt && <ReceiptDialog sale={receipt} onClose={closeReceipt} />}
       {isListingOrders && <OpenOrdersDialog onClose={() => setIsListingOrders(false)} />}
+      <PairDisplayDialog open={isPairingDisplay} onOpenChange={setIsPairingDisplay} registerId={selectedRegisterId} />
       {isChoosingTable && <FloorDialog onClose={() => setIsChoosingTable(false)} />}
       {isSavingOrder && <SaveOrderDialog onClose={() => setIsSavingOrder(false)} />}
     </>
