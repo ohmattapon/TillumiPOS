@@ -393,6 +393,15 @@ Pragmatic choices that are allowed, and places where the code does not yet follo
 - Imports: relative inside a module or feature, aliases (`@/`) across features on the web, never a deep import into another feature or module.
 - Keep line endings as the repo expects (LF for scripts and Docker files) and keep diffs free of whitespace-only changes.
 
+### Version control
+
+- **Every commit goes through `gitcz`**, in non-interactive mode, exactly as in the section "Committing": `gitcz --non-interactive --type=<type> --scope=<scope> --subject="<imperative, English, no period>" --body="<why>"`. Never run `git commit` directly, never `--amend`, and never use the `build` type (use `chore`).
+- **One concern per commit.** Stage the files of that concern by name and check the staged list before committing. A refactor, a behavior change and a formatting change are three commits, not one.
+- **The subject says what changed, the body says why.** Write the body whenever the reason is not obvious from the diff: the bug it fixes, the rule it enforces, the trade-off it makes.
+- **Each commit leaves the branch working.** Typecheck and the relevant tests pass at every commit, so any commit can be checked out, reverted or bisected on its own.
+- **Commit tests with the code they cover**, in the same commit, and never commit a test you have not seen fail and then pass.
+- **Never rewrite published history.** No `--amend`, no rebase of a pushed branch, no force push. Fix a mistake with a new commit.
+
 ## Project structure
 
 - `apps/api`: Bun + Elysia + Drizzle + tsyringe, per the architecture section above
