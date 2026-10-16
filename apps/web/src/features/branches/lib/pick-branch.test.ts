@@ -17,6 +17,11 @@ const cashier = { role: 'cashier' as const, branchId: 2 }
 const all = [branch(1), branch(2), branch(3)]
 
 describe('pickBranch', () => {
+  test('a custom role may switch only while branches.switch remains granted', () => {
+    const manager = { ...cashier, permissions: ['branches.switch'] as const }
+    expect(pickBranch(manager, all, 3)).toEqual({ branch: all[2], chosenIsUsable: true })
+    expect(pickBranch({ ...manager, permissions: [] }, all, 3)).toEqual({ branch: all[1], chosenIsUsable: false })
+  })
   test('without a choice, the user works in their own branch', () => {
     expect(pickBranch(owner, all, null)).toEqual({ branch: all[0], chosenIsUsable: true })
     expect(pickBranch(cashier, all, null).branch).toBe(all[1])

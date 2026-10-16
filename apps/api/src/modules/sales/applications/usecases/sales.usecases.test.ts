@@ -1,3 +1,4 @@
+import { mockAuditLog as auditMock, mockUnitOfWork as auditUnitOfWork } from '../../../../__tests__/mocks'
 import { mockMemberRepository, mockQuoteClaims } from '../../../../__tests__/mocks'
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
@@ -360,11 +361,11 @@ describe('VoidSaleUseCase', () => {
 
   beforeEach(() => {
     sales.findByIdForUpdate.mockResolvedValue(twoLines())
-    useCase = new VoidSaleUseCase(sales, ledger, unitOfWork, clock)
+    useCase = new VoidSaleUseCase(sales, ledger, unitOfWork, clock, auditMock())
   })
 
   test('voids the sale with the reason, user and current time, inside one unit of work', async () => {
-    const voided = await useCase.execute(15, { reason: 'คิดเงินผิด' }, { id: 9 }, 1)
+    const voided = await useCase.execute(15, { reason: 'คิดเงินผิด' }, { ...{ id: 9, role: 'owner' }, displayName: 'ผู้ทดสอบ' }, 1)
 
     expect(voided.toSnapshot()).toMatchObject({ status: 'voided', voidReason: 'คิดเงินผิด', voidedById: 9, voidedAt: now })
     expect(sales.findByIdForUpdate).toHaveBeenCalledWith(15)
@@ -373,7 +374,7 @@ describe('VoidSaleUseCase', () => {
   })
 
   test('returns every line to stock in product-id order, referencing the receipt and the reason', async () => {
-    await useCase.execute(15, { reason: 'คิดเงินผิด' }, { id: 9 }, 1)
+    await useCase.execute(15, { reason: 'คิดเงินผิด' }, { ...{ id: 9, role: 'owner' }, displayName: 'ผู้ทดสอบ' }, 1)
 
     expect(ledger.record.mock.calls.map(([movement]) => movement)).toEqual([
       { branchId: 1, productId: 2, type: 'void', quantity: 2, reference: 'MAIN-20261013-00001', note: 'คิดเงินผิด', userId: 9 },
@@ -384,7 +385,7 @@ describe('VoidSaleUseCase', () => {
   test("another branch's sale cannot be voided, and nothing is returned to stock", async () => {
     sales.findByIdForUpdate.mockResolvedValue(makeSale({ id: 15, branchId: 2 }))
 
-    await expect(useCase.execute(15, { reason: 'คิดเงินผิด' }, { id: 9 }, 1)).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    await expect(useCase.execute(15, { reason: 'คิดเงินผิด' }, { ...{ id: 9, role: 'owner' }, displayName: 'ผู้ทดสอบ' }, 1)).rejects.toMatchObject({ code: 'NOT_FOUND' })
     expect(sales.saveVoid).not.toHaveBeenCalled()
     expect(ledger.record).not.toHaveBeenCalled()
   })
@@ -392,13 +393,13 @@ describe('VoidSaleUseCase', () => {
   test("stock goes back to the sale's own branch", async () => {
     sales.findByIdForUpdate.mockResolvedValue(makeSale({ id: 15, branchId: 2 }))
 
-    await useCase.execute(15, { reason: 'คิดเงินผิด' }, { id: 9 }, 2)
+    await useCase.execute(15, { reason: 'คิดเงินผิด' }, { ...{ id: 9, role: 'owner' }, displayName: 'ผู้ทดสอบ' }, 2)
 
     expect(ledger.record.mock.calls.every(([movement]) => movement.branchId === 2)).toBe(true)
   })
 
   test('the returned sale keeps its lines in receipt order', async () => {
-    const voided = await useCase.execute(15, { reason: 'คิดเงินผิด' }, { id: 9 }, 1)
+    const voided = await useCase.execute(15, { reason: 'คิดเงินผิด' }, { ...{ id: 9, role: 'owner' }, displayName: 'ผู้ทดสอบ' }, 1)
 
     expect(voided.items.map((item) => item.productId)).toEqual([5, 2])
   })
@@ -406,7 +407,7 @@ describe('VoidSaleUseCase', () => {
   test('an unknown sale is not found', async () => {
     sales.findByIdForUpdate.mockResolvedValue(null)
 
-    const attempt = useCase.execute(9999, { reason: 'ไม่มี' }, { id: 9 }, 1)
+    const attempt = useCase.execute(9999, { reason: 'ไม่มี' }, { ...{ id: 9, role: 'owner' }, displayName: 'ผู้ทดสอบ' }, 1)
 
     await expect(attempt).rejects.toBeInstanceOf(DomainNotFoundError)
     await expect(attempt).rejects.toMatchObject({ code: 'NOT_FOUND', message: 'ไม่พบบิลขาย' })
@@ -415,13 +416,13 @@ describe('VoidSaleUseCase', () => {
   test('an already voided sale is refused, and no stock is returned a second time', async () => {
     sales.findByIdForUpdate.mockResolvedValue(twoLines().void('ครั้งแรก', 9, now))
 
-    await expect(useCase.execute(15, { reason: 'อีกครั้ง' }, { id: 9 }, 1)).rejects.toMatchObject({ code: 'ALREADY_VOIDED' })
+    await expect(useCase.execute(15, { reason: 'อีกครั้ง' }, { ...{ id: 9, role: 'owner' }, displayName: 'ผู้ทดสอบ' }, 1)).rejects.toMatchObject({ code: 'ALREADY_VOIDED' })
     expect(sales.saveVoid).not.toHaveBeenCalled()
     expect(ledger.record).not.toHaveBeenCalled()
   })
 
   test.each([[{ reason: '' }], [{ reason: 'x'.repeat(501) }], [{}]])('rejects the input %p', async (input) => {
-    await expect(useCase.execute(15, input, { id: 9 }, 1)).rejects.toBeInstanceOf(ZodError)
+    await expect(useCase.execute(15, input, { ...{ id: 9, role: 'owner' }, displayName: 'ผู้ทดสอบ' }, 1)).rejects.toBeInstanceOf(ZodError)
     expect(unitOfWork.run).not.toHaveBeenCalled()
   })
 })
@@ -606,4 +607,13 @@ describe('SaleCheckout with options', () => {
       [0, 1],
     ])
   })
+})
+
+
+test('void requires sales.void before accessing persistence', async () => {
+  const sales = mockSaleRepository()
+  const usecase = new VoidSaleUseCase(sales, mockStockLedger(), mockUnitOfWork(), { now: () => new Date() }, auditMock())
+  await expect(usecase.execute(1, { reason: 'incorrect' }, { ...{ id: 9, role: 'cashier' }, displayName: 'ผู้ทดสอบ' }, 1))
+    .rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'sales.void' } })
+  expect(sales.findByIdForUpdate).not.toHaveBeenCalled()
 })

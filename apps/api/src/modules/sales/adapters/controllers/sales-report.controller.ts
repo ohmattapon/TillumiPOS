@@ -18,15 +18,15 @@ export class SalesReportElysiaController {
     return new Elysia({ name: 'sales-reports', prefix: '/sales/reports', detail: { tags: ['Sales'] } })
       .use(auth)
       .get('/', async ({ query, user, branch }) => this.overview.execute(query, user, (await branch()).id), {
-        auth: ['owner'], query: reportSchemas.query, response: reportSchemas.overview,
+        auth: { can: 'reports.read' }, query: reportSchemas.query, response: reportSchemas.overview,
         detail: { summary: 'ยอดขายย้อนหลังตามวันและเขตเวลาของร้าน (สูงสุด 366 วัน)' },
       })
       .get('/products', async ({ query, user, branch }) => this.products.execute(query, user, (await branch()).id), {
-        auth: ['owner'], query: reportSchemas.pageQuery, response: page(reportSchemas.product),
+        auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: page(reportSchemas.product),
         detail: { summary: 'สินค้าขายดี เรียงตามจำนวน ใช้ข้อมูล ณ ตอนขาย' },
       })
       .get('/branches', async ({ query, user, branch }) => this.branches.execute(query, user, (await branch()).id), {
-        auth: ['owner'], query: reportSchemas.pageQuery, response: page(reportSchemas.branch),
+        auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: page(reportSchemas.branch),
         detail: { summary: 'เปรียบเทียบยอดขายแยกสาขา' },
       })
   }

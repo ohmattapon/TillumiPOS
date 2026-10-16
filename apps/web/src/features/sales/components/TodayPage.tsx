@@ -16,6 +16,7 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
 import { useFormat } from '@/features/settings'
+import { useCan } from '@/features/auth'
 import { salesTodayQuery, summaryTodayQuery } from '../api'
 
 type StatusFilter = 'all' | 'completed' | 'voided'
@@ -49,6 +50,7 @@ function RetryNotice({ error, stale, pending, onRetry }: { error: Error; stale: 
 }
 
 export function TodayPage({ isOwner }: { isOwner: boolean }) {
+  const canVoid = useCan('sales.void')
   const { t } = useTranslation('sales')
   const { t: tc } = useTranslation()
   const { money, date } = useFormat()
@@ -259,7 +261,7 @@ export function TodayPage({ isOwner }: { isOwner: boolean }) {
       </div>
 
       {selectedId !== null && (
-        <SaleDetailDialog saleId={selectedId} canVoid={isOwner} onClose={() => setSelectedId(null)} />
+        <SaleDetailDialog saleId={selectedId} canVoid={canVoid} onClose={() => setSelectedId(null)} />
       )}
     </>
   )

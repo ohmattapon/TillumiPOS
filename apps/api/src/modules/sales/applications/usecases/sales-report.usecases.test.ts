@@ -42,7 +42,7 @@ test('all-branch scope is explicit; pagination and closed branch names are prese
 })
 test('every report refuses cashier access before reading any port', async () => {
   for (const usecase of [overview, products, comparison])
-    await expect(usecase.execute(range, { role: 'cashier' }, 1)).rejects.toMatchObject({ code: 'REPORT_FORBIDDEN' })
+    await expect(usecase.execute(range, { role: 'cashier' }, 1)).rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'reports.read' } })
   expect(settings.get).not.toHaveBeenCalled()
 })
 test('rejects invalid dates, reversed ranges, excessive ranges and invalid pagination', async () => {

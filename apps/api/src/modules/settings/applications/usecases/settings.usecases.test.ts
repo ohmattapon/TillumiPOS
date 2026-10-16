@@ -1,3 +1,4 @@
+import { mockAuditLog as auditMock, mockUnitOfWork as auditUnitOfWork } from '../../../../__tests__/mocks'
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
 import { mockShopSettingsRepository, mockShiftSettingsGuard, mockUnitOfWork } from '../../../../__tests__/mocks'
@@ -25,7 +26,7 @@ describe('GetShopSettingsUseCase', () => {
 })
 
 describe('UpdateShopSettingsUseCase', () => {
-  const update = (input: unknown) => new UpdateShopSettingsUseCase(repo, shiftGuard, mockUnitOfWork()).execute(input)
+  const update = (input: unknown) => new UpdateShopSettingsUseCase(repo, shiftGuard, mockUnitOfWork(), auditMock()).execute(input, { id: 1, displayName: 'ผู้ทดสอบ' })
 
   test('changes only the given fields and stores the result', async () => {
     const saved = await update({ vatMode: 'exclusive', vatRateBp: 1000 })

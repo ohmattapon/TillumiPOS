@@ -1,3 +1,6 @@
+import { auditChanges } from '../../../../domains/audit-changes'
+import { buildAuditEntry } from '../../../../domains/audit-entry.vo'
+import { auditLogToken, type IAuditLog } from '../../../audit/applications/ports/audit-log.port'
 import { inject, injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
@@ -6,6 +9,8 @@ import type { IBranchRepository } from '../../../branches/applications/ports/bra
 import type { IPasswordHasher } from '../../../shared/ports/password-hasher.port'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import { TOKENS } from '../../../tokens'
+import { roleDirectoryToken, type IRoleDirectory } from '../ports/role-directory.port'
+import { resolveRole } from '../resolve-role'
 import { userRepositoryToken } from '../ports/user.repository'
 import type { IUserRepository } from '../ports/user.repository'
 import { updateUserSchema } from '../schemas/user-schemas'
@@ -18,13 +23,16 @@ export class UpdateUserUseCase {
     @inject(branchRepositoryToken) private readonly branches: IBranchRepository,
     @inject(TOKENS.PasswordHasher) private readonly hasher: IPasswordHasher,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
-  ) {}
+    @inject(roleDirectoryToken) private readonly roles: IRoleDirectory,
+    @inject(auditLogToken) private readonly audit: IAuditLog,
+  ) { }
 
-  async execute(id: number, input: unknown) {
+  async execute(id: number, input: unknown, actor: { id: number; displayName: string }) {
     const { password, ...changes } = updateUserSchema.parse(input)
 
     // The owner count and the write must see the same data, or two requests could each remove "the other" owner.
     return this.unitOfWork.run(async () => {
+      await this.users.lockOwnerChangesForUpdate()
       const existing = await this.users.findByIdForUpdate(id)
       if (!existing) throw new DomainNotFoundError('ไม่พบผู้ใช้')
 
@@ -34,10 +42,27 @@ export class UpdateUserUseCase {
         if (!branch.isActive) throw new DomainConflictError('สาขานี้ปิดใช้งานแล้ว', 'BRANCH_INACTIVE')
       }
 
+      if (changes.roleId !== undefined || changes.role !== undefined) {
+        const role = await resolveRole(this.roles, changes)
+        changes.roleId = role.id
+        changes.role = role.systemKey === 'owner' ? 'owner' : 'cashier'
+      }
+
       if (existing.wouldStopBeingActiveOwner(changes) && (await this.users.countActiveOwners()) <= 1)
         throw new DomainConflictError('ต้องมีเจ้าของร้านที่ใช้งานได้อย่างน้อย 1 คน', 'LAST_OWNER')
 
-      return this.users.update(existing.with(changes), password ? await this.hasher.hash(password) : undefined)
+      const result = await this.users.update(existing.with(changes), password ? await this.hasher.hash(password) : undefined)
+      const delta = auditChanges(existing, result, ['displayName', 'roleId', 'branchId', 'isActive'])
+      if (password) delta.after.passwordChanged = true
+      if (delta.changed || password) await this.audit.record({ id: actor.id, name: actor.displayName }, result.branchId, buildAuditEntry({
+        action: 'user.update',
+        entityType: 'user',
+        entityId: String(id),
+        summary: 'แก้ไขผู้ใช้',
+        before: delta.before,
+        after: delta.after,
+      }))
+      return result
     })
   }
 }

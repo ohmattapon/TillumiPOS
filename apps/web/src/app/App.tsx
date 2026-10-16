@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
-import { LoginPage, meQuery, useLogout } from '@/features/auth'
+import { LoginPage, meQuery, useLogout, useAuthorization } from '@/features/auth'
+import { RolesPage } from '@/features/roles'
+import { AuditPage } from '@/features/audit'
 import { BranchesPage, useActiveBranch } from '@/features/branches'
 import { CategoriesPage } from '@/features/categories'
 import { KitchenBoardPage, KitchenStationsPage } from '@/features/kitchen'
@@ -28,7 +30,7 @@ import { applyLocale } from './i18n'
 function Shell({ user }: { user: User }) {
   const logout = useLogout()
   const { locale } = useSettings()
-  const isOwner = user.role === 'owner'
+  const { can } = useAuthorization()
   const clearRegisterSelection = useRegisterSelectionStore((state) => state.clear)
   // Keeps the remembered branch honest (closed or forbidden ones are dropped) even on pages without a switcher.
   useActiveBranch()
@@ -47,21 +49,23 @@ function Shell({ user }: { user: User }) {
       <SidebarInset className="h-svh bg-canvas min-w-0 overflow-hidden pb-16 sm:pb-0">
         <Routes>
           <Route index element={<PosPage />} />
-          <Route path="today" element={<TodayPage isOwner={isOwner} />} />
-          {isOwner && <Route path="reports" element={<ReportsPage />} />}
-          {isOwner && <Route path="products" element={<ProductsPage />} />}
-          {isOwner && <Route path="categories" element={<CategoriesPage />} />}
-          {isOwner && <Route path="modifiers" element={<ModifiersPage />} />}
-          {isOwner && <Route path="tables" element={<TablesPage />} />}
-          {isOwner && <Route path="branches" element={<BranchesPage />} />}
-          {isOwner && <Route path="users" element={<UsersPage />} />}
-          {isOwner && <Route path="settings" element={<SettingsPage />} />}
+          <Route path="today" element={<TodayPage isOwner={can('reports.read')} />} />
+          {can('reports.read') && <Route path="reports" element={<ReportsPage />} />}
+          {(can('products.write') || can('inventory.receive') || can('inventory.adjust')) && <Route path="products" element={<ProductsPage />} />}
+          {can('categories.write') && <Route path="categories" element={<CategoriesPage />} />}
+          {can('modifiers.write') && <Route path="modifiers" element={<ModifiersPage />} />}
+          {can('tables.write') && <Route path="tables" element={<TablesPage />} />}
+          {can('branches.manage') && <Route path="branches" element={<BranchesPage />} />}
+          {can('users.manage') && <Route path="users" element={<UsersPage />} />}
+          {can('settings.write') && <Route path="settings" element={<SettingsPage />} />}
+          {can('roles.manage') && <Route path="roles" element={<RolesPage />} />}
+          {can('audit.read') && <Route path="audit" element={<AuditPage />} />}
           <Route path="members" element={<MembersPage />} />
           <Route path="members/:id" element={<MemberDetailsPage />} />
           <Route path="promotions" element={<PromotionsPage />} />
           <Route path="shifts" element={<ShiftsPage />} />
           <Route path="kitchen" element={<KitchenBoardPage />} />
-          {isOwner && <Route path="kitchen-stations" element={<KitchenStationsPage />} />}
+          {can('kitchen.write') && <Route path="kitchen-stations" element={<KitchenStationsPage />} />}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </SidebarInset>

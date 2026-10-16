@@ -23,14 +23,14 @@ export class QuoteElysiaController {
         '/',
         async ({ body, user, branch }) => toQuoteResponse(await this.createQuote.execute(body, user, await branch())),
         {
-          auth: ['owner', 'cashier'],
+          auth: true,
           body: quoteSchemas.create,
           response: quoteSchemas.quote,
           detail: { summary: 'คิดราคาตะกร้าหรือออเดอร์ เลือกโปรโมชัน และตรึงราคาไว้' },
         },
       )
       .get('/:id', async ({ params, branch }) => toQuoteResponse(await this.getQuote.execute(params.id, (await branch()).id)), {
-        auth: ['owner', 'cashier'],
+        auth: true,
         params: idParams,
         response: quoteSchemas.quote,
         detail: { summary: 'อ่านราคาที่ตรึงไว้ (อ่านอย่างเดียว)' },
@@ -39,7 +39,7 @@ export class QuoteElysiaController {
         '/:id/cancel',
         async ({ params, branch }) => toQuoteResponse(await this.cancelQuote.execute(params.id, (await branch()).id)),
         {
-          auth: ['owner', 'cashier'],
+          auth: true,
           params: idParams,
           response: quoteSchemas.quote,
           detail: { summary: 'เลิกใช้ราคาที่ตรึงไว้ (ใช้ไม่ได้ถ้ามี QR จองอยู่)' },

@@ -1,3 +1,4 @@
+import type { Actor } from '../../../../domains/authorization'
 import { inject, injectable } from 'tsyringe'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import { TOKENS } from '../../../tokens'
@@ -12,9 +13,9 @@ export class VoidSaleV2UseCase {
     @inject(VoidSaleUseCase) private readonly voidSale: VoidSaleUseCase,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
     @inject(TOKENS.Idempotency) private readonly idempotency: CommandIdempotency,
-  ) {}
+  ) { }
 
-  execute(id: number, input: unknown, actor: { id: number }, branchId: number, key: string) {
+  execute(id: number, input: unknown, actor: Actor & { id: number; displayName: string }, branchId: number, key: string) {
     return this.unitOfWork.run(() => this.idempotency.execute(
       { actorId: actor.id, branchId, action: 'sales.void', key },
       { saleId: id, input },

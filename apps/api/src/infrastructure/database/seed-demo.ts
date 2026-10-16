@@ -144,7 +144,7 @@ for (const plan of cashierPlan) {
   const [found] = await db.select().from(users).where(eq(users.username, plan.username))
   const user =
     found ??
-    (await createUser.execute({ username: plan.username, password, displayName: plan.displayName, role: 'cashier' }, plan.branch.id))
+    (await createUser.execute({ username: plan.username, password, displayName: plan.displayName, role: 'cashier' }, plan.branch.id, owner))
   const list = cashiersOf.get(plan.branch.id) ?? []
   list.push({ id: user.id, name: plan.displayName })
   cashiersOf.set(plan.branch.id, list)

@@ -27,7 +27,7 @@ export class AuthElysiaController {
             path: '/',
             maxAge: SESSION_MAX_AGE,
           })
-          return user.toSnapshot()
+          return { ...user.toSnapshot(), roleId: user.roleId! }
         },
         { body: authSchemas.login, response: userSchemas.user, detail: { summary: 'เข้าสู่ระบบ' } },
       )
@@ -41,7 +41,7 @@ export class AuthElysiaController {
       )
       .get('/me', ({ user }) => user, {
         auth: true,
-        response: userSchemas.user,
+        response: authSchemas.me,
         detail: { summary: 'ข้อมูลผู้ใช้ที่เข้าสู่ระบบอยู่' },
       })
   }

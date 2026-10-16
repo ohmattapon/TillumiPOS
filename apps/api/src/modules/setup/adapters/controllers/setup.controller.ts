@@ -36,7 +36,7 @@ export class SetupElysiaController {
             path: '/',
             maxAge: SESSION_MAX_AGE,
           })
-          return owner.toSnapshot()
+          return { ...owner.toSnapshot(), roleId: owner.roleId! }
         },
         {
           body: setupSchemas.complete,

@@ -6,6 +6,15 @@ const valid = { id: 1, username: 'somchai', displayName: 'สมชาย', role
 const owner = new UserEntity({ ...valid, role: 'owner' })
 
 describe('UserEntity', () => {
+  test('carries a role id without changing the legacy snapshot and supports clearing it', () => {
+    expect(new UserEntity(valid).roleId).toBeNull()
+    const user = new UserEntity({ ...valid, roleId: 4 })
+    expect(user.roleId).toBe(4)
+    expect(user.with({ displayName: 'ใหม่' }).roleId).toBe(4)
+    expect(user.with({ roleId: 9 }).roleId).toBe(9)
+    expect(user.with({ roleId: null }).roleId).toBeNull()
+    expect(user.toSnapshot()).toEqual(valid)
+  })
   test('holds its properties', () => {
     expect(new UserEntity(valid).toSnapshot()).toEqual(valid)
   })

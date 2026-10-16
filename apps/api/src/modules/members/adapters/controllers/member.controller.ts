@@ -24,18 +24,18 @@ export class MemberElysiaController {
       .get('/', async ({ query }) => {
         const result = await this.listMembers.execute(query)
         return { items: result.items.map((member) => member.toSnapshot()), total: result.total }
-      }, { auth: ['owner', 'cashier'], query: memberSchemas.listQuery, response: page(memberSchemas.member), detail: { summary: 'ค้นหาสมาชิก' } })
+      }, { auth: true, query: memberSchemas.listQuery, response: page(memberSchemas.member), detail: { summary: 'ค้นหาสมาชิก' } })
       .post('/', async ({ body, user }) => (await this.createMember.execute(body, user)).toSnapshot(), {
-        auth: ['owner', 'cashier'], body: memberSchemas.create, response: memberSchemas.member, detail: { summary: 'สมัครสมาชิก' },
+        auth: true, body: memberSchemas.create, response: memberSchemas.member, detail: { summary: 'สมัครสมาชิก' },
       })
       .get('/:id', async ({ params }) => (await this.getMember.execute(params)).toSnapshot(), {
-        auth: ['owner', 'cashier'], params: idParams, response: memberSchemas.member, detail: { summary: 'ข้อมูลสมาชิก' },
+        auth: true, params: idParams, response: memberSchemas.member, detail: { summary: 'ข้อมูลสมาชิก' },
       })
       .patch('/:id', async ({ params, body, user }) => (await this.updateMember.execute(params.id, body, user)).toSnapshot(), {
-        auth: ['owner'], params: idParams, body: memberSchemas.update, response: memberSchemas.member, detail: { summary: 'แก้ไขสมาชิกและสถานะ' },
+        auth: { can: 'members.write' }, params: idParams, body: memberSchemas.update, response: memberSchemas.member, detail: { summary: 'แก้ไขสมาชิกและสถานะ' },
       })
       .get('/:id/sales', async ({ params, query, branch }) => this.getHistory.execute(params.id, query, (await branch()).id), {
-        auth: ['owner', 'cashier'], params: idParams, query: memberSchemas.historyQuery, response: memberSchemas.history, detail: { summary: 'ประวัติซื้อของสมาชิกในสาขาที่เลือก' },
+        auth: true, params: idParams, query: memberSchemas.historyQuery, response: memberSchemas.history, detail: { summary: 'ประวัติซื้อของสมาชิกในสาขาที่เลือก' },
       })
   }
 }

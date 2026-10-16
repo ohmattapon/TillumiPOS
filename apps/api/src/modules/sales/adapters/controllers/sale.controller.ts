@@ -30,7 +30,7 @@ export class SaleElysiaController {
         detail: { summary: 'รายการบิลขาย ล่าสุดก่อน' },
       })
       .get('/summary', async ({ query, branch }) => this.getSalesSummary.execute(query, (await branch()).id), {
-        auth: ['owner'],
+        auth: { can: 'reports.read' },
         query: saleSchemas.summaryQuery,
         response: saleSchemas.summary,
         detail: { summary: 'สรุปยอดขายในช่วงเวลา [from, to)' },
@@ -52,7 +52,7 @@ export class SaleElysiaController {
         async ({ params, body, user, branch }) =>
           toResponse(await this.voidSale.execute(params.id, body, user, (await branch()).id)),
         {
-          auth: ['owner'],
+          auth: { can: 'sales.void' },
           params: idParams,
           body: saleSchemas.void,
           response: saleSchemas.sale,

@@ -21,6 +21,8 @@ import { SettingsElysiaController } from './settings/adapters/controllers/settin
 import { SetupElysiaController } from './setup/adapters/controllers/setup.controller'
 import { TableElysiaController } from './tables/adapters/controllers/table.controller'
 import { UserElysiaController } from './users/adapters/controllers/user.controller'
+import { RoleElysiaController } from './roles/adapters/controllers/role.controller'
+import { AuditElysiaController } from './audit/adapters/controllers/audit.controller'
 
 const authController = container.resolve(AuthElysiaController)
 const userController = container.resolve(UserElysiaController)
@@ -52,6 +54,8 @@ export const appModule = new Elysia({ name: 'api', prefix: '/api/v1' })
   .use(authController.getRoutes())
   .use(setupController.getRoutes())
   .use(userController.getRoutes())
+  .use(container.resolve(RoleElysiaController).getRoutes())
+  .use(container.resolve(AuditElysiaController).getRoutes())
   .use(branchController.getRoutes())
   .use(catalog)
   .use(container.resolve(MemberElysiaController).getRoutes())

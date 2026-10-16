@@ -5,6 +5,7 @@ import {
   mockBranchRepository,
   mockFirstRunGuard,
   mockPasswordHasher,
+  mockRoleDirectory,
   mockSetupCode,
   mockShopSettingsRepository,
   mockUnitOfWork,
@@ -41,7 +42,9 @@ beforeEach(() => {
   branches.update.mockImplementation(async (branch) => branch)
   settings.getForUpdate.mockResolvedValue(new ShopSettingsEntity(DEFAULT_SHOP_SETTINGS))
   settings.save.mockImplementation(async (value) => value)
-  useCase = new CompleteSetupUseCase(guard, code, users, branches, settings, mockPasswordHasher(), mockUnitOfWork())
+  useCase = new CompleteSetupUseCase(
+    guard, code, users, branches, settings, mockPasswordHasher(), mockUnitOfWork(), mockRoleDirectory(),
+  )
 })
 
 describe('GetSetupStatusUseCase', () => {
@@ -96,4 +99,9 @@ describe('CompleteSetupUseCase', () => {
     await expect(useCase.execute({ ...input, ...overrides })).rejects.toBeInstanceOf(ZodError)
     expect(guard.lockAndCountUsers).not.toHaveBeenCalled()
   })
+})
+
+test('setup assigns the system owner role id before persisting', async () => {
+  await useCase.execute(input)
+  expect(users.create.mock.calls[0]![0].roleId).toBe(1)
 })

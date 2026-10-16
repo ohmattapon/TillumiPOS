@@ -50,7 +50,7 @@ describe('CreatePromotionUseCase', () => {
     const { repo, clock } = setup()
     await expect(
       new CreatePromotionUseCase(repo, clock).execute({ name: 'x', kind: 'fixed', value: 1 }, { role: 'cashier' }),
-    ).rejects.toMatchObject({ code: 'FORBIDDEN' })
+    ).rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'promotions.write' } })
     expect(repo.create).not.toHaveBeenCalled()
   })
 
@@ -79,7 +79,7 @@ describe('UpdatePromotionUseCase', () => {
   test('a cashier cannot edit, and an unknown promotion is not found', async () => {
     const { repo, clock, uow, calls } = setup()
     const useCase = new UpdatePromotionUseCase(repo, uow, clock)
-    await expect(useCase.execute(1, { isActive: false }, { role: 'cashier' })).rejects.toMatchObject({ code: 'FORBIDDEN' })
+    await expect(useCase.execute(1, { isActive: false }, { role: 'cashier' })).rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'promotions.write' } })
     expect(calls).toEqual([])
     await expect(useCase.execute(9, { isActive: false }, { role: 'owner' })).rejects.toMatchObject({ code: 'PROMOTION_NOT_FOUND' })
     expect(repo.update).not.toHaveBeenCalled()

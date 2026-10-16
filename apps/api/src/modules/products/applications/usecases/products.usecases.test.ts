@@ -1,3 +1,4 @@
+import { mockAuditLog as auditMock, mockUnitOfWork as auditUnitOfWork } from '../../../../__tests__/mocks'
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
 import { makeProduct } from '../../../../__tests__/factories'
@@ -74,11 +75,11 @@ describe('CreateProductUseCase', () => {
 
   beforeEach(() => {
     repo.create.mockImplementation(async (entity) => makeProduct({ ...entity.toSnapshot(), id: 9 }))
-    useCase = new CreateProductUseCase(repo)
+    useCase = new CreateProductUseCase(repo, auditUnitOfWork(), auditMock())
   })
 
   test('fills the defaults: no barcode or category, zero cost, tracked, empty, active, no image', async () => {
-    const created = await useCase.execute({ sku: 'NEW-1', name: 'ใหม่', priceSatang: 100 }, 1)
+    const created = await useCase.execute({ sku: 'NEW-1', name: 'ใหม่', priceSatang: 100 }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
 
     expect(created.toSnapshot()).toEqual({
       id: 9,
@@ -104,13 +105,13 @@ describe('CreateProductUseCase', () => {
       categoryId: 3,
       costSatang: 60,
       trackStock: false,
-    }, 1)
+    }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
 
     expect(created.toSnapshot()).toMatchObject({ barcode: '885', categoryId: 3, costSatang: 60, trackStock: false })
   })
 
   test('opening stock, image and active flag cannot be set by the caller', async () => {
-    await useCase.execute({ sku: 'NEW-1', name: 'ใหม่', priceSatang: 100, stockQty: 50, imageKey: 'x', isActive: false }, 1)
+    await useCase.execute({ sku: 'NEW-1', name: 'ใหม่', priceSatang: 100, stockQty: 50, imageKey: 'x', isActive: false }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
 
     expect(repo.create.mock.calls[0]![0].toSnapshot()).toMatchObject({ stockQty: 0, imageKey: null, isActive: true })
   })
@@ -123,7 +124,7 @@ describe('CreateProductUseCase', () => {
     ['an empty name', { sku: 'A', name: '', priceSatang: 1 }],
     ['an empty barcode', { sku: 'A', name: 'a', priceSatang: 1, barcode: '' }],
   ])('rejects %s without storing anything', async (_label, input) => {
-    await expect(useCase.execute(input, 1)).rejects.toBeInstanceOf(ZodError)
+    await expect(useCase.execute(input, 1, { id: 1, displayName: 'ผู้ทดสอบ' })).rejects.toBeInstanceOf(ZodError)
     expect(repo.create).not.toHaveBeenCalled()
   })
 })
@@ -134,29 +135,29 @@ describe('UpdateProductUseCase', () => {
   beforeEach(() => {
     repo.findById.mockResolvedValue(makeProduct({ id: 4, barcode: '885', categoryId: 2, stockQty: 5 }))
     repo.update.mockImplementation(async (entity) => entity)
-    useCase = new UpdateProductUseCase(repo)
+    useCase = new UpdateProductUseCase(repo, auditUnitOfWork(), auditMock())
   })
 
   test('changes only the given fields', async () => {
-    const updated = await useCase.execute(4, { name: 'น้ำแร่', priceSatang: 1500 }, 1)
+    const updated = await useCase.execute(4, { name: 'น้ำแร่', priceSatang: 1500 }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
 
     expect(updated.toSnapshot()).toMatchObject({ id: 4, name: 'น้ำแร่', priceSatang: 1500, barcode: '885', stockQty: 5 })
   })
 
   test('null clears the barcode and category', async () => {
-    const updated = await useCase.execute(4, { barcode: null, categoryId: null }, 1)
+    const updated = await useCase.execute(4, { barcode: null, categoryId: null }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
 
     expect(updated.toSnapshot()).toMatchObject({ barcode: null, categoryId: null })
   })
 
   test('stock cannot be changed here: the field is dropped', async () => {
-    const updated = await useCase.execute(4, { name: 'น้ำแร่', stockQty: 999 }, 1)
+    const updated = await useCase.execute(4, { name: 'น้ำแร่', stockQty: 999 }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
 
     expect(updated.stockQty).toBe(5)
   })
 
   test('an empty change set stores the product unchanged', async () => {
-    const updated = await useCase.execute(4, {}, 1)
+    const updated = await useCase.execute(4, {}, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
 
     expect(updated.toSnapshot()).toEqual(makeProduct({ id: 4, barcode: '885', categoryId: 2, stockQty: 5 }).toSnapshot())
   })
@@ -164,12 +165,12 @@ describe('UpdateProductUseCase', () => {
   test('an unknown id is not found, and nothing is written', async () => {
     repo.findById.mockResolvedValue(null)
 
-    await expect(useCase.execute(9999, { name: 'ผี' }, 1)).rejects.toMatchObject(notFound)
+    await expect(useCase.execute(9999, { name: 'ผี' }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })).rejects.toMatchObject(notFound)
     expect(repo.update).not.toHaveBeenCalled()
   })
 
   test('rejects an invalid change before reading or writing', async () => {
-    await expect(useCase.execute(4, { priceSatang: -1 }, 1)).rejects.toBeInstanceOf(ZodError)
+    await expect(useCase.execute(4, { priceSatang: -1 }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })).rejects.toBeInstanceOf(ZodError)
     expect(repo.findById).not.toHaveBeenCalled()
   })
 })

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { app } from '../../app'
+import { PERMISSIONS } from '../../domains/permission.vo'
 import { client, login, ok, PASSWORD, pngFile, resetDatabase, seedProduct, signIn } from '../../../test/harness'
 
 beforeEach(() => resetDatabase())
@@ -13,6 +14,9 @@ describe('login', () => {
       username: 'boss',
       displayName: 'boss',
       role: 'owner',
+      roleId: expect.any(Number),
+      permissions: [...PERMISSIONS],
+      roleName: expect.any(String),
       branchId: 1,
       isActive: true,
     })

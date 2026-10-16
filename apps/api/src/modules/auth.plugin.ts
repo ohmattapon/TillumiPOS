@@ -3,10 +3,14 @@ import { Elysia, t } from 'elysia'
 import { container } from 'tsyringe'
 import { DomainError } from '../domains/errors/domain-error'
 import { DomainUnauthorizedError } from '../domains/errors/domain-unauthorized.error'
-import type { UserRole } from '../domains/user-role.vo'
+import type { Permission } from '../domains/permission.vo'
+import type { UserEntityProps } from '../domains/user.domain'
+
 import { env } from '../libs/env'
 import { AuthorizeSessionUseCase } from './auth/applications/usecases/authorize-session.usecase'
 import { ResolveBranchUseCase } from './branches/applications/usecases/resolve-branch.usecase'
+
+export type AuthUser = UserEntityProps & { roleId: number; roleName: string; permissions: Permission[] }
 
 export const SESSION_COOKIE = 'session'
 export const SESSION_MAX_AGE = 60 * 60 * 12
@@ -22,7 +26,7 @@ function parseBranchHeader(value: string | undefined): number | null {
 
 /**
  * Adds the `auth` route option. `auth: true` requires a signed-in user,
- * `auth: ['owner']` additionally restricts by role. Resolves `user` into context, and `branch()`:
+ * `auth: { can: 'sales.void' }` additionally requires a permission. Resolves `user` into context, and `branch()`:
  * the branch the request works in, looked up on first use. It is a function so that routes which
  * do not work inside a branch (who am I, the branch list) still answer when the client holds a
  * branch id that has since been closed.
@@ -37,15 +41,15 @@ export const auth = new Elysia({ name: 'auth' })
     }),
   )
   .macro({
-    auth: (roles: UserRole[] | true) => ({
+    auth: (requirement: true | { can: Permission }) => ({
       async resolve({ jwt, cookie, headers }) {
         const token = cookie[SESSION_COOKIE]?.value
         const payload = typeof token === 'string' && (await jwt.verify(token))
         if (!payload) throw new DomainUnauthorizedError('กรุณาเข้าสู่ระบบ')
 
         // Resolved per request: the container is fully wired only after every module has loaded.
-        const user = await container.resolve(AuthorizeSessionUseCase).execute(Number(payload.sub), roles)
-        const snapshot = user.toSnapshot()
+        const { user, roleName, permissions } = await container.resolve(AuthorizeSessionUseCase).execute(Number(payload.sub), requirement)
+        const snapshot: AuthUser = { ...user.toSnapshot(), roleId: user.roleId!, roleName, permissions: [...permissions] }
 
         let branch: ReturnType<ResolveBranchUseCase['execute']> | undefined
         return {
