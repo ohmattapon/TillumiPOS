@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Not supported yet: Linux has not been tested (Windows is the supported platform, see docs/install.md).
 # Saves the whole database to backups/easypos-<date>-<time>.sql.gz. Safe to run while the shop is open.
 #   scripts/backup.sh [folder]
 set -euo pipefail

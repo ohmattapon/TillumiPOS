@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Not supported yet: Linux has not been tested (Windows is the supported platform, see docs/install.md).
 # Installs TillumiPOS with Podman Compose: writes .env with fresh secrets, starts it, and prints the setup code.
 #
 #   scripts/install.sh                      http://localhost:3000
