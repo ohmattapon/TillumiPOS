@@ -120,6 +120,13 @@
       "when": 1792107252340,
       "tag": "0016_promotions",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792116455906,
+      "tag": "0017_permissions",
+      "breakpoints": true
     }
   ]
 }
