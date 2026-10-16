@@ -1,3 +1,4 @@
+import { mockAuditLog as auditMock, mockUnitOfWork as auditUnitOfWork } from '../../../../__tests__/mocks'
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
 import { makeQrPayment } from '../../../../__tests__/factories'
@@ -320,8 +321,8 @@ describe('DismissQrPaymentUseCase', () => {
   test('closes the quote of money that will never be billed', async () => {
     repo.findByIdForUpdate.mockResolvedValue(makeQrPayment({ reference: 'QRABC' }).markPaid(found))
 
-    await new DismissQrPaymentUseCase(repo, mockUnitOfWork(), mockClock(now), quotes).execute(
-      1, { reason: 'คืนเงินแล้ว' }, { id: 1, role: 'owner' }, 1,
+    await new DismissQrPaymentUseCase(repo, mockUnitOfWork(), mockClock(now), quotes, auditMock()).execute(
+      1, { reason: 'คืนเงินแล้ว' }, { ...{ id: 1, role: 'owner' }, displayName: 'ผู้ทดสอบ' }, 1,
     )
 
     expect(repo.save.mock.calls[0]![0].dismissedAt).toEqual(now)
@@ -331,8 +332,8 @@ describe('DismissQrPaymentUseCase', () => {
 
 
 test('dismiss requires qr.dismiss before accessing persistence', async () => {
-  await expect(new DismissQrPaymentUseCase(repo, mockUnitOfWork(), mockClock(now), quotes)
-    .execute(1, { reason: 'returned' }, { id: 1, role: 'cashier' }, 1))
+  await expect(new DismissQrPaymentUseCase(repo, mockUnitOfWork(), mockClock(now), quotes, auditMock())
+    .execute(1, { reason: 'returned' }, { ...{ id: 1, role: 'cashier' }, displayName: 'ผู้ทดสอบ' }, 1))
     .rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'qr.dismiss' } })
   expect(repo.findByIdForUpdate).not.toHaveBeenCalled()
 })

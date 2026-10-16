@@ -6,6 +6,7 @@ export interface RoleRef {
 
 /** The roles module supplies the role references needed by users. */
 export interface IRoleDirectory {
+  findByIdForUpdate(id: number): Promise<RoleRef | null>
   findById(id: number): Promise<RoleRef | null>
   findBySystemKey(key: 'owner' | 'cashier'): Promise<RoleRef>
 }

@@ -1,3 +1,4 @@
+import type { IAuditLog } from '../modules/audit/applications/ports/audit-log.port'
 import { mock, type Mock } from 'bun:test'
 import type { IRoleRepository } from '../modules/roles/applications/ports/role.repository'
 export const mockRoleRepository = (): Mocked<IRoleRepository> => ({
@@ -325,7 +326,10 @@ export const mockOrderQuoteSource = (): Mocked<IOrderQuoteSource> => ({
   lockOpenOrder: mock<IOrderQuoteSource['lockOpenOrder']>(),
 })
 
-export const mockRoleDirectory = (): Mocked<IRoleDirectory> => ({
-  findById: mock<IRoleDirectory['findById']>(async () => null),
-  findBySystemKey: mock(async (key: 'owner' | 'cashier') => ({ id: key === 'owner' ? 1 : 2, name: key, systemKey: key })),
-})
+export const mockRoleDirectory = (): Mocked<IRoleDirectory> => {
+ const findById = mock<IRoleDirectory['findById']>(async () => null)
+ return { findById, findByIdForUpdate: mock((id: number) => findById(id)),
+  findBySystemKey: mock(async (key: 'owner' | 'cashier') => ({ id: key === 'owner' ? 1 : 2, name: key, systemKey: key })) }
+}
+
+export const mockAuditLog = (): Mocked<IAuditLog> => ({ record: mock(async () => {}), list: mock<IAuditLog['list']>() })

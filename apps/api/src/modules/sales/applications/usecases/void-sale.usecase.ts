@@ -1,3 +1,5 @@
+import { buildAuditEntry } from '../../../../domains/audit-entry.vo'
+import { auditLogToken, type IAuditLog } from '../../../audit/applications/ports/audit-log.port'
 import { requirePermission, type Actor } from '../../../../domains/authorization'
 import { inject, injectable } from 'tsyringe'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
@@ -18,9 +20,10 @@ export class VoidSaleUseCase {
     @inject(stockLedgerToken) private readonly ledger: IStockLedger,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
     @inject(TOKENS.Clock) private readonly clock: IClock,
-  ) {}
+    @inject(auditLogToken) private readonly audit: IAuditLog,
+  ) { }
 
-  async execute(id: number, input: unknown, user: Actor & { id: number }, branchId: number) {
+  async execute(id: number, input: unknown, user: Actor & { id: number; displayName: string }, branchId: number) {
     const { reason } = voidSaleSchema.parse(input)
     requirePermission(user, 'sales.void')
 
@@ -45,6 +48,15 @@ export class VoidSaleUseCase {
           userId: user.id,
         })
 
+      await this.audit.record({ id: user.id, name: user.displayName }, branchId, buildAuditEntry({
+        action: 'sale.void',
+        entityType: 'sale',
+        entityId: String(id),
+        summary: 'ยกเลิกบิลขาย',
+        before: { status: sale.status },
+        after: { status: voided.status },
+        reason,
+      }))
       return voided
     })
   }

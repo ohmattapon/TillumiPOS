@@ -1,3 +1,4 @@
+import { mockAuditLog as auditMock, mockUnitOfWork as auditUnitOfWork } from '../../../../__tests__/mocks'
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
 import { makeUser } from '../../../../__tests__/factories'
@@ -19,7 +20,7 @@ describe('LoginUseCase', () => {
 
   beforeEach(() => {
     repo.findCredentialsByUsername.mockResolvedValue({ user: makeUser({ id: 3 }), passwordHash: 'hashed:secret' })
-    useCase = new LoginUseCase(repo, mockPasswordHasher())
+    useCase = new LoginUseCase(repo, mockPasswordHasher(), auditMock())
   })
 
   test('returns the user for the right password, looking the name up in lower case', async () => {

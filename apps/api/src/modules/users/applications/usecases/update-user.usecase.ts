@@ -1,3 +1,6 @@
+import { auditChanges } from '../../../../domains/audit-changes'
+import { buildAuditEntry } from '../../../../domains/audit-entry.vo'
+import { auditLogToken, type IAuditLog } from '../../../audit/applications/ports/audit-log.port'
 import { inject, injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
@@ -21,9 +24,10 @@ export class UpdateUserUseCase {
     @inject(TOKENS.PasswordHasher) private readonly hasher: IPasswordHasher,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
     @inject(roleDirectoryToken) private readonly roles: IRoleDirectory,
-  ) {}
+    @inject(auditLogToken) private readonly audit: IAuditLog,
+  ) { }
 
-  async execute(id: number, input: unknown) {
+  async execute(id: number, input: unknown, actor: { id: number; displayName: string }) {
     const { password, ...changes } = updateUserSchema.parse(input)
 
     // The owner count and the write must see the same data, or two requests could each remove "the other" owner.
@@ -47,7 +51,18 @@ export class UpdateUserUseCase {
       if (existing.wouldStopBeingActiveOwner(changes) && (await this.users.countActiveOwners()) <= 1)
         throw new DomainConflictError('ต้องมีเจ้าของร้านที่ใช้งานได้อย่างน้อย 1 คน', 'LAST_OWNER')
 
-      return this.users.update(existing.with(changes), password ? await this.hasher.hash(password) : undefined)
+      const result = await this.users.update(existing.with(changes), password ? await this.hasher.hash(password) : undefined)
+      const delta = auditChanges(existing, result, ['displayName', 'roleId', 'branchId', 'isActive'])
+      if (password) delta.after.passwordChanged = true
+      if (delta.changed || password) await this.audit.record({ id: actor.id, name: actor.displayName }, result.branchId, buildAuditEntry({
+        action: 'user.update',
+        entityType: 'user',
+        entityId: String(id),
+        summary: 'แก้ไขผู้ใช้',
+        before: delta.before,
+        after: delta.after,
+      }))
+      return result
     })
   }
 }

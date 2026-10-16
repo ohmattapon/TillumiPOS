@@ -37,7 +37,7 @@ export class InventoryElysiaController {
       .post(
         '/receive',
         async ({ body, user, branch }) =>
-          toResponse(await this.receiveStock.execute(body, user.id, (await branch()).id)),
+          toResponse(await this.receiveStock.execute(body, user, (await branch()).id)),
         {
           auth: { can: 'inventory.receive' },
           body: inventorySchemas.receive,
@@ -48,7 +48,7 @@ export class InventoryElysiaController {
       .post(
         '/adjust',
         async ({ body, user, branch }) =>
-          toResponse(await this.adjustStock.execute(body, user.id, (await branch()).id)),
+          toResponse(await this.adjustStock.execute(body, user, (await branch()).id)),
         {
           auth: { can: 'inventory.adjust' },
           body: inventorySchemas.adjust,

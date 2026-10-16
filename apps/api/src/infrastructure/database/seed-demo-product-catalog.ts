@@ -4,6 +4,7 @@ import { container } from 'tsyringe'
 import { branchStock } from './schema/branches'
 import { categories as productCategories } from './schema/categories'
 import { products } from './schema/products'
+import { users } from './schema/users'
 import { CreateCategoryUseCase } from '../../modules/categories/applications/usecases/create-category.usecase'
 import { CreateProductUseCase } from '../../modules/products/applications/usecases/create-product.usecase'
 import { SetProductImageUseCase } from '../../modules/products/applications/usecases/set-product-image.usecase'
@@ -84,6 +85,8 @@ function prices(product: DemoProduct, category: DemoCategory) {
 }
 
 export async function seedDemoProductCatalog(ownerId: number, branchId: number) {
+  const [actor] = await db.select({ id: users.id, displayName: users.displayName }).from(users).where(eq(users.id, ownerId))
+  if (!actor) throw new Error('The demo catalogue needs an existing owner')
   const manifest = (await Bun.file(new URL('./demo-product-catalog.json', import.meta.url)).json()) as DemoProduct[]
   if (manifest.length < 400 || manifest.length > 500) {
     throw new Error(`Expected 400–500 demo products, found ${manifest.length}`)
@@ -154,6 +157,7 @@ export async function seedDemoProductCatalog(ownerId: number, branchId: number) 
           trackStock: true,
         },
         branchId,
+        actor,
       )
       productId = product.id
       productBySku.set(sku, { id: product.id, sku, imageKey: null })
@@ -165,7 +169,7 @@ export async function seedDemoProductCatalog(ownerId: number, branchId: number) 
       const quantity = 10 + (stableNumber(source.code) % 41)
       await receiveStock.execute(
         { productId, quantity, note: 'สินค้าสาธิตจาก Open Food Facts' },
-        ownerId,
+        actor,
         branchId,
       )
       stockedProductIds.add(productId)

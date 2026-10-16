@@ -5,7 +5,7 @@ import { DomainConflictError } from '../../../../domains/errors/domain-conflict.
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import { UserEntity } from '../../../../domains/user.domain'
 import { users } from '../../../../infrastructure/database/schema/users'
-import { isUniqueViolation } from '../../../../libs/pg-error'
+import { isForeignKeyViolation, isUniqueViolation } from '../../../../libs/pg-error'
 import { currentExecutor } from '../../../../libs/transaction-context'
 import type { IUserRepository } from '../../applications/ports/user.repository'
 
@@ -72,6 +72,7 @@ export class DrizzleUserRepository implements IUserRepository {
       return new UserEntity(row!)
     } catch (error) {
       if (isUniqueViolation(error)) throw duplicate()
+      if (isForeignKeyViolation(error)) throw new DomainConflictError('บทบาทหรือสาขาถูกเปลี่ยน กรุณาลองใหม่', 'IN_USE')
       throw error
     }
   }
@@ -80,6 +81,7 @@ export class DrizzleUserRepository implements IUserRepository {
     if (entity.roleId === null) throw new DomainError('ต้องระบุบทบาท', 'INVALID_USER')
     // The username is not updatable, so it is left out of the SET clause.
     const { id, username: _fixed, ...values } = entity.toSnapshot()
+    try {
     const [row] = await currentExecutor()
       .update(users)
       .set({ ...values, roleId: entity.roleId, ...(passwordHash && { passwordHash }) })
@@ -87,6 +89,10 @@ export class DrizzleUserRepository implements IUserRepository {
       .returning(columns)
     if (!row) throw new DomainNotFoundError('ไม่พบผู้ใช้')
     return new UserEntity(row)
+    } catch (error) {
+      if (isForeignKeyViolation(error)) throw new DomainConflictError('บทบาทหรือสาขาถูกเปลี่ยน กรุณาลองใหม่', 'IN_USE')
+      throw error
+    }
   }
 
   async countActiveOwners() {
