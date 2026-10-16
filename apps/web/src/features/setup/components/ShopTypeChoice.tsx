@@ -17,7 +17,8 @@ export function ShopTypeChoice({ value, onChange }: { value: ShopType | null; on
   return (
     <fieldset className="space-y-2">
       <legend className="mb-2 text-sm font-medium">{t('shopType.legend')}</legend>
-      <div role="radiogroup" className="grid gap-2 sm:grid-cols-2">
+      {/* Native radios sharing a name inside a fieldset with a legend are already a named group. */}
+      <div className="grid gap-2 sm:grid-cols-2">
         {SHOP_TYPES.map((type) => {
           const Icon = ICONS[type]
           return (
