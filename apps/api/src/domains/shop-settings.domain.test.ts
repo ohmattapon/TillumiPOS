@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 import { DomainError } from './errors/domain-error'
-import { DEFAULT_SHOP_SETTINGS, ShopSettingsEntity, type ShopSettingsProps } from './shop-settings.domain'
+import {
+  DEFAULT_SHOP_SETTINGS,
+  SHOP_TYPES,
+  ShopSettingsEntity,
+  shopFeaturesFor,
+  type ShopSettingsProps,
+} from './shop-settings.domain'
 
 const settings = (overrides: Partial<ShopSettingsProps> = {}) =>
   new ShopSettingsEntity({ ...DEFAULT_SHOP_SETTINGS, ...overrides })
@@ -20,6 +26,9 @@ describe('ShopSettingsEntity', () => {
       receiptPaperMm: 80,
       receiptFooter: null,
       homeView: 'till',
+      tablesEnabled: true,
+      kitchenEnabled: true,
+      modifiersEnabled: true,
     })
   })
 
@@ -40,6 +49,7 @@ describe('ShopSettingsEntity', () => {
     ['a paper width no printer uses', { receiptPaperMm: 72 as never }],
     ['a receipt footer over 200 characters', { receiptFooter: 'x'.repeat(201) }],
     ['an unknown home view', { homeView: 'floor' as never }],
+    ['a feature switch that is not a boolean', { kitchenEnabled: 'yes' as never }],
   ])('rejects %s', (_label, overrides) => {
     expect(() => settings(overrides)).toThrow(DomainError)
   })
@@ -74,6 +84,18 @@ describe('ShopSettingsEntity', () => {
     })
   })
 
+  describe('feature switches', () => {
+    test('the floor plan cannot be home while tables are off', () => {
+      expect(() => settings({ tablesEnabled: false, homeView: 'tables' })).toThrow(
+        expect.objectContaining({ code: 'INVALID_SHOP_SETTINGS' }),
+      )
+    })
+
+    test('a switch survives with() and toSnapshot()', () => {
+      expect(settings().with({ kitchenEnabled: false }).toSnapshot().kitchenEnabled).toBe(false)
+    })
+  })
+
   describe('with', () => {
     test('changes the given fields and keeps the rest', () => {
       const changed = settings().with({ shopName: 'ร้านของฉัน', vatMode: 'exclusive' })
@@ -98,5 +120,20 @@ describe('ShopSettingsEntity', () => {
     expect(settings({ vatRateBp: 700 }).effectiveVatRateBp).toBe(700)
     expect(settings({ vatMode: 'exclusive', vatRateBp: 700 }).effectiveVatRateBp).toBe(700)
     expect(settings({ vatMode: 'none', vatRateBp: 700 }).effectiveVatRateBp).toBe(0)
+  })
+})
+
+describe('shopFeaturesFor', () => {
+  test.each([
+    ['cafe', { tablesEnabled: false, kitchenEnabled: false, modifiersEnabled: true, homeView: 'till' }],
+    ['restaurant', { tablesEnabled: true, kitchenEnabled: true, modifiersEnabled: true, homeView: 'tables' }],
+    ['retail', { tablesEnabled: false, kitchenEnabled: false, modifiersEnabled: false, homeView: 'till' }],
+    ['other', { tablesEnabled: true, kitchenEnabled: true, modifiersEnabled: true, homeView: 'till' }],
+  ] as const)('%s', (type, expected) => {
+    expect(shopFeaturesFor(type)).toEqual(expected)
+  })
+
+  test('every type gives settings the entity accepts', () => {
+    for (const type of SHOP_TYPES) expect(() => settings(shopFeaturesFor(type))).not.toThrow()
   })
 })
