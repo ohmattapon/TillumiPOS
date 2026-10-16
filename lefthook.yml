@@ -1,0 +1,40 @@
+# Git hooks for this repo (https://lefthook.dev/configuration/).
+# Install once per clone: bun run hooks:install
+#
+# pre-commit is kept fast (staged files only); the slower checks run on pre-push, and CI runs everything again.
+# Do not skip a hook to get past a check that fails; fix the cause.
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: no secret files
+      run: bun scripts/check-secret-files.ts {staged_files}
+
+    - name: lint web
+      root: "apps/web/"
+      glob: "*.{ts,tsx}"
+      run: bunx oxlint {staged_files}
+
+commit-msg:
+  jobs:
+    - name: gitcz message
+      run: bun scripts/check-commit-msg.ts {1}
+
+pre-push:
+  parallel: true
+  jobs:
+    - name: typecheck
+      run: bun run typecheck
+
+    - name: lint
+      run: bun run lint
+
+    - name: api unit tests
+      run: bun run test:unit
+
+    # Run from the repo root on purpose: a job with `root` is skipped when the push touches no file under it.
+    - name: web unit tests
+      run: bun run --filter @pos/web test
+
+    - name: openapi contract
+      run: bun run --filter @pos/api openapi:check
