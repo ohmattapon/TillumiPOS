@@ -270,6 +270,105 @@ apps/web/src/
 - The confirm button of a dialog without a form uses `DialogFooter sticky`, while in a form put the buttons at the end of the form (a sticky footer inside a form floats in the middle of the dialog)
 - Before merging screen work, run `bun run screenshots` and look at the phone / tablet / desktop images by eye
 
+## Design patterns and best practices
+
+These are the patterns this codebase already uses and the practices every change must follow. When a pattern fits, use it instead of inventing a new one. When none fits, keep the solution as small as the problem and say why in the commit body.
+
+### Principles
+
+- **Make the smallest change that solves the problem.** Build for the requirement in front of you (YAGNI). Do not add options, layers or generality "for later".
+- **Do not abstract on the first or second use.** Duplicate once, extract on the third, and only when the copies really change for the same reason. A wrong abstraction costs more than a little duplication.
+- **Put each rule in exactly one place.** Totals in `calculateTotals`, option rules in `resolveLineOptions`, promotion rules in `evaluatePromotion`, permissions in `domains/authorization.ts`. If you find a second copy of a rule, remove the copy.
+- **Make invalid states unrepresentable.** Validate when an object is created (entities and value objects throw from their constructor), so the rest of the code can trust what it holds.
+- **Fail loudly at the boundary, trust inside.** Validate untrusted input once, where it enters (zod in `execute()`, Elysia schemas on routes). Do not re-validate the same thing at every layer.
+- **Prefer pure functions.** Compute without touching the clock, the database or the network, and pass those in. Pure code is the cheapest to test and the easiest to share with the web.
+- **Comments explain why, not what.** A comment records a reason, a constraint or a trap that the code cannot show (for example why a lock is taken before a read). Delete comments that restate the code and never leave commented-out code.
+- **Name things after the business.** `VoidSaleUseCase`, `ReceiveStockUseCase`, `quote`, `shift`. Avoid `Manager`, `Helper`, `Util` and `Data` in new names.
+- **Keep files and functions small and focused.** If a file needs a "section" comment to be navigable, or a function needs a comment per paragraph, split it.
+
+### Domain modeling
+
+- **Immutable entities.** Fields are `readonly`. A change returns a new entity with `with({ ... })` (copy-on-write), as `UserEntity` and `RoleEntity` do. Never mutate an entity in place.
+- **Validate in the constructor.** An entity or value object rejects invalid values with a domain error and a stable `code`. Normalization (trimming, lower-casing) also happens there or in a static helper such as `UserEntity.normalizeUsername`.
+- **`toSnapshot()` is the way out.** Entities never leave the API as they are. The controller maps them to the response shape (`toResponse`), because the response is a contract of its own. Keep fields that must not be exposed (cost, hashes) out of the snapshot or the response.
+- **Value objects over primitives** for anything with rules: `Permission`, `UserRole`, money as integer satang. Do not pass bare strings or numbers when a type can carry the rule.
+- **Snapshot what must not change later.** A bill stores the product name, unit price, VAT mode and rate, receipt header and options as they were at sale time. An order stores prices when a line is added. A quote pins the whole cart. Never rebuild history from current master data.
+- **Money is integer satang** end to end. Convert only when displaying (`useFormat()`). Check amounts against `MAX_AMOUNT_SATANG`.
+- **State machines are explicit.** A status that has rules about what may follow what (order, shift, QR payment, quote) is a closed set of values with the allowed transitions written in the entity. Do not scatter `if (status === ...)` across use cases.
+- **Soft-disable, do not delete** anything that history points to (branches, tables, products, modifiers, promotions, roles in use). Offer `isActive` and block the deletion that would orphan data.
+
+### Persistence and concurrency
+
+- **One unit of work per command.** A command that writes more than one table runs inside `IUnitOfWork.run()`. Repositories read the current transaction from `currentExecutor()`, so a use case never passes a transaction around.
+- **Lock, then read, then write.** Take the row lock (`...ForUpdate`) before reading a value you are about to change, and read it in a separate statement from the lock when a join would return a stale value (see the stock rule).
+- **Lock in a fixed order** so two requests cannot deadlock: the order documented for sales (order, QR payment, quote, member, product), and ascending id when locking several rows of the same kind (merging orders).
+- **Idempotent commands.** A command that a client may retry (the v2 checkout, void, shift and QR commands) takes an idempotency key and runs through the idempotency helper, so the same key never charges, voids or reserves twice.
+- **Never hold a transaction across a call to an outside system.** Reserve a record under the lock, commit, call the bank, then record the result and resolve unknown outcomes by asking the other side. Never release an unknown result by timeout alone.
+- **Append-only history.** Stock movements, audit entries, shift reports and QR attempts are only ever inserted. Corrections are new rows (a void, an adjustment), never edits.
+- **Migrations are additive and safe on a live database.** Add a nullable column or a table first, backfill, then tighten (`NOT NULL`, constraint) in the same migration. Never drop or retype a column that the previous release still reads. Do not edit a migration that has been merged; add a new one.
+- **Translate database errors in the adapter.** Unique and foreign-key violations become domain errors (`DomainConflictError`) before leaving the repository, so use cases never see driver errors.
+- **Avoid N+1 queries.** Load related rows in one or two queries and assemble them in memory (as the roles repository does for permissions). Page everything that can grow with `limit`/`offset`.
+
+### Ports, adapters and composition
+
+- **Depend on an interface you own.** A use case asks for `IClock`, `IMediaStorage`, `IQrPaymentGateway`, never for a library. The adapter is the only place that knows the library.
+- **Decorate to add behavior without changing the port.** `CachedCategoryRepository` adds caching and `GuardedOrderRepository` adds the QR lock check around the real repository, both behind the same interface. Prefer a decorator over an `if` inside the repository.
+- **Choose the implementation in one factory.** `createMediaStorage()` is the only place that reads `MEDIA_STORAGE`. The rest of the code asks `isEnabled()` and never branches on the configuration.
+- **Gateways are anti-corruption layers.** Translate the outside system's vocabulary into ours inside the adapter (`IQrPaymentGateway`), and never trust data that the outside system did not make verifiable (a callback body is only a signal to go and check).
+- **Cross-module questions go through a port the other module answers** (`ITableOccupancy`, `IRoleDirectory`, `IShiftSalesTotals`). Define the port where it is consumed, implement it in the owning module.
+- **Wire in the module file.** `<module>.module.ts` registers ports and use cases with tsyringe, and `di-registrations.ts` imports the module. Tokens are declared next to the port. Use cases are registered as singletons and must hold no per-request state.
+- **Controllers stay thin.** A controller parses the HTTP request, calls exactly one use case, and maps the result. If a controller contains a condition about the business, move it into the use case or the entity.
+
+### Evolving the contract
+
+- **Additive only in a published version.** New optional fields, new routes and relaxed requirements are fine. Removing a field, changing a type, tightening validation or changing an error `code` that clients switch on is a breaking change and needs a new version.
+- **Keep error codes stable.** Clients switch on `code`. Reuse an existing code for the same situation (for example `BRANCH_FORBIDDEN`) instead of introducing a more generic one.
+- **Keep old and new representations in step during a transition** (as `users.role` and `users.role_id` are), and write down which one is the source of truth.
+- **Review the OpenAPI diff** before recording a baseline. Every change must be explainable as additive, and the project owner is told first.
+
+### Sharing logic with the web
+
+- **One implementation of a business formula.** Pure domain functions are exported from the API package (`@pos/api/pricing`, `@pos/api/modifiers`, `@pos/api/promotions`, `@pos/api/permissions`) and used by both sides, so the screen can never disagree with the server. Add new shared logic the same way, as a pure function with no framework imports.
+- **The server is the authority.** The web may compute for display and speed, but the server recomputes and decides. Never trust a total, a price or a permission sent by the client.
+
+### Web patterns
+
+- **Server state in TanStack Query, client state in zustand, local state in `useState`.** Keep the store to ids and user input and derive everything else at render time.
+- **Key factories and `api.ts` hooks.** Components never build query keys or call the API. Invalidate through the factory of the feature that owns the data.
+- **Extract logic out of components.** Anything with rules (money, selection limits, ordering, retry, merge) is a pure function or a small class in `lib/` with a test next to it. A component only renders and wires.
+- **Inject the world into stateful logic.** A class that talks to the network, storage or timers (`DisplaySessionClient`, `DisplayPublisher`) takes those as constructor options, so a test can pass a fake and fire timers by hand. Never reach for `fetch`, `localStorage` or `setTimeout` inside logic that you want to test.
+- **Newest wins for streams of updates.** When updates replace each other (the customer display), keep one request in flight and send only the latest waiting value (`createServerSender`), so a slow network never replays stale states.
+- **Make the failure path visible.** Every query shows a skeleton, then data, an error with a retry, or an empty state. Never show "no results" while loading or after a failure.
+- **Optimistic UI only when the server can be undone.** Otherwise wait for the server. Never show money as paid before the server says so.
+- **Accessible by default.** Labels tied to inputs, `aria-label` on icon buttons, `role="alert"` on form errors, no meaning by color alone, and 44px touch targets.
+
+### Testing practices
+
+- **Test behavior, not implementation.** Assert on results and on calls that matter (a record was written with these values), not on private steps. A refactor that keeps behavior must not break tests.
+- **Write the failing test first** for a bug or a rule, watch it fail for the right reason, then make it pass. A bug fix includes the test that would have caught it.
+- **Cover every rejected path** of a use case, not just success: invalid input, missing record, no permission, a conflicting state, an outside failure.
+- **Fakes at the ports, the real database for HTTP.** Unit tests use the mocks in `src/__tests__/mocks.ts` and `factories.ts`; integration tests use a real PostgreSQL. Do not mock the database in an integration test and do not hit a real external service in any test.
+- **Tests are independent.** Each test builds its own data and does not rely on another test having run. State that lives outside the database (in-memory stores, caches) must be reset in the test setup.
+- **Do not edit an existing assertion to make a change pass.** If an old assertion fails, the change broke a contract; fix the code, or tell the project owner if the contract is meant to change.
+- **Keep tests deterministic.** Inject the clock, the ids and the schedulers. No real sleeps for logic, no dependence on test order or on the current date.
+
+### Security and reliability
+
+- **Never trust the client or an unsigned callback.** Check the signed-in user, the permission and the branch on the server for every request. Confirm payment by asking the bank.
+- **Secrets stay out of code, logs, responses and audit entries.** Passwords are only hashed, tokens are never logged or put in shared URLs, and `.env.example` holds placeholders.
+- **Bound everything that comes from outside.** Give strings, arrays and request sizes a maximum, and cap anything that an anonymous caller can make the server store (see the pairing session cap and the login audit name limit).
+- **Rate-limit what can be guessed.** Setup codes, passwords and pairing codes lock after repeated failures.
+- **Authorization is deny by default.** A new route needs `auth: true` or `auth: { can: ... }` on purpose, and a public route needs a comment saying why it is safe.
+- **Log failures, not secrets, and never swallow an error silently.** A deliberate swallow (the failed-login audit write) is commented with the reason and still logs.
+
+### Code style
+
+- TypeScript strict. Avoid `any`; use `unknown` and narrow it. Avoid non-null assertions except where the code has just proven the value.
+- Prefer `const`, early returns and small functions over deep nesting. Prefer unions of string literals (an `as const` list plus a derived type, like `USER_ROLES`) over TypeScript enums for new code.
+- Match the file you are editing: its naming, comment density and idiom. Do not reformat code you are not changing.
+- Imports: relative inside a module or feature, aliases (`@/`) across features on the web, never a deep import into another feature or module.
+- Keep line endings as the repo expects (LF for scripts and Docker files) and keep diffs free of whitespace-only changes.
+
 ## Project structure
 
 - `apps/api`: Bun + Elysia + Drizzle + tsyringe, per the architecture section above
