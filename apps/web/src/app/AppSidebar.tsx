@@ -1,6 +1,7 @@
 import type { User } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
 import {
+  Armchair,
   Building2,
   ChartNoAxesCombined,
   CalendarCheck,
@@ -78,7 +79,7 @@ const activeItem =
 export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => void }) {
   const { t } = useTranslation('app')
   const { pathname } = useLocation()
-  const { shopName } = useSettings()
+  const { shopName, homeView } = useSettings()
   const { theme, setTheme } = useTheme()
   const { branch, canSwitch } = useActiveBranch()
   const { can, user: currentUser } = useAuthorization()
@@ -90,7 +91,13 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
     {
       label: t('groups.sales'),
       items: [
-        { to: '/', label: t('nav.sell'), icon: ShoppingCart },
+        // With the floor as home the till moves to /sell, and the floor takes its place at the top.
+        ...(homeView === 'tables'
+          ? [
+              { to: '/', label: t('nav.floor'), icon: Armchair },
+              { to: '/sell', label: t('nav.sell'), icon: ShoppingCart },
+            ]
+          : [{ to: '/', label: t('nav.sell'), icon: ShoppingCart }]),
         { to: '/kitchen', label: t('nav.kitchen'), icon: ChefHat },
         { to: '/today', label: t('nav.today'), icon: CalendarCheck },
         ...(can('reports.read') ? [{ to: '/reports', label: t('nav.reports'), icon: ChartNoAxesCombined }] : []),

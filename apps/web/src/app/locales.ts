@@ -5,6 +5,7 @@ const th = {
   },
   nav: {
     sell: 'ขายสินค้า',
+    floor: 'โต๊ะ',
     today: 'วันนี้',
     kitchen: 'ครัว',
     kitchenStations: 'สถานีครัว',
@@ -48,6 +49,7 @@ const en = {
   },
   nav: {
     sell: 'Sell',
+    floor: 'Tables',
     today: 'Today',
     kitchen: 'Kitchen',
     kitchenStations: 'Kitchen stations',

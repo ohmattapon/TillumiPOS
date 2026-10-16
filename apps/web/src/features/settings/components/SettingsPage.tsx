@@ -24,6 +24,8 @@ const LANGUAGES: { value: Locale; label: string }[] = [
 
 const PAPER_WIDTHS: ShopSettings['receiptPaperMm'][] = [80, 58]
 
+const HOME_VIEWS: ShopSettings['homeView'][] = ['till', 'tables']
+
 const percentFromBp = (bp: number) => String(bp / 100)
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -61,6 +63,7 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     locale: settings.locale,
     receiptPaperMm: settings.receiptPaperMm,
     receiptFooter: settings.receiptFooter ?? '',
+    homeView: settings.homeView,
   })
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm({ ...form, [key]: value })
 
@@ -86,8 +89,7 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     locale: form.locale,
     receiptPaperMm: form.receiptPaperMm,
     receiptFooter: form.receiptFooter.trim() || null,
-    // Not editable here yet: kept as it is so a save does not change it.
-    homeView: settings.homeView,
+    homeView: form.homeView,
   }
   const isDirty = JSON.stringify(changes) !== JSON.stringify(settings)
   const canSave = isDirty && isRateValid && changes.shopName !== '' && !save.isPending
@@ -135,6 +137,20 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
             placeholder={t('shop.optional')}
             onChange={(event) => set('address', event.target.value)}
           />
+        </Field>
+        <Field label={t('shop.homeView')} hint={t('shop.homeViewHint')}>
+          <Select value={form.homeView} onValueChange={(value) => set('homeView', value as ShopSettings['homeView'])}>
+            <SelectTrigger className="h-10! w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {HOME_VIEWS.map((view) => (
+                <SelectItem key={view} value={view}>
+                  {t(`shop.homeViews.${view}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
       </Section>
 

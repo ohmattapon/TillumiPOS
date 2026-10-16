@@ -464,6 +464,20 @@ async function main() {
       await cashier.getByText('2 ออเดอร์').first().waitFor()
     })
 
+    await check('with the floor as home the cashier starts on the tables and carries an order to /sell', async () => {
+      const changed = await owner.request.patch(`${WEB}/api/v1/settings`, { data: { homeView: 'tables' } })
+      if (!changed.ok()) throw new Error(`Could not set the home screen: ${changed.status()}`)
+      try {
+        await cashier.goto(WEB)
+        await cashier.getByRole('main').getByRole('button', { name: 'A1' }).click()
+        await cashier.getByRole('button', { name: 'ทำต่อ', exact: true }).first().click()
+        await cashier.waitForURL(`${WEB}/sell`)
+        await cashier.getByRole('button', { name: 'แยกบิล', exact: true }).waitFor()
+      } finally {
+        await owner.request.patch(`${WEB}/api/v1/settings`, { data: { homeView: 'till' } })
+      }
+    })
+
     await check('a reload keeps the shift: the till is still ready to sell', async () => {
       await cashier.reload()
       await cashier.getByRole('button', { name: 'กะเปิดอยู่' }).waitFor()
@@ -574,7 +588,7 @@ async function main() {
         const screen = await signIn(browser, 'admin', OWNER_PASSWORD, size)
         try {
           const wide: string[] = []
-          for (const path of ['/', '/today', '/shifts', '/products', '/categories', '/modifiers', '/tables', '/branches', '/users', '/promotions', '/settings', '/roles', '/audit']) {
+          for (const path of ['/', '/sell', '/today', '/shifts', '/products', '/categories', '/modifiers', '/tables', '/branches', '/users', '/promotions', '/settings', '/roles', '/audit']) {
             await screen.goto(`${WEB}${path}`)
             await screen.waitForLoadState('networkidle')
             const overflow = await screen.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
