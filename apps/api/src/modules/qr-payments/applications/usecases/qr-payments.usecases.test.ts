@@ -321,10 +321,18 @@ describe('DismissQrPaymentUseCase', () => {
     repo.findByIdForUpdate.mockResolvedValue(makeQrPayment({ reference: 'QRABC' }).markPaid(found))
 
     await new DismissQrPaymentUseCase(repo, mockUnitOfWork(), mockClock(now), quotes).execute(
-      1, { reason: 'คืนเงินแล้ว' }, { id: 1 }, 1,
+      1, { reason: 'คืนเงินแล้ว' }, { id: 1, role: 'owner' }, 1,
     )
 
     expect(repo.save.mock.calls[0]![0].dismissedAt).toEqual(now)
     expect(quotes.cancelByReference).toHaveBeenCalledWith('QRABC')
   })
+})
+
+
+test('dismiss requires qr.dismiss before accessing persistence', async () => {
+  await expect(new DismissQrPaymentUseCase(repo, mockUnitOfWork(), mockClock(now), quotes)
+    .execute(1, { reason: 'returned' }, { id: 1, role: 'cashier' }, 1))
+    .rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'qr.dismiss' } })
+  expect(repo.findByIdForUpdate).not.toHaveBeenCalled()
 })

@@ -21,7 +21,7 @@ export class UserElysiaController {
   getRoutes() {
     return new Elysia({ name: 'users', prefix: '/users', detail: { tags: ['Users'] } })
       .use(auth)
-      .guard({ auth: ['owner'] })
+      .guard({ auth: { can: 'users.manage' } })
       .get(
         '/',
         async () => {

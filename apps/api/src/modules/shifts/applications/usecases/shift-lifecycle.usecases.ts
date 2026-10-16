@@ -1,3 +1,4 @@
+import { canDo, type Actor as PermissionActor } from '../../../../domains/authorization'
 import { inject, injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
@@ -22,7 +23,7 @@ import type { IShiftSummaryRepository } from '../ports/shift-summary.repository'
 import { cashEntryListSchema, cashMovementSchema, closeShiftSchema, shiftListSchema, shiftRevisionSchema, startClosingSchema } from '../schemas/shift-schemas'
 import { restoreCashEntrySnapshot, restoreShiftSnapshot } from '../shift-snapshot'
 
-interface Actor { id: number; displayName: string; role: 'owner' | 'cashier' }
+interface Actor extends PermissionActor { id: number; displayName: string }
 
 /** Query. */
 @injectable()
@@ -124,7 +125,7 @@ export class CancelShiftClosingUseCase {
       async () => {
       const shift = await this.shifts.findByIdForUpdate(id, branchId)
       if (!shift) throw new DomainNotFoundError('ไม่พบกะ', 'SHIFT_NOT_FOUND')
-      if (actor.role !== 'owner' && actor.id !== shift.closingStartedById)
+      if (!canDo(actor, 'shifts.override') && actor.id !== shift.closingStartedById)
         throw new DomainConflictError('เฉพาะผู้เริ่มนับหรือเจ้าของร้านยกเลิกการนับได้', 'SHIFT_CLOSING_OWNER_REQUIRED')
       const reopened = await this.shifts.update(shift.cancelClosing(dto.closingRevision))
       // The shift sells again, so the summary of the abandoned count no longer describes it.
@@ -157,7 +158,7 @@ export class CloseShiftUseCase {
       async () => {
       const shift = await this.shifts.findByIdForUpdate(id, branchId)
       if (!shift) throw new DomainNotFoundError('ไม่พบกะ', 'SHIFT_NOT_FOUND')
-      if (actor.role !== 'owner' && actor.id !== shift.closingStartedById)
+      if (!canDo(actor, 'shifts.override') && actor.id !== shift.closingStartedById)
         throw new DomainConflictError('เฉพาะผู้เริ่มนับหรือเจ้าของร้านยืนยันปิดกะได้', 'SHIFT_CLOSING_OWNER_REQUIRED')
       // The bank may have confirmed a payment while the drawer was being counted.
       if ((await this.qrReadiness.forShift(id)).paidUnclaimed > 0)

@@ -182,9 +182,9 @@ export class QrPaymentV2ElysiaController {
       .post(
         '/:id/dismiss',
         async ({ params, body, user, branch }) =>
-          toResponse(await this.dismiss.execute(params.id, body, { id: user.id }, (await branch()).id)),
+          toResponse(await this.dismiss.execute(params.id, body, user, (await branch()).id)),
         {
-          auth: ['owner'],
+          auth: { can: 'qr.dismiss' },
           params: idParams,
           body: t.Object({ reason: t.String({ minLength: 1, maxLength: 500 }) }),
           response: payment,

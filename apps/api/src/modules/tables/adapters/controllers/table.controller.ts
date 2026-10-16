@@ -39,7 +39,7 @@ export class TableElysiaController {
         { auth: true, response: page(tableSchemas.table), detail: { summary: 'โต๊ะของสาขาพร้อมออเดอร์ที่เปิดอยู่' } },
       )
       .post('/', async ({ body, branch }) => toResponse(await this.createTable.execute(body, (await branch()).id)), {
-        auth: ['owner'],
+        auth: { can: 'tables.write' },
         body: tableSchemas.create,
         response: tableSchemas.table,
         detail: { summary: 'เพิ่มโต๊ะ' },
@@ -49,7 +49,7 @@ export class TableElysiaController {
         async ({ params, body, branch }) =>
           toResponse(await this.updateTable.execute(params.id, body, (await branch()).id)),
         {
-          auth: ['owner'],
+          auth: { can: 'tables.write' },
           params: idParams,
           body: tableSchemas.update,
           response: tableSchemas.table,

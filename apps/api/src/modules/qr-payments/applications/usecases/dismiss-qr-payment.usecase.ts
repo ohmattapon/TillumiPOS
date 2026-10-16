@@ -1,3 +1,4 @@
+import { requirePermission, type Actor } from '../../../../domains/authorization'
 import { inject, injectable } from 'tsyringe'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import type { IClock } from '../../../shared/ports/clock.port'
@@ -22,8 +23,9 @@ export class DismissQrPaymentUseCase {
     @inject(quoteClaimsToken) private readonly quotes: IQuoteClaims,
   ) {}
 
-  async execute(id: number, input: unknown, actor: { id: number }, branchId: number) {
+  async execute(id: number, input: unknown, actor: Actor & { id: number }, branchId: number) {
     const { reason } = dismissQrPaymentSchema.parse(input)
+    requirePermission(actor, 'qr.dismiss')
 
     return this.unitOfWork.run(async () => {
       const payment = await this.payments.findByIdForUpdate(id)

@@ -1,5 +1,5 @@
 import { inject, injectable } from 'tsyringe'
-import { DomainForbiddenError } from '../../../../domains/errors/domain-forbidden.error'
+import { requirePermission, type Actor } from '../../../../domains/authorization'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import type { IClock } from '../../../shared/ports/clock.port'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
@@ -16,10 +16,10 @@ export class UpdatePromotionUseCase {
     @inject(TOKENS.Clock) private readonly clock: IClock,
   ) {}
 
-  async execute(id: number, input: unknown, actor: { role: string }) {
+  async execute(id: number, input: unknown, actor: Actor) {
     promotionIdSchema.parse({ id })
     const dto = updatePromotionSchema.parse(input)
-    if (actor.role !== 'owner') throw new DomainForbiddenError('เฉพาะเจ้าของร้านจัดการโปรโมชันได้', 'FORBIDDEN')
+    requirePermission(actor, 'promotions.write', 'เฉพาะเจ้าของร้านจัดการโปรโมชันได้')
     return this.unitOfWork.run(async () => {
       const promotion = await this.promotions.findByIdForUpdate(id)
       if (!promotion) throw new DomainNotFoundError('ไม่พบโปรโมชัน', 'PROMOTION_NOT_FOUND')

@@ -36,9 +36,9 @@ export class SaleV2ElysiaController {
       })
       .post('/:id/void', async ({ params, body, headers, user, branch }) => {
         const selectedBranch = await branch()
-        return toSaleV2Response(await this.voidSale.execute(params.id, body, { id: user.id }, selectedBranch.id, headers['idempotency-key']))
+        return toSaleV2Response(await this.voidSale.execute(params.id, body, user, selectedBranch.id, headers['idempotency-key']))
       }, {
-        auth: ['owner'], params: idParams, headers: idempotencyHeaders, body: saleSchemas.void,
+        auth: { can: 'sales.void' }, params: idParams, headers: idempotencyHeaders, body: saleSchemas.void,
         response: saleSchemas.saleV2, detail: { summary: 'v2: ยกเลิกบิลและคืนสต็อก' },
       })
       .post('/:id/cash-refund', async ({ params, body, headers, user, branch }) => {
@@ -46,7 +46,7 @@ export class SaleV2ElysiaController {
         const result = await this.recordCashRefund.execute(params.id, body, { id: user.id, displayName: user.displayName }, selectedBranch.id, headers['idempotency-key'])
         return result
       }, {
-        auth: ['owner'], params: idParams, headers: idempotencyHeaders,
+        auth: { can: 'sales.void' }, params: idParams, headers: idempotencyHeaders,
         body: t.Object({ shiftId: t.Integer({ minimum: 1 }), reason: t.String({ minLength: 1, maxLength: 500 }) }),
         response: t.Object({ shiftId: t.Integer(), saleId: t.Integer(), amountSatang: t.Integer() }),
         detail: { summary: 'v2: บันทึกคืนเงินสดเต็มจำนวนของบิลที่ยกเลิกแล้ว' },

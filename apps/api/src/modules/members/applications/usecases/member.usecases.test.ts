@@ -46,7 +46,7 @@ describe('member usecases', () => {
   test('cashier cannot edit and absent member is explicit', async () => {
     const { repo, clock, uow, calls } = setup()
     const usecase = new UpdateMemberUseCase(repo, uow, clock)
-    await expect(usecase.execute(1, { name: 'ใหม่' }, { role: 'cashier' })).rejects.toMatchObject({ code: 'FORBIDDEN' })
+    await expect(usecase.execute(1, { name: 'ใหม่' }, { role: 'cashier' })).rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'members.write' } })
     expect(calls).toEqual([])
     await expect(usecase.execute(99, { name: 'ใหม่' }, { role: 'owner' })).rejects.toMatchObject({ code: 'MEMBER_NOT_FOUND' })
     await expect(new GetMemberUseCase(repo).execute({ id: 99 })).rejects.toMatchObject({ code: 'MEMBER_NOT_FOUND' })

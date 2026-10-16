@@ -34,13 +34,13 @@ export class BranchElysiaController {
         },
       )
       .post('/', async ({ body }) => toResponse(await this.createBranch.execute(body)), {
-        auth: ['owner'],
+        auth: { can: 'branches.manage' },
         body: branchSchemas.create,
         response: branchSchemas.branch,
         detail: { summary: 'เพิ่มสาขา' },
       })
       .patch('/:id', async ({ params, body }) => toResponse(await this.updateBranch.execute(params.id, body)), {
-        auth: ['owner'],
+        auth: { can: 'branches.manage' },
         params: idParams,
         body: branchSchemas.update,
         response: branchSchemas.branch,
