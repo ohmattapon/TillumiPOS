@@ -113,6 +113,13 @@
       "when": 1792065426057,
       "tag": "0015_promotions",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792080000000,
+      "tag": "0016_promotion_image",
+      "breakpoints": true
     }
   ]
 }
