@@ -6,6 +6,8 @@ let cashier: Session
 beforeEach(async () => {
   await resetDatabase()
   cashier = await signIn('cashier')
+  // The screens live in the API's memory, not the database: let go of those an earlier test left paired.
+  await cashier.api['customer-display'].pair.delete({ query: {} })
 })
 
 const display = () => client()['customer-display']
