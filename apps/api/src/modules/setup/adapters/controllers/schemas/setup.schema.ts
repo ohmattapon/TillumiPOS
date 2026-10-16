@@ -9,5 +9,6 @@ export const setupSchemas = {
     username: t.String({ minLength: 1, maxLength: 64 }),
     displayName: t.String({ minLength: 1, maxLength: 100 }),
     password: t.String({ minLength: 10, maxLength: 72 }),
+    shopType: t.Optional(t.Union([t.Literal('cafe'), t.Literal('restaurant'), t.Literal('retail'), t.Literal('other')])),
   }),
 }

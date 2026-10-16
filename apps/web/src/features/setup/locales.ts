@@ -13,6 +13,15 @@ const th = {
   mismatch: 'รหัสผ่านสองช่องไม่ตรงกัน',
   submit: 'ตั้งค่าและเข้าสู่ระบบ',
   submitting: 'กำลังตั้งค่า…',
+  shopType: {
+    legend: 'ร้านของคุณเป็นแบบไหน',
+    required: 'เลือกประเภทร้านก่อนจึงจะตั้งค่าได้',
+    note: 'เลือกเพื่อซ่อนเมนูที่ร้านไม่ได้ใช้ เปิดใช้เพิ่มได้ทุกเมื่อในหน้าตั้งค่า',
+    cafe: { name: 'คาเฟ่', hint: 'ขายที่เคาน์เตอร์ มีตัวเลือก เช่น ร้อน เย็น หวาน' },
+    restaurant: { name: 'ร้านอาหาร', hint: 'มีโต๊ะ ส่งออร์เดอร์เข้าครัว และตัวเลือกเสริม' },
+    retail: { name: 'ร้านค้าปลีก / มินิมาร์ท', hint: 'ขายสินค้าที่เคาน์เตอร์ ไม่มีโต๊ะหรือครัว' },
+    other: { name: 'อื่นๆ', hint: 'เปิดใช้ทุกอย่าง' },
+  },
 }
 
 const en = {
@@ -30,6 +39,15 @@ const en = {
   mismatch: 'The two passwords do not match',
   submit: 'Set up and sign in',
   submitting: 'Setting up…',
+  shopType: {
+    legend: 'What kind of shop is this?',
+    required: 'Choose the kind of shop to finish setup',
+    note: 'This hides menus the shop does not use. You can turn anything on later in Settings.',
+    cafe: { name: 'Café', hint: 'Counter service, with options such as hot, iced or sweetness' },
+    restaurant: { name: 'Restaurant', hint: 'Tables, kitchen orders and options' },
+    retail: { name: 'Retail / minimart', hint: 'Counter sales, no tables or kitchen' },
+    other: { name: 'Other', hint: 'Everything turned on' },
+  },
 } satisfies typeof th
 
 export const locales = { th, en }

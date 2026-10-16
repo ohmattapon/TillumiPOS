@@ -169,8 +169,25 @@ async function runSetupFlow(browser: Browser) {
         throw new Error('The sign-in form is shown while nobody has an account')
     })
 
+    await check('the setup page fits a phone and a tablet without scrolling sideways', async () => {
+      for (const width of [390, 768]) {
+        await page.setViewportSize({ width, height: 844 })
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+        if (overflow > 0) throw new Error(`The setup page overflows by ${overflow}px at ${width}px`)
+      }
+      await page.setViewportSize({ width: 1366, height: 900 })
+    })
+
+    await check('the setup button stays disabled until a shop type is chosen', async () => {
+      await fillForm('AAAAAAAAAAAA')
+      if (await page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' }).isEnabled())
+        throw new Error('Setup can be sent without a shop type')
+      await page.getByText('เลือกประเภทร้านก่อนจึงจะตั้งค่าได้').waitFor()
+    })
+
     await check('a wrong setup code is refused with a message, and nothing is created', async () => {
       await fillForm('AAAAAAAAAAAA')
+      await page.getByRole('radio', { name: /อื่นๆ/ }).check()
       await page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' }).click()
       await page.getByRole('alert').getByText(/รหัสตั้งค่าไม่ถูกต้อง/).waitFor()
       const status = await (await fetch(`http://localhost:${SETUP_API_PORT}/api/v1/setup`)).json()
@@ -464,6 +481,20 @@ async function main() {
       await cashier.getByText('2 ออเดอร์').first().waitFor()
     })
 
+    await check('with the floor as home the cashier starts on the tables and carries an order to /sell', async () => {
+      const changed = await owner.request.patch(`${WEB}/api/v1/settings`, { data: { homeView: 'tables' } })
+      if (!changed.ok()) throw new Error(`Could not set the home screen: ${changed.status()}`)
+      try {
+        await cashier.goto(WEB)
+        await cashier.getByRole('main').getByRole('button', { name: 'A1' }).click()
+        await cashier.getByRole('button', { name: 'ทำต่อ', exact: true }).first().click()
+        await cashier.waitForURL(`${WEB}/sell`)
+        await cashier.getByRole('button', { name: 'แยกบิล', exact: true }).waitFor()
+      } finally {
+        await owner.request.patch(`${WEB}/api/v1/settings`, { data: { homeView: 'till' } })
+      }
+    })
+
     await check('a reload keeps the shift: the till is still ready to sell', async () => {
       await cashier.reload()
       await cashier.getByRole('button', { name: 'กะเปิดอยู่' }).waitFor()
@@ -574,7 +605,7 @@ async function main() {
         const screen = await signIn(browser, 'admin', OWNER_PASSWORD, size)
         try {
           const wide: string[] = []
-          for (const path of ['/', '/today', '/shifts', '/products', '/categories', '/modifiers', '/tables', '/branches', '/users', '/promotions', '/settings', '/roles', '/audit']) {
+          for (const path of ['/', '/sell', '/today', '/shifts', '/products', '/categories', '/modifiers', '/tables', '/branches', '/users', '/promotions', '/settings', '/roles', '/audit']) {
             await screen.goto(`${WEB}${path}`)
             await screen.waitForLoadState('networkidle')
             const overflow = await screen.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)

@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // The whole app (API and web) on Cloudflare: this Worker forwards every request to one container
+  // built from the repo's Dockerfile. Deploy with Workers Builds, which has Docker; see docs/cloudflare.md.
+  "name": "tillumipos",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "containers": [
+    {
+      "class_name": "PosApp",
+      "image": "../../Dockerfile",
+      "image_build_context": "../..",
+      "instance_type": "basic",
+      // One instance only: the customer display sessions live in the API's memory (see AGENTS.md).
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "POS_APP", "class_name": "PosApp" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PosApp"] }],
+  // Passed into the container. Images must go to the media Worker: the container's disk is wiped when it sleeps.
+  "secrets": { "required": ["DATABASE_URL", "JWT_SECRET", "MEDIA_URL", "MEDIA_TOKEN"] },
+  "observability": { "enabled": true }
+}

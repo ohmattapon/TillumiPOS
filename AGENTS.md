@@ -401,12 +401,14 @@ Pragmatic choices that are allowed, and places where the code does not yet follo
 - **Each commit leaves the branch working.** Typecheck and the relevant tests pass at every commit, so any commit can be checked out, reverted or bisected on its own.
 - **Commit tests with the code they cover**, in the same commit, and never commit a test you have not seen fail and then pass.
 - **Never rewrite published history.** No `--amend`, no rebase of a pushed branch, no force push. Fix a mistake with a new commit.
+- **Git hooks (lefthook) enforce part of this.** Install them once per clone with `bun run hooks:install`. `pre-commit` refuses secret files (`scripts/check-secret-files.ts`) and lints staged web files, `commit-msg` refuses a message that did not come from `gitcz` (`scripts/check-commit-msg.ts`), and `pre-push` runs typecheck, lint, the API and web unit tests and the OpenAPI check. Never skip a hook (`--no-verify`, `LEFTHOOK=0`) to get past a failing check; fix the cause. CI runs the full suite again.
 
 ## Project structure
 
 - `apps/api`: Bun + Elysia + Drizzle + tsyringe, per the architecture section above
 - `apps/web`: React + Vite + Tailwind + shadcn/ui + TanStack Query + zustand, split by feature per the web architecture section, calling the API through an Eden client typed from `apps/api`
 - `apps/media`: a Cloudflare Worker that stores product images in R2
+- `apps/cloud`: a Cloudflare Worker that runs the Docker image (API and web) in one Cloudflare Container, see `docs/cloudflare.md`
 - `Dockerfile`, `docker-compose.yml`, `docker-compose.dev.yml`, `Caddyfile`, `docker/entrypoint.sh`, `scripts/`: the install kit for shops (the guide for installers is `docs/install.md`), per the section "Installation and first-run setup"
 - `LICENSE`: AGPL-3.0
 - `DESIGN.md`: the design system of the web pages (colors, typography, components and interaction rules). Read it before changing or adding a screen.
@@ -426,6 +428,7 @@ Run from the root of the repo:
 | `bun run db:seed:demo` | Put 3 weeks of demo data up to now (bills, shifts, drawers, stock, table orders, QR) into the database in `.env`. For demo databases only: it stops by itself if the database already has bills, and `db:seed` must be run first. |
 | `bun run scb:inquiry <ref1>` | Ask SCB whether it knows this QR record and print the raw answer (read-only, uses your `.env`) |
 | `bun run dev` | Start the API (3000, routes under `/api/v1`), the web (5173) and the local Worker (8787) |
+| `bun run hooks:install` | Install the git hooks from `lefthook.yml` (once per clone) |
 | `bun run typecheck` | Type-check every package |
 | `bun run test` | Run all API and web tests (the database must be running) |
 | `bun run test:unit` | Run unit tests only, no database needed |

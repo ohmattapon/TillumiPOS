@@ -16,6 +16,9 @@ const fields = {
   receiptPaperMm: t.Union([t.Literal(58), t.Literal(80)]),
   receiptFooter: t.Nullable(t.String({ maxLength: 200 })),
   homeView: t.Union([t.Literal('till'), t.Literal('tables')]),
+  tablesEnabled: t.Boolean(),
+  kitchenEnabled: t.Boolean(),
+  modifiersEnabled: t.Boolean(),
 }
 
 export const settingsSchemas = {
