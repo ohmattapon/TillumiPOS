@@ -1,5 +1,6 @@
 import { and, count, eq } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
+import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import { UserEntity } from '../../../../domains/user.domain'
@@ -14,6 +15,7 @@ const columns = {
   username: users.username,
   displayName: users.displayName,
   role: users.role,
+  roleId: users.roleId,
   branchId: users.branchId,
   isActive: users.isActive,
 }
@@ -57,11 +59,12 @@ export class DrizzleUserRepository implements IUserRepository {
   }
 
   async create(entity: UserEntity, passwordHash: string) {
+    if (entity.roleId === null) throw new DomainError('ต้องระบุบทบาท', 'INVALID_USER')
     const { id: _unassigned, ...values } = entity.toSnapshot()
     try {
       const [row] = await currentExecutor()
         .insert(users)
-        .values({ ...values, passwordHash })
+        .values({ ...values, roleId: entity.roleId, passwordHash })
         .returning(columns)
       return new UserEntity(row!)
     } catch (error) {
@@ -71,11 +74,12 @@ export class DrizzleUserRepository implements IUserRepository {
   }
 
   async update(entity: UserEntity, passwordHash?: string) {
+    if (entity.roleId === null) throw new DomainError('ต้องระบุบทบาท', 'INVALID_USER')
     // The username is not updatable, so it is left out of the SET clause.
     const { id, username: _fixed, ...values } = entity.toSnapshot()
     const [row] = await currentExecutor()
       .update(users)
-      .set({ ...values, ...(passwordHash && { passwordHash }) })
+      .set({ ...values, roleId: entity.roleId, ...(passwordHash && { passwordHash }) })
       .where(eq(users.id, id))
       .returning(columns)
     if (!row) throw new DomainNotFoundError('ไม่พบผู้ใช้')

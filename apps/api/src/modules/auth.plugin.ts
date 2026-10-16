@@ -45,7 +45,7 @@ export const auth = new Elysia({ name: 'auth' })
 
         // Resolved per request: the container is fully wired only after every module has loaded.
         const user = await container.resolve(AuthorizeSessionUseCase).execute(Number(payload.sub), roles)
-        const snapshot = user.toSnapshot()
+        const snapshot = { ...user.toSnapshot(), roleId: user.roleId! }
 
         let branch: ReturnType<ResolveBranchUseCase['execute']> | undefined
         return {

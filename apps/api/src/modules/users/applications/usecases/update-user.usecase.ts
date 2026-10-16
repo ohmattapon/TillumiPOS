@@ -6,6 +6,8 @@ import type { IBranchRepository } from '../../../branches/applications/ports/bra
 import type { IPasswordHasher } from '../../../shared/ports/password-hasher.port'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import { TOKENS } from '../../../tokens'
+import { roleDirectoryToken, type IRoleDirectory } from '../ports/role-directory.port'
+import { resolveRole } from '../resolve-role'
 import { userRepositoryToken } from '../ports/user.repository'
 import type { IUserRepository } from '../ports/user.repository'
 import { updateUserSchema } from '../schemas/user-schemas'
@@ -18,6 +20,7 @@ export class UpdateUserUseCase {
     @inject(branchRepositoryToken) private readonly branches: IBranchRepository,
     @inject(TOKENS.PasswordHasher) private readonly hasher: IPasswordHasher,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
+    @inject(roleDirectoryToken) private readonly roles: IRoleDirectory,
   ) {}
 
   async execute(id: number, input: unknown) {
@@ -32,6 +35,12 @@ export class UpdateUserUseCase {
         const branch = await this.branches.findById(changes.branchId)
         if (!branch) throw new DomainNotFoundError('ไม่พบสาขา', 'BRANCH_NOT_FOUND')
         if (!branch.isActive) throw new DomainConflictError('สาขานี้ปิดใช้งานแล้ว', 'BRANCH_INACTIVE')
+      }
+
+      if (changes.roleId !== undefined || changes.role !== undefined) {
+        const role = await resolveRole(this.roles, changes)
+        changes.roleId = role.id
+        changes.role = role.systemKey === 'owner' ? 'owner' : 'cashier'
       }
 
       if (existing.wouldStopBeingActiveOwner(changes) && (await this.users.countActiveOwners()) <= 1)

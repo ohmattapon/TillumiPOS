@@ -36,6 +36,7 @@ import type { ISaleRepository } from '../modules/sales/applications/ports/sale.r
 import type { IMediaStorage } from '../modules/shared/ports/media-storage.port'
 import type { IPasswordHasher } from '../modules/shared/ports/password-hasher.port'
 import type { IUnitOfWork } from '../modules/shared/ports/unit-of-work.port'
+import type { IRoleDirectory } from '../modules/users/applications/ports/role-directory.port'
 import type { IUserRepository } from '../modules/users/applications/ports/user.repository'
 
 /** A port whose every method is a bun mock with that method's signature. */
@@ -312,4 +313,9 @@ export const mockPromotionCatalog = (): Mocked<IPromotionCatalog> => ({
 export const mockOrderQuoteSource = (): Mocked<IOrderQuoteSource> => ({
   read: mock<IOrderQuoteSource['read']>(),
   lockOpenOrder: mock<IOrderQuoteSource['lockOpenOrder']>(),
+})
+
+export const mockRoleDirectory = (): Mocked<IRoleDirectory> => ({
+  findById: mock<IRoleDirectory['findById']>(async () => null),
+  findBySystemKey: mock(async (key: 'owner' | 'cashier') => ({ id: key === 'owner' ? 1 : 2, name: key, systemKey: key })),
 })

@@ -4,6 +4,7 @@ import { makeBranch, makeUser } from '../../../../__tests__/factories'
 import {
   mockBranchRepository,
   mockPasswordHasher,
+  mockRoleDirectory,
   mockUnitOfWork,
   mockUserRepository,
 } from '../../../../__tests__/mocks'
@@ -15,9 +16,11 @@ import { UpdateUserUseCase } from './update-user.usecase'
 
 let repo: ReturnType<typeof mockUserRepository>
 let hasher: ReturnType<typeof mockPasswordHasher>
+let roles: ReturnType<typeof mockRoleDirectory>
 let branches: ReturnType<typeof mockBranchRepository>
 
 beforeEach(() => {
+  roles = mockRoleDirectory()
   repo = mockUserRepository()
   hasher = mockPasswordHasher()
   branches = mockBranchRepository()
@@ -39,7 +42,7 @@ describe('CreateUserUseCase', () => {
 
   beforeEach(() => {
     repo.create.mockImplementation(async (entity) => makeUser({ ...entity.toSnapshot(), id: 5 }))
-    useCase = new CreateUserUseCase(repo, branches, hasher)
+    useCase = new CreateUserUseCase(repo, branches, hasher, roles)
   })
 
   test('stores an active user with a lower-cased username and a hashed password', async () => {
@@ -112,7 +115,7 @@ describe('UpdateUserUseCase', () => {
     repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 4 }))
     repo.update.mockImplementation(async (entity) => entity)
     repo.countActiveOwners.mockResolvedValue(1)
-    useCase = new UpdateUserUseCase(repo, branches, hasher, unitOfWork)
+    useCase = new UpdateUserUseCase(repo, branches, hasher, unitOfWork, roles)
   })
 
   test('changes only the given fields, inside one unit of work, reading with a row lock', async () => {
@@ -189,5 +192,52 @@ describe('UpdateUserUseCase', () => {
     const updated = await useCase.execute(4, { username: 'hacker', id: 99 })
 
     expect(updated.toSnapshot()).toMatchObject({ id: 4, username: 'somchai' })
+  })
+})
+
+describe('roles on users', () => {
+  const input = { username: 'manager', password: 'secret-password', displayName: 'Manager' }
+  beforeEach(() => {
+    repo.create.mockImplementation(async (entity) => makeUser({ ...entity.toSnapshot(), id: 5, roleId: entity.roleId }))
+    repo.update.mockImplementation(async (entity) => entity)
+    repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 4, roleId: 2 }))
+  })
+  test.each([[7, null, 'cashier'], [1, 'owner', 'owner']] as const)('stores roleId %p and derives legacy role', async (id, systemKey, legacy) => {
+    roles.findById.mockResolvedValue({ id, name: 'Role', systemKey })
+    const created = await new CreateUserUseCase(repo, branches, hasher, roles).execute({ ...input, roleId: id, role: 'owner' }, 1)
+    expect(created.roleId).toBe(id)
+    expect(created.role).toBe(legacy)
+  })
+  test('maps legacy role input to the system role id', async () => {
+    const created = await new CreateUserUseCase(repo, branches, hasher, roles).execute({ ...input, role: 'cashier' }, 1)
+    expect(created.roleId).toBe(2)
+  })
+  test('rejects an unknown role on create without hashing or writing', async () => {
+    await expect(new CreateUserUseCase(repo, branches, hasher, roles).execute({ ...input, roleId: 99 }, 1)).rejects.toMatchObject({ code: 'ROLE_NOT_FOUND' })
+    expect(repo.create).not.toHaveBeenCalled()
+    expect(hasher.hash).not.toHaveBeenCalled()
+  })
+  test('refuses moving the last owner to a custom role', async () => {
+    repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 1, role: 'owner', roleId: 1 }))
+    repo.countActiveOwners.mockResolvedValue(1)
+    roles.findById.mockResolvedValue({ id: 7, name: 'Manager', systemKey: null })
+    await expect(new UpdateUserUseCase(repo, branches, hasher, mockUnitOfWork(), roles).execute(1, { roleId: 7 })).rejects.toMatchObject({ code: 'LAST_OWNER' })
+    expect(repo.update).not.toHaveBeenCalled()
+  })
+  test('updates both role fields and keeps them on unrelated edits', async () => {
+    roles.findById.mockResolvedValue({ id: 7, name: 'Manager', systemKey: null })
+    const uc = new UpdateUserUseCase(repo, branches, hasher, mockUnitOfWork(), roles)
+    const updated = await uc.execute(4, { roleId: 7, role: 'owner' })
+    expect(updated.roleId).toBe(7)
+    expect(updated.role).toBe('cashier')
+    repo.findByIdForUpdate.mockResolvedValue(updated)
+    expect((await uc.execute(4, { displayName: 'New' })).roleId).toBe(7)
+  })
+  test('rejects an unknown role on update without writing', async () => {
+    await expect(new UpdateUserUseCase(repo, branches, hasher, mockUnitOfWork(), roles).execute(4, { roleId: 99 })).rejects.toMatchObject({ code: 'ROLE_NOT_FOUND' })
+    expect(repo.update).not.toHaveBeenCalled()
+  })
+  test.each([0, -1, 1.5])('rejects invalid roleId %p', async (roleId) => {
+    await expect(new CreateUserUseCase(repo, branches, hasher, roles).execute({ ...input, roleId }, 1)).rejects.toBeInstanceOf(ZodError)
   })
 })
