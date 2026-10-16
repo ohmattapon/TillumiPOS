@@ -48,7 +48,10 @@ function scrub(value: unknown, ancestors = new Set<object>(), depth = 0): JsonVa
     }
     const entries: [string, JsonValue][] = []
     for (const [key, property] of Object.entries(descriptors)) {
-      if (!property.enumerable || SECRET_KEY.test(key)) continue
+      if (!property.enumerable) continue
+      // A boolean records the change without retaining any credential material.
+      const safePasswordMarker = key === 'passwordChanged' && 'value' in property && typeof property.value === 'boolean'
+      if (SECRET_KEY.test(key) && !safePasswordMarker) continue
       if (!('value' in property)) throw invalidEntry()
       entries.push([key, scrub(property.value, ancestors, depth + 1)])
     }
