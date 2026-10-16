@@ -158,6 +158,7 @@ export async function resetDatabase(connection = sqlClient): Promise<void> {
     // The schema ships with one branch; truncating removed it, so put it back for the next test.
     await transaction.unsafe(`insert into branches (code, name) values ('MAIN', 'สาขาหลัก')`)
     await transaction.unsafe(`insert into registers (branch_id, code, name) values (1, 'MAIN', 'เคาน์เตอร์หลัก')`)
+    await transaction.unsafe(`insert into roles (name, system_key) values ('เจ้าของร้าน', 'owner'), ('แคชเชียร์', 'cashier')`)
   })
   // Truncating with SQL bypasses the repositories, so an enabled Redis cache would keep serving the rows just
   // removed. Rotate every cached group the same way a committed write does.
