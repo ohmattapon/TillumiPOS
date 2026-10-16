@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch'
 import { ProductImage } from './ProductImage'
 import { modifierGroupsQuery } from '@/features/modifiers'
 import { useCan } from '@/features/auth'
-import { useFormat, useSettings } from '@/features/settings'
+import { useFeatures, useFormat, useSettings } from '@/features/settings'
 import { imageStorageQuery, useSaveProduct } from '../api'
 
 // Radix Select cannot use an empty string as an item value.
@@ -27,7 +27,8 @@ interface Props {
 }
 
 export function ProductFormDialog({ product, categories, onClose }: Props) {
-  const canEditModifiers = useCan('modifiers.write')
+  const { modifiers: showModifiers } = useFeatures()
+  const canEditModifiers = useCan('modifiers.write') && showModifiers
   const { t } = useTranslation('products')
   const { t: tc } = useTranslation()
   const { money, currency } = useFormat()
@@ -204,7 +205,7 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
               <Switch checked={form.trackStock} onCheckedChange={(checked) => set('trackStock', checked)} />
             </label>
 
-            {groups.length > 0 && (
+            {showModifiers && groups.length > 0 && (
               <fieldset className="col-span-2 space-y-2 rounded-lg border p-3">
                 <legend className="px-1 text-sm font-medium">{t('form.modifiers')}</legend>
                 <p className="text-xs text-muted-foreground">{t('form.modifiersHint')}</p>

@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useCan } from '@/features/auth'
+import { useFeatures } from '@/features/settings'
 import { kitchenRoutingQuery, kitchenStationsQuery, useSetCategoryStation } from '@/features/kitchen'
 import { categoriesQuery, useCreateCategory, useUpdateCategory } from '../api'
 import { CategoryDot } from './CategoryDot'
@@ -36,7 +37,8 @@ function CategoryFormDialog({ category, onClose }: { category?: Category; onClos
   const create = useCreateCategory()
   const update = useUpdateCategory()
   const mutation = category ? update : create
-  const canRoute = useCan('kitchen.write')
+  const { kitchen } = useFeatures()
+  const canRoute = useCan('kitchen.write') && kitchen
   const stations = useQuery({ ...kitchenStationsQuery, enabled: canRoute })
   const routing = useQuery({ ...kitchenRoutingQuery, enabled: canRoute })
   const setStation = useSetCategoryStation()
