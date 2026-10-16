@@ -1,3 +1,4 @@
+import type { ShopType } from '@pos/api/shop-settings'
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { authKeys } from '@/features/auth'
 import { api, unwrap } from '@/lib/api'
@@ -21,6 +22,7 @@ export interface SetupInput {
   username: string
   displayName: string
   password: string
+  shopType: ShopType
 }
 
 export function useCompleteSetup() {

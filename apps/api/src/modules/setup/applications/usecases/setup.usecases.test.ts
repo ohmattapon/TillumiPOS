@@ -68,6 +68,35 @@ describe('CompleteSetupUseCase', () => {
     expect(code.retire).toHaveBeenCalledTimes(1)
   })
 
+  test('a retail shop starts with tables, kitchen and modifiers off', async () => {
+    await useCase.execute({ ...input, shopType: 'retail' })
+
+    expect(settings.save.mock.calls[0]![0].toSnapshot()).toMatchObject({
+      shopName: 'ร้านกาแฟบ้านสวน',
+      tablesEnabled: false,
+      kitchenEnabled: false,
+      modifiersEnabled: false,
+      homeView: 'till',
+    })
+  })
+
+  test('a restaurant opens on the floor plan', async () => {
+    await useCase.execute({ ...input, shopType: 'restaurant' })
+
+    expect(settings.save.mock.calls[0]![0].homeView).toBe('tables')
+  })
+
+  test('without a shop type everything stays on', async () => {
+    await useCase.execute(input)
+
+    expect(settings.save.mock.calls[0]![0].toSnapshot()).toMatchObject({
+      tablesEnabled: true,
+      kitchenEnabled: true,
+      modifiersEnabled: true,
+      homeView: 'till',
+    })
+  })
+
   test('takes the lock before it looks, and refuses when there already is a user, writing nothing', async () => {
     guard.lockAndCountUsers.mockResolvedValue(1)
 
@@ -95,9 +124,11 @@ describe('CompleteSetupUseCase', () => {
     ['a short password', { password: 'short-pw' }],
     ['an empty shop name', { shopName: '   ' }],
     ['no code', { setupCode: '' }],
+    ['an unknown shop type', { shopType: 'bar' }],
   ])('rejects %s before anything else', async (_label, overrides) => {
     await expect(useCase.execute({ ...input, ...overrides })).rejects.toBeInstanceOf(ZodError)
     expect(guard.lockAndCountUsers).not.toHaveBeenCalled()
+    expect(settings.save).not.toHaveBeenCalled()
   })
 })
 

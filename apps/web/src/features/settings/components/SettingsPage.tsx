@@ -8,10 +8,12 @@ import { SkeletonPanel } from '@/components/Skeletons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { createMoney, type Locale } from '@/lib/money'
 import { settingsQuery, useUpdateSettings } from '../api'
+import { withTablesSwitch } from '../lib/feature-switches'
 
 // Currencies a Thai shop is likely to meet; the list is a convenience, the API accepts any ISO 4217 code.
 const CURRENCIES = ['THB', 'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'SGD', 'MYR', 'VND', 'IDR', 'PHP', 'KRW', 'LAK', 'KHR', 'MMK']
@@ -47,6 +49,18 @@ function Field({ label, hint, wide, children }: { label: string; hint?: string; 
   )
 }
 
+function FeatureSwitch({ label, hint, checked, onChange }: { label: string; hint: string; checked: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <label className="flex min-h-11 cursor-pointer items-start justify-between gap-4 sm:col-span-2">
+      <span className="space-y-0.5">
+        <span className="block text-sm font-medium">{label}</span>
+        <span className="block text-xs text-muted-foreground">{hint}</span>
+      </span>
+      <Switch className="mt-1" checked={checked} onCheckedChange={onChange} aria-label={label} />
+    </label>
+  )
+}
+
 function SettingsForm({ settings }: { settings: ShopSettings }) {
   const { t } = useTranslation('settings')
   const save = useUpdateSettings()
@@ -64,6 +78,9 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     receiptPaperMm: settings.receiptPaperMm,
     receiptFooter: settings.receiptFooter ?? '',
     homeView: settings.homeView,
+    tablesEnabled: settings.tablesEnabled,
+    kitchenEnabled: settings.kitchenEnabled,
+    modifiersEnabled: settings.modifiersEnabled,
   })
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm({ ...form, [key]: value })
 
@@ -90,6 +107,9 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     receiptPaperMm: form.receiptPaperMm,
     receiptFooter: form.receiptFooter.trim() || null,
     homeView: form.homeView,
+    tablesEnabled: form.tablesEnabled,
+    kitchenEnabled: form.kitchenEnabled,
+    modifiersEnabled: form.modifiersEnabled,
   }
   const isDirty = JSON.stringify(changes) !== JSON.stringify(settings)
   const canSave = isDirty && isRateValid && changes.shopName !== '' && !save.isPending
@@ -138,20 +158,41 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
             onChange={(event) => set('address', event.target.value)}
           />
         </Field>
-        <Field label={t('shop.homeView')} hint={t('shop.homeViewHint')}>
+        <Field label={t('shop.homeView')} hint={form.tablesEnabled ? t('shop.homeViewHint') : t('features.homeNeedsTables')}>
           <Select value={form.homeView} onValueChange={(value) => set('homeView', value as ShopSettings['homeView'])}>
             <SelectTrigger className="h-10! w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {HOME_VIEWS.map((view) => (
-                <SelectItem key={view} value={view}>
+                <SelectItem key={view} value={view} disabled={view === 'tables' && !form.tablesEnabled}>
                   {t(`shop.homeViews.${view}`)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </Field>
+      </Section>
+
+      <Section title={t('features.title')}>
+        <FeatureSwitch
+          label={t('features.tables')}
+          hint={t('features.tablesHint')}
+          checked={form.tablesEnabled}
+          onChange={(on) => setForm(withTablesSwitch(form, on))}
+        />
+        <FeatureSwitch
+          label={t('features.kitchen')}
+          hint={t('features.kitchenHint')}
+          checked={form.kitchenEnabled}
+          onChange={(on) => set('kitchenEnabled', on)}
+        />
+        <FeatureSwitch
+          label={t('features.modifiers')}
+          hint={t('features.modifiersHint')}
+          checked={form.modifiersEnabled}
+          onChange={(on) => set('modifiersEnabled', on)}
+        />
       </Section>
 
       <Section title={t('money.title')}>
