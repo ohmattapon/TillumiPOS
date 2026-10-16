@@ -408,6 +408,7 @@ Pragmatic choices that are allowed, and places where the code does not yet follo
 - `apps/api`: Bun + Elysia + Drizzle + tsyringe, per the architecture section above
 - `apps/web`: React + Vite + Tailwind + shadcn/ui + TanStack Query + zustand, split by feature per the web architecture section, calling the API through an Eden client typed from `apps/api`
 - `apps/media`: a Cloudflare Worker that stores product images in R2
+- `apps/cloud`: a Cloudflare Worker that runs the Docker image (API and web) in one Cloudflare Container, see `docs/cloudflare.md`
 - `Dockerfile`, `docker-compose.yml`, `docker-compose.dev.yml`, `Caddyfile`, `docker/entrypoint.sh`, `scripts/`: the install kit for shops (the guide for installers is `docs/install.md`), per the section "Installation and first-run setup"
 - `LICENSE`: AGPL-3.0
 - `DESIGN.md`: the design system of the web pages (colors, typography, components and interaction rules). Read it before changing or adding a screen.
