@@ -10,7 +10,7 @@ import assert from 'node:assert/strict'
 import { mkdir, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { chromium, type BrowserContext, type Page } from 'playwright-core'
+import { chromium, type Browser, type BrowserContext, type Page } from 'playwright-core'
 
 const DB_NAME = 'pos_e2e_shots'
 const API_PORT = 3290
@@ -68,7 +68,6 @@ async function main() {
   await admin.unsafe(`create database "${DB_NAME}"`)
   await admin.close()
   await run(['src/infrastructure/database/migrate.ts'])
-  await run(['src/infrastructure/database/seed.ts'])
   children.push(Bun.spawn(['bun', 'src/index.ts'], { cwd: `${root}/apps/api`, env, stdout: 'ignore', stderr: 'inherit' }))
   children.push(Bun.spawn(['bun', 'x', 'vite', '--port', String(WEB_PORT), '--strictPort'], {
     cwd: `${root}/apps/web`, env: { ...process.env, API_TARGET: `http://localhost:${API_PORT}` }, stdout: 'ignore', stderr: 'inherit',
@@ -79,6 +78,10 @@ async function main() {
 
   const browser = await chromium.launch({ channel: 'chrome', headless: true })
   try {
+    // The setup page only shows while nobody has an account, so it is taken before the seed adds the owner.
+    for (const size of chosen) await shootSetup(browser, size)
+    await run(['src/infrastructure/database/seed.ts'])
+
     for (const size of chosen) {
       const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, locale: 'th-TH', hasTouch: size.name !== 'desktop' })
       const page = await context.newPage()
@@ -283,6 +286,17 @@ async function main() {
 }
 
 /** The customer's screen has no sign-in and no API, so it is fed by posting messages on the real channel. */
+async function shootSetup(browser: Browser, size: typeof sizes[number]) {
+  const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, locale: 'th-TH', hasTouch: size.name !== 'desktop' })
+  const page = await context.newPage()
+  await page.goto(WEB)
+  await page.getByText('ตั้งค่าร้านครั้งแรก', { exact: true }).waitFor()
+  await page.getByRole('radio', { name: /คาเฟ่/ }).check()
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${size.name}/setup: horizontal overflow`)
+  await page.screenshot({ path: join(OUT, `${size.name}-00-setup.png`), animations: 'disabled', fullPage: true })
+  await context.close()
+}
+
 async function shootCustomerDisplay(context: BrowserContext, name: string) {
   const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
   const lines = [
