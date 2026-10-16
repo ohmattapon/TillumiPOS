@@ -28,6 +28,7 @@ export class UpdateUserUseCase {
 
     // The owner count and the write must see the same data, or two requests could each remove "the other" owner.
     return this.unitOfWork.run(async () => {
+      await this.users.lockOwnerChangesForUpdate()
       const existing = await this.users.findByIdForUpdate(id)
       if (!existing) throw new DomainNotFoundError('ไม่พบผู้ใช้')
 

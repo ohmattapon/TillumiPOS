@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
+import { container } from 'tsyringe'
+import { UpdateUserUseCase } from '../../modules/users/applications/usecases/update-user.usecase'
+import { userRepositoryToken, type IUserRepository } from '../../modules/users/applications/ports/user.repository'
 import { login, ok, PASSWORD, resetDatabase, signIn, type Session } from '../../../test/harness'
 
 let owner: Session
@@ -12,6 +15,18 @@ const createCashier = (username = 'somchai') =>
   owner.api.users.post({ username, password: PASSWORD, displayName: 'สมชาย', role: 'cashier' })
 
 describe('users', () => {
+  test('two simultaneous owner deactivations cannot remove the final active owner', async () => {
+    const second = ok(await owner.api.users.post({ username: 'second-owner', password: PASSWORD, displayName: 'เจ้าของอีกคน', role: 'owner' }))
+    const update = container.resolve(UpdateUserUseCase)
+    const results = await Promise.allSettled([
+      update.execute(owner.user.id, { isActive: false }),
+      update.execute(second.id, { isActive: false }),
+    ])
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
+    const rejected = results.find((result) => result.status === 'rejected') as PromiseRejectedResult
+    expect(rejected.reason).toMatchObject({ code: 'LAST_OWNER' })
+    expect(await container.resolve<IUserRepository>(userRepositoryToken).countActiveOwners()).toBe(1)
+  })
   test('a created user exposes exactly the public fields, never the password', async () => {
     const created = ok(await createCashier())
 

@@ -107,6 +107,13 @@ describe('CreateUserUseCase', () => {
 })
 
 describe('UpdateUserUseCase', () => {
+  test('acquires the common owner invariant lock before reading a target user', async () => {
+    Object.assign(repo, { lockOwnerChangesForUpdate: async () => { throw new DomainConflictError('ล็อกไม่สำเร็จ', 'OWNER_LOCK_UNAVAILABLE') } })
+    const command = new UpdateUserUseCase(repo, branches, hasher, mockUnitOfWork(), roles)
+    await expect(command.execute(4, { isActive: false })).rejects.toMatchObject({ code: 'OWNER_LOCK_UNAVAILABLE' })
+    expect(repo.findByIdForUpdate).not.toHaveBeenCalled()
+    expect(repo.update).not.toHaveBeenCalled()
+  })
   let unitOfWork: ReturnType<typeof mockUnitOfWork>
   let useCase: UpdateUserUseCase
 

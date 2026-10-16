@@ -1,4 +1,4 @@
-import { and, count, eq } from 'drizzle-orm'
+import { and, count, eq, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
@@ -24,6 +24,9 @@ const duplicate = () => new DomainConflictError('ข้อมูลซ้ำก�
 
 @injectable()
 export class DrizzleUserRepository implements IUserRepository {
+  async lockOwnerChangesForUpdate(): Promise<void> {
+    await currentExecutor().execute(sql`select pg_advisory_xact_lock(731092447)`)
+  }
   async findAll() {
     const rows = await currentExecutor().select(columns).from(users).orderBy(users.id)
     return rows.map((row) => new UserEntity(row))
