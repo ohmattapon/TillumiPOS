@@ -82,7 +82,7 @@ test('branches.switch grants branch visibility and branch selection independentl
   const branch = await seedBranch()
   const role = ok(await owner.api.roles.post({ name: 'Roaming staff', permissions: ['branches.switch'] }))
   const roaming = await signInWithRole('roaming', role.id, { workingBranchId: branch.id })
-  expect(ok(await roaming.api.branches.get()).items.map((item) => item.id)).toEqual([1, branch.id])
+  expect(ok(await roaming.api.branches.get()).items.map((item) => item.id)).toEqual([branch.id, 1])
   expect((await roaming.api.catalog.products.get({ query: {} })).status).toBe(200)
   expect((await roaming.api.branches.post({ code: 'NO', name: 'No' })).status).toBe(403)
 })
