@@ -8,14 +8,14 @@ export const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
 const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }
 const ALLOWED_TYPES = new Set(Object.values(CONTENT_TYPE_BY_EXTENSION))
-// The only shape the product image use case produces. Nothing else is read or written, so a key can never climb out.
-const KEY_PATTERN = /^products\/\d+\/[A-Za-z0-9-]+\.(jpg|png|webp)$/
+// The only shapes the product and promotion image use cases produce. Nothing else is read or written, so a key can never climb out.
+const KEY_PATTERN = /^(products|promotions)\/\d+\/[A-Za-z0-9-]+\.(jpg|png|webp)$/
 
 export const isMediaKey = (key: string) => KEY_PATTERN.test(key)
 
 export function contentTypeOf(key: string): string | null {
   const match = KEY_PATTERN.exec(key)
-  return match ? CONTENT_TYPE_BY_EXTENSION[match[1]!]! : null
+  return match ? CONTENT_TYPE_BY_EXTENSION[match[2]!]! : null
 }
 
 const unavailable = () =>
