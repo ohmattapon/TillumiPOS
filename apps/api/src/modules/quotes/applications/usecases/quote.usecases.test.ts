@@ -21,7 +21,7 @@ const promotion = (overrides: Partial<ConstructorParameters<typeof PromotionEnti
   new PromotionEntity({
     id: 1, name: 'ลด 10%', kind: 'percent', value: 1000, maxDiscountSatang: null, minSubtotalSatang: 0,
     startsOn: null, endsOn: null, weekdays: null, windowStartMinute: null, windowEndMinute: null,
-    audience: 'everyone', isActive: true, createdAt: now, updatedAt: now, ...overrides,
+    audience: 'everyone', isActive: true, imageKey: null, createdAt: now, updatedAt: now, ...overrides,
   })
 const member = (isActive = true) =>
   new MemberEntity({ id: 8, name: 'ลูกค้าประจำ', phone: '0812345678', isActive, createdAt: now, updatedAt: now })
