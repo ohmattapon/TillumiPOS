@@ -2,6 +2,7 @@ import { inject, injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainForbiddenError } from '../../../../domains/errors/domain-forbidden.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
+import { shopFeaturesFor } from '../../../../domains/shop-settings.domain'
 import { UserEntity } from '../../../../domains/user.domain'
 import { branchRepositoryToken } from '../../../branches/applications/ports/branch.repository'
 import type { IBranchRepository } from '../../../branches/applications/ports/branch.repository'
@@ -53,7 +54,7 @@ export class CompleteSetupUseCase {
       const [branch] = await this.branches.findAll()
       if (!branch) throw new DomainNotFoundError('ไม่พบสาขา', 'BRANCH_NOT_FOUND')
       await this.branches.update(branch.with({ name: dto.branchName }))
-      await this.settings.save((await this.settings.getForUpdate()).with({ shopName: dto.shopName }))
+      await this.settings.save((await this.settings.getForUpdate()).with({ shopName: dto.shopName, ...shopFeaturesFor(dto.shopType) }))
 
       const ownerRole = await this.roles.findBySystemKey('owner')
       return this.users.create(

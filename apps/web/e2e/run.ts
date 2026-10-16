@@ -169,8 +169,25 @@ async function runSetupFlow(browser: Browser) {
         throw new Error('The sign-in form is shown while nobody has an account')
     })
 
+    await check('the setup page fits a phone and a tablet without scrolling sideways', async () => {
+      for (const width of [390, 768]) {
+        await page.setViewportSize({ width, height: 844 })
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+        if (overflow > 0) throw new Error(`The setup page overflows by ${overflow}px at ${width}px`)
+      }
+      await page.setViewportSize({ width: 1366, height: 900 })
+    })
+
+    await check('the setup button stays disabled until a shop type is chosen', async () => {
+      await fillForm('AAAAAAAAAAAA')
+      if (await page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' }).isEnabled())
+        throw new Error('Setup can be sent without a shop type')
+      await page.getByText('เลือกประเภทร้านก่อนจึงจะตั้งค่าได้').waitFor()
+    })
+
     await check('a wrong setup code is refused with a message, and nothing is created', async () => {
       await fillForm('AAAAAAAAAAAA')
+      await page.getByRole('radio', { name: /อื่นๆ/ }).check()
       await page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' }).click()
       await page.getByRole('alert').getByText(/รหัสตั้งค่าไม่ถูกต้อง/).waitFor()
       const status = await (await fetch(`http://localhost:${SETUP_API_PORT}/api/v1/setup`)).json()

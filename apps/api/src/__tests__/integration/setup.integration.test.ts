@@ -50,6 +50,19 @@ describe('first-run setup', () => {
     expect((await client().auth.login.post({ username: 'owner', password: 'correct-horse-battery' })).status).toBe(200)
   })
 
+  test('setup with a shop type sets the features', async () => {
+    const response = await fetch(`${baseUrl}/setup`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body({ shopType: 'cafe' })),
+    })
+    expect(response.status).toBe(200)
+    const session = response.headers.get('set-cookie')!.split(';')[0]!
+
+    const settings = await fetch(`${baseUrl}/settings`, { headers: { cookie: session } })
+    expect(await settings.json()).toMatchObject({ tablesEnabled: false, kitchenEnabled: false, modifiersEnabled: true })
+  })
+
   test('a wrong code, and no code issued, are refused and make no one', async () => {
     const wrong = await client().setup.post(body({ setupCode: 'WRONGWRONGWR' }))
     store().retire()

@@ -27,6 +27,19 @@ describe('shop settings', () => {
       receiptPaperMm: 80,
       receiptFooter: null,
       homeView: 'till',
+      tablesEnabled: true,
+      kitchenEnabled: true,
+      modifiersEnabled: true,
+    })
+  })
+
+  test('the owner switches features off and they stay off', async () => {
+    ok(await owner.api.settings.patch({ tablesEnabled: false, modifiersEnabled: false }))
+
+    expect(ok(await owner.api.settings.get())).toMatchObject({
+      tablesEnabled: false,
+      kitchenEnabled: true,
+      modifiersEnabled: false,
     })
   })
 
