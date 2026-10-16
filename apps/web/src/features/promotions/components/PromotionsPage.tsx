@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { meQuery } from '@/features/auth'
+import { useCan } from '@/features/auth'
 import { useFormat } from '@/features/settings'
 import { useListPagination } from '@/hooks/use-list-pagination'
 import { promotionsQuery, useUpdatePromotion, type Promotion } from '../api'
@@ -23,7 +23,7 @@ import { PromotionFormDialog } from './PromotionFormDialog'
 export function PromotionsPage() {
   const { t } = useTranslation('promotions')
   const { money, date, locale } = useFormat()
-  const isOwner = useQuery(meQuery).data?.role === 'owner'
+  const isOwner = useCan('promotions.write')
   const promotions = useQuery(promotionsQuery({ limit: 500 }))
   const update = useUpdatePromotion()
   const [dialog, setDialog] = useState<{ promotion?: Promotion } | null>(null)

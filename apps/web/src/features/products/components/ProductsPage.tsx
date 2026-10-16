@@ -26,6 +26,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { categoriesQuery, CategoryDot } from '@/features/categories'
 import { useFormat, useSettings } from '@/features/settings'
+import { useAuthorization } from '@/features/auth'
 import { productsQuery, useSetProductActive } from '../api'
 import { isLowStock, LOW_STOCK_THRESHOLD } from '../lib/stock'
 
@@ -34,6 +35,7 @@ type Filter = 'all' | 'low' | 'inactive'
 type OpenDialog = { kind: 'form'; product?: Product } | { kind: 'stock'; product: Product; mode: StockMode } | null
 
 export function ProductsPage() {
+  const { can } = useAuthorization()
   const { t } = useTranslation('products')
   const { t: tc } = useTranslation()
   const { money } = useFormat()
@@ -82,10 +84,10 @@ export function ProductsPage() {
               })
         }
       >
-        <Button className="h-11 px-3" onClick={() => setDialog({ kind: 'form' })}>
+        {can('products.write') && <Button className="h-11 px-3" onClick={() => setDialog({ kind: 'form' })}>
           <Plus />
           {t('add')}
-        </Button>
+        </Button>}
       </PageHeader>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
@@ -181,33 +183,33 @@ export function ProductsPage() {
             ]}
             actions={(product) => (
               <>
-                {product.trackStock && (
+                {product.trackStock && can('inventory.receive') && (
                   <Button variant="outline" className="mr-2 h-11" onClick={() => setDialog({ kind: 'stock', product, mode: 'receive' })}>
                     <PackagePlus />
                     {t('actions.receive')}
                   </Button>
                 )}
-                <DropdownMenu>
+                {(can('products.write') || (product.trackStock && can('inventory.adjust'))) && <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="size-11" aria-label={t('actions.more', { name: product.name })}>
                       <MoreHorizontal />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => setDialog({ kind: 'form', product })}>
+                    {can('products.write') && <DropdownMenuItem onSelect={() => setDialog({ kind: 'form', product })}>
                       {t('actions.edit')}
-                    </DropdownMenuItem>
-                    {product.trackStock && (
+                    </DropdownMenuItem>}
+                    {product.trackStock && can('inventory.adjust') && (
                       <DropdownMenuItem onSelect={() => setDialog({ kind: 'stock', product, mode: 'adjust' })}>
                         {t('actions.adjust')}
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={() => toggleActive(product)}>
+                    {can('products.write') && <DropdownMenuSeparator />}
+                    {can('products.write') && <DropdownMenuItem onSelect={() => toggleActive(product)}>
                       {product.isActive ? t('actions.deactivate') : t('actions.activate')}
-                    </DropdownMenuItem>
+                    </DropdownMenuItem>}
                   </DropdownMenuContent>
-                </DropdownMenu>
+                </DropdownMenu>}
               </>
             )}
           />
