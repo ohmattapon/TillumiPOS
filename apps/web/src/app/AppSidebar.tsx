@@ -1,6 +1,7 @@
 import type { User } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
 import {
+  Armchair,
   Building2,
   ChartNoAxesCombined,
   CalendarCheck,
@@ -59,7 +60,7 @@ import { BranchSwitcher, useActiveBranch } from '@/features/branches'
 import { clearCart } from '@/features/pos'
 import { useRegisterSelectionStore } from '@/features/shifts'
 import { LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
-import { useSettings } from '@/features/settings'
+import { useFeatures, useSettings } from '@/features/settings'
 import { useAuthorization } from '@/features/auth'
 import { themes, useTheme, type Theme } from './theme'
 
@@ -78,10 +79,11 @@ const activeItem =
 export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => void }) {
   const { t } = useTranslation('app')
   const { pathname } = useLocation()
-  const { shopName } = useSettings()
+  const { shopName, homeView } = useSettings()
   const { theme, setTheme } = useTheme()
   const { branch, canSwitch } = useActiveBranch()
   const { can, user: currentUser } = useAuthorization()
+  const features = useFeatures()
   const products = useQuery(productsQuery({ stockAtMost: LOW_STOCK_THRESHOLD, limit: 1 }))
   const lowStockCount = products.data?.total ?? 0
   const clearRegisterSelection = useRegisterSelectionStore((state) => state.clear)
@@ -90,8 +92,14 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
     {
       label: t('groups.sales'),
       items: [
-        { to: '/', label: t('nav.sell'), icon: ShoppingCart },
-        { to: '/kitchen', label: t('nav.kitchen'), icon: ChefHat },
+        // With the floor as home the till moves to /sell, and the floor takes its place at the top.
+        ...(homeView === 'tables'
+          ? [
+              { to: '/', label: t('nav.floor'), icon: Armchair },
+              { to: '/sell', label: t('nav.sell'), icon: ShoppingCart },
+            ]
+          : [{ to: '/', label: t('nav.sell'), icon: ShoppingCart }]),
+        ...(features.kitchen ? [{ to: '/kitchen', label: t('nav.kitchen'), icon: ChefHat }] : []),
         { to: '/today', label: t('nav.today'), icon: CalendarCheck },
         ...(can('reports.read') ? [{ to: '/reports', label: t('nav.reports'), icon: ChartNoAxesCombined }] : []),
         { to: '/members', label: t('nav.members'), icon: UserRound },
@@ -104,9 +112,9 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
             items: [
               ...((can('products.write') || can('inventory.receive') || can('inventory.adjust')) ? [{ to: '/products', label: t('nav.products'), icon: Package, badge: lowStockCount }] : []),
               ...(can('categories.write') ? [{ to: '/categories', label: t('nav.categories'), icon: Tags }] : []),
-              ...(can('modifiers.write') ? [{ to: '/modifiers', label: t('nav.modifiers'), icon: SlidersHorizontal }] : []),
-              ...(can('tables.write') ? [{ to: '/tables', label: t('nav.tables'), icon: LayoutGrid }] : []),
-              ...(can('kitchen.write') ? [{ to: '/kitchen-stations', label: t('nav.kitchenStations'), icon: Utensils }] : []),
+              ...(features.modifiers && can('modifiers.write') ? [{ to: '/modifiers', label: t('nav.modifiers'), icon: SlidersHorizontal }] : []),
+              ...(features.tables && can('tables.write') ? [{ to: '/tables', label: t('nav.tables'), icon: LayoutGrid }] : []),
+              ...(features.kitchen && can('kitchen.write') ? [{ to: '/kitchen-stations', label: t('nav.kitchenStations'), icon: Utensils }] : []),
               ...(can('branches.manage') ? [{ to: '/branches', label: t('nav.branches'), icon: Building2 }] : []),
               ...(can('users.manage') ? [{ to: '/users', label: t('nav.users'), icon: Users }] : []),
               ...(can('settings.write') ? [{ to: '/settings', label: t('nav.settings'), icon: Settings }] : []),

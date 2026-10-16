@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { openOrdersQuery, useMergeOrders, useMoveOrder, useSplitOrder } from '@/features/orders'
-import { useFormat } from '@/features/settings'
+import { useFeatures, useFormat } from '@/features/settings'
 import { tablesQuery } from '@/features/tables'
 import { useCartStore } from '../store/cart.store'
 
@@ -229,13 +229,17 @@ function SplitDialog({ order, onClose }: { order: Order; onClose: () => void }) 
 export function OrderTools({ order }: { order: Order }) {
   const { t } = useTranslation('pos')
   const [tool, setTool] = useState<Tool>(null)
+  // Merge and split work on orders without a table too, so only moving to a table goes with the switch.
+  const { tables } = useFeatures()
 
   return (
     <>
       <div className="flex gap-2 border-b px-4 py-2">
-        <Button variant="outline" className="h-9 flex-1" onClick={() => setTool('move')}>
-          {t('tools.move')}
-        </Button>
+        {tables && (
+          <Button variant="outline" className="h-9 flex-1" onClick={() => setTool('move')}>
+            {t('tools.move')}
+          </Button>
+        )}
         <Button variant="outline" className="h-9 flex-1" onClick={() => setTool('merge')}>
           {t('tools.merge')}
         </Button>

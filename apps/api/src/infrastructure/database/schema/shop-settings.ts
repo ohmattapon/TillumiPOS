@@ -1,4 +1,4 @@
-import { check, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { boolean, check, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 export const vatMode = pgEnum('vat_mode', ['inclusive', 'exclusive', 'none'])
@@ -23,6 +23,10 @@ export const shopSettings = pgTable(
     receiptFooter: text(),
     // What the sell screen opens on: the till itself, or the floor plan of tables.
     homeView: shopHomeView().notNull().default('till'),
+    // Which screens the web shows. True by default so a shop set up before these existed keeps them all.
+    tablesEnabled: boolean().notNull().default(true),
+    kitchenEnabled: boolean().notNull().default(true),
+    modifiersEnabled: boolean().notNull().default(true),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [check('shop_settings_single_row', sql`${table.id} = 1`)],

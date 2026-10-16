@@ -47,68 +47,70 @@ export function BranchFormDialog({ branch, onClose }: Props) {
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="flex flex-col overflow-hidden sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{branch ? t('form.titleEdit') : t('form.titleNew')}</DialogTitle>
           <DialogDescription>{t('form.description')}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={submit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="branch-code">{t('form.code')}</Label>
-            <Input
-              id="branch-code"
-              className="h-10 uppercase"
-              value={form.code}
-              onChange={(event) => set('code', event.target.value)}
-              disabled={branch !== undefined}
-              maxLength={10}
-              required
-              autoFocus={branch === undefined}
-            />
-            {!branch && <p className="text-xs text-muted-foreground">{t('form.codeHint')}</p>}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="branch-name">{t('form.name')}</Label>
-            <Input
-              id="branch-name"
-              className="h-10"
-              value={form.name}
-              onChange={(event) => set('name', event.target.value)}
-              maxLength={100}
-              required
-              autoFocus={branch !== undefined}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="branch-address">{t('form.address')}</Label>
-            <Input
-              id="branch-address"
-              className="h-10"
-              value={form.address}
-              onChange={(event) => set('address', event.target.value)}
-              placeholder={t('form.optional')}
-              maxLength={500}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="branch-phone">{t('form.phone')}</Label>
-            <Input
-              id="branch-phone"
-              className="h-10"
-              value={form.phone}
-              onChange={(event) => set('phone', event.target.value)}
-              placeholder={t('form.optional')}
-              maxLength={30}
-            />
-          </div>
+        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col gap-4">
+          {/* Only the fields scroll, so the confirm row stays at the bottom of the dialog. */}
+          <div className="-mx-4 min-h-0 flex-1 overflow-y-auto px-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="branch-code">{t('form.code')}</Label>
+              <Input
+                id="branch-code"
+                className="h-10 uppercase"
+                value={form.code}
+                onChange={(event) => set('code', event.target.value)}
+                disabled={branch !== undefined}
+                maxLength={10}
+                required
+                autoFocus={branch === undefined}
+              />
+              {!branch && <p className="text-xs text-muted-foreground">{t('form.codeHint')}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="branch-name">{t('form.name')}</Label>
+              <Input
+                id="branch-name"
+                className="h-10"
+                value={form.name}
+                onChange={(event) => set('name', event.target.value)}
+                maxLength={100}
+                required
+                autoFocus={branch !== undefined}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="branch-address">{t('form.address')}</Label>
+              <Input
+                id="branch-address"
+                className="h-10"
+                value={form.address}
+                onChange={(event) => set('address', event.target.value)}
+                placeholder={t('form.optional')}
+                maxLength={500}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="branch-phone">{t('form.phone')}</Label>
+              <Input
+                id="branch-phone"
+                className="h-10"
+                value={form.phone}
+                onChange={(event) => set('phone', event.target.value)}
+                placeholder={t('form.optional')}
+                maxLength={30}
+              />
+            </div>
 
-          {mutation.error && (
-            <p role="alert" className="text-sm text-destructive">
-              {mutation.error.message}
-            </p>
-          )}
-
+            {mutation.error && (
+              <p role="alert" className="text-sm text-destructive">
+                {mutation.error.message}
+              </p>
+            )}
+          </div>
           <DialogFooter>
             <Button type="button" variant="outline" className="h-10" onClick={onClose}>
               {tc('cancel')}

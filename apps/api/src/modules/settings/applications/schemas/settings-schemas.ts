@@ -25,5 +25,8 @@ export const updateShopSettingsSchema = z
     receiptPaperMm: z.union(RECEIPT_PAPER_WIDTHS.map((width) => z.literal(width))),
     receiptFooter: optionalText(200),
     homeView: z.enum(HOME_VIEWS),
+    tablesEnabled: z.boolean(),
+    kitchenEnabled: z.boolean(),
+    modifiersEnabled: z.boolean(),
   })
   .partial()

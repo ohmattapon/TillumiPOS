@@ -52,6 +52,35 @@ describe('UpdateShopSettingsUseCase', () => {
     expect(saved).toMatchObject({ shopName: 'ร้านใหม่', currency: 'USD' })
   })
 
+  test('turns a feature off and records it in the audit log', async () => {
+    const audit = auditMock()
+    const saved = await new UpdateShopSettingsUseCase(repo, shiftGuard, mockUnitOfWork(), audit).execute(
+      { kitchenEnabled: false },
+      { id: 1, displayName: 'ผู้ทดสอบ' },
+    )
+
+    expect(saved.kitchenEnabled).toBe(false)
+    expect(repo.save).toHaveBeenCalledWith(saved)
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.anything(),
+      null,
+      expect.objectContaining({ after: expect.objectContaining({ kitchenEnabled: false }) }),
+    )
+  })
+
+  test('refuses to turn tables off while the floor plan is home, and saves nothing', async () => {
+    repo.getForUpdate.mockResolvedValue(current.with({ homeView: 'tables' }))
+
+    await expect(update({ tablesEnabled: false })).rejects.toMatchObject({ code: 'INVALID_SHOP_SETTINGS' })
+    expect(repo.save).not.toHaveBeenCalled()
+  })
+
+  test('turns tables off and the till home in one change', async () => {
+    repo.getForUpdate.mockResolvedValue(current.with({ homeView: 'tables' }))
+
+    expect(await update({ tablesEnabled: false, homeView: 'till' })).toMatchObject({ tablesEnabled: false, homeView: 'till' })
+  })
+
   test.each(['tables', 'till'] as const)('accepts %s as the home view and stores it', async (homeView) => {
     const saved = await update({ homeView })
 

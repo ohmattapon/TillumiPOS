@@ -9,6 +9,7 @@
     "dev:web": "bun run --filter @pos/web dev",
     "dev:media": "bun run --filter @pos/media dev",
     "deploy:media": "bun run --filter @pos/media deploy",
+    "deploy:cloud": "bun run --filter @pos/cloud deploy",
     "db:up": "podman compose -f docker-compose.yml -f docker-compose.dev.yml up -d db",
     "cache:up": "podman compose -f docker-compose.yml -f docker-compose.dev.yml up -d redis",
     "db:generate": "bun run --filter @pos/api db:generate",
@@ -22,6 +23,10 @@
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "bun run --filter @pos/web lint",
     "test": "bun run --filter @pos/api test && bun run --filter @pos/web test",
-    "test:unit": "bun run --filter @pos/api test:unit"
+    "test:unit": "bun run --filter @pos/api test:unit",
+    "hooks:install": "lefthook install"
+  },
+  "devDependencies": {
+    "lefthook": "^2.2.2"
   }
 }

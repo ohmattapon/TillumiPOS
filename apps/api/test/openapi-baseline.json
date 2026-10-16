@@ -27027,12 +27027,18 @@
                       ],
                       "type": "string"
                     },
+                    "kitchenEnabled": {
+                      "type": "boolean"
+                    },
                     "locale": {
                       "enum": [
                         "th",
                         "en"
                       ],
                       "type": "string"
+                    },
+                    "modifiersEnabled": {
+                      "type": "boolean"
                     },
                     "phone": {
                       "maxLength": 30,
@@ -27061,6 +27067,9 @@
                       "maxLength": 100,
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "tablesEnabled": {
+                      "type": "boolean"
                     },
                     "taxId": {
                       "maxLength": 20,
@@ -27112,7 +27121,10 @@
                     "locale",
                     "receiptPaperMm",
                     "receiptFooter",
-                    "homeView"
+                    "homeView",
+                    "tablesEnabled",
+                    "kitchenEnabled",
+                    "modifiersEnabled"
                   ],
                   "type": "object"
                 }
@@ -27153,12 +27165,18 @@
                     ],
                     "type": "string"
                   },
+                  "kitchenEnabled": {
+                    "type": "boolean"
+                  },
                   "locale": {
                     "enum": [
                       "th",
                       "en"
                     ],
                     "type": "string"
+                  },
+                  "modifiersEnabled": {
+                    "type": "boolean"
                   },
                   "phone": {
                     "maxLength": 30,
@@ -27187,6 +27205,9 @@
                     "maxLength": 100,
                     "minLength": 1,
                     "type": "string"
+                  },
+                  "tablesEnabled": {
+                    "type": "boolean"
                   },
                   "taxId": {
                     "maxLength": 20,
@@ -27252,12 +27273,18 @@
                     ],
                     "type": "string"
                   },
+                  "kitchenEnabled": {
+                    "type": "boolean"
+                  },
                   "locale": {
                     "enum": [
                       "th",
                       "en"
                     ],
                     "type": "string"
+                  },
+                  "modifiersEnabled": {
+                    "type": "boolean"
                   },
                   "phone": {
                     "maxLength": 30,
@@ -27286,6 +27313,9 @@
                     "maxLength": 100,
                     "minLength": 1,
                     "type": "string"
+                  },
+                  "tablesEnabled": {
+                    "type": "boolean"
                   },
                   "taxId": {
                     "maxLength": 20,
@@ -27351,12 +27381,18 @@
                     ],
                     "type": "string"
                   },
+                  "kitchenEnabled": {
+                    "type": "boolean"
+                  },
                   "locale": {
                     "enum": [
                       "th",
                       "en"
                     ],
                     "type": "string"
+                  },
+                  "modifiersEnabled": {
+                    "type": "boolean"
                   },
                   "phone": {
                     "maxLength": 30,
@@ -27385,6 +27421,9 @@
                     "maxLength": 100,
                     "minLength": 1,
                     "type": "string"
+                  },
+                  "tablesEnabled": {
+                    "type": "boolean"
                   },
                   "taxId": {
                     "maxLength": 20,
@@ -27456,12 +27495,18 @@
                       ],
                       "type": "string"
                     },
+                    "kitchenEnabled": {
+                      "type": "boolean"
+                    },
                     "locale": {
                       "enum": [
                         "th",
                         "en"
                       ],
                       "type": "string"
+                    },
+                    "modifiersEnabled": {
+                      "type": "boolean"
                     },
                     "phone": {
                       "maxLength": 30,
@@ -27490,6 +27535,9 @@
                       "maxLength": 100,
                       "minLength": 1,
                       "type": "string"
+                    },
+                    "tablesEnabled": {
+                      "type": "boolean"
                     },
                     "taxId": {
                       "maxLength": 20,
@@ -27541,7 +27589,10 @@
                     "locale",
                     "receiptPaperMm",
                     "receiptFooter",
-                    "homeView"
+                    "homeView",
+                    "tablesEnabled",
+                    "kitchenEnabled",
+                    "modifiersEnabled"
                   ],
                   "type": "object"
                 }
@@ -27616,6 +27667,15 @@
                     "minLength": 1,
                     "type": "string"
                   },
+                  "shopType": {
+                    "enum": [
+                      "cafe",
+                      "restaurant",
+                      "retail",
+                      "other"
+                    ],
+                    "type": "string"
+                  },
                   "username": {
                     "maxLength": 64,
                     "minLength": 1,
@@ -27661,6 +27721,15 @@
                     "minLength": 1,
                     "type": "string"
                   },
+                  "shopType": {
+                    "enum": [
+                      "cafe",
+                      "restaurant",
+                      "retail",
+                      "other"
+                    ],
+                    "type": "string"
+                  },
                   "username": {
                     "maxLength": 64,
                     "minLength": 1,
@@ -27704,6 +27773,15 @@
                   "shopName": {
                     "maxLength": 100,
                     "minLength": 1,
+                    "type": "string"
+                  },
+                  "shopType": {
+                    "enum": [
+                      "cafe",
+                      "restaurant",
+                      "retail",
+                      "other"
+                    ],
                     "type": "string"
                   },
                   "username": {

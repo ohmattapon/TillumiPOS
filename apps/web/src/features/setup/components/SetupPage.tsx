@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import type { ShopType } from '@pos/api/shop-settings'
 import { useCompleteSetup } from '../api'
+import { isSetupFormFilled } from '../lib/setup-form'
+import { ShopTypeChoice } from './ShopTypeChoice'
 
 /** Shown instead of the login page while nobody has an account: makes the owner and names the shop. */
 export function SetupPage() {
@@ -19,22 +22,20 @@ export function SetupPage() {
     password: '',
     confirm: '',
   })
+  const [shopType, setShopType] = useState<ShopType | null>(null)
   const complete = useCompleteSetup()
   const set = (key: keyof typeof form) => (event: { target: { value: string } }) =>
     setForm({ ...form, [key]: event.target.value })
 
   const mismatch = form.confirm !== '' && form.password !== form.confirm
-  const canSubmit =
-    Object.values(form).every((value) => value.trim() !== '') &&
-    form.password.length >= 10 &&
-    !mismatch &&
-    !complete.isPending
+  const isFilled = isSetupFormFilled(form)
+  const canSubmit = isFilled && shopType !== null && !complete.isPending
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    if (!canSubmit) return
+    if (!canSubmit || shopType === null) return
     const { confirm: _confirm, ...input } = form
-    complete.mutate({ ...input, setupCode: input.setupCode.trim() })
+    complete.mutate({ ...input, setupCode: input.setupCode.trim(), shopType })
   }
 
   const field = (
@@ -73,12 +74,14 @@ export function SetupPage() {
             <p className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">{t('codeNote')}</p>
             {field('setupCode', t('setupCode'), { autoFocus: true })}
             {field('shopName', t('shopName'))}
+            <ShopTypeChoice value={shopType} onChange={setShopType} />
             {field('branchName', t('branchName'))}
             {field('username', t('username'))}
             {field('displayName', t('displayName'))}
             {field('password', t('password'), { type: 'password', hint: t('passwordHint') })}
             {field('confirm', t('confirm'), { type: 'password' })}
             {mismatch && <p className="text-sm text-destructive">{t('mismatch')}</p>}
+            {isFilled && shopType === null && <p className="text-sm text-muted-foreground">{t('shopType.required')}</p>}
             {complete.error && (
               <p role="alert" className="text-sm text-destructive">
                 {complete.error.message}

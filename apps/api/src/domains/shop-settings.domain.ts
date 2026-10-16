@@ -12,6 +12,29 @@ export type ReceiptPaperMm = (typeof RECEIPT_PAPER_WIDTHS)[number]
 export const HOME_VIEWS = ['till', 'tables'] as const
 export type HomeView = (typeof HOME_VIEWS)[number]
 
+/** The kinds of shop first-run setup asks about. Only the features they turn on are stored, not the type. */
+export const SHOP_TYPES = ['cafe', 'restaurant', 'retail', 'other'] as const
+export type ShopType = (typeof SHOP_TYPES)[number]
+
+export interface ShopFeatures {
+  tablesEnabled: boolean
+  kitchenEnabled: boolean
+  modifiersEnabled: boolean
+  homeView: HomeView
+}
+
+const FEATURES_BY_SHOP_TYPE: Record<ShopType, ShopFeatures> = {
+  cafe: { tablesEnabled: false, kitchenEnabled: false, modifiersEnabled: true, homeView: 'till' },
+  restaurant: { tablesEnabled: true, kitchenEnabled: true, modifiersEnabled: true, homeView: 'tables' },
+  retail: { tablesEnabled: false, kitchenEnabled: false, modifiersEnabled: false, homeView: 'till' },
+  other: { tablesEnabled: true, kitchenEnabled: true, modifiersEnabled: true, homeView: 'till' },
+}
+
+/** What a new shop of this type starts with. The owner can switch each feature later. */
+export function shopFeaturesFor(type: ShopType): ShopFeatures {
+  return { ...FEATURES_BY_SHOP_TYPE[type] }
+}
+
 export interface ShopSettingsProps {
   shopName: string
   /** Tax identification number printed on receipts. */
@@ -30,6 +53,13 @@ export interface ShopSettingsProps {
   /** Printed under every receipt, such as a thank-you line or the return policy. */
   receiptFooter: string | null
   homeView: HomeView
+  /**
+   * Whether the web shows tables, the kitchen and modifier management. They only hide screens:
+   * the API keeps accepting everything, and switching one off deletes nothing.
+   */
+  tablesEnabled: boolean
+  kitchenEnabled: boolean
+  modifiersEnabled: boolean
 }
 
 /** What a shop that has never been configured runs with. */
@@ -46,6 +76,9 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettingsProps = {
   receiptPaperMm: 80,
   receiptFooter: null,
   homeView: 'till',
+  tablesEnabled: true,
+  kitchenEnabled: true,
+  modifiersEnabled: true,
 }
 
 export type ShopSettingsChanges = Partial<ShopSettingsProps>
@@ -75,6 +108,9 @@ export class ShopSettingsEntity {
   public readonly receiptPaperMm: ReceiptPaperMm
   public readonly receiptFooter: string | null
   public readonly homeView: HomeView
+  public readonly tablesEnabled: boolean
+  public readonly kitchenEnabled: boolean
+  public readonly modifiersEnabled: boolean
 
   constructor(props: ShopSettingsProps) {
     if (props.shopName.length < 1 || props.shopName.length > 100) throw invalid('ชื่อร้านต้องยาว 1 ถึง 100 ตัวอักษร')
@@ -90,6 +126,10 @@ export class ShopSettingsEntity {
     if (!RECEIPT_PAPER_WIDTHS.includes(props.receiptPaperMm)) throw invalid('ขนาดกระดาษใบเสร็จต้องเป็น 58 หรือ 80 มม.')
     if (!within(props.receiptFooter, 200)) throw invalid('ข้อความท้ายใบเสร็จต้องไม่เกิน 200 ตัวอักษร')
     if (!HOME_VIEWS.includes(props.homeView)) throw invalid('หน้าแรกต้องเป็นหน้าขายหรือผังโต๊ะ')
+    if ([props.tablesEnabled, props.kitchenEnabled, props.modifiersEnabled].some((value) => typeof value !== 'boolean'))
+      throw invalid('การเปิดปิดฟีเจอร์ต้องเป็นค่าจริงหรือเท็จ')
+    if (!props.tablesEnabled && props.homeView === 'tables')
+      throw invalid('ปิดการใช้โต๊ะอยู่ จึงตั้งผังโต๊ะเป็นหน้าแรกไม่ได้')
 
     this.shopName = props.shopName
     this.taxId = props.taxId
@@ -103,6 +143,9 @@ export class ShopSettingsEntity {
     this.receiptPaperMm = props.receiptPaperMm
     this.receiptFooter = props.receiptFooter
     this.homeView = props.homeView
+    this.tablesEnabled = props.tablesEnabled
+    this.kitchenEnabled = props.kitchenEnabled
+    this.modifiersEnabled = props.modifiersEnabled
   }
 
   /**
@@ -133,6 +176,9 @@ export class ShopSettingsEntity {
       receiptPaperMm: this.receiptPaperMm,
       receiptFooter: this.receiptFooter,
       homeView: this.homeView,
+      tablesEnabled: this.tablesEnabled,
+      kitchenEnabled: this.kitchenEnabled,
+      modifiersEnabled: this.modifiersEnabled,
     }
   }
 }
