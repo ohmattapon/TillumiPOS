@@ -1,5 +1,7 @@
 import type { Branch, User } from '@pos/api/types'
 import { useState, type FormEvent } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { roleOptionsQuery } from '@/features/roles'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -10,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useCreateUser, useUpdateUser } from '../api'
 
 const MIN_PASSWORD = 8
-const roles: User['role'][] = ['cashier', 'owner']
 
 interface Props {
   /** Omit to add a new user. */
@@ -25,10 +26,11 @@ interface Props {
 export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Props) {
   const { t } = useTranslation('users')
   const { t: tc } = useTranslation()
+  const roles = useQuery(roleOptionsQuery)
   const [form, setForm] = useState({
     username: user?.username ?? '',
     displayName: user?.displayName ?? '',
-    role: user?.role ?? ('cashier' as User['role']),
+    roleId: user?.roleId ? String(user.roleId) : '',
     branchId: String(user?.branchId ?? defaultBranchId ?? branches[0]?.id ?? ''),
     password: '',
   })
@@ -40,7 +42,8 @@ export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Pro
 
   // A new user needs a password; an existing one keeps theirs unless a new one is typed.
   const passwordOk = user ? form.password === '' || form.password.length >= MIN_PASSWORD : form.password.length >= MIN_PASSWORD
-  const canSave = form.displayName.trim() !== '' && form.branchId !== '' && passwordOk && !mutation.isPending
+  const selectedRoleId = form.roleId || String(roles.data?.find((role) => role.systemKey === 'cashier')?.id ?? '')
+  const canSave = form.displayName.trim() !== '' && form.branchId !== '' && selectedRoleId !== '' && passwordOk && !mutation.isPending && !roles.isPending && !roles.error
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -50,7 +53,7 @@ export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Pro
 
     if (user)
       update.mutate(
-        { id: user.id, changes: { displayName, role: form.role, branchId, ...(form.password && { password: form.password }) } },
+        { id: user.id, changes: { displayName, roleId: Number(selectedRoleId), branchId, ...(form.password && { password: form.password }) } },
         {
           onSuccess: (saved) => {
             toast.success(t('toast.updated', { name: saved.displayName }))
@@ -60,7 +63,7 @@ export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Pro
       )
     else
       create.mutate(
-        { username: form.username.trim(), password: form.password, displayName, role: form.role, branchId },
+        { username: form.username.trim(), password: form.password, displayName, roleId: Number(selectedRoleId), branchId },
         {
           onSuccess: (saved) => {
             toast.success(t('toast.created', { name: saved.displayName }))
@@ -83,7 +86,7 @@ export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Pro
             <Label htmlFor="user-username">{t('form.username')}</Label>
             <Input
               id="user-username"
-              className="h-10"
+              className="h-11"
               value={form.username}
               onChange={(event) => set('username', event.target.value)}
               disabled={user !== undefined}
@@ -100,7 +103,7 @@ export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Pro
             <Label htmlFor="user-display-name">{t('form.displayName')}</Label>
             <Input
               id="user-display-name"
-              className="h-10"
+              className="h-11"
               value={form.displayName}
               onChange={(event) => set('displayName', event.target.value)}
               maxLength={100}
@@ -111,14 +114,14 @@ export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Pro
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="user-role">{t('form.role')}</Label>
-              <Select value={form.role} onValueChange={(value) => set('role', value as User['role'])}>
-                <SelectTrigger id="user-role" className="h-10! w-full">
+              <Select value={selectedRoleId} onValueChange={(value) => set('roleId', value)} disabled={roles.isPending || Boolean(roles.error)}>
+                <SelectTrigger id="user-role" className="h-11! w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {t(`roles.${role}`)}
+                  {(roles.data ?? []).map((role) => (
+                    <SelectItem key={role.id} value={String(role.id)}>
+                      {role.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -127,7 +130,7 @@ export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Pro
             <div className="space-y-2">
               <Label htmlFor="user-branch">{t('form.branch')}</Label>
               <Select value={form.branchId} onValueChange={(value) => set('branchId', value)}>
-                <SelectTrigger id="user-branch" className="h-10! w-full">
+                <SelectTrigger id="user-branch" className="h-11! w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -145,7 +148,7 @@ export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Pro
             <Input
               id="user-password"
               type="password"
-              className="h-10"
+              className="h-11"
               value={form.password}
               onChange={(event) => set('password', event.target.value)}
               autoComplete="new-password"
@@ -156,6 +159,7 @@ export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Pro
             <p className="text-xs text-muted-foreground">{t('form.passwordHint')}</p>
           </div>
 
+          {roles.error && <p role="alert" className="text-sm text-destructive">{roles.error.message}</p>}
           {mutation.error && (
             <p role="alert" className="text-sm text-destructive">
               {mutation.error.message}
@@ -163,10 +167,10 @@ export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Pro
           )}
 
           <DialogFooter>
-            <Button type="button" variant="outline" className="h-10" onClick={onClose}>
+            <Button type="button" variant="outline" className="h-11" onClick={onClose}>
               {tc('cancel')}
             </Button>
-            <Button type="submit" className="h-10" disabled={!canSave}>
+            <Button type="submit" className="h-11" disabled={!canSave}>
               {mutation.isPending ? t('form.saving') : t('form.save')}
             </Button>
           </DialogFooter>
