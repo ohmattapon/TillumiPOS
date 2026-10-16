@@ -64,6 +64,7 @@ export function Receipt({ sale, elementRef }: { sale: Sale; elementRef?: Ref<HTM
           <span>-{money.plain(sale.discountSatang)}</span>
         </p>
       )}
+      {sale.promotion && <p className="pl-3 text-xs">{t('receipt.promotion', { name: sale.promotion.name })}</p>}
       {vatAdded && (
         <p className={row}>
           <span>{t('receipt.vatAdded', { rate: vatRate })}</span>

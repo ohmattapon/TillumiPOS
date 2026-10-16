@@ -1,4 +1,4 @@
-import { mockMemberRepository } from '../../../../__tests__/mocks'
+import { mockMemberRepository, mockQuoteClaims } from '../../../../__tests__/mocks'
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
 import { makeBranch, makeProduct, makeSale, makeStockMovement } from '../../../../__tests__/factories'
@@ -66,7 +66,7 @@ describe('CompleteSaleUseCase', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches, lineOptions, mockMemberRepository()), unitOfWork)
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork)
   })
 
   const sell = (overrides: Record<string, unknown> = {}) =>
@@ -288,7 +288,7 @@ describe('QR payments in a sale', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches, lineOptions, mockMemberRepository()), unitOfWork)
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork)
   })
 
   test('a promptpay payment backed by a QR is checked for this branch and amount, then used by the sale', async () => {
@@ -532,7 +532,7 @@ describe('SaleCheckout with options', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    checkout = new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches, lineOptions, mockMemberRepository())
+    checkout = new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches, lineOptions, mockMemberRepository(), mockQuoteClaims())
   })
 
   test('a one-step line with option ids is resolved and sold at product plus options', async () => {

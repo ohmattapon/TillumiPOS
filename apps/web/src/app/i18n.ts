@@ -6,6 +6,7 @@ import { categoriesLocales } from '@/features/categories'
 import { kitchenLocales } from '@/features/kitchen'
 import { customerDisplayLocales } from '@/features/customer-display'
 import { membersLocales } from '@/features/members'
+import { promotionsLocales } from '@/features/promotions'
 import { modifiersLocales } from '@/features/modifiers'
 import { posLocales } from '@/features/pos'
 import { productsLocales } from '@/features/products'
@@ -36,6 +37,7 @@ export const resources = {
     modifiers: modifiersLocales.th,
     kitchen: kitchenLocales.th,
     members: membersLocales.th,
+    promotions: promotionsLocales.th,
     tables: tablesLocales.th,
     users: usersLocales.th,
     pos: posLocales.th,
@@ -56,6 +58,7 @@ export const resources = {
     modifiers: modifiersLocales.en,
     kitchen: kitchenLocales.en,
     members: membersLocales.en,
+    promotions: promotionsLocales.en,
     tables: tablesLocales.en,
     users: usersLocales.en,
     pos: posLocales.en,

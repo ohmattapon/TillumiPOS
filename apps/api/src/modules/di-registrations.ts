@@ -17,3 +17,5 @@ import './qr-payments/qr-payments.module'
 import './settings/settings.module'
 
 import './members/members.module'
+import './promotions/promotions.module'
+import './quotes/quotes.module'

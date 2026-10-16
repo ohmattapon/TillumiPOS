@@ -7,6 +7,7 @@ import { auth } from '../../../auth.plugin'
 import { CancelQrPaymentUseCase } from '../../applications/usecases/cancel-qr-payment.usecase'
 import { CreateQrPaymentV2UseCase } from '../../applications/usecases/create-qr-payment-v2.usecase'
 import { DismissQrPaymentUseCase } from '../../applications/usecases/dismiss-qr-payment.usecase'
+import { FindOrderQrHoldUseCase } from '../../applications/usecases/find-order-qr-hold.usecase'
 import { GetQrPaymentUseCase } from '../../applications/usecases/get-qr-payment.usecase'
 import { ListUnclaimedQrPaymentsUseCase } from '../../applications/usecases/list-unclaimed-qr-payments.usecase'
 import { ListUnresolvedQrAttemptsUseCase } from '../../applications/usecases/list-unresolved-qr-attempts.usecase'
@@ -64,6 +65,7 @@ export class QrPaymentV2ElysiaController {
     @inject(CreateQrPaymentV2UseCase) private readonly create: CreateQrPaymentV2UseCase,
     @inject(ReadQrPaymentUseCase) private readonly read: ReadQrPaymentUseCase,
     @inject(GetQrPaymentUseCase) private readonly refresh: GetQrPaymentUseCase,
+    @inject(FindOrderQrHoldUseCase) private readonly findHold: FindOrderQrHoldUseCase,
     @inject(CancelQrPaymentUseCase) private readonly cancel: CancelQrPaymentUseCase,
     @inject(ListUnclaimedQrPaymentsUseCase) private readonly listUnclaimed: ListUnclaimedQrPaymentsUseCase,
     @inject(ListUnresolvedQrAttemptsUseCase) private readonly listAttempts: ListUnresolvedQrAttemptsUseCase,
@@ -86,6 +88,26 @@ export class QrPaymentV2ElysiaController {
           query: t.Object({ ...pageQuery.properties, amountSatang: t.Optional(t.Numeric({ minimum: 1 })) }),
           response: page(payment),
           detail: { summary: 'v2: เงินที่ธนาคารยืนยันแล้วแต่ยังไม่มีบิลในสาขา' },
+        },
+      )
+      .get(
+        '/hold',
+        async ({ query, branch }) => {
+          const hold = await this.findHold.execute(query.orderId, (await branch()).id)
+          return hold && { id: hold.id, status: hold.status, amountSatang: hold.amountSatang, expiresAt: hold.expiresAt }
+        },
+        {
+          auth: true,
+          query: t.Object({ orderId: t.Integer({ minimum: 1 }) }),
+          response: t.Nullable(
+            t.Object({
+              id: t.Integer(),
+              status: t.Union([t.Literal('pending'), t.Literal('paid'), t.Literal('cancelled')]),
+              amountSatang: t.Integer(),
+              expiresAt: t.Date(),
+            }),
+          ),
+          detail: { summary: 'v2: QR ที่ถือราคาของออเดอร์นี้อยู่ (null เมื่อไม่มี) ใช้แสดงว่าออเดอร์ถูกล็อกเพราะ QR' },
         },
       )
       .get(
@@ -126,7 +148,7 @@ export class QrPaymentV2ElysiaController {
         {
           auth: true,
           headers: idempotencyHeaders,
-          body: t.Object({ amountSatang: satang({ minimum: 1 }), shiftId: t.Integer({ minimum: 1 }) }),
+          body: t.Object({ amountSatang: satang({ minimum: 1 }), shiftId: t.Integer({ minimum: 1 }), quoteId: t.Optional(t.Integer({ minimum: 1 })) }),
           response: t.Composite([payment, t.Object({ qrRawData: t.String(), qrImage: t.String() })]),
           detail: { summary: 'v2: ขอ QR ในกะที่เปิดอยู่ (บันทึกคำขอก่อนเรียกธนาคาร)' },
         },

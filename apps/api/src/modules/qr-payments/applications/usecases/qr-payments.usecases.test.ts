@@ -5,6 +5,7 @@ import {
   mockClock,
   mockQrPaymentGateway,
   mockQrPaymentRepository,
+  mockQuoteClaims,
   mockUnitOfWork,
 } from '../../../../__tests__/mocks'
 import { DomainExternalServiceError } from '../../../../domains/errors/domain-external-service.error'
@@ -14,6 +15,7 @@ import { CancelQrPaymentUseCase } from './cancel-qr-payment.usecase'
 import { ConfirmScbCallbackUseCase } from './confirm-scb-callback.usecase'
 import { CreateQrPaymentUseCase, QR_VALID_FOR_MS } from './create-qr-payment.usecase'
 import { GetQrPaymentUseCase } from './get-qr-payment.usecase'
+import { DismissQrPaymentUseCase } from './dismiss-qr-payment.usecase'
 
 const now = new Date('2026-10-13T06:01:00Z')
 const found = { transactionId: 'TX-1', amountSatang: 5000, paidAt: new Date('2026-10-13T06:00:30Z'), payerName: null }
@@ -21,11 +23,13 @@ const found = { transactionId: 'TX-1', amountSatang: 5000, paidAt: new Date('202
 let repo: ReturnType<typeof mockQrPaymentRepository>
 let gateway: ReturnType<typeof mockQrPaymentGateway>
 let refresher: QrPaymentRefresher
+let quotes: ReturnType<typeof mockQuoteClaims>
 
 beforeEach(() => {
   repo = mockQrPaymentRepository()
   gateway = mockQrPaymentGateway()
   refresher = new QrPaymentRefresher(gateway, repo, mockClock(now))
+  quotes = mockQuoteClaims()
 })
 
 describe('CreateQrPaymentUseCase', () => {
@@ -35,7 +39,36 @@ describe('CreateQrPaymentUseCase', () => {
   beforeEach(() => {
     gateway.createQr.mockResolvedValue({ qrRawData: 'RAW', qrImage: 'IMG' })
     repo.create.mockImplementation(async (payment) => makeQrPayment({ ...payment, id: 3 }))
-    useCase = new CreateQrPaymentUseCase(gateway, repo, mockClock(now))
+    useCase = new CreateQrPaymentUseCase(gateway, repo, mockClock(now), quotes, mockUnitOfWork())
+  })
+
+  test('a QR made from a quote holds the quote for the reference it gives the bank', async () => {
+    await useCase.execute({ amountSatang: 2100, quoteId: 7 }, actor)
+
+    const reference = gateway.createQr.mock.calls[0]![0].reference
+    expect(quotes.reserveForQr).toHaveBeenCalledWith(7, { branchId: 1, reference, amountSatang: 2100 })
+    expect(repo.create.mock.calls[0]![0]).toMatchObject({ reference, amountSatang: 2100 })
+  })
+
+  test('a quote that cannot be held stops the QR before the bank is asked', async () => {
+    quotes.reserveForQr.mockRejectedValue(Object.assign(new Error('x'), { code: 'QUOTE_NOT_OPEN' }))
+
+    await expect(useCase.execute({ amountSatang: 2100, quoteId: 7 }, actor)).rejects.toMatchObject({ code: 'QUOTE_NOT_OPEN' })
+    expect(gateway.createQr).not.toHaveBeenCalled()
+  })
+
+  test('a bank that refuses gives the quote back', async () => {
+    gateway.createQr.mockRejectedValue(new DomainExternalServiceError('ธนาคารปฏิเสธ', 'QR_GATEWAY_ERROR'))
+
+    await expect(useCase.execute({ amountSatang: 2100, quoteId: 7 }, actor)).rejects.toMatchObject({ code: 'QR_GATEWAY_ERROR' })
+    const reference = quotes.reserveForQr.mock.calls[0]![1].reference
+    expect(quotes.releaseByReference).toHaveBeenCalledWith(reference)
+    expect(repo.create).not.toHaveBeenCalled()
+  })
+
+  test('a QR without a quote touches no quote', async () => {
+    await useCase.execute({ amountSatang: 5000 }, actor)
+    expect(quotes.reserveForQr).not.toHaveBeenCalled()
   })
 
   test('asks the bank for the amount, then keeps the QR for a limited time', async () => {
@@ -164,7 +197,7 @@ describe('CancelQrPaymentUseCase', () => {
     repo.findByIdForUpdate.mockResolvedValue(makeQrPayment())
     gateway.findPayment.mockResolvedValue(null)
 
-    const cancelled = await new CancelQrPaymentUseCase(repo, refresher, mockUnitOfWork()).execute(1, 1)
+    const cancelled = await new CancelQrPaymentUseCase(repo, refresher, mockUnitOfWork(), quotes).execute(1, 1)
 
     expect(cancelled.status).toBe('cancelled')
   })
@@ -173,10 +206,29 @@ describe('CancelQrPaymentUseCase', () => {
     repo.findByIdForUpdate.mockResolvedValue(makeQrPayment({ lastCheckedAt: new Date(now.getTime() - 1) }))
     gateway.findPayment.mockResolvedValue(found)
 
-    await expect(new CancelQrPaymentUseCase(repo, refresher, mockUnitOfWork()).execute(1, 1)).rejects.toMatchObject({
+    await expect(new CancelQrPaymentUseCase(repo, refresher, mockUnitOfWork(), quotes).execute(1, 1)).rejects.toMatchObject({
       code: 'QR_ALREADY_PAID',
     })
     expect(gateway.findPayment).toHaveBeenCalled()
+  })
+
+  test('closes the quote the QR held: money that still arrives on this QR keeps its price', async () => {
+    repo.findByIdForUpdate.mockResolvedValue(makeQrPayment({ reference: 'QRABC' }))
+    gateway.findPayment.mockResolvedValue(null)
+
+    await new CancelQrPaymentUseCase(repo, refresher, mockUnitOfWork(), quotes).execute(1, 1)
+
+    expect(quotes.cancelByReference).toHaveBeenCalledWith('QRABC')
+    expect(quotes.releaseByReference).not.toHaveBeenCalled()
+  })
+
+  test('keeps the quote when the money turned out to be there', async () => {
+    repo.findByIdForUpdate.mockResolvedValue(makeQrPayment({ lastCheckedAt: new Date(now.getTime() - 1) }))
+    gateway.findPayment.mockResolvedValue(found)
+
+    await expect(new CancelQrPaymentUseCase(repo, refresher, mockUnitOfWork(), quotes).execute(1, 1)).rejects.toThrow()
+
+    expect(quotes.releaseByReference).not.toHaveBeenCalled()
   })
 })
 
@@ -253,5 +305,26 @@ describe('QrPaymentClaims', () => {
     await claims().consume(1, 88)
 
     expect(repo.save.mock.calls[0]![0].saleId).toBe(88)
+  })
+
+  test('tells the reference 1 the bank was given, and not found for an unknown payment', async () => {
+    repo.findByIdForUpdate.mockResolvedValueOnce(makeQrPayment({ reference: 'QRABC' }))
+    expect(await claims().reference(1)).toBe('QRABC')
+
+    repo.findByIdForUpdate.mockResolvedValueOnce(null)
+    await expect(claims().reference(9)).rejects.toMatchObject({ code: 'QR_PAYMENT_NOT_FOUND' })
+  })
+})
+
+describe('DismissQrPaymentUseCase', () => {
+  test('closes the quote of money that will never be billed', async () => {
+    repo.findByIdForUpdate.mockResolvedValue(makeQrPayment({ reference: 'QRABC' }).markPaid(found))
+
+    await new DismissQrPaymentUseCase(repo, mockUnitOfWork(), mockClock(now), quotes).execute(
+      1, { reason: 'คืนเงินแล้ว' }, { id: 1 }, 1,
+    )
+
+    expect(repo.save.mock.calls[0]![0].dismissedAt).toEqual(now)
+    expect(quotes.cancelByReference).toHaveBeenCalledWith('QRABC')
   })
 })

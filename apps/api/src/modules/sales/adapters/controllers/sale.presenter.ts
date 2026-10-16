@@ -7,6 +7,7 @@ export function toSaleResponse(sale: SaleEntity): SaleResponse {
   return {
     ...header,
     member: sale.member,
+    promotion: sale.promotion,
     items: items.map(({ unitCostSatang: _cost, options, ...item }) => ({
       ...item,
       options: options.map(({ costSatang: _optionCost, ...option }) => option),

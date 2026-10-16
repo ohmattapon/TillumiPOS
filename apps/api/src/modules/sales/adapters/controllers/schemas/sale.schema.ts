@@ -4,8 +4,20 @@ import { satang } from '../../../../../libs/http-schemas'
 const method = t.Union([t.Literal('cash'), t.Literal('promptpay'), t.Literal('card')])
 
 const memberInput = t.Optional(t.Nullable(t.Integer({ minimum: 1 })))
+const quoteInput = t.Optional(t.Nullable(t.Integer({ minimum: 1 })))
 const header = {
   member: t.Nullable(t.Object({ id: t.Integer(), code: t.String(), name: t.String() })),
+  // The promotion the sale was given, as it was when sold; null when it had none.
+  promotion: t.Nullable(
+    t.Object({
+      id: t.Integer(),
+      name: t.String(),
+      kind: t.Union([t.Literal('fixed'), t.Literal('percent')]),
+      value: t.Integer(),
+      maxDiscountSatang: t.Nullable(t.Integer()),
+      discountSatang: t.Integer(),
+    }),
+  ),
   id: t.Integer(),
   receiptNo: t.String(),
   status: t.Union([t.Literal('completed'), t.Literal('voided')]),
@@ -82,12 +94,14 @@ export const saleSchemas = {
   ]),
   create: t.Object({
     memberId: memberInput,
+    quoteId: quoteInput,
     items: t.Array(itemRequest, { minItems: 1 }),
     discountSatang: t.Optional(satang()),
     payments: t.Array(paymentRequest, { minItems: 1 }),
   }),
   createV2: t.Object({
     memberId: memberInput,
+    quoteId: quoteInput,
     shiftId: t.Integer({ minimum: 1 }),
     ...t.Object({
       items: t.Array(itemRequest, { minItems: 1 }),

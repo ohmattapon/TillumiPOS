@@ -15,7 +15,7 @@ interface IssuedQr {
  * appears only when the bank itself has reported the money. With a `shiftId` the QR is asked for
  * on behalf of that open shift (the v2 contract); without one the legacy contract is used.
  */
-export function useQrPayment({ amountSatang, active, shiftId }: { amountSatang: number; active: boolean; shiftId?: number }) {
+export function useQrPayment({ amountSatang, quoteId, active, shiftId }: { amountSatang: number; quoteId?: number; active: boolean; shiftId?: number }) {
   const create = useCreateQrPayment()
   const cancelQr = useCancelQrPayment()
   const [issued, setIssued] = useState<IssuedQr | null>(null)
@@ -26,12 +26,12 @@ export function useQrPayment({ amountSatang, active, shiftId }: { amountSatang: 
     setIssued(null)
     // A new key per QR: a lost answer is then resolved from the shift page, never by asking twice.
     create.mutate(
-      { amountSatang, shiftId, idempotencyKey: crypto.randomUUID() },
+      { amountSatang, quoteId, shiftId, idempotencyKey: crypto.randomUUID() },
       { onSuccess: (qr) => setIssued({ id: qr.id, image: qr.qrImage, expiresAt: new Date(qr.expiresAt) }) },
     )
     // `create` is a stable mutation object per render; only the amount and shift decide a new QR.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [amountSatang, shiftId])
+  }, [amountSatang, quoteId, shiftId])
 
   // Once per dialog: a re-render, or React's double effect in development, must not make a second QR.
   useEffect(() => {
@@ -49,6 +49,10 @@ export function useQrPayment({ amountSatang, active, shiftId }: { amountSatang: 
   const state = status.data?.status
   const payment = status.data
   const inShift = shiftId !== undefined
+  // The QR on screen is cancelled before its price is used again. Nothing to cancel once it is paid or gone.
+  const cancelIssued = async () => {
+    if (issued && state !== 'paid') await cancelQr.mutateAsync({ id: issued.id, inShift })
+  }
 
   return {
     /** The QR is being asked for from the bank. */
@@ -58,14 +62,13 @@ export function useQrPayment({ amountSatang, active, shiftId }: { amountSatang: 
     /** Set once the bank has confirmed the money. */
     paid: state === 'paid' && payment ? { id: payment.id, payerName: payment.payerName } : null,
     isWaiting: issued !== null && (state === undefined || state === 'pending'),
-    /** Gives up on the current QR and makes a fresh one, e.g. after it expired. */
-    regenerate: () => {
-      if (issued) cancelQr.mutate({ id: issued.id, inShift })
-      issue()
-    },
-    /** Stops waiting. A payment that has already arrived is left alone (the server refuses to cancel it). */
-    cancel: () => {
-      if (issued && state !== 'paid') cancelQr.mutate({ id: issued.id, inShift })
-    },
+    /**
+     * Stops waiting. Resolves to whether the QR is cancelled. A payment made next waits for that, because its
+     * price stays reserved until then. A payment that has already arrived is left alone (the server refuses to cancel it).
+     */
+    cancel: () => cancelIssued().then(() => true, () => false),
+    /** A cancel is on its way: a payment made now would meet the price the QR still holds. */
+    isCancelling: cancelQr.isPending,
+    cancelError: cancelQr.error,
   }
 }

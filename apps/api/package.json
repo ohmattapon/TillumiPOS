@@ -8,6 +8,7 @@
     "./pricing": "./src/domains/pricing.ts",
     "./shop-settings": "./src/domains/shop-settings.domain.ts",
     "./modifiers": "./src/domains/modifier.domain.ts",
+    "./promotions": "./src/domains/promotion.domain.ts",
     "./dining-table": "./src/domains/dining-table.domain.ts"
   },
   "scripts": {

@@ -38,6 +38,7 @@ export const cancelOrderSchema = z.object({ reason: z.string().min(1).max(500) }
 
 export const payOrderSchema = z.object({
   discountSatang: z.number().int().min(0).optional(),
+  quoteId: z.number().int().positive().nullable().optional(),
   payments: z
     .array(
       z.object({

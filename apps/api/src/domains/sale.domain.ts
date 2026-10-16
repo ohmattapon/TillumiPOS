@@ -54,6 +54,31 @@ export interface SaleMember {
 const copyMember = (member?: SaleMember | null): SaleMember | null =>
   member ? { id: member.id, code: member.code, name: member.name } : null
 
+/**
+ * The promotion a sale was given, as it was when sold, kept so editing or closing the promotion later
+ * never changes an old receipt. `value` is satang for `fixed` and basis points for `percent`.
+ */
+export interface SalePromotion {
+  id: number
+  name: string
+  kind: 'fixed' | 'percent'
+  value: number
+  maxDiscountSatang: number | null
+  discountSatang: number
+}
+
+const copyPromotion = (promotion?: SalePromotion | null): SalePromotion | null =>
+  promotion
+    ? {
+        id: promotion.id,
+        name: promotion.name,
+        kind: promotion.kind,
+        value: promotion.value,
+        maxDiscountSatang: promotion.maxDiscountSatang,
+        discountSatang: promotion.discountSatang,
+      }
+    : null
+
 interface SaleTotals {
   subtotalSatang: number
   discountSatang: number
@@ -67,6 +92,7 @@ interface SaleTotals {
 /** A priced and settled sale that has not been stored yet: it has no id, receipt number or timestamp. */
 export interface NewSale extends SaleTotals, SaleSeller {
   member?: SaleMember | null
+  promotion?: SalePromotion | null
   /** How VAT was applied to this sale, kept so the receipt never changes when the shop settings do. */
   vatMode: VatMode
   /** The rate in basis points that was applied; 0 when no VAT was charged. */
@@ -93,6 +119,7 @@ export interface SaleEntityProps extends NewSale {
 
 export interface CompleteSaleInput {
   member?: SaleMember | null
+  promotion?: SalePromotion | null
   lines: { product: ProductEntity; quantity: number; options?: readonly LineOption[] }[]
   discountSatang: number
   payments: SalePayment[]
@@ -118,6 +145,7 @@ const isWholeAmount = (value: number) => Number.isInteger(value) && value >= 0
  */
 export class SaleEntity {
   public readonly member: Readonly<SaleMember> | null
+  public readonly promotion: Readonly<SalePromotion> | null
   public readonly id: number
   public readonly receiptNo: string
   public readonly status: SaleStatus
@@ -151,6 +179,8 @@ export class SaleEntity {
       throw new DomainError('บิลที่ยกเลิกต้องมีเวลาที่ยกเลิก', 'INVALID_SALE')
 
     this.member = props.member ? Object.freeze(copyMember(props.member)!) : null
+    // `?? null`: a sale restored from a snapshot stored before promotions were kept has none.
+    this.promotion = props.promotion ? Object.freeze(copyPromotion(props.promotion)!) : null
     this.id = props.id
     this.receiptNo = props.receiptNo
     this.status = props.status
@@ -185,11 +215,13 @@ export class SaleEntity {
    * Prices and settles a sale. All amounts are integer satang. Prices include VAT,
    * so VAT is extracted from the discounted total rather than added on top.
    */
-  static complete({ lines, discountSatang, payments, vatMode, vatRateBp, branchId, shiftId, cashier, seller, member }: CompleteSaleInput): NewSale {
+  static complete({ lines, discountSatang, payments, vatMode, vatRateBp, branchId, shiftId, cashier, seller, member, promotion }: CompleteSaleInput): NewSale {
     if (lines.length === 0) throw new DomainError('บิลต้องมีสินค้าอย่างน้อย 1 รายการ', 'EMPTY_SALE')
     if (lines.some((line) => !Number.isInteger(line.quantity) || line.quantity < 1))
       throw new DomainError('จำนวนสินค้าต้องเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป', 'INVALID_QUANTITY')
     if (!isWholeAmount(discountSatang)) throw new DomainError('ส่วนลดต้องเป็นจำนวนเต็มสตางค์ที่ไม่ติดลบ', 'INVALID_DISCOUNT')
+    if (promotion && promotion.discountSatang !== discountSatang)
+      throw new DomainError('ส่วนลดไม่ตรงกับโปรโมชันที่ใช้', 'INVALID_DISCOUNT')
     if (payments.some((payment) => !isWholeAmount(payment.amountSatang) || payment.amountSatang < 1))
       throw new DomainError('ยอดชำระแต่ละรายการต้องเป็นจำนวนเต็มสตางค์ตั้งแต่ 1 ขึ้นไป', 'INVALID_PAYMENT')
 
@@ -224,6 +256,7 @@ export class SaleEntity {
 
     return {
       member: copyMember(member),
+      promotion: copyPromotion(promotion),
       subtotalSatang,
       discountSatang,
       totalSatang,
@@ -251,9 +284,10 @@ export class SaleEntity {
     return new SaleEntity({ ...this.toSnapshot(), status: 'voided', voidedById, voidedAt: at, voidReason: reason })
   }
 
-  toSnapshot(): SaleEntityProps & { member: SaleMember | null } {
+  toSnapshot(): SaleEntityProps & { member: SaleMember | null; promotion: SalePromotion | null } {
     return {
       member: copyMember(this.member),
+      promotion: copyPromotion(this.promotion),
       id: this.id,
       receiptNo: this.receiptNo,
       status: this.status,

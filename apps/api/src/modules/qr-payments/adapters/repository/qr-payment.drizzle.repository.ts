@@ -44,6 +44,11 @@ export class DrizzleQrPaymentRepository implements IQrPaymentRepository {
     return row ? new QrPaymentEntity(row) : null
   }
 
+  async findByReference(reference: string) {
+    const [row] = await currentExecutor().select(columns).from(qrPayments).where(eq(qrPayments.reference, reference))
+    return row ? new QrPaymentEntity(row) : null
+  }
+
   async findByReferenceForUpdate(reference: string) {
     const [row] = await currentExecutor()
       .select(columns)
