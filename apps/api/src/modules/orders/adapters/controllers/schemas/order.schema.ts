@@ -34,6 +34,7 @@ const optionIds = t.Optional(t.Array(t.Integer({ minimum: 1 }), { maxItems: 40 }
 
 const pay = t.Object({
   discountSatang: t.Optional(satang()),
+  quoteId: t.Optional(t.Nullable(t.Integer({ minimum: 1 }))),
   payments: t.Array(
     t.Object({
       method,

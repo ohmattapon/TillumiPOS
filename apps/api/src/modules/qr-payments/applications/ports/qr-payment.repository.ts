@@ -6,6 +6,8 @@ export interface IQrPaymentRepository {
   findById(id: number): Promise<QrPaymentEntity | null>
   /** Like findById, but row-locks the payment until the surrounding unit of work ends. */
   findByIdForUpdate(id: number): Promise<QrPaymentEntity | null>
+  /** By the reference the bank reports back. Read only: nothing is locked. */
+  findByReference(reference: string): Promise<QrPaymentEntity | null>
   /** Row-locked, by the reference the bank reports back. */
   findByReferenceForUpdate(reference: string): Promise<QrPaymentEntity | null>
   /** Payments of the branch the bank confirmed that have no sale and were not dismissed, oldest first. */

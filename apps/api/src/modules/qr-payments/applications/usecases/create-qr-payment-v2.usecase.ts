@@ -6,6 +6,7 @@ import type { IClock } from '../../../shared/ports/clock.port'
 import type { ICheckoutPolicy } from '../../../shared/ports/checkout-policy.port'
 import type { IShiftLedger } from '../../../shared/ports/shift-ledger.port'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
+import { quoteClaimsToken, type IQuoteClaims } from '../../../quotes/applications/ports/quote-claims.port'
 import { TOKENS } from '../../../tokens'
 import { qrAttemptRepositoryToken } from '../ports/qr-attempt.repository'
 import type { IQrAttemptRepository } from '../ports/qr-attempt.repository'
@@ -39,6 +40,7 @@ export class CreateQrPaymentV2UseCase {
     @inject(TOKENS.CheckoutPolicy) private readonly policy: ICheckoutPolicy,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
     @inject(TOKENS.Clock) private readonly clock: IClock,
+    @inject(quoteClaimsToken) private readonly quotes: IQuoteClaims,
   ) {}
 
   async execute(
@@ -63,6 +65,9 @@ export class CreateQrPaymentV2UseCase {
 
       // Reference 1: 16 characters of A-Z and 0-9, unique, and unguessable.
       const reference = 'QR' + crypto.randomUUID().replaceAll('-', '').slice(0, 14).toUpperCase()
+      // The quote is held under the same shift lock, so counting the shift cannot start between the two.
+      if (dto.quoteId !== undefined)
+        await this.quotes.reserveForQr(dto.quoteId, { branchId: branch.id, reference, amountSatang: dto.amountSatang })
       const attempt = await this.attempts.create({
         originShiftId: dto.shiftId,
         branchId: branch.id,
@@ -91,6 +96,8 @@ export class CreateQrPaymentV2UseCase {
       if (error.params?.outcome !== 'unknown') {
         // The bank refused, or was never reached: there is no QR.
         await this.attempts.save(attempt.fail())
+        // The bank never made a QR, so the quote goes back to being open. An unknown outcome keeps it held.
+        await this.unitOfWork.run(() => this.quotes.releaseByReference(attempt.reference))
         throw error
       }
       await this.attempts.save(attempt.outcomeUnknown())

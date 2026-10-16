@@ -124,6 +124,7 @@ export const mockQrPaymentRepository = (): Mocked<IQrPaymentRepository> => ({
   findById: mock<IQrPaymentRepository['findById']>(),
   findByIdForUpdate: mock<IQrPaymentRepository['findByIdForUpdate']>(),
   findByReferenceForUpdate: mock<IQrPaymentRepository['findByReferenceForUpdate']>(),
+  findByReference: mock<IQrPaymentRepository['findByReference']>(),
   findUnclaimed: mock<IQrPaymentRepository['findUnclaimed']>(),
   save: mock<IQrPaymentRepository['save']>(async (payment) => payment),
 })
@@ -140,6 +141,7 @@ export const mockQrPaymentClaims = (): Mocked<IQrPaymentClaims> => ({
   isRequired: mock<IQrPaymentClaims['isRequired']>(() => false),
   assertClaimable: mock<IQrPaymentClaims['assertClaimable']>(async () => {}),
   consume: mock<IQrPaymentClaims['consume']>(async () => {}),
+  reference: mock<IQrPaymentClaims['reference']>(async () => 'QR0123456789ABCD'),
 })
 
 export const mockOrderRepository = (): Mocked<IOrderRepository> => ({
@@ -260,10 +262,54 @@ export const mockFirstRunGuard = (): Mocked<IFirstRunGuard> => ({
 })
 
 import type { IMemberRepository } from '../modules/members/applications/ports/member.repository'
+import type { IPromotionRepository } from '../modules/promotions/applications/ports/promotion.repository'
+import type { IPriceQuoteRepository } from '../modules/quotes/applications/ports/price-quote.repository'
+import type { IQuoteClaims } from '../modules/quotes/applications/ports/quote-claims.port'
+import type { IPromotionCatalog } from '../modules/quotes/applications/ports/promotion-catalog.port'
+import type { IOrderQuoteSource } from '../modules/quotes/applications/ports/order-quote-source.port'
+export const mockPromotionRepository = (): Mocked<IPromotionRepository> => ({
+  find: mock<IPromotionRepository['find']>(),
+  findById: mock<IPromotionRepository['findById']>(),
+  findByIdForUpdate: mock<IPromotionRepository['findByIdForUpdate']>(),
+  create: mock<IPromotionRepository['create']>(),
+  update: mock<IPromotionRepository['update']>(),
+})
+
 export const mockMemberRepository = (): Mocked<IMemberRepository> => ({
   find: mock<IMemberRepository['find']>(),
   findById: mock<IMemberRepository['findById']>(),
   findByIdForUpdate: mock<IMemberRepository['findByIdForUpdate']>(),
   create: mock<IMemberRepository['create']>(),
   update: mock<IMemberRepository['update']>(),
+})
+
+export const mockPriceQuoteRepository = (): Mocked<IPriceQuoteRepository> => ({
+  create: mock<IPriceQuoteRepository['create']>(),
+  findById: mock<IPriceQuoteRepository['findById']>(),
+  findByIdForUpdate: mock<IPriceQuoteRepository['findByIdForUpdate']>(),
+  findByQrReference: mock<IPriceQuoteRepository['findByQrReference']>(async () => null),
+  findByQrReferenceForUpdate: mock<IPriceQuoteRepository['findByQrReferenceForUpdate']>(async () => null),
+  findReservedByOrder: mock<IPriceQuoteRepository['findReservedByOrder']>(async () => null),
+  hasReservedForOrder: mock<IPriceQuoteRepository['hasReservedForOrder']>(async () => false),
+  save: mock<IPriceQuoteRepository['save']>(async (quote) => quote),
+})
+
+/** No quote holds any QR by default, and every claim succeeds; a test sets what it is about. */
+export const mockQuoteClaims = (): Mocked<IQuoteClaims> => ({
+  lockForCheckout: mock<IQuoteClaims['lockForCheckout']>(),
+  findHeldByReference: mock<IQuoteClaims['findHeldByReference']>(async () => null),
+  findHeldByOrder: mock<IQuoteClaims['findHeldByOrder']>(async () => null),
+  consume: mock<IQuoteClaims['consume']>(async () => {}),
+  reserveForQr: mock<IQuoteClaims['reserveForQr']>(async () => {}),
+  releaseByReference: mock<IQuoteClaims['releaseByReference']>(async () => {}),
+  cancelByReference: mock<IQuoteClaims['cancelByReference']>(async () => {}),
+})
+
+export const mockPromotionCatalog = (): Mocked<IPromotionCatalog> => ({
+  activePromotions: mock<IPromotionCatalog['activePromotions']>(async () => []),
+})
+
+export const mockOrderQuoteSource = (): Mocked<IOrderQuoteSource> => ({
+  read: mock<IOrderQuoteSource['read']>(),
+  lockOpenOrder: mock<IOrderQuoteSource['lockOpenOrder']>(),
 })

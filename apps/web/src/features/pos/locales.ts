@@ -1,4 +1,9 @@
 const th = {
+  orderHold: {
+    pending: 'ออเดอร์นี้ถูกล็อกเพราะมี QR รอชำระ {{amount}} ยกเลิก QR ก่อนแก้ไขออเดอร์',
+    paid: 'ลูกค้าชำระ {{amount}} แล้ว ชำระออเดอร์นี้ด้วยเงินก้อนนี้จากปุ่มชำระเงิน',
+    cancel: 'ยกเลิก QR นี้',
+  },
   title: 'ขายสินค้า',
   description: 'สแกนบาร์โค้ด หรือแตะสินค้าเพื่อเพิ่มลงตะกร้า',
   shiftReady: 'กะเปิดอยู่',
@@ -50,6 +55,9 @@ const th = {
   },
   cart: {
     productUnavailable: 'สินค้าบางรายการปิดการขายแล้ว ล้างตะกร้าแล้วเลือกสินค้าใหม่',
+    promotion: 'โปรโมชัน: {{name}}',
+    promotionRemove: 'ยกเลิกโปรโมชัน',
+    promotionUse: 'ใช้โปรโมชัน "{{name}}"',
     optionUnavailable: 'ตัวเลือกบางอย่างปิดใช้งานแล้ว ลบรายการนี้แล้วเลือกใหม่',
     title: 'ตะกร้า',
     itemCount: '{{count}} ชิ้น',
@@ -96,6 +104,13 @@ const th = {
   },
   payment: {
     due: 'ยอดที่ต้องชำระ',
+    promotion: 'โปรโมชัน {{name}} ลด {{amount}}',
+    pricing: {
+      title: 'กำลังคิดราคา',
+      pending: 'ระบบกำลังคิดราคาและโปรโมชันของตะกร้านี้',
+      failed: 'คิดราคาไม่สำเร็จ',
+      retry: 'ลองอีกครั้ง',
+    },
     receivedPlaceholder: 'รับเงินมา ({{currency}})',
     receivedLabel: 'จำนวนเงินที่รับมา ({{currency}})',
     exact: 'พอดี',
@@ -115,6 +130,7 @@ const th = {
       savingSale: 'กำลังบันทึกการขาย…',
       retry: 'บันทึกการขายอีกครั้ง',
       retryNote: 'ลูกค้าชำระแล้ว ไม่ต้องจ่ายซ้ำ แก้ปัญหาแล้วกดบันทึกอีกครั้ง',
+      cancelFailed: 'ยกเลิก QR เดิมไม่สำเร็จ กรุณาลองอีกครั้ง',
       failed: 'สร้าง QR ไม่สำเร็จ',
       arrivedTitle: 'มีเงินยอดนี้เข้ามาแล้วและยังไม่มีบิล',
       arrivedUse: 'ใช้เงินก้อนนี้',
@@ -138,6 +154,11 @@ const th = {
 }
 
 const en = {
+  orderHold: {
+    pending: 'This order is locked by a QR waiting for {{amount}}. Cancel the QR to edit the order.',
+    paid: 'The customer has paid {{amount}}. Pay this order with that money from the payment button.',
+    cancel: 'Cancel this QR',
+  },
   title: 'Sell',
   shiftReady: 'Shift open',
   shiftRequired: 'Open a shift to sell',
@@ -189,6 +210,9 @@ const en = {
   },
   cart: {
     productUnavailable: 'Some products are no longer for sale. Clear the cart and choose again.',
+    promotion: 'Promotion: {{name}}',
+    promotionRemove: 'Remove promotion',
+    promotionUse: 'Use promotion "{{name}}"',
     optionUnavailable: 'Some options are no longer offered. Remove this line and choose again.',
     title: 'Cart',
     itemCount: '{{count}} pcs',
@@ -235,6 +259,13 @@ const en = {
   },
   payment: {
     due: 'Amount due',
+    promotion: 'Promotion {{name}}: {{amount}} off',
+    pricing: {
+      title: 'Pricing the cart',
+      pending: 'The system is working out the price and promotion of this cart.',
+      failed: 'The price could not be worked out.',
+      retry: 'Try again',
+    },
     receivedPlaceholder: 'Amount received ({{currency}})',
     receivedLabel: 'Amount received ({{currency}})',
     exact: 'Exact',
@@ -254,6 +285,7 @@ const en = {
       savingSale: 'Recording the sale…',
       retry: 'Record the sale again',
       retryNote: 'The customer has paid and must not pay again. Fix the problem, then record the sale again.',
+      cancelFailed: 'Could not cancel the previous QR. Try again.',
       failed: 'Could not create the QR',
       arrivedTitle: 'Money for this amount has already arrived and has no sale',
       arrivedUse: 'Use this money',

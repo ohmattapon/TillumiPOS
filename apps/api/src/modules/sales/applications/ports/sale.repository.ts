@@ -2,7 +2,10 @@ import type { Page } from '../../../../domains/page'
 import type { NewSale, PaymentMethod, SaleEntity, SaleEntityProps } from '../../../../domains/sale.domain'
 
 /** A sale without its lines and payments, for lists. */
-export type ISaleHeader = Omit<SaleEntityProps, 'items' | 'payments' | 'voidedById'> & { member: NonNullable<NewSale['member']> | null }
+export type ISaleHeader = Omit<SaleEntityProps, 'items' | 'payments' | 'voidedById' | 'promotion'> & {
+  member: NonNullable<NewSale['member']> | null
+  promotion: NonNullable<NewSale['promotion']> | null
+}
 
 export interface IFindSalesQuery {
   /** Only this branch's sales are listed. */

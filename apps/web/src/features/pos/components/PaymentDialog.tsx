@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input'
 import { useFormat } from '@/features/settings'
 import { unclaimedQrQuery } from '@/features/shifts'
+import type { Quote } from '@/features/promotions'
 import type { PaymentInput, PaymentMethod } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { qrConfigQuery } from '../api'
@@ -27,12 +28,18 @@ const defaultQuickCash = [5, 10, 20, 50, 100]
 
 interface Props {
   totalSatang: number
+  /** The pinned price this payment is made at: its promotion is shown and a QR is made from it. */
+  quote?: Quote | null
   isSubmitting: boolean
   error?: string
-  onConfirm: (payment: PaymentInput) => void
+  onConfirm: (payment: PaymentInput, options?: { arrived?: boolean }) => void
   onCancel: () => void
   /** The open shift the payment is taken in. Set in shift mode, where a bank QR is asked for on its behalf. */
   shiftId?: number
+  /** Asks for the price again, under the method chosen, once a QR holding it has been cancelled. */
+  onRequote: (method: PaymentMethod) => void
+  /** The method the dialog opens on: the one chosen when the price was asked again. */
+  initialMethod?: PaymentMethod
   /**
    * Tells the till which bank QR is showing (or null), so the customer's screen can show the same one.
    * Called again with null when the QR is paid, replaced or the dialog closes.
@@ -40,17 +47,17 @@ interface Props {
   onQrChange?: (qr: { image: string; expiresAt: string } | null) => void
 }
 
-export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onCancel, shiftId, onQrChange }: Props) {
+export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfirm, onCancel, shiftId, onRequote, initialMethod = 'cash', onQrChange }: Props) {
   const { t } = useTranslation('pos')
   const { t: tc } = useTranslation()
   const { money, currency, date } = useFormat()
-  const [method, setMethod] = useState<PaymentMethod>('cash')
+  const [method, setMethod] = useState<PaymentMethod>(initialMethod)
   const [received, setReceived] = useState('')
 
   // With a bank QR set up, PromptPay is paid by scanning and confirmed by the bank, not by the cashier.
   const qrEnabled = useQuery(qrConfigQuery).data?.enabled === true
   const usesQr = method === 'promptpay' && qrEnabled
-  const qr = useQrPayment({ amountSatang: totalSatang, active: usesQr, shiftId })
+  const qr = useQrPayment({ amountSatang: totalSatang, quoteId: quote?.id, active: usesQr, shiftId })
 
   // The customer's screen follows the QR on this dialog. It is keyed by the QR's id: a new QR is a new
   // message, and a paid QR (or a closed dialog) clears it.
@@ -69,9 +76,11 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
   const usable = unclaimed.data?.items ?? []
   const [confirmingId, setConfirmingId] = useState<number | null>(null)
 
-  const payWithArrivedMoney = (qrPaymentId: number) => {
-    qr.cancel()
-    onConfirm({ method: 'promptpay', amountSatang: totalSatang, qrPaymentId })
+  const payWithArrivedMoney = async (qrPaymentId: number) => {
+    // The QR on screen is cancelled first: a sale made before that would meet the price it still holds.
+    if (!(await qr.cancel())) return
+    // Money that arrived earlier was made against whatever quote its QR had; the server names that quote if needed.
+    onConfirm({ method: 'promptpay', amountSatang: totalSatang, qrPaymentId }, { arrived: true })
   }
 
   // The sale is recorded the moment the bank confirms, so a customer who has paid is never left waiting.
@@ -87,15 +96,19 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
   // Non-cash methods always pay the exact total; only cash can be over-tendered.
   const amountSatang = method === 'cash' ? money.parse(received) : totalSatang
   const changeSatang = amountSatang === null ? null : amountSatang - totalSatang
-  const canConfirm = changeSatang !== null && changeSatang >= 0 && !isSubmitting && !usesQr
+  const canConfirm = changeSatang !== null && changeSatang >= 0 && !isSubmitting && !usesQr && !qr.isCancelling
 
   const unit = 10 ** money.fractionDigits
   const quickCash = (quickCashByCurrency[currency] ?? defaultQuickCash).filter((note) => note * unit >= totalSatang)
 
+  // A cancelled QR takes the price it held with it, so the price is asked again before another QR or method.
+  const reprice = async (next: PaymentMethod) => {
+    if (await qr.cancel()) onRequote(next)
+  }
+
   const chooseMethod = (next: PaymentMethod) => {
-    // Leaving PromptPay abandons its QR, unless the customer has already paid it.
-    if (usesQr && next !== 'promptpay') qr.cancel()
-    setMethod(next)
+    if (usesQr && next !== 'promptpay') void reprice(next)
+    else setMethod(next)
   }
 
   const cancel = () => {
@@ -109,6 +122,11 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
         <DialogHeader className="items-center text-center">
           <DialogDescription>{t('payment.due')}</DialogDescription>
           <DialogTitle className="text-4xl font-semibold tabular-nums">{money.format(totalSatang)}</DialogTitle>
+          {quote?.promotion && (
+            <p className="text-sm text-muted-foreground">
+              {t('payment.promotion', { name: quote.promotion.name, amount: money.format(quote.promotion.discountSatang) })}
+            </p>
+          )}
         </DialogHeader>
 
         <form
@@ -124,7 +142,7 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
                 key={value}
                 type="button"
                 aria-pressed={method === value}
-                disabled={isSubmitting || (qr.paid !== null && value !== 'promptpay')}
+                disabled={isSubmitting || (qr.paid !== null && value !== 'promptpay') || (qr.isCreating && value !== 'promptpay')}
                 onClick={() => chooseMethod(value)}
                 className={cn(
                   'flex h-20 flex-col items-center justify-center gap-1.5 rounded-lg border text-sm font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50',
@@ -137,7 +155,8 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
             ))}
           </div>
 
-          {usesQr && <QrPaymentPanel qr={qr} isSaving={isSubmitting} />}
+          {usesQr && <QrPaymentPanel qr={qr} isSaving={isSubmitting} onRegenerate={() => void reprice('promptpay')} />}
+          {usesQr && qr.cancelError && <p role="alert" className="text-sm text-destructive">{t('payment.qr.cancelFailed')}</p>}
           {usesQr && !qr.paid && ((unclaimed.data?.total ?? 0) > 0 || qrPaging.page > 0) && (
             <div className="space-y-2 rounded-lg border p-3">
               <p className="text-sm font-medium">{t('payment.qr.arrivedTitle')}</p>
@@ -153,12 +172,12 @@ export function PaymentDialog({ totalSatang, isSubmitting, error, onConfirm, onC
                         <Button type="button" variant="outline" className="h-10" onClick={() => setConfirmingId(null)}>
                           {tc('cancel')}
                         </Button>
-                        <Button type="button" className="h-10" disabled={isSubmitting} onClick={() => payWithArrivedMoney(payment.id)}>
+                        <Button type="button" className="h-10" disabled={isSubmitting || qr.isCancelling} onClick={() => payWithArrivedMoney(payment.id)}>
                           {t('payment.qr.arrivedConfirm')}
                         </Button>
                       </span>
                     ) : (
-                      <Button type="button" variant="outline" className="h-10" disabled={isSubmitting} onClick={() => setConfirmingId(payment.id)}>
+                      <Button type="button" variant="outline" className="h-10" disabled={isSubmitting || qr.isCancelling} onClick={() => setConfirmingId(payment.id)}>
                         {t('payment.qr.arrivedUse')}
                       </Button>
                     )}

@@ -9,6 +9,7 @@ import { CategoriesPage } from '@/features/categories'
 import { KitchenBoardPage, KitchenStationsPage } from '@/features/kitchen'
 import { CustomerDisplayPage, isCustomerScreenPath } from '@/features/customer-display'
 import { MembersPage, MemberDetailsPage } from '@/features/members'
+import { PromotionsPage } from '@/features/promotions'
 import { ModifiersPage } from '@/features/modifiers'
 import { SetupPage, setupStatusQuery } from '@/features/setup'
 import { TablesPage } from '@/features/tables'
@@ -57,6 +58,7 @@ function Shell({ user }: { user: User }) {
           {isOwner && <Route path="settings" element={<SettingsPage />} />}
           <Route path="members" element={<MembersPage />} />
           <Route path="members/:id" element={<MemberDetailsPage />} />
+          <Route path="promotions" element={<PromotionsPage />} />
           <Route path="shifts" element={<ShiftsPage />} />
           <Route path="kitchen" element={<KitchenBoardPage />} />
           {isOwner && <Route path="kitchen-stations" element={<KitchenStationsPage />} />}

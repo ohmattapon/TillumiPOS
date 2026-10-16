@@ -13,6 +13,7 @@ import { useFormat, useSettings } from '@/features/settings'
 import { tablesQuery } from '@/features/tables'
 import { cn } from '@/lib/utils'
 import { useCart } from '../hooks/use-cart'
+import { OrderQrHold } from './OrderQrHold'
 import { useCartActions } from '../hooks/use-cart-actions'
 import type { PricedLine } from '../lib/cart'
 import { noteToSave } from '../lib/note'
@@ -81,6 +82,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
   const cart = useCart()
   const discount = useCartStore((state) => state.discount)
   const setDiscount = useCartStore((state) => state.setDiscount)
+  const setPromotionDeclined = useCartStore((state) => state.setPromotionDeclined)
   const clear = useCartStore((state) => state.clear)
   const storedLines = useCartStore((state) => state.lines)
   const { setQuantity } = useCartActions()
@@ -112,6 +114,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
         </Button>
         {onClose && <Button variant="ghost" className="size-11 shrink-0" aria-label={t('cart.close')} onClick={onClose}><X /></Button>}
       </div>
+      {cart.orderId !== null && <OrderQrHold orderId={cart.orderId} />}
 
       {cart.order && cart.order.status === 'open' && (
         <>
@@ -202,18 +205,37 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
           <span>{t('cart.subtotal')}</span>
           <span className="tabular-nums">{money.format(cart.subtotalSatang)}</span>
         </p>
-        <label className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
-          <span>{t('cart.discount', { currency })}</span>
-          <Input
-            className="h-11 w-32 text-right tabular-nums"
-            inputMode="decimal"
-            aria-invalid={!cart.isDiscountValid}
-            value={discount}
-            onChange={(event) => setDiscount(event.target.value)}
-            placeholder={money.plain(0)}
-          />
-        </label>
-        {!cart.isDiscountValid && <p className="text-right text-xs text-destructive">{t('cart.discountTooLarge')}</p>}
+        {cart.promotion ? (
+          <div className="flex items-center justify-between gap-3 rounded-lg bg-accent px-3 py-1 text-sm text-accent-foreground">
+            <span className="min-w-0 truncate font-medium">{t('cart.promotion', { name: cart.promotion.name })}</span>
+            <span className="flex shrink-0 items-center gap-1">
+              <span className="tabular-nums">-{money.format(cart.promotion.discountSatang)}</span>
+              <Button variant="ghost" className="h-11 px-2" onClick={() => setPromotionDeclined(true)}>
+                {t('cart.promotionRemove')}
+              </Button>
+            </span>
+          </div>
+        ) : (
+          <>
+            <label className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
+              <span>{t('cart.discount', { currency })}</span>
+              <Input
+                className="h-11 w-32 text-right tabular-nums"
+                inputMode="decimal"
+                aria-invalid={!cart.isDiscountValid}
+                value={discount}
+                onChange={(event) => setDiscount(event.target.value)}
+                placeholder={money.plain(0)}
+              />
+            </label>
+            {!cart.isDiscountValid && <p className="text-right text-xs text-destructive">{t('cart.discountTooLarge')}</p>}
+            {cart.promotionDeclined && cart.availablePromotion && (
+              <Button variant="outline" className="h-11 w-full" onClick={() => setPromotionDeclined(false)}>
+                {t('cart.promotionUse', { name: cart.availablePromotion.name })}
+              </Button>
+            )}
+          </>
+        )}
         {/* When prices already include VAT there is nothing to add; only an added tax is shown here. */}
         {vatMode === 'exclusive' && (
           <p className="flex justify-between text-sm text-muted-foreground">

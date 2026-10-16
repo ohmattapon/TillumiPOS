@@ -13,6 +13,8 @@ export interface IQrPaymentClaims {
   assertClaimable(qrPaymentId: number, claim: { branchId: number; amountSatang: number }): Promise<void>
   /** Marks the payment as used by the sale. */
   consume(qrPaymentId: number, saleId: number): Promise<void>
+  /** The reference 1 the bank was given for this payment: how a quote that the QR holds is found. */
+  reference(qrPaymentId: number): Promise<string>
 }
 
 const qrPaymentClaimsTokenSymbol: unique symbol = Symbol('IQrPaymentClaims')

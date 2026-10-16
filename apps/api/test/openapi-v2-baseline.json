@@ -148,6 +148,28 @@
                     "minItems": 1,
                     "type": "array"
                   },
+                  "quoteId": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "nullable": true
+                  },
                   "shiftId": {
                     "anyOf": [
                       {
@@ -236,6 +258,28 @@
                     "minItems": 1,
                     "type": "array"
                   },
+                  "quoteId": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "nullable": true
+                  },
                   "shiftId": {
                     "anyOf": [
                       {
@@ -323,6 +367,28 @@
                     },
                     "minItems": 1,
                     "type": "array"
+                  },
+                  "quoteId": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "nullable": true
                   },
                   "shiftId": {
                     "anyOf": [
@@ -646,6 +712,89 @@
                       },
                       "type": "array"
                     },
+                    "promotion": {
+                      "nullable": true,
+                      "properties": {
+                        "discountSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "id": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "kind": {
+                          "enum": [
+                            "fixed",
+                            "percent"
+                          ],
+                          "type": "string"
+                        },
+                        "maxDiscountSatang": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "default": 0,
+                                  "format": "integer",
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "integer"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "nullable": true
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "kind",
+                        "value",
+                        "maxDiscountSatang",
+                        "discountSatang"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
                     "receiptNo": {
                       "type": "string"
                     },
@@ -785,6 +934,7 @@
                   },
                   "required": [
                     "member",
+                    "promotion",
                     "id",
                     "receiptNo",
                     "status",
@@ -857,6 +1007,20 @@
                     ],
                     "minimum": 1
                   },
+                  "quoteId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
                   "shiftId": {
                     "anyOf": [
                       {
@@ -896,6 +1060,20 @@
                     ],
                     "minimum": 1
                   },
+                  "quoteId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
                   "shiftId": {
                     "anyOf": [
                       {
@@ -922,6 +1100,20 @@
               "schema": {
                 "properties": {
                   "amountSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
+                  "quoteId": {
                     "anyOf": [
                       {
                         "default": 0,
@@ -2539,6 +2731,107 @@
         ]
       }
     },
+    "/api/v2/payments/qr/hold": {
+      "get": {
+        "operationId": "getApiV2PaymentsQrHold",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "orderId",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "integer",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "nullable": true,
+                  "properties": {
+                    "amountSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "status": {
+                      "enum": [
+                        "pending",
+                        "paid",
+                        "cancelled"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "status",
+                    "amountSatang",
+                    "expiresAt"
+                  ],
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "v2: QR ที่ถือราคาของออเดอร์นี้อยู่ (null เมื่อไม่มี) ใช้แสดงว่าออเดอร์ถูกล็อกเพราะ QR",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
     "/api/v2/payments/qr/unclaimed": {
       "get": {
         "operationId": "getApiV2PaymentsQrUnclaimed",
@@ -3491,6 +3784,28 @@
                     "minItems": 1,
                     "type": "array"
                   },
+                  "quoteId": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "nullable": true
+                  },
                   "shiftId": {
                     "anyOf": [
                       {
@@ -3659,6 +3974,28 @@
                     "minItems": 1,
                     "type": "array"
                   },
+                  "quoteId": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "nullable": true
+                  },
                   "shiftId": {
                     "anyOf": [
                       {
@@ -3826,6 +4163,28 @@
                     },
                     "minItems": 1,
                     "type": "array"
+                  },
+                  "quoteId": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "nullable": true
                   },
                   "shiftId": {
                     "anyOf": [
@@ -4150,6 +4509,89 @@
                       },
                       "type": "array"
                     },
+                    "promotion": {
+                      "nullable": true,
+                      "properties": {
+                        "discountSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "id": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "kind": {
+                          "enum": [
+                            "fixed",
+                            "percent"
+                          ],
+                          "type": "string"
+                        },
+                        "maxDiscountSatang": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "default": 0,
+                                  "format": "integer",
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "integer"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "nullable": true
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "kind",
+                        "value",
+                        "maxDiscountSatang",
+                        "discountSatang"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
                     "receiptNo": {
                       "type": "string"
                     },
@@ -4289,6 +4731,7 @@
                   },
                   "required": [
                     "member",
+                    "promotion",
                     "id",
                     "receiptNo",
                     "status",
@@ -4897,6 +5340,89 @@
                       },
                       "type": "array"
                     },
+                    "promotion": {
+                      "nullable": true,
+                      "properties": {
+                        "discountSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "id": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "kind": {
+                          "enum": [
+                            "fixed",
+                            "percent"
+                          ],
+                          "type": "string"
+                        },
+                        "maxDiscountSatang": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "default": 0,
+                                  "format": "integer",
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "integer"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "nullable": true
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "kind",
+                        "value",
+                        "maxDiscountSatang",
+                        "discountSatang"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
                     "receiptNo": {
                       "type": "string"
                     },
@@ -5036,6 +5562,7 @@
                   },
                   "required": [
                     "member",
+                    "promotion",
                     "id",
                     "receiptNo",
                     "status",

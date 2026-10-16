@@ -31,6 +31,9 @@ interface CartState {
   /** A quantity of 0 or less removes the line. */
   setQuantity: (key: string, quantity: number) => void
   setDiscount: (discount: string) => void
+  /** The cashier chose to sell without the promotion that applies, e.g. to type a discount instead. */
+  promotionDeclined: boolean
+  setPromotionDeclined: (declined: boolean) => void
   /** Works on an open order instead of the local cart. */
   workOnOrder: (orderId: number) => void
   /** Empties the cart and stops working on any order (the order itself stays open). */
@@ -43,6 +46,7 @@ export const useCartStore = create<CartState>()((set) => ({
   discount: '',
   orderId: null,
   memberId: null,
+  promotionDeclined: false,
   setMember: (memberId) => set({ memberId }),
   add: (productId, optionIds = []) =>
     set((state) => {
@@ -60,8 +64,9 @@ export const useCartStore = create<CartState>()((set) => ({
         .filter((line) => line.quantity > 0),
     })),
   setDiscount: (discount) => set({ discount }),
-  workOnOrder: (orderId) => set({ orderId, lines: [], discount: '', memberId: null }),
-  clear: () => set({ lines: [], discount: '', orderId: null, memberId: null }),
+  setPromotionDeclined: (promotionDeclined) => set({ promotionDeclined }),
+  workOnOrder: (orderId) => set({ orderId, lines: [], discount: '', memberId: null, promotionDeclined: false }),
+  clear: () => set({ lines: [], discount: '', orderId: null, memberId: null, promotionDeclined: false }),
 }))
 
 /** For code outside React, such as the logout handler. */

@@ -3,6 +3,7 @@ import { MAX_AMOUNT_SATANG } from '../../../../domains/sale.domain'
 
 export const createQrPaymentSchema = z.object({
   amountSatang: z.number().int().min(1).max(MAX_AMOUNT_SATANG),
+  quoteId: z.number().int().positive().optional(),
 })
 
 /**
@@ -18,6 +19,7 @@ export const scbConfirmationSchema = z
 
 export const createQrPaymentV2Schema = z.object({
   amountSatang: z.number().int().min(1).max(MAX_AMOUNT_SATANG),
+  quoteId: z.number().int().positive().optional(),
   shiftId: z.number().int().positive(),
 })
 

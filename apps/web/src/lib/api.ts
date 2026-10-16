@@ -18,11 +18,14 @@ export const apiV2 = client.api.v2
 export class ApiError extends Error {
   status: number
   code: string
+  /** Data the API sent to fill into its message, such as which quote a sale has to carry. */
+  params: Record<string, string | number> | undefined
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, params?: Record<string, string | number>) {
     super(message)
     this.status = status
     this.code = code
+    this.params = params
   }
 }
 
@@ -60,7 +63,7 @@ export async function unwrap<T>(request: Promise<EdenResult<T>>): Promise<T> {
   const { data, error } = await request
   if (error) {
     const problem = error.value as Problem | null
-    throw new ApiError(Number(error.status), problem?.code ?? 'UNKNOWN', messageFor(problem))
+    throw new ApiError(Number(error.status), problem?.code ?? 'UNKNOWN', messageFor(problem), problem?.params)
   }
   return data as T
 }

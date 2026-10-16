@@ -20,3 +20,5 @@ export * from './shop-settings'
 export * from './users'
 
 export * from './members'
+export * from './promotions'
+export * from './price-quotes'

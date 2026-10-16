@@ -16,7 +16,7 @@ function useSecondsLeft(expiresAt: Date | undefined) {
 const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 
 /** The QR the customer scans, and what the till is waiting for. */
-export function QrPaymentPanel({ qr, isSaving }: { qr: ReturnType<typeof useQrPayment>; isSaving: boolean }) {
+export function QrPaymentPanel({ qr, isSaving, onRegenerate }: { qr: ReturnType<typeof useQrPayment>; isSaving: boolean; onRegenerate: () => void }) {
   const { t } = useTranslation('pos')
   const secondsLeft = useSecondsLeft(qr.issued?.expiresAt)
   const expired = secondsLeft === 0 && qr.isWaiting
@@ -39,7 +39,7 @@ export function QrPaymentPanel({ qr, isSaving }: { qr: ReturnType<typeof useQrPa
         <p role="alert" className="text-sm text-destructive">
           {t('payment.qr.failed')}: {qr.createError.message}
         </p>
-        <Button type="button" variant="outline" className="h-10" onClick={qr.regenerate}>
+        <Button type="button" variant="outline" className="h-10" onClick={onRegenerate}>
           <RefreshCw />
           {t('payment.qr.regenerate')}
         </Button>
@@ -65,7 +65,7 @@ export function QrPaymentPanel({ qr, isSaving }: { qr: ReturnType<typeof useQrPa
       {expired ? (
         <>
           <p className="text-sm font-medium text-destructive">{t('payment.qr.expired')}</p>
-          <Button type="button" variant="outline" className="h-10" onClick={qr.regenerate}>
+          <Button type="button" variant="outline" className="h-10" onClick={onRegenerate}>
             <RefreshCw />
             {t('payment.qr.regenerate')}
           </Button>

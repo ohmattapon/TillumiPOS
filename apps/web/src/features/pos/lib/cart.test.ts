@@ -329,3 +329,36 @@ describe('options on a line', () => {
     })
   })
 })
+
+describe('a promotion', () => {
+  const tea = product({ id: 1, priceSatang: 2500 })
+  const lines = [{ key: '1:', productId: 1, optionIds: [], quantity: 2 }]
+  const promotion = { id: 4, name: 'ลด 10%', discountSatang: 500 }
+
+  test('sets the discount and is part of the total', () => {
+    const cart = priceCart(lines, catalogue(tea), '', { ...inclusive, promotion })
+    expect(cart).toMatchObject({ discountSatang: 500, totalSatang: 4500, promotion, isDiscountValid: true, canPay: true })
+  })
+
+  test('replaces whatever was typed in the discount field', () => {
+    const cart = priceCart(lines, catalogue(tea), '99', { ...inclusive, promotion })
+    expect(cart).toMatchObject({ discountSatang: 500, totalSatang: 4500, isDiscountValid: true })
+  })
+
+  test('never takes more than the subtotal', () => {
+    const cart = priceCart(lines, catalogue(tea), '', { ...inclusive, promotion: { ...promotion, discountSatang: 9000 } })
+    expect(cart).toMatchObject({ discountSatang: 5000, totalSatang: 0 })
+  })
+
+  test('without one nothing changes and promotion is null', () => {
+    expect(priceCart(lines, catalogue(tea), '7.50', inclusive)).toMatchObject({ promotion: null, discountSatang: 750 })
+  })
+
+  test('an order is priced the same way, at the prices it quoted', () => {
+    const items: Order['items'] = [
+      { lineId: 1, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2000, quantity: 2, lineTotalSatang: 4000, options: [], note: null, sentQuantity: 0 },
+    ]
+    const cart = priceOrder(items, catalogue(tea), '', { ...inclusive, promotion: { id: 4, name: 'ลด 10%', discountSatang: 400 } })
+    expect(cart).toMatchObject({ subtotalSatang: 4000, discountSatang: 400, totalSatang: 3600 })
+  })
+})
