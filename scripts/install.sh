@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Installs TillumiPOS with Docker Compose: writes .env with fresh secrets, starts it, and prints the setup code.
+# Not supported yet: Linux has not been tested (Windows is the supported platform, see docs/install.md).
+# Installs TillumiPOS with Podman Compose: writes .env with fresh secrets, starts it, and prints the setup code.
 #
 #   scripts/install.sh                      http://localhost:3000
 #   scripts/install.sh --domain pos.my.shop  HTTPS on that domain (ports 80 and 443 must be free and reach this machine)
@@ -14,8 +15,13 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-command -v docker >/dev/null 2>&1 || { echo "Docker is not installed. Install Docker first: https://docs.docker.com/get-docker/" >&2; exit 1; }
-docker compose version >/dev/null 2>&1 || { echo "Docker Compose is not available." >&2; exit 1; }
+# Podman runs rootful here (ports 80 and 443 need it), so every call uses sudo unless the script already runs as root.
+compose() {
+  if [ "$(id -u)" -eq 0 ]; then podman compose "$@"; else sudo podman compose "$@"; fi
+}
+
+command -v podman >/dev/null 2>&1 || { echo "Podman is not installed. Install it first: https://podman.io/getting-started/installation" >&2; exit 1; }
+compose version >/dev/null 2>&1 || { echo "Podman Compose is not available: check with: sudo podman compose version" >&2; exit 1; }
 
 secret() { head -c 256 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c "$1"; }
 
@@ -47,7 +53,7 @@ if grep -qE '^DOMAIN=.+' .env; then
   DOMAIN="$(grep -E '^DOMAIN=' .env | tail -1 | cut -d= -f2 | tr -d '\r')"
 fi
 
-docker compose -f docker-compose.yml "${PROFILE[@]}" up -d --build
+compose -f docker-compose.yml "${PROFILE[@]}" up -d --build
 
 echo "Waiting for the system to start..."
 for _ in $(seq 1 90); do
@@ -55,7 +61,7 @@ for _ in $(seq 1 90); do
   sleep 2
 done
 curl -fsS "http://localhost:${PORT}/api/v1/health" >/dev/null 2>&1 || {
-  echo "The system did not start. See: docker compose logs app" >&2
+  echo "The system did not start. See: sudo podman compose logs app" >&2
   exit 1
 }
 
@@ -63,7 +69,7 @@ URL="http://localhost:${PORT}"
 [ -n "$DOMAIN" ] && URL="https://${DOMAIN}"
 echo
 echo "TillumiPOS is running: ${URL}"
-CODE="$(docker compose -f docker-compose.yml logs app 2>/dev/null | grep -o 'SETUP CODE[^:]*:  *[A-Z0-9]*' | tail -1 | grep -o '[A-Z0-9]*$' || true)"
+CODE="$(compose -f docker-compose.yml logs app 2>/dev/null | grep -o 'SETUP CODE[^:]*:  *[A-Z0-9]*' | tail -1 | grep -o '[A-Z0-9]*$' || true)"
 if [ -n "$CODE" ]; then
   echo "First-time setup code: ${CODE}"
   echo "Open the address above and enter this code to create the owner account."
