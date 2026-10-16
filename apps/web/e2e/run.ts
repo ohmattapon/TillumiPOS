@@ -169,8 +169,15 @@ async function runSetupFlow(browser: Browser) {
         throw new Error('The sign-in form is shown while nobody has an account')
     })
 
+    await check('the setup button stays disabled until a shop type is chosen', async () => {
+      await fillForm('AAAAAAAAAAAA')
+      if (await page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' }).isEnabled())
+        throw new Error('Setup can be sent without a shop type')
+    })
+
     await check('a wrong setup code is refused with a message, and nothing is created', async () => {
       await fillForm('AAAAAAAAAAAA')
+      await page.getByRole('radio', { name: /อื่นๆ/ }).check()
       await page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' }).click()
       await page.getByRole('alert').getByText(/รหัสตั้งค่าไม่ถูกต้อง/).waitFor()
       const status = await (await fetch(`http://localhost:${SETUP_API_PORT}/api/v1/setup`)).json()

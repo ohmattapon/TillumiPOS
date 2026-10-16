@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import type { ShopType } from '@pos/api/shop-settings'
 import { useCompleteSetup } from '../api'
+import { ShopTypeChoice } from './ShopTypeChoice'
 
 /** Shown instead of the login page while nobody has an account: makes the owner and names the shop. */
 export function SetupPage() {
@@ -19,6 +21,7 @@ export function SetupPage() {
     password: '',
     confirm: '',
   })
+  const [shopType, setShopType] = useState<ShopType | null>(null)
   const complete = useCompleteSetup()
   const set = (key: keyof typeof form) => (event: { target: { value: string } }) =>
     setForm({ ...form, [key]: event.target.value })
@@ -27,14 +30,15 @@ export function SetupPage() {
   const canSubmit =
     Object.values(form).every((value) => value.trim() !== '') &&
     form.password.length >= 10 &&
+    shopType !== null &&
     !mismatch &&
     !complete.isPending
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    if (!canSubmit) return
+    if (!canSubmit || shopType === null) return
     const { confirm: _confirm, ...input } = form
-    complete.mutate({ ...input, setupCode: input.setupCode.trim() })
+    complete.mutate({ ...input, setupCode: input.setupCode.trim(), shopType })
   }
 
   const field = (
@@ -73,6 +77,7 @@ export function SetupPage() {
             <p className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">{t('codeNote')}</p>
             {field('setupCode', t('setupCode'), { autoFocus: true })}
             {field('shopName', t('shopName'))}
+            <ShopTypeChoice value={shopType} onChange={setShopType} />
             {field('branchName', t('branchName'))}
             {field('username', t('username'))}
             {field('displayName', t('displayName'))}
