@@ -68,9 +68,10 @@ interface NavItem {
   badge?: number
 }
 
-// Active item reads as a flat mint wash with deep-teal text.
+// Active item reads as a flat mint wash with deep-teal text. Hover is a quieter neutral wash, so pointing at a row never
+// looks like the page you are on; the active row keeps its mint while hovered.
 const activeItem =
-  'data-[active=true]:bg-accent data-[active=true]:text-accent-foreground'
+  'transition-colors hover:bg-muted hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-accent-foreground data-[active=true]:hover:bg-accent data-[active=true]:hover:text-accent-foreground'
 
 export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => void }) {
   const { t } = useTranslation('app')
