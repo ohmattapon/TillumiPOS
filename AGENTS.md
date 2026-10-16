@@ -280,7 +280,7 @@ These are the patterns this codebase already uses and the practices every change
 - **Do not abstract on the first or second use.** Duplicate once, extract on the third, and only when the copies really change for the same reason. A wrong abstraction costs more than a little duplication.
 - **Put each rule in exactly one place.** Totals in `calculateTotals`, option rules in `resolveLineOptions`, promotion rules in `evaluatePromotion`, permissions in `domains/authorization.ts`. If you find a second copy of a rule, remove the copy.
 - **Make invalid states unrepresentable.** Validate when an object is created (entities and value objects throw from their constructor), so the rest of the code can trust what it holds.
-- **Fail loudly at the boundary, trust inside.** Validate untrusted input once, where it enters (zod in `execute()`, Elysia schemas on routes). Do not re-validate the same thing at every layer.
+- **The core validates its own input.** A use case can be driven by more than one adapter (HTTP, a seed script, a test), so `execute()` parses its input with zod and never trusts the caller. The Elysia schema on a route only describes the HTTP contract (OpenAPI, coercion). Business rules are checked once, in the entity or use case, never in the route schema.
 - **Prefer pure functions.** Compute without touching the clock, the database or the network, and pass those in. Pure code is the cheapest to test and the easiest to share with the web.
 - **Comments explain why, not what.** A comment records a reason, a constraint or a trap that the code cannot show (for example why a lock is taken before a read). Delete comments that restate the code and never leave commented-out code.
 - **Name things after the business.** `VoidSaleUseCase`, `ReceiveStockUseCase`, `quote`, `shift`. Avoid `Manager`, `Helper`, `Util` and `Data` in new names.
@@ -309,15 +309,39 @@ These are the patterns this codebase already uses and the practices every change
 - **Translate database errors in the adapter.** Unique and foreign-key violations become domain errors (`DomainConflictError`) before leaving the repository, so use cases never see driver errors.
 - **Avoid N+1 queries.** Load related rows in one or two queries and assemble them in memory (as the roles repository does for permissions). Page everything that can grow with `limit`/`offset`.
 
-### Ports, adapters and composition
+### Hexagonal rules (ports and adapters)
 
-- **Depend on an interface you own.** A use case asks for `IClock`, `IMediaStorage`, `IQrPaymentGateway`, never for a library. The adapter is the only place that knows the library.
-- **Decorate to add behavior without changing the port.** `CachedCategoryRepository` adds caching and `GuardedOrderRepository` adds the QR lock check around the real repository, both behind the same interface. Prefer a decorator over an `if` inside the repository.
-- **Choose the implementation in one factory.** `createMediaStorage()` is the only place that reads `MEDIA_STORAGE`. The rest of the code asks `isEnabled()` and never branches on the configuration.
-- **Gateways are anti-corruption layers.** Translate the outside system's vocabulary into ours inside the adapter (`IQrPaymentGateway`), and never trust data that the outside system did not make verifiable (a callback body is only a signal to go and check).
-- **Cross-module questions go through a port the other module answers** (`ITableOccupancy`, `IRoleDirectory`, `IShiftSalesTotals`). Define the port where it is consumed, implement it in the owning module.
-- **Wire in the module file.** `<module>.module.ts` registers ports and use cases with tsyringe, and `di-registrations.ts` imports the module. Tokens are declared next to the port. Use cases are registered as singletons and must hold no per-request state.
-- **Controllers stay thin.** A controller parses the HTTP request, calls exactly one use case, and maps the result. If a controller contains a condition about the business, move it into the use case or the entity.
+The application core is `domains/` plus each module's `applications/`. Everything else is an adapter. These rules are what make the core testable and the adapters replaceable; the layer table above is how they are enforced on imports.
+
+- **Dependencies point inward only.** Adapters depend on the core; the core never depends on an adapter, a framework for I/O (Elysia, Drizzle), `libs/` or `infrastructure/`. If the core needs something from the outside, it declares a port and an adapter implements it.
+- **Driving side (primary).** Something outside calls the core: an HTTP controller, `auth.plugin.ts`, a seed or CLI script, a test. The driving port is the use case's `execute()`. A driving adapter translates its own input (an HTTP request, a script argument) into the use case input, calls exactly one use case, and translates the result back (an HTTP response). It holds no business decision. If a controller contains a condition about the business, move it into the use case or the entity.
+- **Driven side (secondary).** The core calls something outside through a port: repositories, `IUnitOfWork`, `IClock`, `IMediaStorage`, `IQrPaymentGateway`, `IAuditLog`. The core owns the port, so it is declared in `applications/ports/` of the module that uses it, with its DI token next to it.
+- **Name ports by what the core needs, not by the technology.** `IMediaStorage`, not `IR2Client`; `IQrPaymentGateway`, not `IScbApi`; `findByIdForUpdate`, not `selectWithRowLock`.
+- **Port signatures speak domain types only.** Entities, value objects, plain read models and domain errors. Never a Drizzle row, a SQL fragment, an Elysia context, an HTTP status, a `Response` or a library type. A port that exposes the technology has leaked the adapter into the core.
+- **Adapters contain no business rules.** An adapter translates and moves data: map rows to entities, call the outside system, convert its errors into domain errors. Caching, retries, connection handling and serialization belong in adapters; "may this order be edited" does not.
+- **Decorators are allowed on both sides, for their own side's concerns.** A technical decorator stays in `adapters/` (`CachedCategoryRepository` adds caching behind `ICategoryRepository`). A decorator that enforces a business rule must live in the core, in `applications/`, wrapping the port, not in `adapters/`.
+- **Everything nondeterministic is a port.** Time (`IClock`), random codes and ids, the database transaction (`IUnitOfWork`), outside services. The core never calls `Date.now()`, `crypto`, `fetch`, `setTimeout` or reads `process.env` directly.
+- **Configuration is read at the edge.** Environment variables are read by adapters and the composition root (`libs/env`, `libs/scb-config.ts`, `createMediaStorage()`), and the core receives behavior through ports (`IMediaStorage.isEnabled()`), never a config value to branch on.
+- **One composition root chooses the adapters.** `<module>.module.ts` binds each port token to its adapter and `di-registrations.ts` imports every module. Nothing else decides which implementation is used. Use cases are singletons and hold no per-request state.
+- **Gateways are anti-corruption layers.** Translate the outside system's vocabulary and errors into ours inside the adapter, and never trust data the outside system did not make verifiable (a callback body is only a signal to go and check).
+- **Modules talk through ports, not through each other's insides.** A module that needs an answer from another declares a port in its own `applications/ports/` (the consumer owns it) and the owning module implements it as an adapter (`ITableOccupancy` answered by `orders`, `IRoleDirectory` answered by `roles`). Never import another module's use case, repository or table.
+- **Authorization is a business rule.** The use case enforces the permission (`requirePermission`) so the rule holds whichever adapter drives it. The route guard (`auth: { can }`) is the HTTP adapter's early rejection and does not replace the check in the core when the use case's rule depends on the data (whose shift, which branch).
+- **Errors cross the boundary as domain errors.** The core throws domain errors with a stable `code`. Only the driving adapter (`libs/http-error.factory.ts`) decides how they look on the wire.
+- **The core is tested without adapters.** Use cases are tested with fake ports (`src/__tests__/mocks.ts`); adapters are tested against the real thing (PostgreSQL, the fake SCB server). If a use case test needs a database, a port is missing.
+
+### Accepted compromises and known deviations
+
+Pragmatic choices that are allowed, and places where the code does not yet follow the rules above. Do not copy a deviation into new code; fix it when you work in that area.
+
+| Kind | What | The rule-following way |
+|---|---|---|
+| Accepted | `applications/` uses tsyringe decorators and zod | Kept for brevity; they do no I/O. Do not add other frameworks to the core. |
+| Accepted | Domain errors carry a Thai message | The `code` and `params` are the contract; the web translates from them. |
+| Accepted | The use case class is the driving port, with no separate interface | Controllers depend on the class; add an interface only if a second implementation is needed. |
+| Deviation | `orders/adapters/repository/guarded-order.repository.ts` enforces `ORDER_LOCKED_BY_QR_PAYMENT` in the adapter layer | Move the decorator to `orders/applications/` so the rule lives in the core, wrapping `IOrderRepository`. |
+| Deviation | `auth/applications/usecases/login.usecase.ts` and `qr-payments/applications/services/qr-payment-refresher.ts` call `console` from the core | Add a logger port (or let the adapter log) and inject it. |
+| Deviation | `products/.../set-product-image.usecase.ts`, `qr-payments/.../create-qr-payment.usecase.ts` and `create-qr-payment-v2.usecase.ts` call `crypto.randomUUID()` in the use case | Generate keys and references through an id-generator port, as `customer-display` does with its identifiers port. |
+| Deviation | `customer-display/.../open-display-stream.usecase.ts` waits with `setTimeout` in the use case | Take the wait (or the ping schedule) through a port so tests can drive it. |
 
 ### Evolving the contract
 
@@ -359,7 +383,7 @@ These are the patterns this codebase already uses and the practices every change
 - **Bound everything that comes from outside.** Give strings, arrays and request sizes a maximum, and cap anything that an anonymous caller can make the server store (see the pairing session cap and the login audit name limit).
 - **Rate-limit what can be guessed.** Setup codes, passwords and pairing codes lock after repeated failures.
 - **Authorization is deny by default.** A new route needs `auth: true` or `auth: { can: ... }` on purpose, and a public route needs a comment saying why it is safe.
-- **Log failures, not secrets, and never swallow an error silently.** A deliberate swallow (the failed-login audit write) is commented with the reason and still logs.
+- **Log failures, not secrets, and never swallow an error silently.** A deliberate swallow (the failed-login audit write) is commented with the reason and still logs. Logging is an adapter concern: the core reports through a port or by throwing, not with `console` (see the known deviations).
 
 ### Code style
 
