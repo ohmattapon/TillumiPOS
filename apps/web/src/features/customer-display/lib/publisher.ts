@@ -41,6 +41,11 @@ export class DisplayPublisher {
     this.send()
   }
 
+  /** Sends the latest state again, for a channel that has just become useful (a screen was paired). */
+  resend() {
+    this.send()
+  }
+
   /** The till is closing or reloading: do not leave its last basket in front of the next customer. */
   leave() {
     if (this.latest === null) return
