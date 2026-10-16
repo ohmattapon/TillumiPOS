@@ -32,10 +32,9 @@ pre-push:
     - name: api unit tests
       run: bun run test:unit
 
+    # Run from the repo root on purpose: a job with `root` is skipped when the push touches no file under it.
     - name: web unit tests
-      root: "apps/web/"
-      run: bun run test
+      run: bun run --filter @pos/web test
 
     - name: openapi contract
-      root: "apps/api/"
-      run: bun run openapi:check
+      run: bun run --filter @pos/api openapi:check
