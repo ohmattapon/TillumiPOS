@@ -5,6 +5,9 @@ param([string]$Directory = 'backups')
 $ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..')
 
+. (Join-Path $PSScriptRoot 'podman-windows.ps1')
+Initialize-Podman
+
 New-Item -ItemType Directory -Force -Path $Directory | Out-Null
 $name = 'easypos-{0}.sql.gz' -f (Get-Date -Format 'yyyyMMdd-HHmmss')
 $file = Join-Path $Directory $name
@@ -12,14 +15,14 @@ $full = Join-Path (Get-Location) $file
 
 # The dump is compressed inside the container and copied out as a file, so no binary passes through
 # the PowerShell pipeline (which would damage it).
-docker compose -f docker-compose.yml exec -T db sh -c 'pg_dump -U pos -d pos --clean --if-exists --no-owner | gzip > /tmp/backup.sql.gz'
-if ($LASTEXITCODE -ne 0) { Write-Error 'The backup failed: is the database running? (docker compose ps)' }
-docker compose -f docker-compose.yml cp db:/tmp/backup.sql.gz $full
-docker compose -f docker-compose.yml exec -T db rm -f /tmp/backup.sql.gz
+compose -f docker-compose.yml exec -T db sh -c 'pg_dump -U pos -d pos --clean --if-exists --no-owner | gzip > /tmp/backup.sql.gz'
+if ($LASTEXITCODE -ne 0) { Write-Error 'The backup failed: is the database running? (podman compose ps)' }
+compose -f docker-compose.yml cp db:/tmp/backup.sql.gz $full
+compose -f docker-compose.yml exec -T db rm -f /tmp/backup.sql.gz
 
 if (-not (Test-Path $full) -or (Get-Item $full).Length -lt 200) {
   Remove-Item $full -ErrorAction SilentlyContinue
-  Write-Error 'The backup failed: is the database running? (docker compose ps)'
+  Write-Error 'The backup failed: is the database running? (podman compose ps)'
 }
 Write-Host "Backup saved: $file"
 
@@ -27,10 +30,10 @@ Write-Host "Backup saved: $file"
 $mediaName = $name -replace '\.sql\.gz$', '.media.tar.gz'
 $mediaFile = Join-Path $Directory $mediaName
 $mediaFull = Join-Path (Get-Location) $mediaFile
-docker compose -f docker-compose.yml exec -T app sh -c 'find /data/media -type f 2>/dev/null | head -n 1 | grep -q . && tar -czf /tmp/media.tar.gz -C /data/media .'
+compose -f docker-compose.yml exec -T app sh -c 'find /data/media -type f 2>/dev/null | head -n 1 | grep -q . && tar -czf /tmp/media.tar.gz -C /data/media .'
 if ($LASTEXITCODE -eq 0) {
-  docker compose -f docker-compose.yml cp app:/tmp/media.tar.gz $mediaFull
-  docker compose -f docker-compose.yml exec -T app rm -f /tmp/media.tar.gz
+  compose -f docker-compose.yml cp app:/tmp/media.tar.gz $mediaFull
+  compose -f docker-compose.yml exec -T app rm -f /tmp/media.tar.gz
   Write-Host "Images saved: $mediaFile"
 }
 Write-Host 'Keep a copy somewhere else too (another disk, or a cloud drive).'

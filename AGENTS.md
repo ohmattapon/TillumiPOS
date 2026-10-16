@@ -185,9 +185,9 @@ Every operation is a use case that is exactly one of a command or a query, and t
 - Product image storage has three kinds, chosen by `MEDIA_STORAGE` (`local` | `worker` | `none`) through `createMediaStorage()` only. Unset = `worker` if `MEDIA_URL` and `MEDIA_TOKEN` are both set, otherwise `local`. An unknown value stops the program from starting. Ask `IMediaStorage.isEnabled()` before using it, and `urlFor()` may return `null`, so never assume an image URL always exists. The v2 `capabilities` report the status through the `imageStorage` field, and the web hides uploading when it is off.
 - Locally stored images are served at `GET /media/<key>` (`modules/media.plugin.ts`), which is deliberately outside `/api/v1` and therefore not in the OpenAPI baseline. It reads and writes only keys of the form `products/<number>/<uuid>.<jpg|png|webp>` (`isMediaKey`), this form must not be relaxed, and it must come before `web.plugin`. In Docker the image files live in the `pos-media` volume, and `backup` saves them as a `.media.tar.gz` file paired with the `.sql.gz`.
 - The API serves the built web itself when `WEB_DIST` is set (`modules/web.plugin.ts`). This plugin must be last in `app.ts` and must never answer in place of `/api` or `/openapi` routes.
-- Installation uses `docker-compose.yml` (the database, the app, and Caddy in the `https` profile), while `docker-compose.dev.yml` is only for starting just the database during development. The scripts `scripts/install`, `backup` and `restore` (both `.sh` and `.ps1`) use `docker-compose.yml` only, and `restore` replaces the whole database so it must ask for confirmation.
+- Installation uses `docker-compose.yml` (the database, the app, and Caddy in the `https` profile), run by `podman compose` (Podman is the only container engine; Docker is not used). The compose file names keep their `docker-` prefix on purpose. `docker-compose.dev.yml` is only for starting just the database during development. The scripts `scripts/install`, `backup` and `restore` (both `.sh` and `.ps1`) use `docker-compose.yml` only, and `restore` replaces the whole database so it must ask for confirmation.
 - `*.sh` files, `Dockerfile` and `Caddyfile` must be LF (set in `.gitattributes`). With CRLF they cannot run in the container.
-- When changing the install scripts or Docker, try it with a separate compose project (`COMPOSE_PROJECT_NAME`) in a worktree that has its own `.env`. Never point it at a live database. `apps/api/src/__tests__/repo-secrets.test.ts` must always pass, because it checks that no `.env` or real password is in a tracked file.
+- When changing the install scripts or the container setup, try it with a separate compose project (`COMPOSE_PROJECT_NAME`) in a worktree that has its own `.env`. Never point it at a live database. `apps/api/src/__tests__/repo-secrets.test.ts` must always pass, because it checks that no `.env` or real password is in a tracked file.
 
 ### The API contract
 
@@ -391,7 +391,7 @@ Pragmatic choices that are allowed, and places where the code does not yet follo
 - Prefer `const`, early returns and small functions over deep nesting. Prefer unions of string literals (an `as const` list plus a derived type, like `USER_ROLES`) over TypeScript enums for new code.
 - Match the file you are editing: its naming, comment density and idiom. Do not reformat code you are not changing.
 - Imports: relative inside a module or feature, aliases (`@/`) across features on the web, never a deep import into another feature or module.
-- Keep line endings as the repo expects (LF for scripts and Docker files) and keep diffs free of whitespace-only changes.
+- Keep line endings as the repo expects (LF for scripts and the Dockerfile) and keep diffs free of whitespace-only changes.
 
 ### Version control
 
@@ -420,8 +420,8 @@ Run from the root of the repo:
 
 | Command | Effect |
 |---|---|
-| `bun run db:up` | Start PostgreSQL in Docker (port 5433) with `docker-compose.dev.yml` |
-| `scripts/install.sh [--domain <domain>]` (Windows: `scripts/install.ps1 [-Domain <domain>]`) | Install the whole system with Docker: creates a `.env` with random secrets, starts the system and prints the setup code |
+| `bun run db:up` | Start PostgreSQL in Podman (port 5433) with `docker-compose.dev.yml` |
+| `scripts/install.sh [--domain <domain>]` (Windows: `scripts/install.ps1 [-Domain <domain>]`) | Install the whole system with Podman: creates a `.env` with random secrets, starts the system and prints the setup code |
 | `scripts/backup.sh` (`backup.ps1`) | Back up the database to `backups/easypos-<date>-<time>.sql.gz` |
 | `scripts/restore.sh <file> [--yes]` (`restore.ps1 <file> [-Yes]`) | Restore from a backup file, replacing all data |
 | `bun run db:migrate` | Run migrations |
