@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Not supported yet: Linux has not been tested (Windows is the supported platform, see docs/install.md).
 # Loads a backup made by scripts/backup.sh. It REPLACES everything in the database.
 #   scripts/restore.sh backups/easypos-20261014-210000.sql.gz [--yes]
 set -euo pipefail
