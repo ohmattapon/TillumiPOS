@@ -1,3 +1,4 @@
+import { mockAuditLog as auditMock, mockUnitOfWork as auditUnitOfWork } from '../../../../__tests__/mocks'
 import 'reflect-metadata'
 import { describe, expect, mock, test } from 'bun:test'
 import { RoleEntity } from '../../../../domains/role.domain'
@@ -21,7 +22,7 @@ describe('role commands', () => {
   test('creates a custom role with unique sorted permissions inside a unit of work', async () => {
     const repo = repository(), uow = mockUnitOfWork()
     repo.create.mockImplementation(async (entity) => new RoleEntity({ ...entity.toSnapshot(), id: 8 }))
-    const result = await new CreateRoleUseCase(repo, uow).execute({ name: 'ผู้จัดการ', permissions: ['sales.void', 'sales.void', 'reports.read'] })
+    const result = await new CreateRoleUseCase(repo, uow, auditMock()).execute({ name: 'ผู้จัดการ', permissions: ['sales.void', 'sales.void', 'reports.read'] }, { id: 1, displayName: 'ผู้ทดสอบ', role: 'owner' as const })
     expect(result.permissions).toEqual(['reports.read', 'sales.void'])
     expect(result.systemKey).toBeNull()
     expect(uow.run).toHaveBeenCalledTimes(1)
@@ -31,48 +32,48 @@ describe('role commands', () => {
     { name: 'x'.repeat(61), permissions: [] },
   ])('rejects an invalid role before storing it: %p', async (input) => {
     const repo = repository()
-    await expect(new CreateRoleUseCase(repo, mockUnitOfWork()).execute(input)).rejects.toThrow()
+    await expect(new CreateRoleUseCase(repo, mockUnitOfWork(), auditMock()).execute(input, { id: 1, displayName: 'ผู้ทดสอบ', role: 'owner' as const })).rejects.toThrow()
     expect(repo.create).not.toHaveBeenCalled()
   })
   test('replaces all permissions after locking the role', async () => {
     const repo = repository()
     repo.findByIdForUpdate.mockResolvedValue(role())
     repo.update.mockImplementation(async (entity) => entity)
-    const result = await new UpdateRoleUseCase(repo, mockUnitOfWork()).execute(8, { permissions: ['reports.read'] })
+    const result = await new UpdateRoleUseCase(repo, mockUnitOfWork(), auditMock()).execute(8, { permissions: ['reports.read'] }, { id: 1, displayName: 'ผู้ทดสอบ', role: 'owner' as const })
     expect(result.permissions).toEqual(['reports.read'])
     expect(repo.findByIdForUpdate).toHaveBeenCalledWith(8)
   })
   test('protects the owner and reports missing roles', async () => {
     const repo = repository()
     repo.findByIdForUpdate.mockResolvedValue(new RoleEntity({ id: 1, name: 'เจ้าของร้าน', systemKey: 'owner', permissions: [] }))
-    await expect(new UpdateRoleUseCase(repo, mockUnitOfWork()).execute(1, { permissions: [] })).rejects.toMatchObject({ code: 'ROLE_PROTECTED' })
+    await expect(new UpdateRoleUseCase(repo, mockUnitOfWork(), auditMock()).execute(1, { permissions: [] }, { id: 1, displayName: 'ผู้ทดสอบ', role: 'owner' as const })).rejects.toMatchObject({ code: 'ROLE_PROTECTED' })
     repo.findByIdForUpdate.mockResolvedValue(null)
-    await expect(new UpdateRoleUseCase(repo, mockUnitOfWork()).execute(99, { name: 'x' })).rejects.toMatchObject({ code: 'ROLE_NOT_FOUND' })
+    await expect(new UpdateRoleUseCase(repo, mockUnitOfWork(), auditMock()).execute(99, { name: 'x' }, { id: 1, displayName: 'ผู้ทดสอบ', role: 'owner' as const })).rejects.toMatchObject({ code: 'ROLE_NOT_FOUND' })
     expect(repo.update).not.toHaveBeenCalled()
   })
   test('allows editing cashier permissions but protects its name', async () => {
     const repo = repository()
     repo.findByIdForUpdate.mockResolvedValue(new RoleEntity({ id: 2, name: 'แคชเชียร์', systemKey: 'cashier', permissions: [] }))
     repo.update.mockImplementation(async (entity) => entity)
-    expect((await new UpdateRoleUseCase(repo, mockUnitOfWork()).execute(2, { permissions: ['reports.read'] })).permissions).toEqual(['reports.read'])
-    await expect(new UpdateRoleUseCase(repo, mockUnitOfWork()).execute(2, { name: 'อื่น' })).rejects.toMatchObject({ code: 'ROLE_PROTECTED' })
+    expect((await new UpdateRoleUseCase(repo, mockUnitOfWork(), auditMock()).execute(2, { permissions: ['reports.read'] }, { id: 1, displayName: 'ผู้ทดสอบ', role: 'owner' as const })).permissions).toEqual(['reports.read'])
+    await expect(new UpdateRoleUseCase(repo, mockUnitOfWork(), auditMock()).execute(2, { name: 'อื่น' }, { id: 1, displayName: 'ผู้ทดสอบ', role: 'owner' as const })).rejects.toMatchObject({ code: 'ROLE_PROTECTED' })
   })
   test('deletes an unused custom role', async () => {
     const repo = repository(), users = usage()
     repo.findByIdForUpdate.mockResolvedValue(role())
-    const result = await new DeleteRoleUseCase(repo, mockUnitOfWork(), users).execute(8)
+    const result = await new DeleteRoleUseCase(repo, mockUnitOfWork(), users, auditMock()).execute(8, { id: 1, displayName: 'ผู้ทดสอบ', role: 'owner' as const })
     expect(result.id).toBe(8)
     expect(repo.delete).toHaveBeenCalledWith(8)
   })
   test('refuses a used, system or missing role without deleting', async () => {
-    const repo = repository(), users = usage(), command = new DeleteRoleUseCase(repo, mockUnitOfWork(), users)
+    const repo = repository(), users = usage(), command = new DeleteRoleUseCase(repo, mockUnitOfWork(), users, auditMock())
     repo.findByIdForUpdate.mockResolvedValue(role()); users.countUsers.mockResolvedValue(2)
-    await expect(command.execute(8)).rejects.toMatchObject({ code: 'ROLE_IN_USE' })
+    await expect(command.execute(8, { id: 1, displayName: 'ผู้ทดสอบ', role: 'owner' as const })).rejects.toMatchObject({ code: 'ROLE_IN_USE' })
     repo.findByIdForUpdate.mockResolvedValue(new RoleEntity({ id: 2, name: 'แคชเชียร์', systemKey: 'cashier', permissions: [] }))
-    await expect(command.execute(2)).rejects.toMatchObject({ code: 'ROLE_PROTECTED' })
+    await expect(command.execute(2, { id: 1, displayName: 'ผู้ทดสอบ', role: 'owner' as const })).rejects.toMatchObject({ code: 'ROLE_PROTECTED' })
     expect(users.countUsers).toHaveBeenCalledTimes(1)
     repo.findByIdForUpdate.mockResolvedValue(null)
-    await expect(command.execute(99)).rejects.toMatchObject({ code: 'ROLE_NOT_FOUND' })
+    await expect(command.execute(99, { id: 1, displayName: 'ผู้ทดสอบ', role: 'owner' as const })).rejects.toMatchObject({ code: 'ROLE_NOT_FOUND' })
     expect(repo.delete).not.toHaveBeenCalled()
   })
 })

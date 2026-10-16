@@ -30,12 +30,12 @@ export class UserElysiaController {
         },
         { response: page(userSchemas.user), detail: { summary: 'รายชื่อผู้ใช้ทั้งหมด' } },
       )
-      .post('/', async ({ body, branch }) => toResponse(await this.createUser.execute(body, (await branch()).id)), {
+      .post('/', async ({ body, branch, user }) => toResponse(await this.createUser.execute(body, (await branch()).id, user)), {
         body: userSchemas.create,
         response: userSchemas.user,
         detail: { summary: 'เพิ่มผู้ใช้' },
       })
-      .patch('/:id', async ({ params, body }) => toResponse(await this.updateUser.execute(params.id, body)), {
+      .patch('/:id', async ({ params, body, user }) => toResponse(await this.updateUser.execute(params.id, body, user)), {
         params: idParams,
         body: userSchemas.update,
         response: userSchemas.user,

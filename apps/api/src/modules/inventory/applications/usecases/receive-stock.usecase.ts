@@ -1,3 +1,5 @@
+import { buildAuditEntry } from '../../../../domains/audit-entry.vo'
+import { auditLogToken, type IAuditLog } from '../../../audit/applications/ports/audit-log.port'
 import { inject, injectable } from 'tsyringe'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
@@ -16,9 +18,10 @@ export class ReceiveStockUseCase {
     @inject(productRepositoryToken) private readonly products: IProductRepository,
     @inject(stockLedgerToken) private readonly ledger: IStockLedger,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
-  ) {}
+    @inject(auditLogToken) private readonly audit: IAuditLog,
+  ) { }
 
-  async execute(input: unknown, userId: number, branchId: number) {
+  async execute(input: unknown, actor: { id: number; displayName: string }, branchId: number) {
     const dto = receiveStockSchema.parse(input)
 
     return this.unitOfWork.run(async () => {
@@ -33,8 +36,17 @@ export class ReceiveStockUseCase {
         type: 'receive',
         quantity: dto.quantity,
         note: dto.note ?? null,
-        userId,
+        userId: actor.id,
       })
+      await this.audit.record({ id: actor.id, name: actor.displayName }, branchId, buildAuditEntry({
+        action: 'stock.receive',
+        entityType: 'product',
+        entityId: String(dto.productId),
+        summary: 'รับสินค้าเข้าสต็อก',
+        before: { qty: product.stockQty },
+        after: { qty: product.stockQty + dto.quantity },
+        reason: dto.note,
+      }))
       return movement!
     })
   }

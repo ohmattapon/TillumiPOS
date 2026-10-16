@@ -19,8 +19,8 @@ describe('users', () => {
     const second = ok(await owner.api.users.post({ username: 'second-owner', password: PASSWORD, displayName: 'เจ้าของอีกคน', role: 'owner' }))
     const update = container.resolve(UpdateUserUseCase)
     const results = await Promise.allSettled([
-      update.execute(owner.user.id, { isActive: false }),
-      update.execute(second.id, { isActive: false }),
+      update.execute(owner.user.id, { isActive: false }, { id: 1, displayName: 'ผู้ทดสอบ' }),
+      update.execute(second.id, { isActive: false }, { id: 1, displayName: 'ผู้ทดสอบ' }),
     ])
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
     const rejected = results.find((result) => result.status === 'rejected') as PromiseRejectedResult

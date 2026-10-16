@@ -57,7 +57,7 @@ export class ProductElysiaController {
       )
       .post(
         '/',
-        async ({ body, branch }) => toResponse(await this.createProduct.execute(body, (await branch()).id)),
+        async ({ body, branch, user }) => toResponse(await this.createProduct.execute(body, (await branch()).id, user)),
         {
           auth: { can: 'products.write' },
           body: productSchemas.create,
@@ -67,8 +67,8 @@ export class ProductElysiaController {
       )
       .patch(
         '/:id',
-        async ({ params, body, branch }) =>
-          toResponse(await this.updateProduct.execute(params.id, body, (await branch()).id)),
+        async ({ params, body, branch, user }) =>
+          toResponse(await this.updateProduct.execute(params.id, body, (await branch()).id, user)),
         {
           auth: { can: 'products.write' },
           params: idParams,

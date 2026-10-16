@@ -21,6 +21,7 @@ if (existing!.total > 0) {
   const owner = await container.resolve(CreateUserUseCase).execute(
     { username: 'admin', password, displayName: 'เจ้าของร้าน', role: 'owner' },
     branchId,
+    { id: null, displayName: 'Database seed' },
   )
 
   const createCategory = container.resolve(CreateCategoryUseCase)
@@ -34,8 +35,8 @@ if (existing!.total > 0) {
     { sku: 'SNK-002', barcode: '8850000000042', name: 'ช็อกโกแลตแท่ง', categoryId: snacks.id, priceSatang: 2500, costSatang: 1800 },
   ]
   for (const sample of samples) {
-    const product = await container.resolve(CreateProductUseCase).execute(sample, branchId)
-    await container.resolve(ReceiveStockUseCase).execute({ productId: product.id, quantity: 50, note: 'ยอดยกมา' }, owner.id, branchId)
+    const product = await container.resolve(CreateProductUseCase).execute(sample, branchId, owner)
+    await container.resolve(ReceiveStockUseCase).execute({ productId: product.id, quantity: 50, note: 'ยอดยกมา' }, owner, branchId)
   }
 
   console.log(`Seeded owner "admin" (password: ${password}) and ${samples.length} sample products`)

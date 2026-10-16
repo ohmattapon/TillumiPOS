@@ -25,16 +25,16 @@ export class RoleElysiaController {
         const result = await this.list.execute(query, user)
         return { ...result, items: result.items.map((role) => ({ ...role, permissions: [...role.permissions] })) }
       }, { auth: true, query: roleSchemas.listQuery, response: page(roleSchemas.role), detail: { summary: 'รายการบทบาท' } })
-      .post('/', async ({ body }) => {
-        return response(await this.create.execute(body), 0)
+      .post('/', async ({ body, user }) => {
+        return response(await this.create.execute(body, user), 0)
       }, { auth: { can: 'roles.manage' }, body: roleSchemas.create, response: roleSchemas.role, detail: { summary: 'สร้างบทบาท' } })
-      .patch('/:id', async ({ params, body }) => {
-        const role = await this.update.execute(params.id, body)
+      .patch('/:id', async ({ params, body, user }) => {
+        const role = await this.update.execute(params.id, body, user)
         const read = await this.get.execute(role.id)
         return response(role, read.userCount)
       }, { auth: { can: 'roles.manage' }, params: idParams, body: roleSchemas.update, response: roleSchemas.role, detail: { summary: 'แก้ไขบทบาท' } })
-      .delete('/:id', async ({ params }) => {
-        await this.remove.execute(params.id)
+      .delete('/:id', async ({ params, user }) => {
+        await this.remove.execute(params.id, user)
         return { ok: true }
       }, { auth: { can: 'roles.manage' }, params: idParams, response: t.Object({ ok: t.Boolean() }), detail: { summary: 'ลบบทบาท' } })
   }

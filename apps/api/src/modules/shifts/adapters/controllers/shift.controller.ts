@@ -37,7 +37,7 @@ export class ShiftElysiaController {
         return { items: items.map((item) => item.toSnapshot()), total }
       }, { auth: true, query: shiftHttpSchemas.shiftListQuery, response: page(shiftHttpSchemas.shift), detail: { summary: 'ประวัติกะของสาขา' } })
       .post('/', async ({ body, headers, user, branch }) =>
-        (await this.open.execute(body, { id: user.id, displayName: user.displayName }, (await branch()).id, headers['idempotency-key'])).toSnapshot(), {
+        (await this.open.execute(body, user, (await branch()).id, headers['idempotency-key'])).toSnapshot(), {
           auth: true, headers: idempotencyHeaders, body: shiftHttpSchemas.openShift, response: shiftHttpSchemas.shift, detail: { summary: 'เปิดกะ' },
         })
       .get('/:id', async ({ params, branch }) => (await this.get.execute(params.id, (await branch()).id)).toSnapshot(), {
@@ -48,7 +48,7 @@ export class ShiftElysiaController {
         detail: { summary: 'สรุปกะ: ยอด ณ ขณะนี้ถ้ากะเปิดอยู่ หรือยอดที่หยุดไว้ตอนเริ่มนับ' },
       })
       .post('/:id/cash-entries', async ({ params, body, headers, user, branch }) =>
-        (await this.recordCash.execute(params.id, body, { id: user.id, displayName: user.displayName, role: user.role }, (await branch()).id, headers['idempotency-key'])).toSnapshot(), {
+        (await this.recordCash.execute(params.id, body, user, (await branch()).id, headers['idempotency-key'])).toSnapshot(), {
           auth: true, headers: idempotencyHeaders, params: idParams, body: shiftHttpSchemas.cashMovement, response: shiftHttpSchemas.cashEntry, detail: { summary: 'บันทึกเงินเข้า–ออก' },
         })
       .get('/:id/cash-entries', async ({ params, query, branch }) => {
@@ -56,15 +56,15 @@ export class ShiftElysiaController {
         return { items: items.map((item) => item.toSnapshot()), total }
       }, { auth: true, params: idParams, query: shiftHttpSchemas.pageQuery, response: page(shiftHttpSchemas.cashEntry), detail: { summary: 'รายการเคลื่อนไหวเงินสดของกะ' } })
       .post('/:id/start-closing', async ({ params, body, headers, user, branch }) =>
-        (await this.startClosing.execute(params.id, body, { id: user.id, displayName: user.displayName, role: user.role }, (await branch()).id, headers['idempotency-key'])).toSnapshot(), {
+        (await this.startClosing.execute(params.id, body, user, (await branch()).id, headers['idempotency-key'])).toSnapshot(), {
           auth: true, headers: idempotencyHeaders, params: idParams, body: shiftHttpSchemas.startClosing, response: shiftHttpSchemas.shift, detail: { summary: 'เริ่มนับเงินปิดกะ' },
         })
       .post('/:id/cancel-closing', async ({ params, body, headers, user, branch }) =>
-        (await this.cancelClosing.execute(params.id, body, { id: user.id, displayName: user.displayName, role: user.role }, (await branch()).id, headers['idempotency-key'])).toSnapshot(), {
+        (await this.cancelClosing.execute(params.id, body, user, (await branch()).id, headers['idempotency-key'])).toSnapshot(), {
           auth: true, headers: idempotencyHeaders, params: idParams, body: shiftHttpSchemas.shiftRevision, response: shiftHttpSchemas.shift, detail: { summary: 'ยกเลิกการนับกะ' },
         })
       .post('/:id/close', async ({ params, body, headers, user, branch }) =>
-        (await this.close.execute(params.id, body, { id: user.id, displayName: user.displayName, role: user.role }, (await branch()).id, headers['idempotency-key'])).toSnapshot(), {
+        (await this.close.execute(params.id, body, user, (await branch()).id, headers['idempotency-key'])).toSnapshot(), {
           auth: true, headers: idempotencyHeaders, params: idParams, body: shiftHttpSchemas.closeShift, response: shiftHttpSchemas.shift, detail: { summary: 'ยืนยันปิดกะ' },
         })
   }

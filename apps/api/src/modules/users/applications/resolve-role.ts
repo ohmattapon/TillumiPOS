@@ -6,7 +6,7 @@ export async function resolveRole(
   input: { roleId?: number; role?: 'owner' | 'cashier' },
 ): Promise<RoleRef> {
   if (input.roleId !== undefined) {
-    const found = await roles.findById(input.roleId)
+    const found = await roles.findByIdForUpdate(input.roleId)
     if (!found) throw new DomainNotFoundError('ไม่พบบทบาท', 'ROLE_NOT_FOUND')
     return found
   }

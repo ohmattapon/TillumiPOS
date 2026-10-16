@@ -94,7 +94,7 @@ export async function signIn(
 ): Promise<Session> {
   const created = await container
     .resolve(CreateUserUseCase)
-    .execute({ username, password: PASSWORD, displayName: username, role, branchId }, branchId)
+    .execute({ username, password: PASSWORD, displayName: username, role, branchId }, branchId, { id: null, displayName: 'Test fixture' })
   const cookie = await loginCookie(username, PASSWORD)
   return { api: client(cookie, workingBranchId), apiV2: clientV2(cookie, workingBranchId), user: { ...created.toSnapshot(), roleId: created.roleId! } }
 }
@@ -106,7 +106,7 @@ export async function signInWithRole(
   { branchId = MAIN_BRANCH_ID, workingBranchId }: { branchId?: number; workingBranchId?: number } = {},
 ): Promise<Session> {
   const created = await container.resolve(CreateUserUseCase)
-    .execute({ username, password: PASSWORD, displayName: username, roleId, branchId }, branchId)
+    .execute({ username, password: PASSWORD, displayName: username, roleId, branchId }, branchId, { id: null, displayName: 'Test fixture' })
   const cookie = await loginCookie(username, PASSWORD)
   return { api: client(cookie, workingBranchId), apiV2: clientV2(cookie, workingBranchId),
     user: { ...created.toSnapshot(), roleId: created.roleId! } }
@@ -131,9 +131,9 @@ export async function seedProduct(
     priceSatang: 1000,
     costSatang: 600,
     ...input,
-  }, branchId)
+  }, branchId, by.user)
   if (stock > 0)
-    await container.resolve(ReceiveStockUseCase).execute({ productId: product.id, quantity: stock }, by.user.id, branchId)
+    await container.resolve(ReceiveStockUseCase).execute({ productId: product.id, quantity: stock }, by.user, branchId)
   return toProductResponse(
     await container.resolve(GetProductUseCase).execute(product.id, branchId),
     container.resolve<IMediaStorage>(TOKENS.MediaStorage),

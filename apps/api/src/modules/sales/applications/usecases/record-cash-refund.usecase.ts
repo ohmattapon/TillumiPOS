@@ -1,3 +1,5 @@
+import { buildAuditEntry } from '../../../../domains/audit-entry.vo'
+import { auditLogToken, type IAuditLog } from '../../../audit/applications/ports/audit-log.port'
 import { inject, injectable } from 'tsyringe'
 import { z } from 'zod'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
@@ -22,7 +24,8 @@ export class RecordCashRefundUseCase {
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
     @inject(TOKENS.Clock) private readonly clock: IClock,
     @inject(TOKENS.Idempotency) private readonly idempotency: CommandIdempotency,
-  ) {}
+    @inject(auditLogToken) private readonly audit: IAuditLog,
+  ) { }
 
   execute(saleId: number, input: unknown, actor: Actor, branchId: number, key: string) {
     const dto = refundSchema.parse(input)
@@ -39,6 +42,14 @@ export class RecordCashRefundUseCase {
           shiftId: dto.shiftId, branchId, saleId, actorId: actor.id, actorName: actor.displayName,
           amountSatang, reason: dto.reason, createdAt: this.clock.now(),
         })
+        await this.audit.record({ id: actor.id, name: actor.displayName }, branchId, buildAuditEntry({
+          action: 'sale.cash_refund',
+          entityType: 'sale',
+          entityId: String(saleId),
+          summary: 'คืนเงินสดของบิลที่ยกเลิก',
+          after: { amountSatang, shiftId: dto.shiftId },
+          reason: dto.reason,
+        }))
         return { shiftId: dto.shiftId, saleId, amountSatang }
       },
       (result) => result,

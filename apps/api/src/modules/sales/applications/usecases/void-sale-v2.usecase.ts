@@ -13,9 +13,9 @@ export class VoidSaleV2UseCase {
     @inject(VoidSaleUseCase) private readonly voidSale: VoidSaleUseCase,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
     @inject(TOKENS.Idempotency) private readonly idempotency: CommandIdempotency,
-  ) {}
+  ) { }
 
-  execute(id: number, input: unknown, actor: Actor & { id: number }, branchId: number, key: string) {
+  execute(id: number, input: unknown, actor: Actor & { id: number; displayName: string }, branchId: number, key: string) {
     return this.unitOfWork.run(() => this.idempotency.execute(
       { actorId: actor.id, branchId, action: 'sales.void', key },
       { saleId: id, input },
