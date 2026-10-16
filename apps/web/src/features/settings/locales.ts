@@ -15,6 +15,16 @@ const th = {
       tables: 'ผังโต๊ะ',
     },
   },
+  features: {
+    title: 'ฟีเจอร์',
+    tables: 'โต๊ะ',
+    tablesHint: 'ผังโต๊ะ การเลือกโต๊ะในหน้าขาย และการจัดการโต๊ะ',
+    kitchen: 'ครัว',
+    kitchenHint: 'จอครัว ปุ่มส่งเข้าครัว และสถานีครัว',
+    modifiers: 'ตัวเลือกเสริม',
+    modifiersHint: 'หน้าจัดการตัวเลือก เช่น ร้อน เย็น ความหวาน สินค้าที่ผูกตัวเลือกไว้แล้วยังถามตัวเลือกตอนขาย',
+    homeNeedsTables: 'เปิดใช้โต๊ะก่อนจึงจะเลือกผังโต๊ะเป็นหน้าแรกได้',
+  },
   money: {
     title: 'สกุลเงินและภาษี',
     currency: 'สกุลเงิน',
@@ -65,6 +75,16 @@ const en = {
       till: 'Sell screen',
       tables: 'Floor plan',
     },
+  },
+  features: {
+    title: 'Features',
+    tables: 'Tables',
+    tablesHint: 'The floor plan, choosing a table when selling, and managing tables',
+    kitchen: 'Kitchen',
+    kitchenHint: 'The kitchen board, sending orders to the kitchen, and kitchen stations',
+    modifiers: 'Options',
+    modifiersHint: 'Managing options such as hot, iced or sweetness. Products that already have options still ask for them when sold.',
+    homeNeedsTables: 'Turn tables on to start on the floor plan',
   },
   money: {
     title: 'Currency and tax',

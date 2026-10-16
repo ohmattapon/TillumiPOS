@@ -24,6 +24,9 @@ const columns = {
   receiptPaperMm: shopSettings.receiptPaperMm,
   receiptFooter: shopSettings.receiptFooter,
   homeView: shopSettings.homeView,
+  tablesEnabled: shopSettings.tablesEnabled,
+  kitchenEnabled: shopSettings.kitchenEnabled,
+  modifiersEnabled: shopSettings.modifiersEnabled,
 }
 
 @injectable()
