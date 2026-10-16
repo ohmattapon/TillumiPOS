@@ -1,5 +1,6 @@
 export type { ShopSettings } from '@pos/api/types'
 export { settingsKeys, settingsQuery } from './api'
+export { FeatureRoute } from './components/FeatureRoute'
 export { SettingsPage } from './components/SettingsPage'
 export { useFormat } from './hooks/use-format'
 export { useFeatures } from './hooks/use-features'
