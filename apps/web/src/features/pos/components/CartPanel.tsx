@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSetOrderLineNote } from '@/features/orders'
-import { useFormat, useSettings } from '@/features/settings'
+import { useFeatures, useFormat, useSettings } from '@/features/settings'
 import { tablesQuery } from '@/features/tables'
 import { cn } from '@/lib/utils'
 import { useCart } from '../hooks/use-cart'
@@ -79,6 +79,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
   const { t } = useTranslation('pos')
   const { money, currency } = useFormat()
   const { vatMode, vatRateBp } = useSettings()
+  const features = useFeatures()
   const cart = useCart()
   const discount = useCartStore((state) => state.discount)
   const setDiscount = useCartStore((state) => state.setDiscount)
@@ -119,7 +120,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
       {cart.order && cart.order.status === 'open' && (
         <>
           <OrderTools order={cart.order} />
-          <KitchenSendButton order={cart.order} />
+          {features.kitchen && <KitchenSendButton order={cart.order} />}
         </>
       )}
 
@@ -139,7 +140,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 space-y-1">
                 <p className="text-base leading-snug font-medium">{name}</p>
-                {sentQuantity > 0 && <Badge variant="secondary">{t('kitchen.sentBadge', { count: sentQuantity })}</Badge>}
+                {features.kitchen && sentQuantity > 0 && <Badge variant="secondary">{t('kitchen.sentBadge', { count: sentQuantity })}</Badge>}
               </div>
               <p className="shrink-0 text-sm font-semibold tabular-nums">{money.plain(lineTotalSatang)}</p>
             </div>
@@ -194,7 +195,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
                   : `@ ${money.plain(unitPriceSatang)}`}
               </span>
             </div>
-            {cart.orderId !== null && lineId !== null && <LineNote orderId={cart.orderId} lineId={lineId} line={line} />}
+            {features.kitchen && cart.orderId !== null && lineId !== null && <LineNote orderId={cart.orderId} lineId={lineId} line={line} />}
           </li>
           )
         })}

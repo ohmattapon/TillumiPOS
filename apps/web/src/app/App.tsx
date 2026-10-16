@@ -19,7 +19,7 @@ import { clearCart, FloorPage, PosPage } from '@/features/pos'
 import { ProductsPage } from '@/features/products'
 import { TodayPage } from '@/features/sales'
 import { ReportsPage } from '@/features/reports'
-import { SettingsPage, useSettings } from '@/features/settings'
+import { SettingsPage, useFeatures, useSettings } from '@/features/settings'
 import { UsersPage } from '@/features/users'
 import { ShiftsPage, useRegisterSelectionStore } from '@/features/shifts'
 import { AppSidebar } from './AppSidebar'
@@ -31,6 +31,7 @@ function Shell({ user }: { user: User }) {
   const logout = useLogout()
   const { locale, homeView } = useSettings()
   const { can } = useAuthorization()
+  const features = useFeatures()
   const clearRegisterSelection = useRegisterSelectionStore((state) => state.clear)
   // Keeps the remembered branch honest (closed or forbidden ones are dropped) even on pages without a switcher.
   useActiveBranch()
@@ -54,8 +55,8 @@ function Shell({ user }: { user: User }) {
           {can('reports.read') && <Route path="reports" element={<ReportsPage />} />}
           {(can('products.write') || can('inventory.receive') || can('inventory.adjust')) && <Route path="products" element={<ProductsPage />} />}
           {can('categories.write') && <Route path="categories" element={<CategoriesPage />} />}
-          {can('modifiers.write') && <Route path="modifiers" element={<ModifiersPage />} />}
-          {can('tables.write') && <Route path="tables" element={<TablesPage />} />}
+          {features.modifiers && can('modifiers.write') && <Route path="modifiers" element={<ModifiersPage />} />}
+          {features.tables && can('tables.write') && <Route path="tables" element={<TablesPage />} />}
           {can('branches.manage') && <Route path="branches" element={<BranchesPage />} />}
           {can('users.manage') && <Route path="users" element={<UsersPage />} />}
           {can('settings.write') && <Route path="settings" element={<SettingsPage />} />}
@@ -65,8 +66,8 @@ function Shell({ user }: { user: User }) {
           <Route path="members/:id" element={<MemberDetailsPage />} />
           <Route path="promotions" element={<PromotionsPage />} />
           <Route path="shifts" element={<ShiftsPage />} />
-          <Route path="kitchen" element={<KitchenBoardPage />} />
-          {can('kitchen.write') && <Route path="kitchen-stations" element={<KitchenStationsPage />} />}
+          {features.kitchen && <Route path="kitchen" element={<KitchenBoardPage />} />}
+          {features.kitchen && can('kitchen.write') && <Route path="kitchen-stations" element={<KitchenStationsPage />} />}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </SidebarInset>

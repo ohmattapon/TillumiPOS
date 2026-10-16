@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { openOrdersQuery, usePayOrder } from '@/features/orders'
-import { useFormat, useSettings } from '@/features/settings'
+import { useFeatures, useFormat, useSettings } from '@/features/settings'
 import {
   isCustomerDisplaySupported,
   openCustomerDisplay,
@@ -68,6 +68,7 @@ export function PosPage() {
   const [isPaying, setIsPaying] = useState(false)
   const [receipt, setReceipt] = useState<Sale | null>(null)
   const settings = useSettings()
+  const features = useFeatures()
   // The bank QR the payment dialog is showing, and the sale just paid, for the customer's screen.
   const [shownQr, setShownQr] = useState<{ image: string; expiresAt: string } | null>(null)
   const [paidSale, setPaidSale] = useState<{ totalSatang: number; changeSatang: number } | null>(null)
@@ -200,10 +201,12 @@ export function PosPage() {
               {shiftReady ? t('shiftReady') : t('shiftRequired')}
             </Button>
           )}
-          <Button variant="outline" className="h-11 px-3" onClick={() => setIsChoosingTable(true)}>
-            <LayoutGrid />
-            {t('floor.button')}
-          </Button>
+          {features.tables && (
+            <Button variant="outline" className="h-11 px-3" onClick={() => setIsChoosingTable(true)}>
+              <LayoutGrid />
+              {t('floor.button')}
+            </Button>
+          )}
           <Button variant="outline" className="h-11 px-3" onClick={() => setIsListingOrders(true)}>
             <ClipboardList />
             {t('orders.button')}
@@ -232,10 +235,12 @@ export function PosPage() {
                 {shiftReady ? t('shiftReady') : t('shiftRequired')}
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onSelect={() => setIsChoosingTable(true)}>
-              <LayoutGrid />
-              {t('floor.button')}
-            </DropdownMenuItem>
+            {features.tables && (
+              <DropdownMenuItem onSelect={() => setIsChoosingTable(true)}>
+                <LayoutGrid />
+                {t('floor.button')}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onSelect={() => setIsListingOrders(true)}>
               <ClipboardList />
               {t('orders.button')}
@@ -296,7 +301,7 @@ export function PosPage() {
       {receipt && <ReceiptDialog sale={receipt} onClose={closeReceipt} />}
       {isListingOrders && <OpenOrdersDialog onClose={() => setIsListingOrders(false)} />}
       <PairDisplayDialog open={isPairingDisplay} onOpenChange={setIsPairingDisplay} registerId={selectedRegisterId} />
-      {isChoosingTable && <FloorDialog onClose={() => setIsChoosingTable(false)} />}
+      {features.tables && isChoosingTable && <FloorDialog onClose={() => setIsChoosingTable(false)} />}
       {isSavingOrder && <SaveOrderDialog onClose={() => setIsSavingOrder(false)} />}
     </>
   )
