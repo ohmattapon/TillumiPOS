@@ -19,7 +19,6 @@ import {
   ShoppingCart,
   SlidersHorizontal,
   WalletCards,
-  Store,
   BadgePercent,
   Tags,
   UserRound,
@@ -122,9 +121,8 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <NavLink to="/">
-                <span className="flex aspect-square size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <Store className="size-4" />
-                </span>
+                {/* The product mark; the shop name beside it is what names the shop, so the image is decorative. */}
+                <img src="/logo.png" alt="" className="size-8 shrink-0 object-contain" />
                 <span className="truncate text-lg font-semibold">{shopName}</span>
               </NavLink>
             </SidebarMenuButton>
