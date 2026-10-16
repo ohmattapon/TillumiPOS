@@ -1,7 +1,7 @@
 ---
 version: alpha
 name: TillumiPOS
-description: ระบบขายหน้าร้านโทนมิ้นต์-ทีลบนพื้นขาว เน้นทีลเข้ม ข้อมูลหนาแน่นแต่อ่านง่าย ใช้ได้ทั้งเมาส์ คีย์บอร์ด และจอสัมผัส
+description: A point-of-sale system in mint-teal on white. Deep teal accent, dense but readable data, usable with mouse, keyboard and touch screen.
 colors:
   background: "#ffffff"
   canvas: "#f7fbfa"
@@ -82,202 +82,202 @@ components:
 
 # TillumiPOS Design System
 
-เอกสารนี้อธิบายหน้าตาและกฎการออกแบบของหน้าเว็บใน `apps/web` ค่าจริงทั้งหมดอยู่ใน `apps/web/src/index.css` ถ้าเอกสารนี้ขัดกับไฟล์นั้น ให้ถือไฟล์นั้นเป็นหลักแล้วแก้เอกสารนี้
+This document describes the look and the design rules of the web app in `apps/web`. All the actual values live in `apps/web/src/index.css`. If this document disagrees with that file, treat the file as the source of truth and fix this document.
 
 ## Overview
 
-TillumiPOS เป็นเครื่องมือทำงาน ไม่ใช่หน้าโฆษณา พนักงานใช้หน้าขายซ้ำหลายร้อยครั้งต่อวัน การออกแบบจึงยึดสามข้อ:
+TillumiPOS is a work tool, not a landing page. Staff use the sales screen hundreds of times a day, so the design rests on three principles:
 
-1. **เร็วก่อนสวย** งานที่ทำบ่อยที่สุด (สแกน เพิ่มสินค้า ชำระเงิน) ต้องจบได้โดยไม่ต้องเลื่อนหน้าจอและไม่ต้องละมือจากเครื่องสแกนหรือจอสัมผัส
-2. **สงบ** การ์ดขาวบนพื้นมิ้นต์จาง เส้นบาง สีเน้นสีเดียว (ทีล) สีอื่นปรากฏเมื่อมีความหมายเท่านั้น (สถานะ หมวดหมู่ หรือแยกตัวเลขในการ์ดสรุป)
-3. **กันพลาด** การกระทำที่ย้อนไม่ได้ต้องถามยืนยันและบอกผลที่จะเกิด ปุ่มที่กดไม่ได้ต้องดูออกว่ากดไม่ได้
+1. **Fast before pretty.** The most frequent tasks (scan, add a product, take payment) must finish without scrolling and without taking a hand off the scanner or the touch screen.
+2. **Calm.** White cards on a pale mint canvas, thin lines, a single accent color (teal). Other colors appear only when they carry meaning (status, category, or telling the figures in a summary card apart).
+3. **Hard to get wrong.** Actions that cannot be undone must ask for confirmation and say what will happen. A button that cannot be pressed must look like it cannot be pressed.
 
-ที่มาของแนวทางคือความเรียบแบบ Attio ผสม Linear: sidebar ขาว เมนูที่เลือกเป็นพื้นมิ้นต์อ่อนตัวอักษรทีล หัวหน้าจอขาวมี breadcrumb นำทาง ตาราง compact อ่านหนาแน่นได้โดยไม่ต้องละมือจากเมาส์หรือคีย์บอร์ด
+The approach comes from the restraint of Attio mixed with Linear: a white sidebar, the selected menu item on a soft mint background with teal text, a white page header with a navigation breadcrumb, and compact tables that can be read densely without taking a hand off the mouse or keyboard.
 
 ## Colors
 
-สีทั้งหมดเป็นตัวแปร CSS ของ shadcn/ui ให้เรียกผ่านคลาสของ Tailwind เช่น `bg-primary`, `text-muted-foreground` ห้ามเขียนค่าสีตรงในคอมโพเนนต์
+All colors are shadcn/ui CSS variables. Use them through Tailwind classes such as `bg-primary` and `text-muted-foreground`. Never write a color value directly in a component.
 
-| บทบาท | ค่า | ใช้กับ |
+| Role | Value | Used for |
 |---|---|---|
-| `background` | `#ffffff` | การ์ด dialog หัวหน้าจอ และช่องกรอก |
-| `canvas` | `#f7fbfa` | พื้นของพื้นที่เนื้อหาหลังการ์ด (`bg-canvas` ที่ `SidebarInset`) |
-| `foreground` | `#1c1917` | ข้อความหลัก |
-| `primary` | `#0f766e` | ปุ่มหลักหนึ่งปุ่มต่อหน้าจอ ตัวเลือกที่เลือกอยู่ วันที่ในหัวหน้าจอ และเมนูที่เปิดอยู่ |
-| `accent` | `#d9f2eb` | พื้นของเมนูที่เลือกใน sidebar และพื้นตอน hover การ์ดสินค้า |
-| `muted` | `#f6f5f3` | พื้นของช่องสรุป แถบตัวกรอง และรูปสินค้าที่ยังไม่มี |
-| `muted-foreground` | `#79716b` | ข้อความรอง คำอธิบาย หัวตาราง |
-| `border` | `#e7e5e4` | เส้นขอบและเส้นคั่นทุกชนิด |
-| `sidebar` | `#ffffff` | พื้น sidebar (แผงตะกร้าใช้พื้นการ์ดขาวเช่นกัน) |
-| `chart-1` … `chart-3` | `#12b8a6` / `#5b8def` / `#a78bfa` | กราฟ: มิ้นต์เป็นหลัก น้ำเงินและม่วงเป็นรอง |
-| `success` | `#168b49` | สำเร็จ พร้อมขาย เงินทอน |
-| `warning` | `#c26f00` | ใกล้หมด ต้องดูแล |
-| `destructive` | `#e7000b` | ยกเลิกบิล หมดสต็อก ข้อผิดพลาด |
-| `category-1` … `category-8` | ดู `index.css` | สีประจำหมวดหมู่ เว้นโทนส้มและแดงไว้ไม่ให้ปนกับ `primary` และ `destructive` |
+| `background` | `#ffffff` | Cards, dialogs, the page header and input fields |
+| `canvas` | `#f7fbfa` | The background of the content area behind the cards (`bg-canvas` on `SidebarInset`) |
+| `foreground` | `#1c1917` | Main text |
+| `primary` | `#0f766e` | The one primary button per screen, the selected option, the date in the page header, and the open menu item |
+| `accent` | `#d9f2eb` | The background of the selected sidebar item and of a product card on hover |
+| `muted` | `#f6f5f3` | The background of summary cells, filter bars and products that have no image yet |
+| `muted-foreground` | `#79716b` | Secondary text, descriptions, table headers |
+| `border` | `#e7e5e4` | Every kind of border and divider |
+| `sidebar` | `#ffffff` | The sidebar background (the cart panel uses the same white card background) |
+| `chart-1` … `chart-3` | `#12b8a6` / `#5b8def` / `#a78bfa` | Charts: mint is the main color, blue and violet are secondary |
+| `success` | `#168b49` | Success, ready to sell, change due |
+| `warning` | `#c26f00` | Running low, needs attention |
+| `destructive` | `#e7000b` | Voiding a bill, out of stock, errors |
+| `category-1` … `category-8` | See `index.css` | The color of a category. Orange and red tones are left out so they never get mixed up with `primary` and `destructive` |
 
-กฎการใช้สี:
+Rules for using color:
 
-- สีเน้นทีลใช้ได้กับปุ่มหลักเพียงปุ่มเดียวต่อหน้าจอ ปุ่มอื่นใช้แบบ `outline` หรือ `ghost`
-- sidebar พื้นขาว เมนูที่เลือกเป็นพื้น `accent` ตัวอักษร `accent-foreground` แบบเรียบ ไม่มีเงาหรือขอบ
-- ทุกหน้าหลักมี breadcrumb จางเหนือชื่อหน้าผ่าน prop `breadcrumb` ของ `PageHeader`
-- สีสถานะ (เขียว เหลือง แดง) ใช้คู่กับข้อความหรือไอคอนเสมอ ห้ามสื่อความหมายด้วยสีอย่างเดียว
-- พื้นของป้ายสถานะคือสีสถานะที่ความทึบ 10% (`bg-success/10`) ตัวอักษรเป็นสีสถานะเต็ม
-- สีของหมวดหมู่มาจาก `categoryColor(id)` (ส่งออกจาก `@/features/categories`) ซึ่งเลือกจากแปดโทนตามลำดับ id ไม่ได้เก็บในฐานข้อมูล ใช้เป็นแถบบนการ์ดสินค้า จุดหน้าแท็บหมวด (`dot` ของ `SegmentedTabs`) และ `CategoryDot` หน้าชื่อหมวดในรายการ ห้ามใช้เป็นพื้นเต็มการ์ดหรือสื่อสถานะ
-- ไอคอนในการ์ดสรุปตัวเลขใช้พื้นสีของตัวเองที่ 12% และไอคอนสีเต็ม เพื่อให้แยกตัวเลขแต่ละช่องได้แวบเดียว
-- มีธีม `light`, `dark`, `midnight`, `forest` และ `rose` เลือกจากเมนูผู้ใช้และจำไว้ใน browser ด้วย `pos.theme` ค่าสีอยู่ใต้ `data-theme` ใน `index.css` ให้ใช้ semantic token เป็นหลัก ธีม `dark` และ `midnight` ใช้คลาส `dark` ร่วมกับคอมโพเนนต์ shadcn และ toast ส่วน QR คงพื้นขาวเพื่อให้อ่านได้
+- The teal accent goes on one primary button per screen. Every other button is `outline` or `ghost`.
+- The sidebar is white. The selected item has an `accent` background and `accent-foreground` text, flat, with no shadow or border.
+- Every main page has a faint breadcrumb above the page title, through the `breadcrumb` prop of `PageHeader`.
+- Status colors (green, amber, red) are always paired with text or an icon. Never convey meaning with color alone.
+- The background of a status badge is the status color at 10% opacity (`bg-success/10`) and the text is the full status color.
+- A category's color comes from `categoryColor(id)` (exported from `@/features/categories`), which picks one of eight tones by id order. It is not stored in the database. It is used as the stripe on a product card, as the dot in front of a category tab (`dot` of `SegmentedTabs`), and as `CategoryDot` in front of a category name in a list. Never use it as a full card background or to convey status.
+- The icon in a summary card with a figure uses its own color as a 12% background and a full-color icon, so each figure can be told apart at a glance.
+- There are five themes: `light`, `dark`, `midnight`, `forest` and `rose`. They are chosen from the user menu and remembered in the browser under `pos.theme`. The color values live under `data-theme` in `index.css`; rely on semantic tokens first. The `dark` and `midnight` themes use the `dark` class together with the shadcn components and toasts. QR codes keep a white background so they stay readable.
 
 ## Typography
 
-- **Inter Variable** ใช้กับตัวอักษรละตินและตัวเลข **IBM Plex Sans Thai** ใช้กับตัวอักษรไทย ทั้งสองติดตั้งในโปรเจกต์ผ่าน `@fontsource` จึงใช้ได้โดยไม่ต่ออินเทอร์เน็ต
-- น้ำหนักที่ใช้มีสามระดับ: 400 เนื้อความ, 500 ป้ายและปุ่ม, 600 หัวข้อและตัวเลขสำคัญ ห้ามใช้ตัวหนา 700 ยกเว้นในใบเสร็จ
-- ตัวเลขเงินและจำนวนทุกจุดต้องใส่คลาส `tabular-nums` เพื่อให้หลักตรงกันในคอลัมน์
-- เงินแสดงทศนิยมสองตำแหน่งเสมอ ผ่าน `formatBaht` ใน `apps/web/src/lib/money.ts` และนำหน้าด้วย `฿` เมื่ออยู่นอกตาราง
-- หัวตารางขนาด 11px เว้นระยะตัวอักษร ใช้สี `muted-foreground` และเป็นตัวพิมพ์ใหญ่เมื่อเป็นอักษรละติน
-- ใบเสร็จใช้ `font-mono` เพื่อให้คอลัมน์ตรงกันบนเครื่องพิมพ์ความร้อน
+- **Inter Variable** is used for Latin letters and digits. **IBM Plex Sans Thai** is used for Thai letters. Both are installed in the project through `@fontsource`, so they work without an internet connection.
+- There are three weights: 400 for body text, 500 for labels and buttons, 600 for headings and key figures. Do not use bold 700, except on the receipt.
+- Every money figure and every quantity needs the `tabular-nums` class so the digits line up in a column.
+- Money is always shown with two decimal places, through `formatBaht` in `apps/web/src/lib/money.ts`, and is prefixed with `฿` when it appears outside a table.
+- Table headers are 11px with letter spacing, in `muted-foreground`, and uppercase when the text is Latin.
+- The receipt uses `font-mono` so the columns line up on a thermal printer.
 
-| ระดับ | ขนาด | น้ำหนัก | ใช้กับ |
+| Level | Size | Weight | Used for |
 |---|---|---|---|
-| ยอดชำระใน dialog | 36px | 600 | ยอดที่ต้องจ่าย เงินทอน |
-| ยอดสุทธิในตะกร้า | 30px | 600 | ยอดสุทธิ |
-| ตัวเลขในการ์ดสรุป | 24px | 600 | ยอดขาย จำนวนบิล |
-| หัวหน้าจอ | 16px | 600 | ชื่อหน้า |
-| หัวหน้าจอเข้าสู่ระบบ | 20px | 600 | ชื่อหน้าเข้าสู่ระบบ |
-| เนื้อความ หัวการ์ด | 14px | 400 / 600 | ข้อความทั่วไป |
-| คำอธิบาย | 12px | 400 | บรรทัดรอง หมายเหตุ |
-| หัวตาราง | 11px | 500 | หัวคอลัมน์ ป้ายกลุ่มเมนู |
+| Payment amount in a dialog | 36px | 600 | The amount due, the change |
+| Grand total in the cart | 30px | 600 | The grand total |
+| Figure in a summary card | 24px | 600 | Sales, number of bills |
+| Page header | 16px | 600 | The page title |
+| Login page heading | 20px | 600 | The title of the login page |
+| Body text, card header | 14px | 400 / 600 | General text |
+| Description | 12px | 400 | Secondary lines, notes |
+| Table header | 11px | 500 | Column headers, menu group labels |
 
 ## Layout
 
-- โครงหน้าจอ: sidebar ซ้ายกว้าง 256px ย่อเหลือแถบไอคอน 48px ได้ ถัดมาเป็นหัวหน้าจอสูง 64px และพื้นที่เนื้อหาที่เลื่อนได้เอง ตัวหน้าเว็บทั้งหน้าไม่เลื่อน
-- หน้าขายแบ่งสองส่วน: รายการสินค้ายืดตามพื้นที่ และแผงตะกร้าด้านขวากว้าง 320px (384px เมื่อจอกว้างตั้งแต่ 1280px) ยอดสุทธิและปุ่มชำระเงินอยู่ล่างสุดของแผงเสมอ ไม่เลื่อนหาย
-- การ์ดสินค้าจัดเรียงอัตโนมัติ กว้างขั้นต่ำ 152px รูปสัดส่วน 4:3 อยู่ด้านบน
-- การ์ดสินค้าใช้มุม `rounded-md` ไม่มีเงา และแถบสีหมวดหมู่หนา 2px เพื่อให้รายการดูเรียบและอ่านง่าย
-- หน้า “วันนี้” ใช้แถบสรุปรวมแทนการ์ดตัวเลขแยก แสดงสองคอลัมน์บนจอเล็กและสี่คอลัมน์บนจอกว้าง รายการบิลเป็นพื้นที่หลัก แผงในหน้านี้ใช้มุม `rounded-md` และไม่มีเงา โดยไม่เปลี่ยนแผงของหน้าอื่น
-- โหลดข้อมูลครั้งแรกใช้ skeleton แต่เมื่อโหลดล้มเหลวต้องแสดงข้อผิดพลาดและปุ่มลองใหม่ ห้ามแสดงข้อความว่าไม่มีรายการพร้อมข้อผิดพลาด ถ้ามีข้อมูลเดิมให้คงข้อมูลนั้นและแจ้งว่าอัปเดตไม่สำเร็จ
-- ระยะห่างใช้ชุดเดียว: 4, 8, 12, 16, 24px ขอบของพื้นที่เนื้อหาคือ 16px และช่องว่างระหว่างการ์ดคือ 12 หรือ 16px
+- App frame: a 256px sidebar on the left that collapses to a 48px icon rail, then a 64px page header, then a content area that scrolls on its own. The page as a whole never scrolls.
+- The sales page has two parts: the product list, which stretches to fill the space, and a 320px cart panel on the right (384px when the screen is 1280px wide or more). The grand total and the pay button are always at the bottom of the panel and never scroll out of sight.
+- Product cards lay out automatically with a minimum width of 152px and a 4:3 image on top.
+- Product cards use `rounded-md` corners, no shadow, and a 2px category color stripe, so the list looks flat and is easy to read.
+- The "Today" page uses a summary strip instead of separate figure cards: two columns on a small screen and four on a wide one. The bill list is the main area. The panels on this page use `rounded-md` corners and no shadow, without changing the panels of other pages.
+- First load uses a skeleton. When loading fails, show the error and a retry button. Never show a "no items" message together with an error. If there is earlier data, keep it and say that the update failed.
+- Spacing uses one scale: 4, 8, 12, 16, 24px. The margin of the content area is 16px and the gap between cards is 12 or 16px.
 
-### ขนาดจอและโครงของแอป
+### Screen sizes and app structure
 
-ออกแบบและทดสอบที่สามขนาด ค่าเหล่านี้ตรงกับ breakpoint `sm` (640px) และ `lg` (1024px) ของ Tailwind:
+Design and test at three sizes. These values match the Tailwind breakpoints `sm` (640px) and `lg` (1024px):
 
-| ช่วง | ความกว้าง | อุปกรณ์ตัวอย่าง |
+| Range | Width | Example devices |
 |---|---|---|
-| มือถือ | ต่ำกว่า 640px | มือถือแนวตั้ง (390px) |
-| แท็บเล็ต | 640–1023px | แท็บเล็ตแนวตั้ง (768px) |
-| จอใหญ่ | 1024px ขึ้นไป | แท็บเล็ตแนวนอน คอม (1366px) |
+| Phone | below 640px | A phone in portrait (390px) |
+| Tablet | 640–1023px | A tablet in portrait (768px) |
+| Large | 1024px and up | A tablet in landscape, a computer (1366px) |
 
-- เมนูหลัก: จอใหญ่กาง sidebar พร้อมชื่อ แท็บเล็ตเป็นแถบไอคอน 48px เป็นค่าเริ่มต้น มือถือซ่อน sidebar และใช้แถบเมนูล่าง 4 ช่อง (ขาย วันนี้ กะ เมนู) เมนูที่เหลือเปิดจากปุ่ม "เมนู"
-- ตะกร้า: จอใหญ่เป็นแผงขวาคงที่ ต่ำกว่า 1024px เป็นแถบล่างที่แสดงจำนวน ยอดรวม และปุ่มชำระ แตะแล้วเปิดตะกร้าทั้งหมดเป็นแผงจากล่าง
-- ปุ่มบนแถบหัว: สูง 44px ทุกปุ่ม ต่ำกว่า 640px รวมไว้ในปุ่ม "การทำงานอื่น" หัวข้อยาวตัดบรรทัดได้ ไม่ตัดกลางคำ
-- ตาราง: ใช้ `DataTable` เสมอ คอลัมน์ `primary` เป็นหัวของรายการบนมือถือ `secondary` เป็นบรรทัดรอง และ `wide-only` แสดงตั้งแต่ 1024px ขึ้นไป
-- Dialog: สูงไม่เกิน `100svh - 2rem` และเลื่อนในตัวได้ dialog ที่ไม่มี form ใช้ `DialogFooter sticky` ให้ปุ่มติดล่าง ส่วน dialog ที่มี form ปุ่มอยู่ท้ายฟอร์มและเลื่อนลงไปถึง
-- ผังโต๊ะ: ต่ำกว่า 640px เป็นรายการ แก้ชื่อ ที่นั่ง และเปิดปิดได้ ไม่ลากตำแหน่ง
-- ไม่มีหน้าไหนเลื่อนแนวนอนที่ 390, 768 และ 1366px (ตรวจด้วย e2e)
-- หน้าเข้าสู่ระบบ (`LoginPage`): จอ 1024px ขึ้นไปแบ่งสองฝั่ง แผงซ้ายมีรูปเครื่องขายด้านบน และพื้น `primary` ด้านล่างแสดงความสามารถหลักแบบสั้น ซึ่งเป็นข้อยกเว้นเฉพาะหน้านี้ของกฎ "สีเน้นกับปุ่มหลักเพียงปุ่มเดียว" ฝั่งขวาเป็นการ์ดฟอร์มขาวบนพื้น `canvas` จอเล็กกว่านั้นเป็นคอลัมน์เดียวที่มีชื่อระบบอยู่บน
-- เป้ากด: ปุ่มและช่องกรอกที่มองเห็นได้สูงอย่างน้อย 44px ไม่มีข้อยกเว้น (ตรวจที่หน้าขายด้วย e2e)
+- Main menu: on a large screen the sidebar is expanded with names. On a tablet it is a 48px icon rail by default. On a phone the sidebar is hidden and a bottom bar with 4 slots (Sell, Today, Shift, Menu) is used. The remaining items open from the "Menu" button.
+- Cart: on a large screen it is a fixed right panel. Below 1024px it is a bottom bar showing the count, the total and the pay button. Tapping it opens the whole cart as a sheet from the bottom.
+- Buttons in the header bar: every button is 44px tall. Below 640px they are gathered into a "More actions" button. A long title can wrap, and never breaks in the middle of a word.
+- Tables: always use `DataTable`. A `primary` column is the title of a row on a phone, `secondary` is the secondary line, and `wide-only` is shown from 1024px up.
+- Dialogs: at most `100svh - 2rem` tall and scrollable inside. A dialog without a form uses `DialogFooter sticky` so the buttons stay at the bottom. A dialog with a form puts its buttons at the end of the form, and you scroll down to reach them.
+- Table floor plan: below 640px it is a list where you can edit the name and seats and turn a table on or off. Positions cannot be dragged.
+- No page scrolls horizontally at 390, 768 and 1366px (checked by e2e).
+- Login page (`LoginPage`): from 1024px up it is split in two. The left panel has a picture of a till on top and a `primary` background below showing the main capabilities briefly. This is an exception, for this page only, to the rule "one accent button per screen". The right side is a white form card on the `canvas` background. Below that width it is a single column with the system name on top.
+- Touch target: every visible button and input field is at least 44px tall, with no exceptions (checked on the sales page by e2e).
 
 ## Elevation & Depth
 
-ความลึกมาจากเส้นขอบเป็นหลัก เงาใช้น้อยและอ่อน:
+Depth comes mainly from borders. Shadows are used sparingly and are soft:
 
-| ระดับ | ลักษณะ | ใช้กับ |
+| Level | Look | Used for |
 |---|---|---|
-| 0 | ไม่มีเงา มีเส้นคั่น | แถวตาราง รายการในลิสต์ |
-| 1 | เส้นขอบ ไม่มีเงา | การ์ด แผงข้อมูล (`Panel`) การ์ดสินค้า |
-| 2 | เงาของ shadcn + พื้นหลังมืดโปร่ง | dialog และเมนูแบบ dropdown |
+| 0 | No shadow, with a divider | Table rows, list items |
+| 1 | A border, no shadow | Cards, data panels (`Panel`), product cards |
+| 2 | The shadcn shadow + a translucent dark backdrop | Dialogs and dropdown menus |
 
 ## Shapes
 
-- ปุ่มและช่องกรอก: มุมโค้ง 8px
-- การ์ดและแผงข้อมูล: มุมโค้ง 10px ไม่มีเงา
-- ป้ายสถานะ ตัวนับ และรูปโปรไฟล์: วงรีเต็ม (`rounded-full`)
-- ไอคอนมาจาก `lucide-react` ชุดเดียว ขนาด 16px ในปุ่มและเมนู ห้ามผสมชุดไอคอนอื่นและห้ามใช้ emoji แทนไอคอน
+- Buttons and input fields: 8px rounded corners.
+- Cards and data panels: 10px rounded corners, no shadow.
+- Status badges, counters and profile pictures: fully round (`rounded-full`).
+- Icons come from a single set, `lucide-react`, at 16px in buttons and menus. Do not mix in other icon sets and do not use emoji in place of icons.
 
 ## Components
 
-ใช้คอมโพเนนต์จาก `apps/web/src/components/ui` (shadcn/ui) ก่อนเสมอ และใช้คอมโพเนนต์ร่วมด้านล่างเมื่อมีรูปแบบตรงกัน ห้ามสร้างรูปแบบซ้ำ
+Always use components from `apps/web/src/components/ui` (shadcn/ui) first, and use the shared components below when the pattern matches. Do not create a duplicate pattern.
 
-| คอมโพเนนต์ | ไฟล์ | ใช้เมื่อ |
+| Component | File | Use when |
 |---|---|---|
-| `PageHeader` | `components/PageHeader.tsx` | หัวของทุกหน้า: breadcrumb จางด้านบน (prop `breadcrumb`) ชื่อหน้า คำอธิบายบรรทัดเดียว และปุ่มหลักทางขวา |
-| `Panel` | `components/Panel.tsx` | การ์ดที่มีหัว คำอธิบาย และตารางหรือรายการข้างใน มุม 10px เส้นขอบ ไม่มีเงา |
-| `tableHead`, `tableCell` | `components/Panel.tsx` | คลาสของหัวตารางและเซลล์ ใช้กับทุกตารางข้อมูล |
-| `StatusBadge` | `components/StatusBadge.tsx` | ป้ายสถานะที่มีจุดสีนำหน้า มีสี่โทน: `success`, `warning`, `danger`, `neutral` |
-| `SegmentedTabs` | `components/SegmentedTabs.tsx` | ตัวกรองแบบเลือกหนึ่งจากไม่กี่ตัวเลือก ใช้ `size="touch"` บนหน้าขาย |
-| `DatePicker` | `components/DatePicker.tsx` | เลือกวันด้วย shadcn Calendar + Popover ปุ่มและวันสูงอย่างน้อย 44px ใช้ภาษาและปี พ.ศ./ค.ศ. จาก `useFormat()` ค่าในฟอร์มยังเป็น `YYYY-MM-DD` และแปลงผ่าน `lib/calendar-date.ts` โดยไม่เลื่อนวันจาก timezone |
-| `ProductImage` | `features/products/components/ProductImage.tsx` | รูปสินค้าทุกจุด แสดงไอคอนแทนเมื่อไม่มีรูปหรือโหลดไม่ได้ |
-| `Receipt` | `features/sales/components/Receipt.tsx` | เนื้อใบเสร็จ ทั้งบนจอและตอนพิมพ์ |
-| `SkeletonRows`, `SkeletonPanel`, `SkeletonCardGrid`, `SkeletonStatCards` | `components/Skeletons.tsx` | โครงร่างระหว่างโหลด รูปทรงตามรายการ การ์ดสินค้า และการ์ดสรุป |
+| `PageHeader` | `components/PageHeader.tsx` | The header of every page: a faint breadcrumb on top (the `breadcrumb` prop), the page title, a one-line description and the primary button on the right |
+| `Panel` | `components/Panel.tsx` | A card with a header, a description and a table or list inside. 10px corners, a border, no shadow |
+| `tableHead`, `tableCell` | `components/Panel.tsx` | The classes for a table header and a cell, used on every data table |
+| `StatusBadge` | `components/StatusBadge.tsx` | A status badge with a colored dot in front. Four tones: `success`, `warning`, `danger`, `neutral` |
+| `SegmentedTabs` | `components/SegmentedTabs.tsx` | A filter that picks one of a few options. Use `size="touch"` on the sales page |
+| `DatePicker` | `components/DatePicker.tsx` | Choosing a day with the shadcn Calendar + Popover. The button and the days are at least 44px tall. It takes the language and the Buddhist/Gregorian year from `useFormat()`. The value in a form is still `YYYY-MM-DD` and is converted through `lib/calendar-date.ts` without shifting the day because of the timezone |
+| `ProductImage` | `features/products/components/ProductImage.tsx` | Every product image. Shows an icon instead when there is no image or it cannot load |
+| `Receipt` | `features/sales/components/Receipt.tsx` | The body of the receipt, both on screen and when printing |
+| `SkeletonRows`, `SkeletonPanel`, `SkeletonCardGrid`, `SkeletonStatCards` | `components/Skeletons.tsx` | Placeholders while loading, shaped like the list, the product cards and the summary cards |
 
-ขนาดของส่วนที่กดได้:
+Size of tappable elements:
 
-| บริบท | ความสูง |
+| Context | Height |
 |---|---|
-| ปุ่มในหน้าจัดการและหัวหน้าจอ | 36px |
-| แถวตารางในหน้าจัดการ (`DataTable`) | ประมาณ 40px มี hover |
-| ปุ่มใน dialog | 40px |
-| ทุกอย่างบนหน้าขายและ dialog ชำระเงิน | อย่างน้อย 44px |
-| ปุ่มชำระเงิน | 56px |
+| Buttons on management pages and in the page header | 36px |
+| A table row on a management page (`DataTable`) | About 40px, with hover |
+| Buttons in a dialog | 40px |
+| Everything on the sales page and in the payment dialog | At least 44px |
+| The pay button | 56px |
 
-รูปแบบการโต้ตอบ:
+Interaction patterns:
 
-- **ผลของการกระทำ** แจ้งด้วย toast (`sonner`) ที่ขอบบนกลางจอ ข้อความระบุสิ่งที่เกิดขึ้น เช่น "ยกเลิกบิล 20261013-00012 และคืนสต็อกแล้ว"
-- **ข้อผิดพลาดของฟอร์ม** แสดงในฟอร์มใต้ช่องที่เกี่ยวข้อง ด้วย `role="alert"` และไม่ปิด dialog
-- **การกระทำที่ย้อนไม่ได้** (ยกเลิกบิล) ต้องให้กรอกเหตุผล บอกผลที่จะเกิด และใช้ปุ่มโทน `destructive`
-- **การกรอกข้อมูล** ใช้ dialog ห้ามใช้ `window.prompt`, `window.confirm` หรือ `window.alert`
-- **สถานะว่าง** ทุกตารางและรายการต้องมีข้อความบอกเมื่อไม่มีข้อมูล
-- **กำลังโหลด** ใช้โครงร่าง (`Skeleton`) ที่มีรูปทรงเหมือนของจริง ไม่ใช้ข้อความ "กำลังโหลด" ลอย ๆ และไม่ใช้ตัวหมุน ใช้คอมโพเนนต์จาก `components/Skeletons.tsx` หรือโครงในตัว `DataTable` ตอนยังไม่มีข้อมูล ห้ามแสดงศูนย์ ("0 รายการ", "สต็อกทุกรายการยังเพียงพอ", "ยังไม่มีบิล") หรือข้อความว่างระหว่างโหลด เพราะคนจะอ่านเป็นคำตอบจริง ทุกโครงร่างเป็น `role="status"` ที่มีข้อความซ่อนว่า "กำลังโหลด" และแถบแสงกระพริบหยุดเมื่อผู้ใช้ตั้ง "ลดการเคลื่อนไหว"
-- **คีย์ลัดบนหน้าขาย** F2 ไปช่องค้นหา F9 ชำระเงิน และแสดงคีย์กำกับไว้บนปุ่ม
-- **โฟกัส** หลังเพิ่มสินค้าหรือปิดใบเสร็จ โฟกัสกลับไปช่องค้นหาเฉพาะเมื่ออุปกรณ์มีเมาส์ เพื่อไม่ให้คีย์บอร์ดบนจอสัมผัสเด้งขึ้น
-- **การพิมพ์** พิมพ์เฉพาะใบเสร็จ กว้าง 72mm สำหรับเครื่องพิมพ์ 80mm ส่วนที่ไม่ต้องพิมพ์ใส่คลาส `print:hidden`
+- **The result of an action** is announced with a toast (`sonner`) at the top center of the screen. The message says what happened, for example "Voided bill 20261013-00012 and returned the stock".
+- **Form errors** appear in the form under the field they belong to, with `role="alert"`, and do not close the dialog.
+- **Actions that cannot be undone** (voiding a bill) must ask for a reason, say what will happen, and use a `destructive` button.
+- **Entering data** uses a dialog. Never use `window.prompt`, `window.confirm` or `window.alert`.
+- **Empty state:** every table and list must show a message when there is no data.
+- **Loading** uses a skeleton (`Skeleton`) shaped like the real content. Do not use a bare "Loading" text and do not use a spinner. Use the components from `components/Skeletons.tsx`, or the built-in skeleton of `DataTable` while there is no data yet. Never show a zero ("0 items", "All stock is sufficient", "No bills yet") or an empty-state message while loading, because people will read it as a real answer. Every skeleton is a `role="status"` with a hidden "Loading" text, and the shimmer stops when the user asks for reduced motion.
+- **Shortcuts on the sales page:** F2 goes to the search field and F9 takes payment. The key is shown on the button.
+- **Focus:** after adding a product or closing a receipt, focus returns to the search field only when the device has a mouse, so the keyboard on a touch screen does not pop up.
+- **Printing** prints only the receipt, 72mm wide for an 80mm printer. Anything that should not print gets the `print:hidden` class.
 
-## จอลูกค้า
+## Customer display
 
-หน้า `/customer` เป็นจอที่สองหันหาลูกค้าที่เคาน์เตอร์ ใช้ได้เฉพาะบนเครื่องและเบราว์เซอร์เดียวกับหน้าขาย (ส่งข้อมูลผ่าน `BroadcastChannel` ชื่อ `easypos-customer-display`) แสดงเท่านั้น ไม่มีปุ่มหรือช่องกรอก
+The `/customer` page is a second screen facing the customer at the counter. It works only on the same machine and browser as the sales page (the data travels over a `BroadcastChannel` named `easypos-customer-display`). It only displays: it has no buttons or input fields.
 
-| สถานะ | แสดง |
+| State | Shows |
 |---|---|
-| ว่าง | ชื่อร้านและข้อความต้อนรับ |
-| กำลังขาย | รายการ รวม ส่วนลด ภาษี และยอดสุทธิตัวใหญ่ที่สุด |
-| ชำระเงิน | ยอดที่ต้องจ่ายและ QR PromptPay พร้อมเวลาหมดอายุ |
-| ชำระแล้ว | เครื่องหมายถูกสีเขียว ข้อความขอบคุณ และเงินทอน แสดง 5 วินาทีแล้วกลับเป็นว่าง |
+| Idle | The shop name and a welcome message |
+| Selling | The items, the subtotal, the discount, the tax and the grand total in the largest type |
+| Paying | The amount due and a PromptPay QR with its expiry time |
+| Paid | A green check mark, a thank-you message and the change, shown for 5 seconds and then back to idle |
 
-กฎ:
+Rules:
 
-- ข้อความที่ส่งมีเท่าที่อยู่บนใบเสร็จเท่านั้น: ห้ามเพิ่มต้นทุน กำไร ยอดสต็อก ชื่อแคชเชียร์ หรือรหัสภายในลงใน `DisplayState` ตัวตรวจข้อความตัดฟิลด์ที่ไม่รู้จักทิ้ง
-- หน้านี้ไม่เรียก API และไม่ต้องล็อกอิน (อยู่ก่อนประตูล็อกอินของ `App`) จึงไม่มีทางเป็นช่องทางเข้าถึงข้อมูลของร้าน
-- ขนาดตัวอักษรตามความสูงจอ (ตัวแปร `--u`) เพื่ออ่านได้จากระยะ 1–2 เมตร ที่ 1080p: แถวรายการ ~36px ยอดสุทธิ ~96px
-- สีเขียวใช้กับ "ชำระแล้ว" เท่านั้นและมีเครื่องหมายถูกกับข้อความคู่เสมอ ไม่ใช้ปุ่มสีส้มเพราะไม่มีปุ่ม
-- หน้าขายส่งสถานะซ้ำทุก 10 วินาที จอที่เงียบเกิน 30 วินาทีกลับเป็นว่าง กันตะกร้าของลูกค้าคนก่อนค้าง
+- The message that is sent contains only what is on the receipt. Never add cost, profit, stock levels, the cashier's name or internal ids to `DisplayState`. The message validator drops unknown fields.
+- This page does not call the API and does not need a login (it sits before the login gate of `App`), so it can never be a way into the shop's data.
+- Font sizes follow the screen height (the `--u` variable) so the text can be read from 1–2 meters. At 1080p: item rows ~36px, grand total ~96px.
+- Green is used for "Paid" only and always comes with a check mark and text. There is no orange button because there are no buttons.
+- The sales page repeats its state every 10 seconds. A screen that has been silent for more than 30 seconds goes back to idle, so the previous customer's cart does not linger.
 
 ## Do's and Don'ts
 
-ควรทำ:
+Do:
 
-- ใช้ข้อความไทยที่สั้นและเป็นคำที่ร้านใช้จริง เช่น "รับเข้า", "ปรับยอด", "ยกเลิกบิล"
-- ใส่ `aria-label` ให้ปุ่มที่มีแต่ไอคอน และผูก `Label` กับช่องกรอกทุกช่อง
-- ปิดปุ่มพร้อมบอกเหตุผลใกล้ปุ่มเมื่อกดไม่ได้ เช่น "มีแค่ 2 ชิ้น" ใต้จำนวนที่เกินสต็อก
-- ทดสอบหน้าจอที่ความกว้าง 390, 768 และ 1366px ด้วย `bun run screenshots` และดูภาพก่อนถือว่าเสร็จ
+- Use short Thai text in the words shops actually use, such as "รับเข้า" (receive), "ปรับยอด" (adjust) and "ยกเลิกบิล" (void bill).
+- Give an `aria-label` to every button that has only an icon, and tie a `Label` to every input field.
+- Disable a button that cannot be pressed and give the reason near it, for example "Only 2 left" under a quantity that exceeds the stock.
+- Test screens at 390, 768 and 1366px with `bun run screenshots` and look at the images before calling the work done.
 
-ไม่ควรทำ:
+Don't:
 
-- ใช้สีทีลกับปุ่มมากกว่าหนึ่งปุ่มในหน้าจอเดียว
-- ใช้การไล่สี เงาหนา หรือภาพเคลื่อนไหวเพื่อตกแต่ง
-- ซ่อนยอดสุทธิหรือปุ่มชำระเงินไว้ใต้ส่วนที่ต้องเลื่อน
-- แสดงจำนวนเงินโดยไม่มีทศนิยม หรือคำนวณเงินเป็นทศนิยมในหน้าเว็บ (เงินเป็นจำนวนเต็มหน่วยสตางค์จนถึงจุดแสดงผล)
-- สร้างคอมโพเนนต์ใหม่ที่ทำหน้าที่ซ้ำกับตารางด้านบน
+- Use the teal color on more than one button in a single screen.
+- Use gradients, heavy shadows or animation for decoration.
+- Hide the grand total or the pay button under something you have to scroll past.
+- Show an amount without decimals, or compute money as a decimal in the web app (money is an integer number of satang up to the point of display).
+- Create a new component that duplicates the job of one in the table above.
 
-## ช่องโหว่ที่รู้อยู่
+## Known gaps
 
-รายการนี้คือจุดที่ระบบปัจจุบันยังไม่ถึงมาตรฐานของเอกสารนี้:
+This list is where the current system does not yet meet the standard of this document:
 
-| เรื่อง | รายละเอียด |
+| Topic | Detail |
 |---|---|
-| ความต่างสีของปุ่มหลัก | ตัวอักษรขาวบนพื้น `#0f766e` ได้อัตราส่วน 5.47:1 บนพื้นขาว (5.25:1 บนพื้น canvas) ผ่านเกณฑ์ WCAG AA ตรวจด้วย `scripts/check-contrast.mjs` |
-| ความต่างสีของป้ายสถานะ | ตัวอักษร 12px สี `success` (ประมาณ 4.4:1) และ `warning` (ประมาณ 3.8:1) บนพื้นขาวต่ำกว่า 4.5:1 และต่ำลงอีกบนพื้นสีจาง |
-| ฟอร์มยาวบนมือถือ | ปุ่มยืนยันของ dialog ที่มี form ไม่ได้ติดล่างเสมอ ต้องเลื่อนลงไปถึง (ดูหัวข้อขนาดจอ) |
-| หลายภาษา | ข้อความไทยฝังอยู่ในคอมโพเนนต์ ยังไม่แยกเป็นไฟล์ภาษา (ชิ้นงานที่ 4 ใน roadmap) |
-| โหมดมืด | มีธีม `dark` และ `midnight` แล้ว ต้องตรวจหน้าจอและ dialog เมื่อเพิ่มหรือแก้คอมโพเนนต์ |
-| ใบเสร็จ | ยังไม่มีชื่อร้าน ที่อยู่ และเลขผู้เสียภาษี (ชิ้นงานที่ 11 ใน roadmap) |
+| Contrast of the primary button | White text on `#0f766e` gives 5.47:1 on a white background (5.25:1 on the canvas background), which passes WCAG AA. Checked with `scripts/check-contrast.mjs` |
+| Contrast of status badges | 12px text in `success` (about 4.4:1) and `warning` (about 3.8:1) on white is below 4.5:1, and lower still on a pale background |
+| Long forms on a phone | The confirm button of a dialog that has a form is not always pinned to the bottom; you have to scroll down to it (see the screen sizes section) |
+| Multiple languages | Thai text is embedded in the components and has not yet been split into language files (item 4 in the roadmap) |
+| Dark mode | The `dark` and `midnight` themes exist. Check screens and dialogs when adding or changing a component |
+| Receipt | It does not yet have the shop name, address and tax id (item 11 in the roadmap) |
 
-อัตราส่วนความต่างสีข้างต้นคำนวณจากค่าสีด้วยมือ ยังไม่ได้ตรวจด้วยเครื่องมือ
+The contrast ratios above were calculated from the color values by hand and have not been verified with a tool.
