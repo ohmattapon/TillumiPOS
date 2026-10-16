@@ -7,8 +7,11 @@ import { userRepositoryToken } from './applications/ports/user.repository'
 import { CreateUserUseCase } from './applications/usecases/create-user.usecase'
 import { ListUsersUseCase } from './applications/usecases/list-users.usecase'
 import { UpdateUserUseCase } from './applications/usecases/update-user.usecase'
+import { roleUsageToken } from '../roles/applications/ports/role-usage.port'
+import { DrizzleRoleUsage } from './adapters/repository/role-usage.drizzle.adapter'
 
 container.register(userRepositoryToken, { useClass: DrizzleUserRepository })
+container.register(roleUsageToken, { useClass: DrizzleRoleUsage })
 container.register(firstRunGuardToken, { useClass: DrizzleFirstRunGuard })
 container.registerSingleton(ListUsersUseCase)
 container.registerSingleton(CreateUserUseCase)

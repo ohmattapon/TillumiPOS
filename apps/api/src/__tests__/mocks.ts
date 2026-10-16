@@ -1,4 +1,13 @@
 import { mock, type Mock } from 'bun:test'
+import type { IRoleRepository } from '../modules/roles/applications/ports/role.repository'
+export const mockRoleRepository = (): Mocked<IRoleRepository> => ({
+  findAll: mock<IRoleRepository['findAll']>(),
+  findById: mock<IRoleRepository['findById']>(),
+  findByIdForUpdate: mock<IRoleRepository['findByIdForUpdate']>(),
+  create: mock<IRoleRepository['create']>(),
+  update: mock<IRoleRepository['update']>(),
+  delete: mock<IRoleRepository['delete']>(),
+})
 import type { ISalesReportRepository } from '../modules/sales/applications/ports/sales-report.repository'
 
 export const mockSalesReportRepository = (): Mocked<ISalesReportRepository> => ({
@@ -51,6 +60,7 @@ export const mockCategoryRepository = (): Mocked<ICategoryRepository> => ({
 })
 
 export const mockUserRepository = (): Mocked<IUserRepository> => ({
+  lockOwnerChangesForUpdate: mock(async () => {}),
   findAll: mock<IUserRepository['findAll']>(),
   findById: mock<IUserRepository['findById']>(),
   findByIdForUpdate: mock<IUserRepository['findByIdForUpdate']>(),
