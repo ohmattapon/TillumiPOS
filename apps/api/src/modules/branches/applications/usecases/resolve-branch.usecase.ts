@@ -1,6 +1,7 @@
-import { requirePermission, type Actor } from '../../../../domains/authorization'
+import { canDo, type Actor } from '../../../../domains/authorization'
 import { inject, injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
+import { DomainForbiddenError } from '../../../../domains/errors/domain-forbidden.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import type { UserEntityProps } from '../../../../domains/user.domain'
 import { branchRepositoryToken } from '../ports/branch.repository'
@@ -17,8 +18,9 @@ export class ResolveBranchUseCase {
 
   async execute(user: Pick<UserEntityProps, 'branchId'> & Actor, requested?: number | null) {
     const branchId = requested ?? user.branchId
-    if (branchId !== user.branchId)
-      requirePermission(user, 'branches.switch', 'ไม่มีสิทธิ์ทำงานในสาขานี้')
+    // Kept as BRANCH_FORBIDDEN: clients already switch on this code.
+    if (branchId !== user.branchId && !canDo(user, 'branches.switch'))
+      throw new DomainForbiddenError('ไม่มีสิทธิ์ทำงานในสาขานี้', 'BRANCH_FORBIDDEN')
 
     const branch = await this.branches.findById(branchId)
     if (!branch) throw new DomainNotFoundError('ไม่พบสาขา', 'BRANCH_NOT_FOUND')

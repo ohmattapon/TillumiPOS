@@ -156,7 +156,7 @@ describe('ResolveBranchUseCase', () => {
 
   test('a cashier may name their own branch but no other', async () => {
     expect((await useCase.execute(cashier, 2)).id).toBe(2)
-    await expect(useCase.execute(cashier, 1)).rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'branches.switch' } })
+    await expect(useCase.execute(cashier, 1)).rejects.toMatchObject({ code: 'BRANCH_FORBIDDEN' })
   })
 
   test('an unknown branch is not found', async () => {
