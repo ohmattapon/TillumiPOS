@@ -9,6 +9,9 @@ import { userRepositoryToken } from '../../../users/applications/ports/user.repo
 import type { IUserRepository } from '../../../users/applications/ports/user.repository'
 import { loginSchema } from '../schemas/auth-schemas'
 
+/** The login form has no length limit, so what a failed attempt writes to the audit log is cut to this. */
+const MAX_ATTEMPTED_NAME = 64
+
 /** Command: checks credentials and records failed attempts. The HTTP adapter starts the session. */
 @injectable()
 export class LoginUseCase {
@@ -25,11 +28,12 @@ export class LoginUseCase {
     const isValid = found?.user.isActive && (await this.hasher.verify(dto.password, found.passwordHash))
     // One message for every cause, so the response never reveals whether a username exists.
     if (!found || !isValid) {
+      const attempted = dto.username.slice(0, MAX_ATTEMPTED_NAME)
       try {
-        await this.audit.record({ id: null, name: dto.username }, null, buildAuditEntry({
+        await this.audit.record({ id: null, name: attempted }, null, buildAuditEntry({
           action: 'auth.login_failed',
           entityType: 'auth',
-          entityId: dto.username,
+          entityId: attempted,
           summary: 'เข้าสู่ระบบไม่สำเร็จ',
         }))
       } catch (error) { console.error('audit: login_failed not recorded', error) }

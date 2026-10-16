@@ -45,6 +45,33 @@ describe('LoginUseCase', () => {
     await expect(useCase.execute({ username: 'somchai', password: 'secret' })).rejects.toMatchObject(rejection)
   })
 
+  test('a failed attempt is recorded without a user id, never with the password, and with a bounded name', async () => {
+    const audit = auditMock()
+    const loginWith = new LoginUseCase(repo, mockPasswordHasher(), audit)
+    await expect(loginWith.execute({ username: 'x'.repeat(5_000), password: 'topsecret-password' })).rejects.toBeInstanceOf(
+      DomainUnauthorizedError,
+    )
+
+    const [actor, branchId, entry] = audit.record.mock.calls[0]!
+    expect(actor).toEqual({ id: null, name: 'x'.repeat(64) })
+    expect(branchId).toBeNull()
+    expect(entry).toMatchObject({ action: 'auth.login_failed', entityId: 'x'.repeat(64) })
+    expect(JSON.stringify(entry)).not.toContain('topsecret-password')
+  })
+
+  test('a failure to write the audit entry does not change the answer to the caller', async () => {
+    const audit = auditMock()
+    audit.record.mockRejectedValue(new Error('database down'))
+    const loginWith = new LoginUseCase(repo, mockPasswordHasher(), audit)
+    await expect(loginWith.execute({ username: 'somchai', password: 'wrong' })).rejects.toMatchObject(rejection)
+  })
+
+  test('a successful login writes nothing to the audit log', async () => {
+    const audit = auditMock()
+    await new LoginUseCase(repo, mockPasswordHasher(), audit).execute({ username: 'somchai', password: 'secret' })
+    expect(audit.record).not.toHaveBeenCalled()
+  })
+
   test.each([[{ username: '', password: 'x' }], [{ username: 'x', password: '' }], [{ username: 'x' }], [null]])(
     'rejects malformed input %p without a lookup',
     async (input) => {
