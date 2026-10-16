@@ -161,6 +161,14 @@ apps/api/src/
 - ค่าของ SCB ใช้ทดสอบกับ SCB จำลองใน `apps/api/test/scb-server.ts` เท่านั้น ห้ามให้ชุดทดสอบเรียก SCB จริง
 - ความลับห้ามอยู่ในไฟล์ที่ commit: `.env.example` ต้องเป็นค่า placeholder (ขึ้นต้น `your-`) เสมอ ถ้าเผลอ commit คีย์จริงต้องแจ้งเจ้าของโครงการให้ออกคีย์ใหม่ เพราะแก้ประวัติ git ไม่พอ
 
+### จอลูกค้าผ่าน server (customer-display)
+
+- จอลูกค้าฟังได้สองทางเข้า receiver ตัวเดียว: `BroadcastChannel` (เบราว์เซอร์เดียวกัน ยังเป็นทางสำรอง) และสตรีม SSE `GET /api/v1/customer-display/stream?token=` ของ server ห้ามถอด BroadcastChannel
+- จอ (ไม่ล็อกอิน) ขอ session ด้วย `POST /customer-display/sessions` ได้ token กับรหัส 6 หลัก แคชเชียร์กรอกรหัสด้วย `POST /pair` จึงผูกจอกับเครื่องขาย (`registerId`) ผู้ถือ token อ่านได้เฉพาะสตรีมของ session ตัวเอง และ token ห้ามเข้า log หรือ URL ที่แชร์
+- ห้ามเชื่อรหัสจากฝั่งจอเอง: กรอกผิด 5 ครั้งล็อก 15 นาทีต่อผู้ใช้ (`IPairingGuard`) รหัสใช้ได้ครั้งเดียวและหมดอายุ และจำนวน session ที่รอผูกมีเพดานทั้งระบบ
+- สถานะของ session และสถานะการขายล่าสุดอยู่ในหน่วยความจำของ API (`IDisplaySessionStore`, `IDisplayStream`) ไม่ลงฐานข้อมูล จึงใช้ได้กับ API ตัวเดียวเท่านั้น ถ้าจะรันหลาย instance ต้องเปลี่ยน adapter ก่อน
+- หน้าขายส่งสถานะผ่าน server เฉพาะเมื่อมีจอผูกอยู่ (`displayPairingQuery`) และส่งทีละคำขอ เหลือแค่อันใหม่สุด (`createServerSender`) ถ้า proxy หน้า API บัฟเฟอร์ SSE ต้องปิดการบัฟเฟอร์ (Caddy: `flush_interval -1` ถ้าพบว่าจอช้า)
+
 ### การติดตั้งและการตั้งค่าครั้งแรก
 
 - ห้ามมีบัญชีหรือรหัสผ่านเริ่มต้น ระบบที่ยังไม่มีผู้ใช้เลยตอบ `GET /api/v1/setup` ว่า `needsSetup: true` และเว็บแสดงหน้าตั้งค่าครั้งแรกแทนหน้าล็อกอิน เจ้าของร้านสร้างบัญชีด้วย `POST /api/v1/setup` พร้อมรหัสตั้งค่า (`CompleteSetupUseCase`)
