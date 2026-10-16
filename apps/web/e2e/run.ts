@@ -173,6 +173,7 @@ async function runSetupFlow(browser: Browser) {
       await fillForm('AAAAAAAAAAAA')
       if (await page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' }).isEnabled())
         throw new Error('Setup can be sent without a shop type')
+      await page.getByText('เลือกประเภทร้านก่อนจึงจะตั้งค่าได้').waitFor()
     })
 
     await check('a wrong setup code is refused with a message, and nothing is created', async () => {
