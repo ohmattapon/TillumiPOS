@@ -10,6 +10,7 @@ const th = {
   shiftRequired: 'เปิดกะก่อนขาย',
   moreActions: 'การทำงานอื่น',
   customerDisplay: 'จอลูกค้า',
+  pairDisplay: 'เชื่อมจอลูกค้า',
   picker: {
     searchPlaceholder: 'สแกนบาร์โค้ด หรือพิมพ์ชื่อ / รหัสสินค้า แล้วกด Enter',
     searchLabel: 'ค้นหาสินค้า',
@@ -164,6 +165,7 @@ const en = {
   shiftRequired: 'Open a shift to sell',
   moreActions: 'More actions',
   customerDisplay: 'Customer screen',
+  pairDisplay: 'Connect screen',
   description: 'Scan a barcode, or tap a product to add it to the cart',
   picker: {
     searchPlaceholder: 'Scan a barcode, or type a name or SKU and press Enter',

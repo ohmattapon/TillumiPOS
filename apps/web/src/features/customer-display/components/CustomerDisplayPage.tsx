@@ -21,7 +21,7 @@ const IDLE: DisplayState = { kind: 'idle' }
 /** The screen the customer faces. It shows only what the till sends and asks the server for nothing. */
 export function CustomerDisplayPage() {
   const { t, i18n } = useTranslation('customerDisplay')
-  const view = useDisplayReceiver()
+  const { view, connection } = useDisplayReceiver()
   const hidden = useIdleCursor(3_000)
   const fullscreen = useFullscreen()
 
@@ -52,6 +52,17 @@ export function CustomerDisplayPage() {
           <div className="flex flex-1 flex-col items-center justify-center gap-[2vh] text-center">
             <p className={cn('font-semibold', size.title)}>{shopName}</p>
             <p className={cn('text-muted-foreground', size.row)}>{t('idle.welcome')}</p>
+            {connection.phase === 'waiting' && (
+              <section className="mt-[3vh] rounded-xl border bg-card px-[3vh] py-[2vh] shadow-xs">
+                <p className={cn('text-muted-foreground', size.label)}>{t('pairing.hint')}</p>
+                <p
+                  className={cn('font-semibold tabular-nums tracking-[0.2em]', size.title)}
+                  aria-label={t('pairing.code', { code: connection.code.split('').join(' ') })}
+                >
+                  {connection.code}
+                </p>
+              </section>
+            )}
           </div>
         )}
 

@@ -1,3 +1,4 @@
+export { PairDisplayDialog } from './components/PairDisplayDialog'
 export { CustomerDisplayPage } from './components/CustomerDisplayPage'
 export { useCustomerDisplayPublisher } from './hooks/use-customer-display-publisher'
 export { isChannelSupported as isCustomerDisplaySupported } from './lib/channel'
