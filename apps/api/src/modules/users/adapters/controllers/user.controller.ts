@@ -8,7 +8,7 @@ import { ListUsersUseCase } from '../../applications/usecases/list-users.usecase
 import { UpdateUserUseCase } from '../../applications/usecases/update-user.usecase'
 import { userSchemas, type UserResponse } from './schemas/user.schema'
 
-const toResponse = (user: UserEntity): UserResponse => user.toSnapshot()
+const toResponse = (user: UserEntity): UserResponse => ({ ...user.toSnapshot(), roleId: user.roleId! })
 
 @injectable()
 export class UserElysiaController {

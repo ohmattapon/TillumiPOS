@@ -13,6 +13,7 @@ describe('login', () => {
       username: 'boss',
       displayName: 'boss',
       role: 'owner',
+      roleId: expect.any(Number),
       branchId: 1,
       isActive: true,
     })

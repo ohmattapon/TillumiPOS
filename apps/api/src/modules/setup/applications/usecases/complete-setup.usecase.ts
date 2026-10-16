@@ -10,6 +10,7 @@ import type { IShopSettingsRepository } from '../../../settings/applications/por
 import type { IPasswordHasher } from '../../../shared/ports/password-hasher.port'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import { TOKENS } from '../../../tokens'
+import { roleDirectoryToken, type IRoleDirectory } from '../../../users/applications/ports/role-directory.port'
 import { userRepositoryToken } from '../../../users/applications/ports/user.repository'
 import type { IUserRepository } from '../../../users/applications/ports/user.repository'
 import { firstRunGuardToken } from '../ports/first-run-guard.port'
@@ -32,6 +33,7 @@ export class CompleteSetupUseCase {
     @inject(shopSettingsRepositoryToken) private readonly settings: IShopSettingsRepository,
     @inject(TOKENS.PasswordHasher) private readonly hasher: IPasswordHasher,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
+    @inject(roleDirectoryToken) private readonly roles: IRoleDirectory,
   ) {}
 
   async execute(input: unknown): Promise<UserEntity> {
@@ -53,12 +55,14 @@ export class CompleteSetupUseCase {
       await this.branches.update(branch.with({ name: dto.branchName }))
       await this.settings.save((await this.settings.getForUpdate()).with({ shopName: dto.shopName }))
 
+      const ownerRole = await this.roles.findBySystemKey('owner')
       return this.users.create(
         new UserEntity({
           id: 0,
           username: UserEntity.normalizeUsername(dto.username),
           displayName: dto.displayName,
           role: 'owner',
+          roleId: ownerRole.id,
           branchId: branch.id,
           isActive: true,
         }),
