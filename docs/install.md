@@ -1,22 +1,32 @@
 # คู่มือติดตั้ง TillumiPOS สำหรับร้านค้า
 
-คู่มือนี้ติดตั้ง TillumiPOS ด้วย Docker บนเครื่องของร้านหรือ VPS ด้วยคำสั่งเดียว ข้อมูลทั้งหมดอยู่ในเครื่องของคุณเอง
+คู่มือนี้ติดตั้ง TillumiPOS ด้วย **Podman** บนเครื่องของร้านหรือ VPS ด้วยคำสั่งเดียว ข้อมูลทั้งหมดอยู่ในเครื่องของคุณเอง
+
+> **สถานะเอกสาร:** ฉบับนี้เป็นร่างสำหรับการย้ายจาก Docker มาเป็น Podman ข้อความที่มี `[ยืนยันก่อนใช้]` ยังไม่ได้ทดสอบบนเครื่องจริง ต้องแก้ให้ตรงผลทดสอบก่อนประกาศให้ร้านใช้
 
 ## สิ่งที่ต้องมี
 
-- เครื่องที่ติดตั้ง **Docker** (บน Windows/macOS ใช้ Docker Desktop) และ Docker Compose
-- พื้นที่ว่างอย่างน้อย 2 GB และ RAM อย่างน้อย 1 GB
+- **Linux:** Podman พร้อม `podman compose` (ตรวจด้วย `sudo podman compose version`) เวอร์ชันขั้นต่ำ `[ยืนยันก่อนใช้]`
+  - ระบบรันแบบ rootful ด้วย `sudo` เพราะการใช้ผ่านอินเทอร์เน็ตต้องเปิดพอร์ต 80 กับ 443
+- **Windows:** Podman Desktop (ติดตั้งด้วย `winget install --id RedHat.Podman -e` ได้) เวอร์ชันขั้นต่ำ `[ยืนยันก่อนใช้]`
+  - สคริปต์จะสร้างและเปิด Podman machine ให้เองถ้ายังไม่มี การสร้าง machine ครั้งแรกต้องดาวน์โหลดอิมเมจ VM ประมาณ 1 GB จึงต้องมีอินเทอร์เน็ต
+  - `[ยืนยันก่อนใช้]` โฟลเดอร์โปรเจกต์ที่ใช้ได้ (ต้องอยู่ในไดรฟ์ที่ Podman machine แชร์ได้)
+- พื้นที่ว่างอย่างน้อย 2 GB และ RAM อย่างน้อย 1 GB `[ยืนยันก่อนใช้]` (บน Windows ต้องเผื่อ RAM ให้ Podman machine ด้วย)
 - ถ้าต้องการใช้ผ่านอินเทอร์เน็ตด้วย HTTPS: โดเมนที่ชี้มาที่เครื่องนี้ และพอร์ต 80 กับ 443 ที่เข้าถึงได้
+
+ไม่ต้องติดตั้ง Docker อีกแล้ว ถ้าร้านเคยใช้ Docker อยู่ให้ดูหัวข้อ [ย้ายจาก Docker](#ย้ายจาก-docker)
 
 ## ติดตั้ง
 
 ดาวน์โหลดหรือ clone โปรเจกต์ แล้วรันในโฟลเดอร์หลัก:
 
-macOS / Linux:
+Linux:
 
 ```sh
 scripts/install.sh
 ```
+
+สคริปต์จะขอรหัส `sudo` เมื่อต้องใช้
 
 Windows (PowerShell):
 
@@ -26,9 +36,10 @@ Windows (PowerShell):
 
 สคริปต์จะ
 
-1. สร้างไฟล์ `.env` พร้อมรหัสลับที่สุ่มให้ (เก็บไฟล์นี้เป็นความลับ ห้ามส่งให้ใคร)
-2. สร้างและเริ่มระบบด้วย Docker (ครั้งแรกใช้เวลาหลายนาที)
-3. พิมพ์ที่อยู่เว็บและ **รหัสตั้งค่า** ให้
+1. ตรวจว่ามี Podman หรือไม่ ถ้าไม่มีจะลองติดตั้งด้วย winget (Windows) หรือหยุดพร้อมลิงก์ดาวน์โหลด
+2. สร้างไฟล์ `.env` พร้อมรหัสลับที่สุ่มให้ (เก็บไฟล์นี้เป็นความลับ ห้ามส่งให้ใคร)
+3. สร้างและเริ่มระบบด้วย `podman compose` (ครั้งแรกใช้เวลาหลายนาที)
+4. พิมพ์ที่อยู่เว็บและ **รหัสตั้งค่า** ให้
 
 ถ้ามีไฟล์ `.env` อยู่แล้ว สคริปต์จะเก็บไว้และไม่เขียนทับ
 
@@ -38,11 +49,11 @@ Windows (PowerShell):
 2. กรอก **รหัสตั้งค่า** ที่สคริปต์พิมพ์ให้ ชื่อร้าน ชื่อสาขาแรก และบัญชีเจ้าของ (รหัสผ่านอย่างน้อย 10 ตัวอักษร)
 3. กด "ตั้งค่าและเข้าสู่ระบบ" ระบบจะพาเข้าหน้าขาย
 
-ถ้าลืมรหัสตั้งค่า (ก่อนตั้งค่าเสร็จ) ดูรหัสได้จาก log หรือรีสตาร์ทเพื่อรับรหัสใหม่:
+ถ้าลืมรหัสตั้งค่า (ก่อนตั้งค่าเสร็จ) ดูรหัสได้จาก log หรือรีสตาร์ทเพื่อรับรหัสใหม่ (Linux ใช้ `sudo`):
 
 ```sh
-docker compose logs app
-docker compose restart app
+sudo podman compose logs app
+sudo podman compose restart app
 ```
 
 รหัสตั้งค่าใช้ได้ครั้งเดียว กรอกผิด 5 ครั้งจะถูกล็อก 15 นาที หลังตั้งค่าเสร็จหน้านี้ใช้อีกไม่ได้
@@ -50,37 +61,50 @@ docker compose restart app
 ## ใช้ผ่านอินเทอร์เน็ตด้วย HTTPS
 
 ```sh
-scripts/install.sh --domain pos.ร้านของคุณ.com
+sudo scripts/install.sh --domain pos.ร้านของคุณ.com
 ```
 
-(Windows: `.\scripts\install.ps1 -Domain ...`) ระบบจะขอและต่ออายุใบรับรองให้เอง ถ้าติดตั้งไปแล้ว ให้ใส่ `DOMAIN=` และ `COOKIE_SECURE=true` ใน `.env` แล้วรัน `docker compose --profile https up -d`
+(Windows: `.\scripts\install.ps1 -Domain ...`) ระบบจะขอและต่ออายุใบรับรองให้เอง ถ้าติดตั้งไปแล้ว ให้ใส่ `DOMAIN=` และ `COOKIE_SECURE=true` ใน `.env` แล้วรัน `sudo podman compose --profile https up -d` (Windows ไม่ต้องใช้ `sudo`)
 
 ## สำรองข้อมูล
 
 ```sh
-scripts/backup.sh
+sudo scripts/backup.sh
 ```
 
 ได้ไฟล์ `backups/easypos-วันที่-เวลา.sql.gz` (Windows: `.\scripts\backup.ps1`) **เก็บสำเนาไว้นอกเครื่องนี้ด้วย** เช่นดิสก์อีกลูกหรือ cloud drive
 
-ควรตั้งให้สำรองทุกคืน: บน Linux ใช้ cron (`0 2 * * * cd /path/to/easypos && scripts/backup.sh`) บน Windows ใช้ Task Scheduler เรียก `backup.ps1`
+ควรตั้งให้สำรองทุกคืน:
+
+- Linux: ใส่ใน crontab ของ root เพราะระบบรันแบบ rootful เช่น `sudo crontab -e` แล้วเพิ่มบรรทัด `0 2 * * * cd /path/to/easypos && scripts/backup.sh`
+- Windows: ใช้ Task Scheduler เรียก `backup.ps1` `[ยืนยันก่อนใช้]` ต้องให้ Podman machine เปิดอยู่ตอนที่งานทำงาน
 
 ถ้าเก็บรูปสินค้าในเครื่อง (ค่าเริ่มต้น) สคริปต์จะสำรองรูปเป็นไฟล์ที่สองชื่อเดียวกัน `backups/easypos-วันที่-เวลา.media.tar.gz` เก็บและคัดลอกคู่กับไฟล์ `.sql.gz` ตอนกู้คืนให้ระบุไฟล์ `.sql.gz` ระบบจะกู้รูปจากไฟล์คู่ให้เองถ้ามี ส่วนรูปที่เก็บบน Cloudflare R2 ไม่อยู่ในไฟล์สำรองนี้
 
 ## กู้คืนข้อมูล
 
 ```sh
-scripts/restore.sh backups/easypos-20261014-210000.sql.gz
+sudo scripts/restore.sh backups/easypos-20261014-210000.sql.gz
 ```
 
 (Windows: `.\scripts\restore.ps1 backups\...`) **คำสั่งนี้แทนที่ข้อมูลทั้งหมด** จะถามให้พิมพ์ `YES` ก่อน
 
 ## อัปเดตเวอร์ชัน
 
+Linux:
+
 ```sh
-scripts/backup.sh
+sudo scripts/backup.sh
 git pull
-docker compose up -d --build
+sudo podman compose up -d --build
+```
+
+Windows:
+
+```powershell
+.\scripts\backup.ps1
+git pull
+podman compose up -d --build
 ```
 
 ระบบปรับโครงสร้างฐานข้อมูลให้เองตอนเริ่ม
@@ -93,20 +117,33 @@ docker compose up -d --build
 | `DOMAIN`, `COOKIE_SECURE` | เปิด HTTPS (ดูหัวข้อด้านบน) |
 | `MEDIA_STORAGE` | ที่เก็บรูปสินค้า: `local` เก็บในเครื่อง (ค่าเริ่มต้นเมื่อไม่ได้ตั้ง `MEDIA_URL` และ `MEDIA_TOKEN` ครบ), `worker` ใช้ Cloudflare R2 ผ่าน Worker ของ `apps/media` (ค่าเริ่มต้นเมื่อตั้งสองตัวนั้นครบ), `none` ไม่ใช้รูป เปลี่ยนที่เก็บแล้วต้องอัปโหลดรูปใหม่ (รูปเดิมไม่ถูกย้าย) |
 | `MEDIA_URL`, `MEDIA_TOKEN` | ใช้เมื่อเลือก `worker` |
-| `MEDIA_DIR` | โฟลเดอร์เก็บรูปเมื่อรันนอก Docker (ใน Docker คือ volume `pos-media` ไม่ต้องตั้ง) |
+| `MEDIA_DIR` | โฟลเดอร์เก็บรูปเมื่อรันนอก container (ใน container คือ volume `pos-media` ไม่ต้องตั้ง) |
 | `SCB_API_KEY`, `SCB_API_SECRET`, `SCB_BILLER_ID`, `SCB_REF3_PREFIX` | เปิดการชำระ QR ของ SCB ตั้งค่าและทดสอบกับธนาคารก่อนใช้จริง |
 | `SCB_API_BASE_URL` | ที่อยู่ API ของ SCB ค่าเริ่มต้นเป็น sandbox: ตอนใช้จริงต้องเปลี่ยนเป็นที่อยู่ production ที่ SCB ให้มาพร้อมกุญแจ |
 
-แก้ `.env` แล้วรัน `docker compose up -d` เพื่อให้มีผล
+แก้ `.env` แล้วรัน `sudo podman compose up -d` (Linux) หรือ `podman compose up -d` (Windows) เพื่อให้มีผล
 
 ## แก้ปัญหา
 
 | อาการ | ทางแก้ |
 |---|---|
-| เปิดเว็บไม่ได้ | `docker compose ps` ดูว่า `app` และ `db` ทำงานอยู่ และ `docker compose logs app` ดูข้อความผิดพลาด |
-| พอร์ต 3000 ถูกใช้อยู่ | ตั้ง `PORT=` ใน `.env` เป็นเลขอื่นแล้ว `docker compose up -d` |
-| ไม่เห็นรหัสตั้งค่า | `docker compose logs app` แล้วหา `SETUP CODE` หรือ `docker compose restart app` |
-| ต้องการเริ่มใหม่หมด (ลบข้อมูลทั้งหมด) | `docker compose down -v` แล้วลบ `.env` แล้วรันติดตั้งใหม่ ข้อมูลทั้งหมดจะหายถาวร |
+| เปิดเว็บไม่ได้ | `podman compose ps` ดูว่า `app` และ `db` ทำงานอยู่ และ `podman compose logs app` ดูข้อความผิดพลาด (Linux ใส่ `sudo` หน้าทุกคำสั่ง) |
+| พอร์ต 3000 ถูกใช้อยู่ | ตั้ง `PORT=` ใน `.env` เป็นเลขอื่นแล้วรัน `podman compose up -d` |
+| ไม่เห็นรหัสตั้งค่า | `podman compose logs app` แล้วหา `SETUP CODE` หรือ `podman compose restart app` |
+| Windows: คำสั่ง `podman` ใช้ไม่ได้หรือบอกว่าเชื่อมต่อ machine ไม่ได้ | `podman machine start` แล้วลองใหม่ `[ยืนยันก่อนใช้]` |
+| ต้องการเริ่มใหม่หมด (ลบข้อมูลทั้งหมด) | `podman compose down -v` แล้วลบ `.env` แล้วรันติดตั้งใหม่ ข้อมูลทั้งหมดจะหายถาวร |
+
+## ย้ายจาก Docker
+
+ใช้ตอนร้านเคยรันด้วย Docker และต้องการย้ายข้อมูลมา Podman ไม่ต้องเริ่มตั้งค่าร้านใหม่ ข้อมูลการขาย สต็อก ผู้ใช้ และรูปสินค้าจะติดไปด้วย
+
+1. **สำรองด้วยสคริปต์เวอร์ชัน Docker** ก่อนแก้โค้ด เช็กเอาต์คอมมิตสุดท้ายที่ยังใช้ Docker แล้วรัน `scripts/backup.sh` ได้ไฟล์ `.sql.gz` และ `.media.tar.gz` คู่กัน จดชื่อคอมมิตนี้ไว้
+2. **หยุดระบบ Docker** ด้วย `docker compose down` **ห้ามใช้ `-v`** เพราะจะลบ volume ของข้อมูลและรูป ต้องหยุดก่อนเพื่อให้พอร์ต 3000 และ 5433 ว่างสำหรับ Podman
+3. **ติดตั้ง Podman** ตามหัวข้อ "สิ่งที่ต้องมี" และ "ติดตั้ง" ข้างต้น
+4. **ใช้โค้ดที่มี migration ชุดเดียวกับตอนสำรอง** ตรวจก่อนด้วย `git diff <คอมมิตที่สำรอง> <คอมมิตที่จะติดตั้ง> -- apps/api/drizzle` ต้องไม่มีผลลัพธ์ ถ้ามีต้องใช้คอมมิตที่ migration ตรงกัน ไม่งั้นการกู้คืนอาจล้มเหลว
+5. **กู้คืน** ด้วย `sudo scripts/restore.sh backups/<ไฟล์>.sql.gz` (Windows: `.\scripts\restore.ps1 backups\...`) แล้วพิมพ์ `YES`
+6. **ตรวจ** เข้าสู่ระบบ ดูยอดขายย้อนหลัง และตรวจว่ารูปสินค้าแสดงได้
+7. **เก็บ Docker ไว้จนกว่าจะมั่นใจ** เมื่อยืนยันแล้ว จึงลบ container และ volume ของ Docker ได้ แต่ต้องเก็บไฟล์สำรองไว้เสมอ
 
 ## ใบอนุญาต
 
