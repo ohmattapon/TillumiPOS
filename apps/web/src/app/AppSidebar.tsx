@@ -150,7 +150,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
         {groups.map((group) => (
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel className="text-[11px] tracking-wider uppercase">{group.label}</SidebarGroupLabel>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {group.items.map((item) => (
                 <SidebarMenuItem key={item.to}>
                   <SidebarMenuButton
