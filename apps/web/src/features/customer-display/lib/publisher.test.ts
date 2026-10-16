@@ -73,6 +73,18 @@ describe('DisplayPublisher', () => {
     expect(sent[1]!.seq).toBe(2)
   })
 
+  test('sends the latest state again when asked, and nothing before there is one', () => {
+    const { publisher, envelopes } = setup()
+    publisher.resend()
+    expect(envelopes()).toHaveLength(0)
+
+    publisher.update(view())
+    publisher.resend()
+    const sent = envelopes()
+    expect(sent).toHaveLength(2)
+    expect(sent[1]!.state).toEqual(selling)
+  })
+
   test('repeats the latest state on every heartbeat', () => {
     const { publisher, scheduler, envelopes } = setup()
     publisher.update(view())
