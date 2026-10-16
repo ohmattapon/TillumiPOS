@@ -168,6 +168,13 @@ async function main() {
       await shot('26-role-form')
       await page.keyboard.press('Escape')
 
+      // The floor as the home screen (the seed may have no tables, which shows the empty floor).
+      assert((await page.request.patch(`${WEB}/api/v1/settings`, { data: { homeView: 'tables' } })).ok())
+      await page.goto(WEB)
+      await page.waitForTimeout(1000)
+      await shot('27-floor-home')
+      assert((await page.request.patch(`${WEB}/api/v1/settings`, { data: { homeView: 'till' } })).ok())
+
       // Date-only values survive the shadcn calendar without UTC conversion or premature submission.
       await page.goto(`${WEB}/reports?from=2024-02-01&to=2024-02-29&scope=branch`)
       const from = page.getByRole('button', { name: 'ตั้งแต่วันที่', exact: true })
