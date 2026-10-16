@@ -5,6 +5,13 @@ import { DomainError } from './errors/domain-error'
 const base = { action: 'sale.void', entityType: 'sale', entityId: '412', summary: 'ยกเลิกบิล' }
 
 describe('buildAuditEntry', () => {
+  test('retains only a boolean passwordChanged marker while removing credential values', () => {
+    for (const passwordChanged of [true, false])
+      expect(buildAuditEntry({ ...base, after: { passwordChanged, password: 'secret', passwordHash: 'hash' } }).after)
+        .toEqual({ passwordChanged })
+    for (const passwordChanged of ['secret', { password: 'secret' }, 1, null])
+      expect(buildAuditEntry({ ...base, after: { passwordChanged } }).after).toEqual({})
+  })
   test('keeps small JSON values and defaults omitted fields to null', () => {
     expect(buildAuditEntry({ ...base, before: { status: 'completed' }, after: { status: 'voided' } })).toEqual({
       ...base, before: { status: 'completed' }, after: { status: 'voided' }, reason: null,
