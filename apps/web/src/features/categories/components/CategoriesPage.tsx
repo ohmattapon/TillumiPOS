@@ -20,6 +20,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useCan } from '@/features/auth'
+import { kitchenRoutingQuery, kitchenStationsQuery, useSetCategoryStation } from '@/features/kitchen'
 import { categoriesQuery, useCreateCategory, useUpdateCategory } from '../api'
 import { CategoryDot } from './CategoryDot'
 
@@ -33,6 +36,14 @@ function CategoryFormDialog({ category, onClose }: { category?: Category; onClos
   const create = useCreateCategory()
   const update = useUpdateCategory()
   const mutation = category ? update : create
+  const canRoute = useCan('kitchen.write')
+  const stations = useQuery({ ...kitchenStationsQuery, enabled: canRoute })
+  const routing = useQuery({ ...kitchenRoutingQuery, enabled: canRoute })
+  const setStation = useSetCategoryStation()
+  const routedTo = routing.data?.find((route) => route.categoryId === category?.id)?.stationId ?? null
+  // Undefined until the user picks: the current routing may still be loading, and an untouched field must not overwrite it.
+  const [stationId, setStationId] = useState<number | null | undefined>(undefined)
+  const chosenStation = stationId === undefined ? routedTo : stationId
 
   const order = /^-?\d+$/.test(sortOrder.trim()) ? Number(sortOrder) : null
   const canSave = name.trim() !== '' && order !== null && !mutation.isPending
@@ -44,8 +55,23 @@ function CategoryFormDialog({ category, onClose }: { category?: Category; onClos
       toast.success(t(category ? 'toast.updated' : 'toast.created', { name: saved.name }))
       onClose()
     }
-    if (category) update.mutate({ id: category.id, changes: { name: name.trim(), sortOrder: order } }, { onSuccess: done })
-    else create.mutate({ name: name.trim(), sortOrder: order }, { onSuccess: done })
+    // The station is the kitchen's own record, saved after the category exists (a new one has no id before).
+    // If only the station fails the category is already saved, so close rather than let a retry create it twice.
+    const saved = (savedCategory: Category) => {
+      if (stationId === undefined || stationId === routedTo) return done(savedCategory)
+      setStation.mutate(
+        { categoryId: savedCategory.id, stationId },
+        {
+          onSuccess: () => done(savedCategory),
+          onError: (error) => {
+            toast.error(error.message)
+            onClose()
+          },
+        },
+      )
+    }
+    if (category) update.mutate({ id: category.id, changes: { name: name.trim(), sortOrder: order } }, { onSuccess: saved })
+    else create.mutate({ name: name.trim(), sortOrder: order }, { onSuccess: saved })
   }
 
   return (
@@ -81,6 +107,29 @@ function CategoryFormDialog({ category, onClose }: { category?: Category; onClos
             />
             <p className="text-xs text-muted-foreground">{t('form.sortOrderHint')}</p>
           </div>
+          {canRoute && (
+            <div className="space-y-2">
+              <Label htmlFor="category-station">{t('form.station')}</Label>
+              <Select
+                value={String(chosenStation ?? 'none')}
+                onValueChange={(value) => setStationId(value === 'none' ? null : Number(value))}
+                disabled={routing.isPending}
+              >
+                <SelectTrigger id="category-station" className="h-10 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('form.noStation')}</SelectItem>
+                  {(stations.data ?? []).map((station) => (
+                    <SelectItem key={station.id} value={String(station.id)} disabled={!station.isActive}>
+                      {station.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{t('form.stationHint')}</p>
+            </div>
+          )}
 
           {mutation.error && (
             <p role="alert" className="text-sm text-destructive">
@@ -92,8 +141,8 @@ function CategoryFormDialog({ category, onClose }: { category?: Category; onClos
             <Button type="button" variant="outline" className="h-10" onClick={onClose}>
               {tc('cancel')}
             </Button>
-            <Button type="submit" className="h-10" disabled={!canSave}>
-              {mutation.isPending ? t('form.saving') : t('form.save')}
+            <Button type="submit" className="h-10" disabled={!canSave || setStation.isPending}>
+              {mutation.isPending || setStation.isPending ? t('form.saving') : t('form.save')}
             </Button>
           </DialogFooter>
         </form>
