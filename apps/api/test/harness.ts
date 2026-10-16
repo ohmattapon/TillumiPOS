@@ -99,6 +99,19 @@ export async function signIn(
   return { api: client(cookie, workingBranchId), apiV2: clientV2(cookie, workingBranchId), user: { ...created.toSnapshot(), roleId: created.roleId! } }
 }
 
+/** Creates and signs in a user of a custom role, using the public command. */
+export async function signInWithRole(
+  username: string,
+  roleId: number,
+  { branchId = MAIN_BRANCH_ID, workingBranchId }: { branchId?: number; workingBranchId?: number } = {},
+): Promise<Session> {
+  const created = await container.resolve(CreateUserUseCase)
+    .execute({ username, password: PASSWORD, displayName: username, roleId, branchId }, branchId)
+  const cookie = await loginCookie(username, PASSWORD)
+  return { api: client(cookie, workingBranchId), apiV2: clientV2(cookie, workingBranchId),
+    user: { ...created.toSnapshot(), roleId: created.roleId! } }
+}
+
 /** Creates another branch, e.g. to check that stock and receipts stay apart. */
 export async function seedBranch(code = 'BKK', name = 'สาขากรุงเทพ') {
   return (await container.resolve(CreateBranchUseCase).execute({ code, name })).toSnapshot()

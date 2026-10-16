@@ -59,7 +59,7 @@ export class ProductElysiaController {
         '/',
         async ({ body, branch }) => toResponse(await this.createProduct.execute(body, (await branch()).id)),
         {
-          auth: ['owner'],
+          auth: { can: 'products.write' },
           body: productSchemas.create,
           response: productSchemas.product,
           detail: { summary: 'เพิ่มสินค้า' },
@@ -70,7 +70,7 @@ export class ProductElysiaController {
         async ({ params, body, branch }) =>
           toResponse(await this.updateProduct.execute(params.id, body, (await branch()).id)),
         {
-          auth: ['owner'],
+          auth: { can: 'products.write' },
           params: idParams,
           body: productSchemas.update,
           response: productSchemas.product,
@@ -82,7 +82,7 @@ export class ProductElysiaController {
         async ({ params, body, branch }) =>
           toResponse(await this.setProductImage.execute(params.id, body.file, (await branch()).id)),
         {
-          auth: ['owner'],
+          auth: { can: 'products.write' },
           params: idParams,
           body: productSchemas.image,
           response: productSchemas.product,
@@ -94,7 +94,7 @@ export class ProductElysiaController {
         async ({ params, branch }) =>
           toResponse(await this.removeProductImage.execute(params.id, (await branch()).id)),
         {
-          auth: ['owner'],
+          auth: { can: 'products.write' },
           params: idParams,
           response: productSchemas.product,
           detail: { summary: 'ลบรูปสินค้า' },

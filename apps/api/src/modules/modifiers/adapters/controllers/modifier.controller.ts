@@ -46,7 +46,7 @@ export class ModifierElysiaController {
         },
       )
       .post('/modifier-groups', async ({ body }) => toGroupResponse(await this.createGroup.execute(body)), {
-        auth: ['owner'],
+        auth: { can: 'modifiers.write' },
         body: modifierSchemas.createGroup,
         response: modifierSchemas.group,
         detail: { summary: 'เพิ่มกลุ่มตัวเลือก' },
@@ -55,7 +55,7 @@ export class ModifierElysiaController {
         '/modifier-groups/:id',
         async ({ params, body }) => toGroupResponse(await this.updateGroup.execute(params.id, body)),
         {
-          auth: ['owner'],
+          auth: { can: 'modifiers.write' },
           params: idParams,
           body: modifierSchemas.updateGroup,
           response: modifierSchemas.group,
@@ -66,7 +66,7 @@ export class ModifierElysiaController {
         '/modifier-groups/:id/options',
         async ({ params, body }) => (await this.createOption.execute(params.id, body)).toSnapshot(),
         {
-          auth: ['owner'],
+          auth: { can: 'modifiers.write' },
           params: idParams,
           body: modifierSchemas.createOption,
           response: modifierSchemas.option,
@@ -77,7 +77,7 @@ export class ModifierElysiaController {
         '/modifier-options/:id',
         async ({ params, body }) => (await this.updateOption.execute(params.id, body)).toSnapshot(),
         {
-          auth: ['owner'],
+          auth: { can: 'modifiers.write' },
           params: idParams,
           body: modifierSchemas.updateOption,
           response: modifierSchemas.option,
@@ -90,7 +90,7 @@ export class ModifierElysiaController {
           groupIds: await this.setProductGroups.execute(params.id, body, (await branch()).id),
         }),
         {
-          auth: ['owner'],
+          auth: { can: 'modifiers.write' },
           params: idParams,
           body: modifierSchemas.productGroups,
           response: modifierSchemas.productGroups,

@@ -1,3 +1,4 @@
+import { requirePermission, type Actor } from '../../../../domains/authorization'
 import { inject, injectable } from 'tsyringe'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import { stockLedgerToken } from '../../../inventory/applications/ports/stock-ledger.port'
@@ -19,8 +20,9 @@ export class VoidSaleUseCase {
     @inject(TOKENS.Clock) private readonly clock: IClock,
   ) {}
 
-  async execute(id: number, input: unknown, user: { id: number }, branchId: number) {
+  async execute(id: number, input: unknown, user: Actor & { id: number }, branchId: number) {
     const { reason } = voidSaleSchema.parse(input)
+    requirePermission(user, 'sales.void')
 
     return this.unitOfWork.run(async () => {
       // Locked so two requests cannot both void the sale and return its stock twice.

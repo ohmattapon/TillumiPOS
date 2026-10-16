@@ -12,7 +12,7 @@ export class AuditElysiaController {
     return new Elysia({ name: 'audit', prefix: '/audit-logs', detail: { tags: ['Audit'] } })
       .use(auth)
       .get('/', ({ query, user }) => this.list.execute(query, user), {
-        auth: true, query: auditSchemas.query, response: page(auditSchemas.record), detail: { summary: 'ประวัติการกระทำ' },
+        auth: { can: 'audit.read' }, query: auditSchemas.query, response: page(auditSchemas.record), detail: { summary: 'ประวัติการกระทำ' },
       })
   }
 }

@@ -41,7 +41,7 @@ export class AuthElysiaController {
       )
       .get('/me', ({ user }) => user, {
         auth: true,
-        response: userSchemas.user,
+        response: authSchemas.me,
         detail: { summary: 'ข้อมูลผู้ใช้ที่เข้าสู่ระบบอยู่' },
       })
   }

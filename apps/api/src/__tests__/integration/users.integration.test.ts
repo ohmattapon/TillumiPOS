@@ -72,9 +72,10 @@ describe('users', () => {
 
     const renamed = ok(await owner.api.users({ id: created.id }).patch({ displayName: 'สมชาย ใจดี' }))
     const promoted = ok(await owner.api.users({ id: created.id }).patch({ role: 'owner' }))
+    const newOwnerRoleId = owner.user.roleId
 
     expect(renamed).toEqual({ ...created, displayName: 'สมชาย ใจดี' })
-    expect(promoted).toEqual({ ...created, displayName: 'สมชาย ใจดี', role: 'owner' })
+    expect(promoted).toEqual({ ...created, displayName: 'สมชาย ใจดี', role: 'owner', roleId: newOwnerRoleId })
   })
 
   test('changing a password invalidates the old one', async () => {

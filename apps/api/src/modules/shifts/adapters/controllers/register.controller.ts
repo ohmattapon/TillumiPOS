@@ -23,11 +23,11 @@ export class RegisterElysiaController {
         return { items: items.map((item) => item.toSnapshot()), total: items.length }
       }, { auth: true, response: page(shiftHttpSchemas.register), detail: { summary: 'รายการจุดขายของสาขา' } })
       .post('/', async ({ body, branch }) => (await this.create.execute(body, (await branch()).id)).toSnapshot(), {
-        auth: ['owner'], body: shiftHttpSchemas.createRegister, response: shiftHttpSchemas.register, detail: { summary: 'สร้างจุดขาย' },
+        auth: { can: 'registers.manage' }, body: shiftHttpSchemas.createRegister, response: shiftHttpSchemas.register, detail: { summary: 'สร้างจุดขาย' },
       })
       .patch('/:id', async ({ params, body, branch }) =>
         (await this.update.execute(params.id, body, (await branch()).id)).toSnapshot(), {
-          auth: ['owner'], params: idParams, body: shiftHttpSchemas.updateRegister, response: shiftHttpSchemas.register, detail: { summary: 'แก้ชื่อหรือปิดใช้งานจุดขาย' },
+          auth: { can: 'registers.manage' }, params: idParams, body: shiftHttpSchemas.updateRegister, response: shiftHttpSchemas.register, detail: { summary: 'แก้ชื่อหรือปิดใช้งานจุดขาย' },
         })
       .get('/:id/current-shift', async ({ params, branch }) => {
         const shift = await this.currentShift.execute(params.id, (await branch()).id)
