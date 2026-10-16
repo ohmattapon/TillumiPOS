@@ -8,6 +8,12 @@ const th = {
     address: 'ที่อยู่',
     phone: 'เบอร์โทร',
     optional: 'ไม่บังคับ',
+    homeView: 'หน้าแรก',
+    homeViewHint: 'หน้าที่เห็นเมื่อเปิดระบบ ร้านอาหารที่มีโต๊ะเลือกผังโต๊ะได้',
+    homeViews: {
+      till: 'หน้าขาย',
+      tables: 'ผังโต๊ะ',
+    },
   },
   money: {
     title: 'สกุลเงินและภาษี',
@@ -53,6 +59,12 @@ const en = {
     address: 'Address',
     phone: 'Phone',
     optional: 'Optional',
+    homeView: 'Home screen',
+    homeViewHint: 'The screen you see when you open the system. Restaurants with tables can start on the floor plan.',
+    homeViews: {
+      till: 'Sell screen',
+      tables: 'Floor plan',
+    },
   },
   money: {
     title: 'Currency and tax',

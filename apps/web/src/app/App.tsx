@@ -15,7 +15,7 @@ import { PromotionsPage } from '@/features/promotions'
 import { ModifiersPage } from '@/features/modifiers'
 import { SetupPage, setupStatusQuery } from '@/features/setup'
 import { TablesPage } from '@/features/tables'
-import { clearCart, PosPage } from '@/features/pos'
+import { clearCart, FloorPage, PosPage } from '@/features/pos'
 import { ProductsPage } from '@/features/products'
 import { TodayPage } from '@/features/sales'
 import { ReportsPage } from '@/features/reports'
@@ -29,7 +29,7 @@ import { applyLocale } from './i18n'
 
 function Shell({ user }: { user: User }) {
   const logout = useLogout()
-  const { locale } = useSettings()
+  const { locale, homeView } = useSettings()
   const { can } = useAuthorization()
   const clearRegisterSelection = useRegisterSelectionStore((state) => state.clear)
   // Keeps the remembered branch honest (closed or forbidden ones are dropped) even on pages without a switcher.
@@ -48,7 +48,8 @@ function Shell({ user }: { user: User }) {
       {/* Room at the bottom for the phone menu, which takes the place of the sidebar there. */}
       <SidebarInset className="h-svh bg-canvas min-w-0 overflow-hidden pb-16 sm:pb-0">
         <Routes>
-          <Route index element={<PosPage />} />
+          <Route index element={homeView === 'tables' ? <FloorPage /> : <PosPage />} />
+          <Route path="sell" element={<PosPage />} />
           <Route path="today" element={<TodayPage isOwner={can('reports.read')} />} />
           {can('reports.read') && <Route path="reports" element={<ReportsPage />} />}
           {(can('products.write') || can('inventory.receive') || can('inventory.adjust')) && <Route path="products" element={<ProductsPage />} />}

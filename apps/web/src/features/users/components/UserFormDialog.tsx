@@ -75,97 +75,99 @@ export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Pro
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="flex flex-col overflow-hidden sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{user ? t('form.titleEdit') : t('form.titleNew')}</DialogTitle>
           <DialogDescription>{user ? t('form.descriptionEdit') : t('form.descriptionNew')}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={submit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="user-username">{t('form.username')}</Label>
-            <Input
-              id="user-username"
-              className="h-11"
-              value={form.username}
-              onChange={(event) => set('username', event.target.value)}
-              disabled={user !== undefined}
-              autoComplete="off"
-              minLength={3}
-              maxLength={32}
-              pattern="[a-zA-Z0-9_.\-]+"
-              required
-              autoFocus={user === undefined}
-            />
-            {!user && <p className="text-xs text-muted-foreground">{t('form.usernameHint')}</p>}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="user-display-name">{t('form.displayName')}</Label>
-            <Input
-              id="user-display-name"
-              className="h-11"
-              value={form.displayName}
-              onChange={(event) => set('displayName', event.target.value)}
-              maxLength={100}
-              required
-              autoFocus={user !== undefined}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col gap-4">
+          {/* Only the fields scroll, so the confirm row stays at the bottom of the dialog. */}
+          <div className="-mx-4 min-h-0 flex-1 overflow-y-auto px-4 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="user-role">{t('form.role')}</Label>
-              <Select value={selectedRoleId} onValueChange={(value) => set('roleId', value)} disabled={roles.isPending || Boolean(roles.error)}>
-                <SelectTrigger id="user-role" className="h-11! w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(roles.data ?? []).map((role) => (
-                    <SelectItem key={role.id} value={String(role.id)}>
-                      {role.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="user-username">{t('form.username')}</Label>
+              <Input
+                id="user-username"
+                className="h-11"
+                value={form.username}
+                onChange={(event) => set('username', event.target.value)}
+                disabled={user !== undefined}
+                autoComplete="off"
+                minLength={3}
+                maxLength={32}
+                pattern="[a-zA-Z0-9_.\-]+"
+                required
+                autoFocus={user === undefined}
+              />
+              {!user && <p className="text-xs text-muted-foreground">{t('form.usernameHint')}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="user-branch">{t('form.branch')}</Label>
-              <Select value={form.branchId} onValueChange={(value) => set('branchId', value)}>
-                <SelectTrigger id="user-branch" className="h-11! w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={String(branch.id)}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="user-display-name">{t('form.displayName')}</Label>
+              <Input
+                id="user-display-name"
+                className="h-11"
+                value={form.displayName}
+                onChange={(event) => set('displayName', event.target.value)}
+                maxLength={100}
+                required
+                autoFocus={user !== undefined}
+              />
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="user-password">{user ? t('form.newPassword') : t('form.password')}</Label>
-            <Input
-              id="user-password"
-              type="password"
-              className="h-11"
-              value={form.password}
-              onChange={(event) => set('password', event.target.value)}
-              autoComplete="new-password"
-              aria-invalid={!passwordOk && form.password !== ''}
-              maxLength={72}
-              required={user === undefined}
-            />
-            <p className="text-xs text-muted-foreground">{t('form.passwordHint')}</p>
-          </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="user-role">{t('form.role')}</Label>
+                <Select value={selectedRoleId} onValueChange={(value) => set('roleId', value)} disabled={roles.isPending || Boolean(roles.error)}>
+                  <SelectTrigger id="user-role" className="h-11! w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(roles.data ?? []).map((role) => (
+                      <SelectItem key={role.id} value={String(role.id)}>
+                        {role.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="user-branch">{t('form.branch')}</Label>
+                <Select value={form.branchId} onValueChange={(value) => set('branchId', value)}>
+                  <SelectTrigger id="user-branch" className="h-11! w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={String(branch.id)}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="user-password">{user ? t('form.newPassword') : t('form.password')}</Label>
+              <Input
+                id="user-password"
+                type="password"
+                className="h-11"
+                value={form.password}
+                onChange={(event) => set('password', event.target.value)}
+                autoComplete="new-password"
+                aria-invalid={!passwordOk && form.password !== ''}
+                maxLength={72}
+                required={user === undefined}
+              />
+              <p className="text-xs text-muted-foreground">{t('form.passwordHint')}</p>
+            </div>
 
-          {roles.error && <p role="alert" className="text-sm text-destructive">{roles.error.message}</p>}
-          {mutation.error && (
-            <p role="alert" className="text-sm text-destructive">
-              {mutation.error.message}
-            </p>
-          )}
-
+            {roles.error && <p role="alert" className="text-sm text-destructive">{roles.error.message}</p>}
+            {mutation.error && (
+              <p role="alert" className="text-sm text-destructive">
+                {mutation.error.message}
+              </p>
+            )}
+          </div>
           <DialogFooter>
             <Button type="button" variant="outline" className="h-11" onClick={onClose}>
               {tc('cancel')}
