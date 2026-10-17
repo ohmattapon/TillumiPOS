@@ -15,7 +15,7 @@ The second half is a change to the modifiers feature. A café records the same a
 
 - One dialog on `/products` ("เพิ่มจากชุดเมนูคาเฟ่") and the same dialog as the empty-state action, so a new café finds it on the page it will already open.
 - The owner ticks whole categories or single items; the server creates the missing categories, products, groups and options in one transaction with one audit entry.
-- Retrying is safe: an existing category or group is reused by name, an existing product is skipped and never overwritten, and the answer reports what happened ("เพิ่ม 18 ข้าม 4").
+- Retrying is safe: an existing category or group is reused by name for the items that are actually created, an existing product is skipped and never overwritten, and the answer reports what happened ("เพิ่ม 18 ข้าม 4"). A second run of the same keys creates nothing and therefore reuses nothing.
 - An option can be marked as the group's default, and the sell screen starts with it chosen.
 
 ## Non-goals
@@ -115,7 +115,7 @@ Item names are data (Thai product names stored in the database), not i18n keys: 
 ```ts
 {
   added:  { categories: number; products: number; groups: number; options: number }
-  reused: { categories: number; groups: number }
+  reused: { categories: number; groups: number } // only what the created items needed, so zero when everything was skipped
   skipped: { products: number; items: { key: string; name: string }[] }
 }
 ```
