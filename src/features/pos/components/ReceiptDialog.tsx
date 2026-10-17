@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Receipt, ReceiptPdfButton } from '@/features/sales'
-import { useFormat } from '@/features/settings'
+import { useFormat, useSettings } from '@/features/settings'
 
 interface Props {
   sale: Sale
@@ -15,10 +15,11 @@ interface Props {
 export function ReceiptDialog({ sale, onClose }: Props) {
   const { t } = useTranslation('pos')
   const { money } = useFormat()
+  const shop = useSettings()
   const receiptRef = useRef<HTMLDivElement>(null)
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-sm" showCloseButton={false}>
+      <DialogContent className="sm:max-w-sm" showCloseButton={false} data-receipt-paper={shop.receiptPaperMm}>
         <DialogHeader className="items-center text-center">
           <DialogDescription>{t('receipt.saved')}</DialogDescription>
           <DialogTitle className="text-4xl font-semibold text-success tabular-nums">

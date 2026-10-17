@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
+import { client as sql } from '../../libs/db'
 import { baseUrl, ok, login, MAIN_BRANCH_ID, PASSWORD, resetDatabase, seedProduct, signIn, type Session } from '../../../test/harness'
 
 let owner: Session
@@ -11,6 +12,7 @@ beforeEach(async () => {
 })
 
 const stockIn = async (api: Session['api'], id: number) => ok(await api.catalog.products({ id }).get()).stockQty
+const cash = (amountSatang: number) => [{ method: 'cash' as const, amountSatang }]
 
 describe('one branch', () => {
   test('an owner cannot add a second branch, and nothing is stored', async () => {
@@ -75,6 +77,22 @@ describe('working in a branch', () => {
 
     expect(malformed.status).toBe(400)
     expect(await malformed.json()).toMatchObject({ code: 'INVALID_BRANCH_ID' })
+  })
+
+  test('a user assigned to a second branch sells in MAIN, with MAIN receipt numbers and stock movements', async () => {
+    // No use case can create a second branch any more, so the row that an older install may hold is inserted directly.
+    const [elsewhere] = await sql`insert into branches (code, name) values ('BKK', 'สาขากรุงเทพ') returning id`
+    const staff = await signIn('cashier', 'bkk-cashier', { branchId: elsewhere!.id })
+    const tea = await seedProduct(owner, { stock: 4 })
+
+    const sale = ok(await staff.api.sales.post({ items: [{ productId: tea.id, quantity: 1 }], payments: cash(10_000) }))
+
+    expect(sale.branchId).toBe(MAIN_BRANCH_ID)
+    expect(sale.receiptNo).toMatch(/^MAIN-/)
+    const movements = ok(await owner.api.inventory.movements.get({ query: { productId: tea.id } })).items
+    expect(movements.map((movement) => movement.branchId)).toEqual(expect.arrayContaining([MAIN_BRANCH_ID]))
+    expect(movements.every((movement) => movement.branchId === MAIN_BRANCH_ID)).toBe(true)
+    expect(await stockIn(owner.api, tea.id)).toBe(3)
   })
 
   test('a user created without a branch belongs to MAIN', async () => {

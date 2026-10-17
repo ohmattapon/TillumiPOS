@@ -186,7 +186,7 @@ async function runSetupFlow(browser: Browser) {
 
     await check('a wrong setup code is refused with a message, and nothing is created', async () => {
       await fillForm('AAAAAAAAAAAA')
-      await page.getByRole('radio', { name: /อื่นๆ/ }).check()
+      await page.getByText('อื่นๆ', { exact: true }).click()
       await page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' }).click()
       await page.getByRole('alert').getByText(/รหัสตั้งค่าไม่ถูกต้อง/).waitFor()
       const status = await (await fetch(`http://localhost:${SETUP_API_PORT}/api/v1/setup`)).json()
@@ -283,7 +283,8 @@ async function main() {
     })
 
     await check('the customer screen needs no sign-in, then follows the cashier: the item and total, then paid, then idle', async () => {
-      // A stranger's browser: no session. The screen must neither show a login page nor ask the API for anything.
+      // A stranger's browser: no session. The screen must neither show a login page nor ask the API
+      // for anything beyond opening its own display session (the pairing flow).
       const stranger = await browser.newContext({ viewport: { width: 1366, height: 768 }, locale: 'th-TH' })
       try {
         const bare = await stranger.newPage()
@@ -294,7 +295,10 @@ async function main() {
         })
         await bare.goto(`${WEB}/customer`)
         await bare.getByText('ยินดีต้อนรับ').waitFor()
-        if (apiCalls.length > 0) throw new Error(`The customer screen called the API: ${apiCalls[0]}`)
+        const unexpected = apiCalls.filter(
+          (url) => !new URL(url).pathname.startsWith('/api/v1/customer-display/sessions'),
+        )
+        if (unexpected.length > 0) throw new Error(`The customer screen called the API: ${unexpected[0]}`)
       } finally {
         await stranger.close()
       }
@@ -309,7 +313,7 @@ async function main() {
         await display.getByText('น้ำดื่ม 600 มล.').waitFor()
         await display.getByText('ยอดสุทธิ').waitFor()
         await cashier.getByRole('button', { name: /^ชำระเงิน/ }).click()
-        // Not cash: the checks that close the shift assert exactly what the drawer should hold (฿160.00, and
+        // Not cash: the checks that close the shift assert exactly what the drawer should hold (฿169.00, and
         // a difference of -฿25.00), so this sale must not add to it.
         await cashier.getByRole('button', { name: 'พร้อมเพย์' }).click()
         await cashier.getByRole('button', { name: 'ยืนยันการชำระ' }).click()
@@ -334,6 +338,12 @@ async function main() {
       await receipt.getByText('ขอบคุณที่ใช้บริการ').waitFor()
 
       await owner.emulateMedia({ media: 'print' })
+      // Settle the 100ms open animation before measuring: rect snapshots mid-zoom read narrower than the paper width.
+      await receipt.waitForFunction(
+        (element) => element.getAnimations().every((animation) => animation.playState !== 'running'),
+        null,
+        { timeout: 5_000 },
+      )
       const widthMm = await receipt.evaluate((element) => (element.getBoundingClientRect().width * 25.4) / 96)
       const appVisible = await owner.locator('#root').isVisible()
       await owner.emulateMedia({ media: 'screen' })
@@ -507,9 +517,10 @@ async function main() {
     await check('the owner starts counting: the report is frozen and shows what the drawer should hold', async () => {
       await owner.getByRole('button', { name: 'เริ่มนับปิดกะ' }).click()
       await owner.getByText(/ยอดที่หยุดไว้ตอนเริ่มนับ/).waitFor()
-      // 100.00 opening + four sales of 10.00 (one of them on a phone) + one of 20.00 (10.00 and a 10.00 topping).
+      // 100.00 opening + six cash sales of 69.00: four of 10.00 (one of them on a phone),
+      // one of 9.00 (a 10.00 sale with the 10% promotion), one of 20.00 (10.00 and a 10.00 topping).
       await owner.getByText('เงินสดที่ควรมี').first().waitFor()
-      await owner.getByText('฿160.00').first().waitFor()
+      await owner.getByText('฿169.00').first().waitFor()
     })
 
     await check('the other till can no longer take payment once counting has started', async () => {
@@ -523,7 +534,8 @@ async function main() {
     })
 
     await check('a count that differs needs a reason before the shift can be closed', async () => {
-      await owner.getByLabel('เงินสดที่นับได้').fill('135')
+      // Counted 144.00 against an expected 169.00: a difference of -25.00 that needs a reason.
+      await owner.getByLabel('เงินสดที่นับได้').fill('144')
       const close = owner.getByRole('button', { name: 'ยืนยันปิดกะ' })
       if (!(await close.isDisabled())) throw new Error('Close is enabled without a reason for the difference')
       await owner.getByLabel('เหตุผลของยอดเงินที่ต่างกัน').fill('ทอนเงินผิด')
