@@ -111,7 +111,7 @@ Every operation is a use case that is exactly one of a command or a query, and t
 ### Branches (one fixed branch)
 
 - The shop has one branch, `MAIN`, created with the database. Every request works in `MAIN`: `ResolveBranchUseCase` ignores the `X-Branch-Id` header and the user's own branch, so old clients that still send them keep working in `MAIN`. Controllers read the branch from `await branch()` in the `auth` context. Never read the header yourself.
-- Creating a branch always answers `SINGLE_BRANCH_ONLY` (409), and `MAIN` cannot be closed (`MAIN_BRANCH_REQUIRED`, 409). The route stays in v1 so nothing disappears. Its code and name can still be changed.
+- Creating a branch always answers `SINGLE_BRANCH_ONLY` (409), and `MAIN` cannot be closed (`MAIN_BRANCH_REQUIRED`, 409). The route stays in v1 so nothing disappears. Its name, address and phone can still be changed.
 - The web has no branch screens, switcher or header. Branch data is not shown except on old receipts, which still print the branch they were sold in when no header was stored with the bill.
 - The branch permissions `branches.manage` and `branches.switch` still exist in the API, but the role editor does not offer them.
 - Exception to the QR money rule: a paid QR with no bill, a QR with an unknown outcome, a quote reserved by a QR and an open shift in a branch other than `MAIN` that existed before the one-branch change are unreachable from the system. Only demo databases had a second branch, so no check was added. New data never goes to another branch.
