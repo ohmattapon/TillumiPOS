@@ -106,18 +106,18 @@ export function LoginPage() {
                 {login.error && (
                   <p
                     role="alert"
-                    className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+                    className="mt-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
                   >
                     <CircleAlert className="mt-0.5 size-4 shrink-0" />
                     {login.error.message}
                   </p>
                 )}
-                <Button type="submit" disabled={login.isPending} className="h-11 w-full text-base">
+                <Button type="submit" disabled={login.isPending} className="mt-2 h-11 w-full text-base font-medium">
                   {login.isPending ? t('submitting') : t('submit')}
                 </Button>
               </form>
             </section>
-            <p className="text-center text-xs text-muted-foreground">{t('forgotPassword')}</p>
+            <p className="mt-6 text-center text-xs leading-relaxed text-muted-foreground">{t('forgotPassword')}</p>
           </div>
         </div>
       </main>
