@@ -341,12 +341,16 @@ export const mockAuditLog = (): Mocked<IAuditLog> => ({ record: mock(async () =>
 
 import type { IPinGuard } from '../modules/auth/applications/ports/pin-guard.port'
 
-/** Counts failures per user like the real guard (5 locks), without a clock: a lock lasts for the whole test. */
+/** Counts attempts per user like the real guard (the 5th locks), without a clock: a lock lasts for the whole test. */
 export const mockPinGuard = (): Mocked<IPinGuard> => {
-  const failures = new Map<number, number>()
+  const attempts = new Map<number, number>()
   return {
-    check: mock((userId: number) => ((failures.get(userId) ?? 0) >= 5 ? 'locked' as const : 'ok' as const)),
-    recordFailure: mock((userId: number) => { failures.set(userId, (failures.get(userId) ?? 0) + 1) }),
-    recordSuccess: mock((userId: number) => { failures.delete(userId) }),
+    begin: mock((userId: number) => {
+      const count = attempts.get(userId) ?? 0
+      if (count >= 5) return 'locked' as const
+      attempts.set(userId, count + 1)
+      return 'ok' as const
+    }),
+    recordSuccess: mock((userId: number) => { attempts.delete(userId) }),
   }
 }

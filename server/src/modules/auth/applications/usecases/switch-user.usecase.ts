@@ -27,19 +27,20 @@ export class SwitchUserUseCase {
   async execute(input: unknown, actor: { id: number; displayName: string }): Promise<UserEntity> {
     const { userId, pin } = switchUserSchema.parse(input)
 
-    // Checked before the hash so a locked PIN cannot be tested at all.
-    if (this.guard.check(userId) === 'locked')
-      throw new DomainConflictError('ใส่ PIN ผิดหลายครั้ง กรุณารอ 15 นาทีแล้วลองใหม่', 'PIN_LOCKED')
-
     const target = await this.users.findActiveById(userId)
     const pinHash = await this.users.findPinHash(userId)
+    // Reveals only what the switch-users list already shows, so it counts no attempt.
     if (!target || !pinHash) throw new DomainError('ผู้ใช้นี้ยังไม่ได้ตั้ง PIN', 'PIN_NOT_SET')
+
+    // The attempt is counted here, synchronously, before the hash check (the step that can be guessed) is
+    // awaited: parallel requests each take a slot, so at most five reach the hash before the lock.
+    if (this.guard.begin(userId) === 'locked')
+      throw new DomainConflictError('ใส่ PIN ผิดหลายครั้ง กรุณารอ 15 นาทีแล้วลองใหม่', 'PIN_LOCKED')
 
     const from = { id: actor.id, displayName: actor.displayName }
     const to = { id: target.id, displayName: target.displayName }
     if (!(await this.hasher.verify(pin, pinHash))) {
-      this.guard.recordFailure(userId)
-      // Outside any transaction, like a failed login: the audit write must never change the answer.
+      // Already counted by begin(). Outside any transaction, like a failed login: the audit write must never change the answer.
       try {
         await this.audit.record({ id: actor.id, name: actor.displayName }, target.branchId, buildAuditEntry({
           action: 'auth.switch_failed',
@@ -53,7 +54,6 @@ export class SwitchUserUseCase {
       throw new DomainError('PIN ไม่ถูกต้อง', 'PIN_INVALID')
     }
 
-    this.guard.recordSuccess(userId)
     await this.audit.record({ id: actor.id, name: actor.displayName }, target.branchId, buildAuditEntry({
       action: 'auth.switch',
       entityType: 'user',
@@ -62,6 +62,7 @@ export class SwitchUserUseCase {
       before: from,
       after: to,
     }))
+    this.guard.recordSuccess(userId)
     return target
   }
 }
