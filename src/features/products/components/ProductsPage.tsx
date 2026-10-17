@@ -1,6 +1,6 @@
 import type { Product } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
-import { MoreHorizontal, PackagePlus, Plus } from 'lucide-react'
+import { Coffee, MoreHorizontal, PackagePlus, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -11,6 +11,7 @@ import { PaginationBar } from '@/components/PaginationBar'
 import { TableSearch } from '@/components/TableSearch'
 import { useListPagination } from '@/hooks/use-list-pagination'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
+import { CafeMenuDialog } from './CafeMenuDialog'
 import { ProductFormDialog } from './ProductFormDialog'
 import { ProductImage } from './ProductImage'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
@@ -32,7 +33,11 @@ import { isLowStock, LOW_STOCK_THRESHOLD } from '../lib/stock'
 
 type Filter = 'all' | 'low' | 'inactive'
 
-type OpenDialog = { kind: 'form'; product?: Product } | { kind: 'stock'; product: Product; mode: StockMode } | null
+type OpenDialog =
+  | { kind: 'form'; product?: Product }
+  | { kind: 'stock'; product: Product; mode: StockMode }
+  | { kind: 'cafeMenu' }
+  | null
 
 export function ProductsPage() {
   const { can } = useAuthorization()
@@ -41,6 +46,9 @@ export function ProductsPage() {
   const { money } = useFormat()
   const { vatMode } = useSettings()
   const categories = useQuery(categoriesQuery)
+
+  // The set writes categories, products and modifier groups at once, so it needs all three rights.
+  const canAddCafeMenu = can('products.write') && can('categories.write') && can('modifiers.write')
 
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
@@ -84,6 +92,12 @@ export function ProductsPage() {
               })
         }
       >
+        {canAddCafeMenu && (
+          <Button variant="outline" className="h-11 px-3" onClick={() => setDialog({ kind: 'cafeMenu' })}>
+            <Coffee />
+            {t('cafeMenu.button')}
+          </Button>
+        )}
         {can('products.write') && <Button className="h-11 px-3" onClick={() => setDialog({ kind: 'form' })}>
           <Plus />
           {t('add')}
@@ -110,7 +124,17 @@ export function ProductsPage() {
             rows={visible}
             rowKey={(product) => product.id}
             isPending={products.isPending || searching}
-            empty={t('list.empty')}
+            empty={
+              <span className="block space-y-3">
+                <span className="block">{t('list.empty')}</span>
+                {canAddCafeMenu && (
+                  <Button variant="outline" className="h-11" onClick={() => setDialog({ kind: 'cafeMenu' })}>
+                    <Coffee />
+                    {t('cafeMenu.emptyAction')}
+                  </Button>
+                )}
+              </span>
+            }
             muted={(product) => !product.isActive}
             columns={[
               {
@@ -214,6 +238,7 @@ export function ProductsPage() {
       {dialog?.kind === 'stock' && (
         <StockDialog product={dialog.product} mode={dialog.mode} onClose={() => setDialog(null)} />
       )}
+      {dialog?.kind === 'cafeMenu' && <CafeMenuDialog onClose={() => setDialog(null)} />}
     </>
   )
 }

@@ -73,6 +73,7 @@ export const errors = {
     MODIFIER_DUPLICATE: 'The same option cannot be chosen twice.',
     MODIFIER_NOT_AVAILABLE: 'This option cannot be used for this product.',
     INVALID_MODIFIER: 'These option details are not valid.',
+    INVALID_CAFE_MENU_ITEM: 'That item is not part of the cafe menu set.',
     SETUP_DONE: 'This shop is already set up.',
     SETUP_CODE_INVALID: 'The setup code is not right. It is printed in the system log.',
     SETUP_LOCKED: 'Too many wrong codes. Please wait 15 minutes and try again.',
