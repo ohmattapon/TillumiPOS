@@ -12,16 +12,13 @@ function BrandLogo() {
   return <img src="/tillumipos-logo.png" alt={t('brand.logoAlt')} className="mx-auto mb-6 block h-16 w-auto" />
 }
 
-/** The left half of the floating card: the till photo full-bleed on top, short caption below. Shown from 1024px up. */
+/** The left half of the floating card: the till photo full-bleed. Shown from 1024px up. */
 function CardImage() {
   const { t } = useTranslation('auth')
   return (
     <div className="hidden flex-col lg:flex">
       <div className="relative min-h-72 flex-1">
         <img src="/login-hero.jpg" alt={t('brand.imageAlt')} loading="lazy" className="absolute inset-0 size-full object-cover" />
-      </div>
-      <div className="bg-primary p-8 text-primary-foreground">
-        <p className="text-xl leading-snug font-semibold">{t('brand.headline')}</p>
       </div>
     </div>
   )
