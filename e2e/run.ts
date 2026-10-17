@@ -422,6 +422,19 @@ async function main() {
       await owner.getByText('+10.00').first().waitFor()
     })
 
+    await check('products offer manual creation without the starter menu, including empty results', async () => {
+      await owner.goto(`${WEB}/products`)
+      await owner.getByRole('button', { name: 'เพิ่มสินค้า', exact: true }).waitFor()
+      const starterActions = owner.getByRole('button', { name: /เมนูคาเฟ่/ })
+      if (await starterActions.count()) throw new Error('The starter menu action is still visible')
+
+      const search = owner.getByRole('textbox', { name: 'ค้นหาสินค้า' })
+      await search.fill('no-such-cafe-product-e2e')
+      await owner.getByText('ไม่พบสินค้า', { exact: true }).locator('visible=true').waitFor()
+      if (await starterActions.count()) throw new Error('Empty results still offer the starter menu')
+      await search.fill('')
+    })
+
     await check('the owner offers the group on a product from the product form', async () => {
       await owner.goto(`${WEB}/products`)
       const row = owner.getByRole('row', { name: /น้ำดื่ม 600 มล\./ })
