@@ -12,7 +12,7 @@ function BrandLogo() {
   return <img src="/tillumipos-logo.png" alt={t('brand.logoAlt')} className="mx-auto mb-6 block h-16 w-auto" />
 }
 
-/** The left half of the floating card: the till photo full-bleed on top, one caption line below. Shown from 1024px up. */
+/** The left half of the floating card: the till photo full-bleed on top, short caption below. Shown from 1024px up. */
 function CardImage() {
   const { t } = useTranslation('auth')
   return (
