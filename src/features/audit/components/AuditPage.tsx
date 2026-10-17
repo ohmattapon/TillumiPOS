@@ -43,7 +43,6 @@ export function AuditPage() {
           { id: 'time', header: t('time'), priority: 'primary', cell: (row) => date.dateTime(row.at) },
           { id: 'actor', header: t('person'), priority: 'primary', cell: (row) => <span>{row.actorName}{row.actorId !== null && <span className="ml-1 text-xs text-muted-foreground">#{row.actorId}</span>}</span> },
           { id: 'summary', header: t('summary'), priority: 'secondary', cell: (row) => describeEntry(row, (key) => t(key, { defaultValue: row.action })) },
-          { id: 'branch', header: t('branch'), priority: 'wide-only', cell: (row) => row.branchId ?? t('noValue') },
         ]} />
         <PaginationBar page={page} pageSize={50} total={result.data?.total} isLoading={result.isPending} onPageChange={(next) => { setPage(next); setSelected(null) }} />
       </Panel>
