@@ -11,8 +11,8 @@ const group = (overrides: Partial<ModifierGroup>): ModifierGroup => ({
   isActive: true,
   productIds: [7],
   options: [
-    { id: 10, groupId: 1, name: 'หวานน้อย', priceSatang: 0, costSatang: 0, sortOrder: 0, isActive: true },
-    { id: 11, groupId: 1, name: 'หวานมาก', priceSatang: 0, costSatang: 0, sortOrder: 1, isActive: false },
+    { id: 10, groupId: 1, name: 'หวานน้อย', priceSatang: 0, costSatang: 0, sortOrder: 0, isActive: true, isDefault: false },
+    { id: 11, groupId: 1, name: 'หวานมาก', priceSatang: 0, costSatang: 0, sortOrder: 1, isActive: false, isDefault: false },
   ],
   ...overrides,
 })
