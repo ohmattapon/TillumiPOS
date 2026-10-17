@@ -38,8 +38,12 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-muted p-4 sm:p-8">
-      <div className="grid w-full max-w-4xl overflow-hidden rounded-[10px] border bg-card lg:grid-cols-2">
+    <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-muted p-4 sm:p-8">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_38%,color-mix(in_srgb,var(--color-primary)_22%,transparent),transparent_75%)]"
+      />
+      <div className="relative grid w-full max-w-4xl overflow-hidden rounded-[10px] border bg-card lg:grid-cols-2">
         <CardImage />
         <main className="flex items-center justify-center">
           <div className="mx-auto w-full max-w-sm p-6 sm:p-8">
