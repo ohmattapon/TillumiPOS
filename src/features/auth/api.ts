@@ -2,7 +2,7 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/r
 import { canDo, isPermission, type Permission } from '@pos/api/permissions'
 import { api, unwrap } from '@/lib/api'
 import { forgetSession } from './lib/forget-session'
-import { handOverSession } from './lib/hand-over-session'
+import { completeHandOver } from './lib/hand-over-session'
 
 export const authKeys = {
   me: ['auth', 'me'] as const,
@@ -62,8 +62,7 @@ export function useSwitchUser(options: { onHandOver: (newUserId: number) => void
   return useMutation({
     mutationFn: (input: { userId: number; pin: string }) => unwrap(api.auth.switch.post(input)),
     onSuccess: async (user) => {
-      await handOverSession(queryClient, authKeys.me)
-      options.onHandOver(user.id)
+      await completeHandOver(queryClient, authKeys.me, user.id, options.onHandOver)
     },
   })
 }

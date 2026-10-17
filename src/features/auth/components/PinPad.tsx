@@ -23,6 +23,8 @@ export function PinPad({ pin, onChange, onSubmit, disabled = false }: Props) {
       if (/^\d$/.test(event.key)) onChange(appendDigit(pin, event.key))
       else if (event.key === 'Backspace') onChange(removeDigit(pin))
       else if (event.key === 'Enter' && canSubmitPin(pin)) {
+        // Enter on a focused button (Cancel, use password, or the pad's own submit) is that button's click.
+        if (event.target instanceof Element && event.target.closest('button, a')) return
         event.preventDefault()
         onSubmit()
       }
