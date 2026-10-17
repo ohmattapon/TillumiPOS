@@ -8,6 +8,7 @@ import { auditLogToken, type IAuditLog } from '../../../audit/applications/ports
 import type { IMediaStorage } from '../../../shared/ports/media-storage.port'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import { TOKENS } from '../../../tokens'
+import { slideIdGeneratorToken, type ISlideIdGenerator } from '../ports/slide-id-generator.port'
 import { slideRepositoryToken, type ISlideRepository } from '../ports/slide.repository'
 import { MAX_SLIDE_IMAGE_BYTES, uploadSlideImageSchema } from '../schemas/slide-schemas'
 
@@ -21,6 +22,7 @@ export class UploadSlideImageUseCase {
     @inject(TOKENS.MediaStorage) private readonly media: IMediaStorage,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
     @inject(auditLogToken) private readonly audit: IAuditLog,
+    @inject(slideIdGeneratorToken) private readonly ids: ISlideIdGenerator,
   ) {}
 
   async execute(input: unknown, actor: Actor & { id: number; displayName: string }) {
@@ -35,7 +37,7 @@ export class UploadSlideImageUseCase {
       throw new DomainExternalServiceError('ร้านนี้ปิดการใช้รูปภาพอยู่', 'MEDIA_UNAVAILABLE')
 
     // A new key per upload lets browsers and the edge cache images forever.
-    const key = ['slides', crypto.randomUUID() + '.' + extension].join('/')
+    const key = ['slides', this.ids.newId() + '.' + extension].join('/')
     // Outside the transaction: never hold a unit of work across a call to an outside system.
     await this.media.put(key, dto.file)
 
