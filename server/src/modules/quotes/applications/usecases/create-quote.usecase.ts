@@ -4,6 +4,7 @@ import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found
 import { lineKey } from '../../../../domains/modifier.domain'
 import { PriceQuoteEntity, type QuoteLine } from '../../../../domains/price-quote.domain'
 import { pickBestPromotion } from '../../../../domains/promotion.domain'
+import { packUnitPriceSatang, type ProductPack } from '../../../../domains/product-pack'
 import type { ProductEntity } from '../../../../domains/product.domain'
 import type { SaleMember } from '../../../../domains/sale.domain'
 import { memberRepositoryToken, type IMemberRepository } from '../../../members/applications/ports/member.repository'
@@ -85,38 +86,56 @@ export class CreateQuoteUseCase {
     )
   }
 
-  /** The same product with the same options is one line; stock is the product's, so checked for the total. */
-  private async priceLines(requested: { productId: number; quantity: number; options?: number[] }[], branchId: number) {
-    const wanted = new Map<string, { productId: number; optionIds: number[]; quantity: number }>()
-    for (const { productId, quantity, options = [] } of requested) {
+  /**
+   * The same product with the same options, or the same pack, is one line. Stock is the product's in pieces,
+   * so it is checked for the total of every line of the product. A pack has no options and is priced as a pack.
+   */
+  private async priceLines(
+    requested: { productId: number; quantity: number; options?: number[]; packId?: number }[],
+    branchId: number,
+  ) {
+    const wanted = new Map<string, { productId: number; optionIds: number[]; packId: number | null; quantity: number }>()
+    for (const { productId, quantity, options = [], packId } of requested) {
+      if (packId !== undefined && options.length > 0)
+        throw new DomainError('แพ็กสินค้าเลือกตัวเลือกเพิ่มไม่ได้', 'PACK_WITH_OPTIONS')
       const optionIds = [...options].sort((a, b) => a - b)
-      const key = `${productId}:${lineKey(optionIds.map((optionId) => ({ optionId })))}`
+      const key = `${productId}:${lineKey(optionIds.map((optionId) => ({ optionId })))}:${packId ?? ''}`
       const existing = wanted.get(key)
       if (existing) existing.quantity += quantity
-      else wanted.set(key, { productId, optionIds, quantity })
+      else wanted.set(key, { productId, optionIds, packId: packId ?? null, quantity })
     }
 
-    const demand = new Map<number, number>()
-    for (const line of wanted.values()) demand.set(line.productId, (demand.get(line.productId) ?? 0) + line.quantity)
     const productsById = new Map<number, ProductEntity>()
-    for (const [productId, quantity] of demand) {
+    const packs = new Map<string, ProductPack>()
+    for (const productId of new Set([...wanted.values()].map((line) => line.productId))) {
       const product = await this.products.findById(productId, branchId)
       if (!product) throw new DomainError('ไม่พบสินค้ารหัส ' + productId, 'PRODUCT_NOT_FOUND', { productId })
-      product.assertSellable(quantity)
+      let pieces = 0
+      for (const [key, line] of wanted) {
+        if (line.productId !== productId) continue
+        const pack = line.packId === null ? undefined : product.packForSale(line.packId)
+        if (pack) packs.set(key, pack)
+        pieces += line.quantity * (pack?.size ?? 1)
+      }
+      product.assertSellable(pieces)
       productsById.set(productId, product)
     }
 
     const lines: QuoteLine[] = []
-    for (const line of wanted.values()) {
+    for (const [key, line] of wanted) {
       const product = productsById.get(line.productId)!
+      const pack = packs.get(key)
+      // A pack is resolved with no options, so a product that needs a choice cannot be quoted as a pack.
       const resolved = await this.lineOptions.resolve(line.productId, line.optionIds)
       lines.push({
         productId: product.id,
         productName: product.name,
         sku: product.sku,
-        unitPriceSatang: product.priceSatang + resolved.priceSatang,
+        unitPriceSatang: pack ? packUnitPriceSatang(product.priceSatang, pack) : product.priceSatang + resolved.priceSatang,
         quantity: line.quantity,
         options: resolved.options,
+        packId: pack?.id ?? null,
+        packSize: pack?.size ?? 1,
       })
     }
     return lines

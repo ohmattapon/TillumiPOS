@@ -5,7 +5,7 @@ import { mockClock, mockOrderQuoteSource, mockPriceQuoteRepository } from '../..
 import { QuoteClaims } from './quote-claims'
 
 const now = new Date('2026-10-15T05:05:00Z')
-const cart = { branchId: 1, memberId: null, orderId: null, lines: [{ productId: 1, optionIds: [], quantity: 3 }] }
+const cart = { branchId: 1, memberId: null, orderId: null, lines: [{ productId: 1, optionIds: [], quantity: 3, packId: null }] }
 
 let quotes: ReturnType<typeof mockPriceQuoteRepository>
 let orders: ReturnType<typeof mockOrderQuoteSource>
@@ -87,12 +87,12 @@ describe('reserveForQr', () => {
     })
     orders.lockOpenOrder.mockImplementation(async () => {
       steps.push('order')
-      return { id: 9, memberId: null, items: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 1000, quantity: 3, options: [] }] }
+      return { id: 9, memberId: null, items: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 1000, quantity: 3, options: [], packId: null, packSize: 1 }] }
     })
     await claims.reserveForQr(5, claim)
     expect(steps).toEqual(['order', 'quote'])
 
-    orders.lockOpenOrder.mockResolvedValue({ id: 9, memberId: null, items: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 1000, quantity: 4, options: [] }] })
+    orders.lockOpenOrder.mockResolvedValue({ id: 9, memberId: null, items: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 1000, quantity: 4, options: [], packId: null, packSize: 1 }] })
     await expect(claims.reserveForQr(5, claim)).rejects.toMatchObject({ code: 'QUOTE_MISMATCH' })
   })
 })

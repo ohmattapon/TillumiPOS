@@ -36,6 +36,7 @@ const toQuoteLine = (line: CheckoutLine): QuoteRequestLine => ({
   productId: line.productId,
   optionIds: line.options ? line.options.map((option) => option.optionId) : [...(line.optionIds ?? [])],
   quantity: line.quantity,
+  packId: line.packId ?? null,
 })
 
 @injectable()
@@ -102,6 +103,8 @@ export class SaleCheckout implements ISaleCheckout {
       packId: number | undefined
       quantity: number
       quotedUnitPriceSatang: number | undefined
+      /** A pack as a quote pinned it: sold at that size and price even if the pack was changed or switched off since. */
+      pinnedPack: { id: number; size: number; unitPriceSatang: number } | undefined
     }
     const keyOf = (productId: number, options: readonly LineOption[], packId: number | undefined) =>
       `${productId}:${lineKey(options)}:${packId ?? ''}`
@@ -109,16 +112,19 @@ export class SaleCheckout implements ISaleCheckout {
     if (quote) {
       // The quote has the options and the price of every line; nothing is resolved or priced again.
       for (const line of quote.lines) {
-        const key = keyOf(line.productId, line.options, undefined)
+        const packId = line.packId ?? undefined
+        const key = keyOf(line.productId, line.options, packId)
         const existing = wanted.get(key)
         if (existing) existing.quantity += line.quantity
         else
           wanted.set(key, {
             productId: line.productId,
             options: [...line.options],
-            packId: undefined,
+            packId,
             quantity: line.quantity,
             quotedUnitPriceSatang: line.unitPriceSatang,
+            pinnedPack:
+              packId === undefined ? undefined : { id: packId, size: line.packSize, unitPriceSatang: line.unitPriceSatang },
           })
       }
     } else {
@@ -140,6 +146,7 @@ export class SaleCheckout implements ISaleCheckout {
             packId: line.packId,
             quantity: line.quantity,
             quotedUnitPriceSatang: line.unitPriceSatang,
+            pinnedPack: undefined,
           })
       }
     }
@@ -157,21 +164,23 @@ export class SaleCheckout implements ISaleCheckout {
       const product = productsById.get(productId)
       if (!product) throw new DomainError('ไม่พบสินค้ารหัส ' + productId, 'PRODUCT_NOT_FOUND', { productId })
       // Stock is the product's in pieces, whichever options or packs the lines have, so it is checked for the
-      // total. Packs are read from the locked product, so one switched off by another till cannot slip through.
+      // total. Packs are read from the locked product, so one switched off by another till cannot slip through;
+      // a pack a quote pinned is not read again, because the money for it may already have been paid.
       let pieces = 0
       for (const line of wanted.values()) {
         if (line.productId !== productId) continue
-        const pack = line.packId === undefined ? undefined : product.packForSale(line.packId)
+        const pack = line.packId === undefined || line.pinnedPack ? undefined : product.packForSale(line.packId)
         if (pack) packs.set(line, pack)
-        pieces += line.quantity * (pack?.size ?? 1)
+        pieces += line.quantity * (line.pinnedPack?.size ?? pack?.size ?? 1)
       }
       product.assertSellable(pieces)
     }
 
     const lines = [...wanted.values()].map((line) => {
       const product = productsById.get(line.productId)!
+      if (line.pinnedPack) return { product, quantity: line.quantity, pack: { ...line.pinnedPack } }
       const pack = packs.get(line)
-      // A pack is always charged its own price; orders and quotes do not carry packs.
+      // A pack not pinned by a quote is charged its own price now; orders do not carry packs.
       if (pack)
         return {
           product,

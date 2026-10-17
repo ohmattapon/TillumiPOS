@@ -18,8 +18,8 @@ const option = { groupId: 1, groupName: 'ท็อปปิง', optionId: 7, na
 const input = (overrides: Partial<NewPriceQuote> = {}): NewPriceQuote => ({
   branchId: 1, memberId: null, member: null, orderId: null,
   lines: [
-    { productId: 1, productName: 'ชาไทย', sku: 'T1', unitPriceSatang: 4500, quantity: 2, options: [option] },
-    { productId: 2, productName: 'เค้ก', sku: 'C1', unitPriceSatang: 6000, quantity: 1, options: [] },
+    { productId: 1, productName: 'ชาไทย', sku: 'T1', unitPriceSatang: 4500, quantity: 2, options: [option], packId: null, packSize: 1 },
+    { productId: 2, productName: 'เค้ก', sku: 'C1', unitPriceSatang: 6000, quantity: 1, options: [], packId: null, packSize: 1 },
   ],
   promotion: null, vatMode: 'inclusive', vatRateBp: 700, createdById: 3, ...overrides,
 })
@@ -29,7 +29,7 @@ const stored = (overrides: Partial<PriceQuoteProps> = {}) =>
   })
 const request = (overrides: Partial<QuoteRequest> = {}): QuoteRequest => ({
   branchId: 1, memberId: null, orderId: null,
-  lines: [{ productId: 2, optionIds: [], quantity: 1 }, { productId: 1, optionIds: [7], quantity: 2 }],
+  lines: [{ productId: 2, optionIds: [], quantity: 1, packId: null }, { productId: 1, optionIds: [7], quantity: 2, packId: null }],
   ...overrides,
 })
 const after = (ms: number) => new Date(now.getTime() + ms)
@@ -64,7 +64,7 @@ describe('pricing a quote', () => {
 describe('matching a request', () => {
   test('same branch, member and lines in any order match; repeated lines add up', () => {
     expect(stored().matches(request())).toBe(true)
-    const split = request({ lines: [{ productId: 1, optionIds: [7], quantity: 1 }, { productId: 2, optionIds: [], quantity: 1 }, { productId: 1, optionIds: [7], quantity: 1 }] })
+    const split = request({ lines: [{ productId: 1, optionIds: [7], quantity: 1, packId: null }, { productId: 2, optionIds: [], quantity: 1, packId: null }, { productId: 1, optionIds: [7], quantity: 1, packId: null }] })
     expect(stored().matches(split)).toBe(true)
   })
 
@@ -72,9 +72,9 @@ describe('matching a request', () => {
     const quote = stored()
     expect(quote.matches(request({ branchId: 2 }))).toBe(false)
     expect(quote.matches(request({ memberId: 5 }))).toBe(false)
-    expect(quote.matches(request({ lines: [{ productId: 2, optionIds: [], quantity: 1 }, { productId: 1, optionIds: [7], quantity: 3 }] }))).toBe(false)
-    expect(quote.matches(request({ lines: [{ productId: 2, optionIds: [], quantity: 1 }, { productId: 1, optionIds: [], quantity: 2 }] }))).toBe(false)
-    expect(quote.matches(request({ lines: [{ productId: 2, optionIds: [], quantity: 1 }] }))).toBe(false)
+    expect(quote.matches(request({ lines: [{ productId: 2, optionIds: [], quantity: 1, packId: null }, { productId: 1, optionIds: [7], quantity: 3, packId: null }] }))).toBe(false)
+    expect(quote.matches(request({ lines: [{ productId: 2, optionIds: [], quantity: 1, packId: null }, { productId: 1, optionIds: [], quantity: 2, packId: null }] }))).toBe(false)
+    expect(quote.matches(request({ lines: [{ productId: 2, optionIds: [], quantity: 1, packId: null }] }))).toBe(false)
   })
 
   test("an order quote matches only its own order, and a cart quote only a one-step sale", () => {
@@ -83,6 +83,35 @@ describe('matching a request', () => {
     expect(orderQuote.matches(request({ orderId: 5 }))).toBe(false)
     expect(orderQuote.matches(request({ orderId: null }))).toBe(false)
     expect(stored().matches(request({ orderId: 4 }))).toBe(false)
+  })
+
+  test('a pack line matches only the same pack, never loose pieces of the product, and the other way round', () => {
+    const packLine = { productId: 3, productName: 'น้ำ', sku: 'W1', unitPriceSatang: 9000, quantity: 1, options: [], packId: 12, packSize: 6 }
+    const pieceLine = { ...packLine, unitPriceSatang: 1500, packId: null, packSize: 1 }
+    const packQuote = new PriceQuoteEntity({
+      ...PriceQuoteEntity.price(input({ lines: [packLine] }), now), id: 12, status: 'open', qrReference: null, saleId: null, createdAt: now,
+    })
+    const pieceQuote = new PriceQuoteEntity({
+      ...PriceQuoteEntity.price(input({ lines: [pieceLine] }), now), id: 13, status: 'open', qrReference: null, saleId: null, createdAt: now,
+    })
+    const asked = (packId: number | null) => request({ lines: [{ productId: 3, optionIds: [], quantity: 1, packId }] })
+
+    expect(packQuote.matches(asked(12))).toBe(true)
+    expect(packQuote.matches(asked(null))).toBe(false)
+    expect(packQuote.matches(asked(13))).toBe(false)
+    expect(pieceQuote.matches(asked(null))).toBe(true)
+    expect(pieceQuote.matches(asked(12))).toBe(false)
+  })
+})
+
+describe('restoring a stored quote', () => {
+  test('a line stored before packs were kept sold loose pieces', () => {
+    const { packId: _id, packSize: _size, ...oldLine } = input().lines[1]!
+    const quote = new PriceQuoteEntity({
+      ...PriceQuoteEntity.price(input(), now), lines: [oldLine], id: 11, status: 'open', qrReference: null, saleId: null, createdAt: now,
+    })
+    expect(quote.lines[0]).toMatchObject({ packId: null, packSize: 1 })
+    expect(quote.toSnapshot().lines[0]).toMatchObject({ packId: null, packSize: 1 })
   })
 })
 

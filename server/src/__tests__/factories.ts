@@ -1,5 +1,5 @@
 import { BranchEntity, type BranchEntityProps } from '../domains/branch.domain'
-import { PriceQuoteEntity, type PriceQuoteProps } from '../domains/price-quote.domain'
+import { PriceQuoteEntity, type StoredPriceQuoteProps } from '../domains/price-quote.domain'
 import { DiningTableEntity, type DiningTableProps } from '../domains/dining-table.domain'
 import {
   ModifierGroupEntity,
@@ -172,7 +172,7 @@ export const makeTable = (overrides: Partial<DiningTableProps> = {}) =>
   })
 
 /** An open quote for 3 x 10.00 made at 12:00 on 2026-10-15 (Bangkok), good for 15 minutes. */
-export const makePriceQuote = (overrides: Partial<PriceQuoteProps> = {}) =>
+export const makePriceQuote = (overrides: Partial<StoredPriceQuoteProps> = {}) =>
   new PriceQuoteEntity({
     id: 5,
     branchId: 1,

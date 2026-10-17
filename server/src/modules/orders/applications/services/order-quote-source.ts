@@ -23,7 +23,7 @@ export class OrderQuoteSource implements IOrderQuoteSource {
       id: order.id,
       memberId: order.memberId,
       items: order.items.map(({ productId, productName, sku, unitPriceSatang, quantity, options }) => ({
-        productId, productName, sku, unitPriceSatang, quantity, options: [...options],
+        productId, productName, sku, unitPriceSatang, quantity, options: [...options], packId: null, packSize: 1,
       })),
     }
   }

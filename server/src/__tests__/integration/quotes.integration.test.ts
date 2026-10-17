@@ -26,7 +26,7 @@ describe('creating a quote', () => {
       promotion: { name: 'ลด 10%', kind: 'percent', value: 1000, discountSatang: 500 },
     })
     expect(quote.lines).toEqual([
-      { productId: tea.id, productName: tea.name, sku: tea.sku, unitPriceSatang: 2500, quantity: 2, options: [] },
+      { productId: tea.id, productName: tea.name, sku: tea.sku, unitPriceSatang: 2500, quantity: 2, options: [], packId: null, packSize: 1 },
     ])
     expect(new Date(quote.expiresAt).getTime()).toBeGreaterThan(Date.now() + 14 * 60_000)
   })
@@ -70,6 +70,53 @@ describe('creating a quote', () => {
     expect(short.error?.value).toMatchObject({ code: 'INSUFFICIENT_STOCK' })
     expect((await cashier.api.quotes.post({ orderId: 99999 })).status).toBe(404)
     expect((await fetch(`${baseUrl}/quotes/1`)).status).toBe(401)
+  })
+})
+
+describe('a quote with a pack', () => {
+  const cash = (amountSatang: number) => [{ method: 'cash' as const, amountSatang }]
+  const water = async () => {
+    const product = await seedProduct(owner, { priceSatang: 1500, packs: [{ barcode: 'BOX6', size: 6, priceSatang: null }] })
+    ok(await owner.api.inventory.receive.post({ productId: product.id, quantity: 12 }))
+    return { product, packId: product.packs[0]!.id }
+  }
+
+  test('is pinned at the pack price and sold at it after the pack was repriced and switched off', async () => {
+    const { product, packId } = await water()
+    const quote = ok(await cashier.api.quotes.post({ lines: [{ productId: product.id, packId, quantity: 1 }] }))
+    expect(quote.lines).toEqual([expect.objectContaining({ packId, packSize: 6, unitPriceSatang: 9000, quantity: 1 })])
+    expect(quote.subtotalSatang).toBe(9000)
+
+    ok(await owner.api.catalog.products({ id: product.id }).patch({
+      packs: [{ id: packId, barcode: 'BOX6', size: 6, priceSatang: 12000, isActive: false }],
+    }))
+    const sale = ok(await cashier.api.sales.post({
+      items: [{ productId: product.id, packId, quantity: 1 }], payments: cash(9000), quoteId: quote.id,
+    }))
+
+    expect(sale).toMatchObject({ subtotalSatang: 9000, totalSatang: 9000 })
+    expect(sale.items).toEqual([expect.objectContaining({ packId, packSize: 6, quantity: 1, unitPriceSatang: 9000 })])
+    expect(ok(await owner.api.catalog.products({ id: product.id }).get()).stockQty).toBe(6)
+    expect(ok(await cashier.api.quotes({ id: quote.id }).get()).status).toBe('consumed')
+  })
+
+  test('a pack and loose pieces never stand in for each other', async () => {
+    const { product, packId } = await water()
+    const pieceQuote = ok(await cashier.api.quotes.post({ lines: [{ productId: product.id, quantity: 1 }] }))
+    const packQuote = ok(await cashier.api.quotes.post({ lines: [{ productId: product.id, packId, quantity: 1 }] }))
+
+    const packOnPieces = await cashier.api.sales.post({
+      items: [{ productId: product.id, packId, quantity: 1 }], payments: cash(9000), quoteId: pieceQuote.id,
+    })
+    const piecesOnPack = await cashier.api.sales.post({
+      items: [{ productId: product.id, quantity: 1 }], payments: cash(9000), quoteId: packQuote.id,
+    })
+
+    for (const refused of [packOnPieces, piecesOnPack]) {
+      expect(refused.status).toBe(409)
+      expect(refused.error?.value).toMatchObject({ code: 'QUOTE_MISMATCH' })
+    }
+    expect(ok(await owner.api.catalog.products({ id: product.id }).get()).stockQty).toBe(12)
   })
 })
 

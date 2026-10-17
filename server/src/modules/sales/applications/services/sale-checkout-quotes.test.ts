@@ -3,9 +3,11 @@ import { makeBranch, makePriceQuote, makeProduct, makeSale } from '../../../../_
 import {
   mockBranchRepository, mockCheckoutPolicy, mockLineOptionsResolver, mockMemberRepository,
   mockProductRepository, mockQrPaymentClaims, mockQuoteClaims, mockSaleRepository, mockShiftLedger,
-  mockShopSettingsRepository, mockStockLedger,
+  mockShopSettingsRepository, mockStockLedger, mockPriceQuoteRepository, mockOrderQuoteSource, mockClock,
 } from '../../../../__tests__/mocks'
+import { PriceQuoteEntity } from '../../../../domains/price-quote.domain'
 import { DEFAULT_SHOP_SETTINGS, ShopSettingsEntity } from '../../../../domains/shop-settings.domain'
+import { QuoteClaims } from '../../../quotes/applications/services/quote-claims'
 import { SaleCheckout } from './sale-checkout'
 
 const promotion = { id: 4, name: 'ลด 3 บาท', kind: 'fixed' as const, value: 300, maxDiscountSatang: null, discountSatang: 300 }
@@ -71,7 +73,7 @@ describe('SaleCheckout with a pinned price', () => {
   test('hands the quote the cart it was asked for, and uses it up with the sale', async () => {
     await checkout.checkout(request)
 
-    expect(quotes.lockForCheckout).toHaveBeenCalledWith(7, { branchId: 1, memberId: null, orderId: null, lines: [cart] }, [])
+    expect(quotes.lockForCheckout).toHaveBeenCalledWith(7, { branchId: 1, memberId: null, orderId: null, lines: [{ ...cart, packId: null }] }, [])
     expect(quotes.consume).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }), 31)
   })
 
@@ -85,7 +87,7 @@ describe('SaleCheckout with a pinned price', () => {
 
   test("an order's pinned price is held for that order, so it cannot be sold as a cart", async () => {
     await checkout.checkout({ ...request, orderId: 4 })
-    expect(quotes.lockForCheckout).toHaveBeenCalledWith(7, { branchId: 1, memberId: null, orderId: 4, lines: [cart] }, [])
+    expect(quotes.lockForCheckout).toHaveBeenCalledWith(7, { branchId: 1, memberId: null, orderId: 4, lines: [{ ...cart, packId: null }] }, [])
   })
 
   test('still refuses when there is not enough stock, and writes nothing', async () => {
@@ -116,6 +118,69 @@ describe('SaleCheckout with a pinned price', () => {
       checkout.checkout({ ...request, payments: [{ method: 'cash', amountSatang: 2099 }] }),
     ).rejects.toMatchObject({ code: 'UNDERPAID' })
     expect(quotes.consume).not.toHaveBeenCalled()
+  })
+
+  describe('with a pack', () => {
+    const now = new Date('2026-10-15T05:00:00Z')
+    // One 6-pack pinned at 6 x 15.00 when the pack had no price of its own.
+    const packQuote = () =>
+      makePriceQuote({
+        ...PriceQuoteEntity.price({
+          branchId: 1, memberId: null, member: null, orderId: null, promotion: null, vatMode: 'inclusive', vatRateBp: 700, createdById: 1,
+          lines: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 9000, quantity: 1, options: [], packId: 12, packSize: 6 }],
+        }, now),
+        id: 7,
+      })
+    const packRequest = { ...request, lines: [{ productId: 1, quantity: 1, packId: 12 }], payments: [{ method: 'cash' as const, amountSatang: 9000 }] }
+
+    test('sells at the pinned pack price even after the pack was switched off and repriced', async () => {
+      quotes.lockForCheckout.mockResolvedValue(packQuote())
+      products.findManyForUpdate.mockResolvedValue([
+        makeProduct({ priceSatang: 2000, stockQty: 6, packs: [{ id: 12, barcode: 'BOX6', size: 6, priceSatang: 12000, isActive: false }] }),
+      ])
+
+      await checkout.checkout(packRequest)
+
+      expect(quotes.lockForCheckout).toHaveBeenCalledWith(
+        7, expect.objectContaining({ lines: [{ productId: 1, optionIds: [], quantity: 1, packId: 12 }] }), [],
+      )
+      const stored = sales.create.mock.calls[0]![0]
+      expect(stored).toMatchObject({ subtotalSatang: 9000, totalSatang: 9000 })
+      expect(stored.items).toMatchObject([{ productId: 1, quantity: 1, packId: 12, packSize: 6, unitPriceSatang: 9000, lineTotalSatang: 9000 }])
+      expect(ledger.record).toHaveBeenCalledWith(expect.objectContaining({ productId: 1, quantity: -6 }))
+    })
+
+    test('the pinned pack is checked against the stock in pieces', async () => {
+      quotes.lockForCheckout.mockResolvedValue(packQuote())
+      products.findManyForUpdate.mockResolvedValue([makeProduct({ stockQty: 5 })])
+      await expect(checkout.checkout(packRequest)).rejects.toMatchObject({ code: 'INSUFFICIENT_STOCK' })
+      expect(sales.create).not.toHaveBeenCalled()
+    })
+
+    describe('matched by the real quote rules', () => {
+      const withRealQuotes = (quote: PriceQuoteEntity) => {
+        const repository = mockPriceQuoteRepository()
+        repository.findByIdForUpdate.mockResolvedValue(quote)
+        return new SaleCheckout(
+          sales, products, ledger, settings, qr, mockCheckoutPolicy(), mockShiftLedger(),
+          mockLineOptionsResolver(), members, new QuoteClaims(repository, mockOrderQuoteSource(), mockClock(now)),
+        )
+      }
+
+      test('a pack cannot be sold against a quote for the same number of loose pieces', async () => {
+        const pieces = makePriceQuote({ id: 7, lines: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 1000, quantity: 1, options: [] }], subtotalSatang: 1000, totalSatang: 1000, vatSatang: 65 })
+        await expect(withRealQuotes(pieces).checkout(packRequest)).rejects.toMatchObject({ code: 'QUOTE_MISMATCH' })
+        expect(products.findManyForUpdate).not.toHaveBeenCalled()
+        expect(sales.create).not.toHaveBeenCalled()
+      })
+
+      test('loose pieces cannot be sold against a pack quote', async () => {
+        const pieceRequest = { ...packRequest, lines: [{ productId: 1, quantity: 1 }] }
+        await expect(withRealQuotes(packQuote()).checkout(pieceRequest)).rejects.toMatchObject({ code: 'QUOTE_MISMATCH' })
+        expect(products.findManyForUpdate).not.toHaveBeenCalled()
+        expect(sales.create).not.toHaveBeenCalled()
+      })
+    })
   })
 
   describe('with a QR', () => {

@@ -1,5 +1,5 @@
 import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
-import type { QuoteLine } from '../../../domains/price-quote.domain'
+import type { StoredQuoteLine } from '../../../domains/price-quote.domain'
 import type { SaleMember, SalePromotion } from '../../../domains/sale.domain'
 import { id, timestamps } from '../columns'
 import { branches } from './branches'
@@ -23,7 +23,7 @@ export const priceQuotes = pgTable(
     memberId: integer().references(() => members.id),
     member: jsonb().$type<SaleMember>(),
     orderId: integer().references(() => orders.id),
-    lines: jsonb().$type<QuoteLine[]>().notNull(),
+    lines: jsonb().$type<StoredQuoteLine[]>().notNull(),
     promotion: jsonb().$type<SalePromotion>(),
     subtotalSatang: integer().notNull(),
     discountSatang: integer().notNull().default(0),

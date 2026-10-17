@@ -58,7 +58,7 @@ describe('CreateQuoteUseCase', () => {
       branchId: 1, memberId: null, orderId: null, subtotalSatang: 5000, discountSatang: 0, totalSatang: 5000,
       vatMode: 'inclusive', vatRateBp: 700, promotion: null, createdById: 7, status: 'open',
     })
-    expect(quote.lines).toEqual([{ productId: 1, productName: 'สินค้า 1', sku: 'S1', unitPriceSatang: 2500, quantity: 2, options: [] }])
+    expect(quote.lines).toEqual([{ productId: 1, productName: 'สินค้า 1', sku: 'S1', unitPriceSatang: 2500, quantity: 2, options: [], packId: null, packSize: 1 }])
     expect(quote.expiresAt).toEqual(new Date(now.getTime() + 15 * 60_000))
   })
 
@@ -116,10 +116,51 @@ describe('CreateQuoteUseCase', () => {
     await expect(create.execute({ lines: [{ productId: 1, quantity: 1 }] }, actor, branch)).rejects.toMatchObject({ code: 'PRODUCT_INACTIVE' })
   })
 
+  describe('packs', () => {
+    const box = { id: 12, barcode: 'BOX6', size: 6, priceSatang: null, isActive: true }
+    beforeEach(() => {
+      products.findById.mockImplementation(async (id) =>
+        makeProduct({ id, name: 'น้ำ', sku: 'W1', priceSatang: 1500, stockQty: 12, packs: [box] }))
+    })
+
+    test('a pack without its own price is pinned at its pieces times the product price', async () => {
+      const quote = await create.execute({ lines: [{ productId: 1, quantity: 1, packId: 12 }] }, actor, branch)
+      expect(lineOptions.resolve).toHaveBeenCalledWith(1, [])
+      expect(quote.lines).toEqual([
+        { productId: 1, productName: 'น้ำ', sku: 'W1', unitPriceSatang: 9000, quantity: 1, options: [], packId: 12, packSize: 6 },
+      ])
+      expect(quote).toMatchObject({ subtotalSatang: 9000, totalSatang: 9000 })
+    })
+
+    test('a pack and loose pieces are separate lines, and stock is checked in pieces for both', async () => {
+      const quote = await create.execute(
+        { lines: [{ productId: 1, quantity: 1, packId: 12 }, { productId: 1, quantity: 6 }] }, actor, branch,
+      )
+      expect(quote.lines.map((line) => [line.packId, line.quantity])).toEqual([[12, 1], [null, 6]])
+      await expect(
+        create.execute({ lines: [{ productId: 1, quantity: 2, packId: 12 }, { productId: 1, quantity: 1 }] }, actor, branch),
+      ).rejects.toMatchObject({ code: 'INSUFFICIENT_STOCK' })
+    })
+
+    test('refuses a pack with options, an unknown pack and a switched-off pack', async () => {
+      await expect(
+        create.execute({ lines: [{ productId: 1, quantity: 1, packId: 12, options: [7] }] }, actor, branch),
+      ).rejects.toMatchObject({ code: 'PACK_WITH_OPTIONS' })
+      await expect(create.execute({ lines: [{ productId: 1, quantity: 1, packId: 99 }] }, actor, branch)).rejects.toMatchObject({
+        code: 'PACK_NOT_FOUND',
+      })
+      products.findById.mockResolvedValue(makeProduct({ id: 1, priceSatang: 1500, stockQty: 12, packs: [{ ...box, isActive: false }] }))
+      await expect(create.execute({ lines: [{ productId: 1, quantity: 1, packId: 12 }] }, actor, branch)).rejects.toMatchObject({
+        code: 'PACK_INACTIVE',
+      })
+      expect(quotes.create).not.toHaveBeenCalled()
+    })
+  })
+
   test("prices an open order from the order's own lines and member, not from the catalogue", async () => {
     orders.read.mockResolvedValue({
       id: 9, memberId: 8,
-      items: [{ productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2000, quantity: 3, options: [] }],
+      items: [{ productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2000, quantity: 3, options: [], packId: null, packSize: 1 }],
     })
     members.findById.mockResolvedValue(member())
     const quote = await create.execute({ orderId: 9 }, actor, branch)
