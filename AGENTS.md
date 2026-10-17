@@ -133,6 +133,15 @@ Every operation is a use case that is exactly one of a command or a query, and t
 - An order or bill line is a product + a set of options (`options` is a snapshot). `unitPriceSatang` already includes the option prices, and the bill's `unitCostSatang` includes the option costs. Never change the `calculateTotals` formula. The cost of an option does not appear in order and bill responses.
 - Stock is checked against the product's total, not per line. An order line is edited by `lineId` (the repository compares lines, it does not delete and re-insert). The route by `productId` is for lines without options only.
 
+### Packs
+
+- A pack belongs to one product (`product_packs`): own barcode, size 2–9999, optional price; a null price means size × the current product price, computed only by `packUnitPriceSatang` in `domains/product-pack.ts` (web through `@pos/api/packs`). At most 10 per product, written as a set on product create/update with `products.write` and audited with the product.
+- A barcode is unique across product barcodes and pack barcodes together, active or not (`BARCODE_TAKEN`); every write that brings a barcode into use takes the barcode advisory lock first.
+- Stock is always in pieces; there is no stock per pack. A bill line stores `packId` and `packSize`; stock moves by `quantity × packSize` on sale and void, the stock check and reports count pieces, and the line's unit cost is size × product cost.
+- A pack line carries no options (`PACK_WITH_OPTIONS`) but still goes through `ILineOptionsResolver` with none, so a product with a required group cannot be sold as a pack. Packs are not offered on orders: orders add lines by `productId` only, and the web refuses a pack scan or saving a cart with packs as an order.
+- A sold pack cannot be deleted (`PACK_IN_USE`), only switched off. A switched-off pack, or a pack of a switched-off product, is refused at sale and quote time (and at scan time on the web).
+- A quote pins `packId`, `packSize` and the pack price; a sale with that quote uses the pinned values even if the pack was edited or switched off. If the pinned pack was deleted, the bill line keeps the pinned size and price with `packId` null.
+
 ### Promotions and pinned prices (promotions, quotes)
 
 - Promotions are shared by all branches, can be disabled but not deleted, are managed by the owner and are readable by cashiers. The evaluation formulas (`evaluatePromotion`, `pickBestPromotion`) live in `domains/promotion.domain.ts` only, and the web uses the same functions through `@pos/api/promotions`. Promotion times are computed in the shop's `timeZone`. A period that crosses midnight belongs to the day it starts.
