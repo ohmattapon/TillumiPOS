@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCan } from '@/features/auth'
-import { useActiveBranch } from '@/features/branches'
 import { Receipt } from '@/features/sales'
 import { useFormat, useSettings } from '@/features/settings'
 import { api, unwrap } from '@/lib/api'
@@ -142,7 +141,6 @@ export function MemberDetailsPage() {
   const update = useUpdateMember()
   const { money, date, locale } = useFormat()
   const shop = useSettings()
-  const { branch } = useActiveBranch()
   const [editing, setEditing] = useState(false)
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -150,9 +148,9 @@ export function MemberDetailsPage() {
   const [page, setPage] = useState(0)
   const [receiptId, setReceiptId] = useState<number | null>(null)
   const receipt = useQuery({
-    queryKey: ['sales', 'detail', receiptId, branch?.id],
+    queryKey: ['sales', 'detail', receiptId],
     queryFn: () => unwrap(api.sales({ id: receiptId! }).get()),
-    enabled: receiptId !== null && Boolean(branch),
+    enabled: receiptId !== null,
   })
   const history = useQuery({
     ...memberHistoryQuery(
@@ -164,9 +162,8 @@ export function MemberDetailsPage() {
         limit: 20,
         offset: page * 20,
       },
-      branch?.id,
     ),
-    enabled: Boolean(branch) && (!from || !to || from <= to),
+    enabled: !from || !to || from <= to,
   })
   const [now] = useState(() => new Date())
   const today = new Intl.DateTimeFormat('en-CA', {
@@ -227,7 +224,7 @@ export function MemberDetailsPage() {
             {update.error.message}
           </p>
         )}
-        <Panel title={t('history')} description={`${branch?.name ?? ''} / ${t('historyHint')}`}>
+        <Panel title={t('history')} description={t('historyHint')}>
           <FieldGroup className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
             <Field>
               <FieldLabel htmlFor="member-from">{t('from')}</FieldLabel>

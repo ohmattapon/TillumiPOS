@@ -22,7 +22,6 @@ import {
 } from '@/features/customer-display'
 import { checkoutModeQuery, currentShiftQuery, registersQuery, useRegisterSelectionStore } from '@/features/shifts'
 import { meQuery } from '@/features/auth'
-import { useActiveBranch } from '@/features/branches'
 import { useNavigate } from 'react-router'
 import type { PaymentInput, PaymentMethod } from '@/lib/money'
 import { useCreateQuote } from '@/features/promotions'
@@ -55,9 +54,8 @@ export function PosPage() {
   const checkoutMode = useQuery(checkoutModeQuery)
   const registers = useQuery(registersQuery)
   const me = useQuery(meQuery).data
-  const { branch } = useActiveBranch()
   const selections = useRegisterSelectionStore((state) => state.selections)
-  const selectedRegisterId = (me && branch && selections[`${me.id}:${branch.id}`]) || registers.data?.items.find((item) => item.isActive)?.id
+  const selectedRegisterId = (me && selections[String(me.id)]) || registers.data?.items.find((item) => item.isActive)?.id
   const currentShift = useQuery({ ...currentShiftQuery(selectedRegisterId ?? 0), enabled: selectedRegisterId !== undefined })
   const needsShift = checkoutMode.data?.checkoutMode === 'shifts'
   const shiftReady = checkoutMode.data?.checkoutMode === 'legacy' || (needsShift && currentShift.data?.status === 'open')
