@@ -178,7 +178,12 @@ export class SaleCheckout implements ISaleCheckout {
 
     const lines = [...wanted.values()].map((line) => {
       const product = productsById.get(line.productId)!
-      if (line.pinnedPack) return { product, quantity: line.quantity, pack: { ...line.pinnedPack } }
+      // A pinned pack deleted since is still sold as pinned, since its money may already be paid; the bill line
+      // then names no pack, which it could not point to. The product row is locked, so this read is current.
+      if (line.pinnedPack) {
+        const { id, size, unitPriceSatang } = line.pinnedPack
+        return { product, quantity: line.quantity, pack: { id: product.findPack(id) ? id : null, size, unitPriceSatang } }
+      }
       const pack = packs.get(line)
       // A pack not pinned by a quote is charged its own price now; orders do not carry packs.
       if (pack)

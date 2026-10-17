@@ -100,6 +100,21 @@ describe('a quote with a pack', () => {
     expect(ok(await cashier.api.quotes({ id: quote.id }).get()).status).toBe('consumed')
   })
 
+  test('is still sold as pinned after the pack was deleted, with no pack on the bill line', async () => {
+    const { product, packId } = await water()
+    const quote = ok(await cashier.api.quotes.post({ lines: [{ productId: product.id, packId, quantity: 1 }] }))
+    ok(await owner.api.catalog.products({ id: product.id }).patch({ packs: [] }))
+
+    const sale = ok(await cashier.api.sales.post({
+      items: [{ productId: product.id, packId, quantity: 1 }], payments: cash(9000), quoteId: quote.id,
+    }))
+
+    expect(sale).toMatchObject({ subtotalSatang: 9000, totalSatang: 9000 })
+    expect(sale.items).toEqual([expect.objectContaining({ packId: null, packSize: 6, quantity: 1, unitPriceSatang: 9000 })])
+    expect(ok(await owner.api.catalog.products({ id: product.id }).get()).stockQty).toBe(6)
+    expect(ok(await cashier.api.quotes({ id: quote.id }).get()).status).toBe('consumed')
+  })
+
   test('a pack and loose pieces never stand in for each other', async () => {
     const { product, packId } = await water()
     const pieceQuote = ok(await cashier.api.quotes.post({ lines: [{ productId: product.id, quantity: 1 }] }))

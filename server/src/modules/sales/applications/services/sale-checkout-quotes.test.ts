@@ -150,6 +150,18 @@ describe('SaleCheckout with a pinned price', () => {
       expect(ledger.record).toHaveBeenCalledWith(expect.objectContaining({ productId: 1, quantity: -6 }))
     })
 
+    test('a pinned pack deleted since is sold as pinned, with no pack id on the bill line', async () => {
+      quotes.lockForCheckout.mockResolvedValue(packQuote())
+      products.findManyForUpdate.mockResolvedValue([makeProduct({ priceSatang: 2000, stockQty: 6, packs: [] })])
+
+      await checkout.checkout(packRequest)
+
+      const stored = sales.create.mock.calls[0]![0]
+      expect(stored).toMatchObject({ subtotalSatang: 9000, totalSatang: 9000 })
+      expect(stored.items).toMatchObject([{ productId: 1, quantity: 1, packId: null, packSize: 6, unitPriceSatang: 9000 }])
+      expect(ledger.record).toHaveBeenCalledWith(expect.objectContaining({ productId: 1, quantity: -6 }))
+    })
+
     test('the pinned pack is checked against the stock in pieces', async () => {
       quotes.lockForCheckout.mockResolvedValue(packQuote())
       products.findManyForUpdate.mockResolvedValue([makeProduct({ stockQty: 5 })])

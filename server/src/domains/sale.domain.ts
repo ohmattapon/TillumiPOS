@@ -131,13 +131,14 @@ export interface CompleteSaleInput {
   promotion?: SalePromotion | null
   /**
    * A line with a pack sells whole packs at the pack's price; its cost is the pieces it holds. The checkout
-   * has already checked the pack can be sold and worked out its price.
+   * has already checked the pack can be sold and worked out its price. A null id is a pack a quote pinned that
+   * was deleted since: the line keeps the pinned size and price, with no pack to point to.
    */
   lines: {
     product: ProductEntity
     quantity: number
     options?: readonly LineOption[]
-    pack?: { id: number; size: number; unitPriceSatang: number }
+    pack?: { id: number | null; size: number; unitPriceSatang: number }
   }[]
   discountSatang: number
   payments: SalePayment[]
