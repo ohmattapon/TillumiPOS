@@ -4,6 +4,7 @@ import { container } from 'tsyringe'
 import { AuthElysiaController } from './auth/adapters/controllers/auth.controller'
 import { BranchElysiaController } from './branches/adapters/controllers/branch.controller'
 import { CategoryElysiaController } from './categories/adapters/controllers/category.controller'
+import { CafeMenuElysiaController } from './cafe-menu/adapters/controllers/cafe-menu.controller'
 import { CustomerDisplayElysiaController } from './customer-display/adapters/controllers/customer-display.controller'
 import './di-registrations'
 import { InventoryElysiaController } from './inventory/adapters/controllers/inventory.controller'
@@ -58,6 +59,7 @@ export const appModule = new Elysia({ name: 'api', prefix: '/api/v1' })
   .use(container.resolve(AuditElysiaController).getRoutes())
   .use(branchController.getRoutes())
   .use(catalog)
+  .use(container.resolve(CafeMenuElysiaController).getRoutes())
   .use(container.resolve(MemberElysiaController).getRoutes())
   .use(container.resolve(PromotionElysiaController).getRoutes())
   .use(container.resolve(QuoteElysiaController).getRoutes())
