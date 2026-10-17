@@ -29,8 +29,8 @@ export class CachedProductRepository implements IProductRepository {
     await this.cache.changed('products')
     return saved
   }
-  async update(entity: ProductEntity, branchId: number) {
-    const saved = await this.source.update(entity, branchId)
+  async update(entity: ProductEntity, branchId: number, options: { writePacks: boolean }) {
+    const saved = await this.source.update(entity, branchId, options)
     await this.cache.changed('products')
     return saved
   }

@@ -142,7 +142,7 @@ export class DrizzleProductRepository implements IProductRepository {
     try {
       const unsaved = packs.find((pack) => pack.id !== 0)
       if (unsaved) throw packNotFound(unsaved.id)
-      await this.assertBarcodesFree(entity)
+      await this.assertBarcodesFree(entity, packs)
       const [row] = await currentExecutor().insert(products).values(values).returning({ id: products.id })
       await this.writePacks(row!.id, packs)
       return (await this.findById(row!.id, branchId))!
@@ -151,14 +151,14 @@ export class DrizzleProductRepository implements IProductRepository {
     }
   }
 
-  async update(entity: ProductEntity, branchId: number) {
-    // Stock and image have their own write paths and must not be overwritten from a stale read.
+  async update(entity: ProductEntity, branchId: number, { writePacks }: { writePacks: boolean }) {
+    // Stock and image have their own write paths and must not be overwritten from a stale read; so do packs not being written.
     const { id, stockQty: _stock, imageKey: _image, packs = [], ...values } = entity.toSnapshot()
     try {
-      await this.assertBarcodesFree(entity)
+      await this.assertBarcodesFree(entity, writePacks ? packs : [])
       const [row] = await currentExecutor().update(products).set(values).where(eq(products.id, id)).returning({ id: products.id })
       if (!row) throw new DomainNotFoundError('ไม่พบสินค้า')
-      await this.writePacks(id, packs)
+      if (writePacks) await this.writePacks(id, packs)
       return (await this.findById(id, branchId))!
     } catch (error) {
       throw translate(error)
@@ -210,8 +210,8 @@ export class DrizzleProductRepository implements IProductRepository {
    * Refuses a pack barcode that is another product's barcode or pack, and a product barcode that is another
    * product's pack. Product barcode against product barcode stays with the unique index (DUPLICATE).
    */
-  private async assertBarcodesFree(entity: ProductEntity): Promise<void> {
-    const packBarcodes = entity.packs.map((pack) => pack.barcode)
+  private async assertBarcodesFree(entity: ProductEntity, packs: readonly ProductPack[]): Promise<void> {
+    const packBarcodes = packs.map((pack) => pack.barcode)
     const ownBarcodes = entity.barcode === null ? packBarcodes : [entity.barcode, ...packBarcodes]
     if (ownBarcodes.length === 0) return
     await currentExecutor().execute(sql`select pg_advisory_xact_lock(${BARCODE_LOCK_KEY})`)

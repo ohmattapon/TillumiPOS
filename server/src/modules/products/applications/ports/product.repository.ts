@@ -38,11 +38,12 @@ export interface IProductRepository {
    */
   create(entity: ProductEntity, branchId: number): Promise<ProductEntity>
   /**
-   * Overwrites the editable fields and writes the packs as a set: id 0 is added, a known id is updated and a stored
-   * pack left out is deleted (PACK_IN_USE when a sale line points to it). Stock and image are untouched; otherwise
-   * the same errors as create.
+   * Overwrites the editable fields and, with `writePacks`, writes the packs as a set: id 0 is added, a known id is
+   * updated and a stored pack left out is deleted (PACK_IN_USE when a sale line points to it). Without it the stored
+   * packs stay as they are, so a save that did not edit packs cannot undo another one that did. Stock and image are
+   * untouched; otherwise the same errors as create.
    */
-  update(entity: ProductEntity, branchId: number): Promise<ProductEntity>
+  update(entity: ProductEntity, branchId: number, options: { writePacks: boolean }): Promise<ProductEntity>
   /** Adds `delta` to the branch's stock and returns the new balance, or null when the product does not track stock. */
   adjustStock(id: number, branchId: number, delta: number): Promise<number | null>
   setImageKey(id: number, imageKey: string | null, branchId: number): Promise<ProductEntity>

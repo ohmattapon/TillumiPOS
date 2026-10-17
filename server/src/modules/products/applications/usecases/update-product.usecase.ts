@@ -31,11 +31,12 @@ export class UpdateProductUseCase {
         // A pack sent without an id is new (0); omitted packs leave the stored set alone.
         ...(packs && { packs: packs.map((pack) => ({ id: pack.id ?? 0, barcode: pack.barcode, size: pack.size, priceSatang: pack.priceSatang, isActive: pack.isActive ?? true })) }),
       })
-      const updated = await this.products.update(next, branchId)
+      const updated = await this.products.update(next, branchId, { writePacks: packs !== undefined })
+      // Packs this save did not write may have been changed by someone else meanwhile; that is not this change.
       const delta = auditChanges(
         { ...existing, packs: existing.packs.map(auditPack) },
         { ...updated, packs: updated.packs.map(auditPack) },
-        ['name', 'priceSatang', 'costSatang', 'isActive', 'categoryId', 'sku', 'barcode', 'packs'],
+        ['name', 'priceSatang', 'costSatang', 'isActive', 'categoryId', 'sku', 'barcode', ...(packs ? ['packs' as const] : [])],
       )
       if (delta.changed) await this.audit.record({ id: actor.id, name: actor.displayName }, branchId, buildAuditEntry({
         action: 'product.update',

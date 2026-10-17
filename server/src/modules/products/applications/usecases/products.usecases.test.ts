@@ -198,6 +198,18 @@ describe('UpdateProductUseCase', () => {
       expect(updated.packs).toEqual([pack])
     })
 
+    test('a save without packs does not write packs, so it cannot undo a pack edit made meanwhile', async () => {
+      await useCase.execute(4, { name: 'x' }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
+
+      expect(repo.update.mock.calls[0]?.[2]).toEqual({ writePacks: false })
+    })
+
+    test('a save with packs writes them', async () => {
+      await useCase.execute(4, { packs: [] }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
+
+      expect(repo.update.mock.calls[0]?.[2]).toEqual({ writePacks: true })
+    })
+
     test('an empty list removes every pack', async () => {
       const updated = await useCase.execute(4, { packs: [] }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
 

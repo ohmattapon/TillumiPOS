@@ -45,7 +45,8 @@ const pack = (barcode: string, size: number, priceSatang: number | null = null, 
 })
 
 const create = (entity: ProductEntity) => unitOfWork.run(() => repository.create(entity, branchId))
-const update = (entity: ProductEntity) => unitOfWork.run(() => repository.update(entity, branchId))
+const update = (entity: ProductEntity, writePacks = true) =>
+  unitOfWork.run(() => repository.update(entity, branchId, { writePacks }))
 
 const rejection = async (work: Promise<unknown>) => {
   try {
@@ -176,6 +177,15 @@ describe('product packs', () => {
     ])
     expect(saved.packs).toEqual(found!.packs)
     expect((await repository.findAll({ branchId, code: '885000000006' })).total).toBe(0)
+  })
+
+  test('an update that does not write packs leaves the stored packs alone, whatever the entity holds', async () => {
+    const created = await withPacks()
+
+    const saved = await update(created.with({ name: 'Renamed', packs: [] }), false)
+
+    expect(saved.name).toBe('Renamed')
+    expect(saved.packs).toEqual(created.packs)
   })
 
   test('a removed barcode can be used by another product', async () => {
