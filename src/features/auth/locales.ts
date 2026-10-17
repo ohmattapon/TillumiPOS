@@ -21,6 +21,16 @@ const th = {
   pin: {
     backspace: 'ลบตัวเลขตัวสุดท้าย',
     submit: 'ยืนยัน',
+    setOwn: 'ตั้ง PIN',
+    description: 'ตั้ง PIN ของคุณเพื่อใช้สลับพนักงานที่หน้าขาย',
+    currentPassword: 'รหัสผ่านปัจจุบัน',
+    newPin: 'PIN ใหม่',
+    remove: 'ลบ PIN',
+    saving: 'กำลังบันทึก…',
+    save: 'บันทึก',
+    saved: 'ตั้ง PIN แล้ว',
+    removed: 'ลบ PIN แล้ว',
+    hint: 'ตัวเลข 4–6 หลัก ใช้สลับพนักงานที่หน้าขาย',
   },
   brand: {
     imageAlt: 'หน้าจอเครื่องขาย TillumiPOS',
@@ -56,6 +66,16 @@ const en = {
   pin: {
     backspace: 'Delete the last digit',
     submit: 'Confirm',
+    setOwn: 'Set PIN',
+    description: 'Set your PIN to switch staff at the till',
+    currentPassword: 'Current password',
+    newPin: 'New PIN',
+    remove: 'Remove PIN',
+    saving: 'Saving…',
+    save: 'Save',
+    saved: 'PIN set',
+    removed: 'PIN removed',
+    hint: '4–6 digits, used to switch staff at the till',
   },
   brand: {
     imageAlt: 'TillumiPOS on a point-of-sale screen',

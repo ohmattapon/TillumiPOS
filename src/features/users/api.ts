@@ -51,4 +51,14 @@ export function useUpdateUser() {
   })
 }
 
+/** An owner or user manager sets or clears another user's PIN. */
+export function useSetUserPin() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, pin }: { id: number; pin: string | null }) => unwrap(api.users({ id }).pin.put({ pin })),
+    onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: userKeys.all }), queryClient.invalidateQueries({ queryKey: authKeys.me })]) },
+  })
+}
+
 export type { User }

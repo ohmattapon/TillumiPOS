@@ -1,4 +1,6 @@
-export { authKeys, meQuery, useLogout, useSwitchUser, switchUsersQuery, useCan, useAuthorization } from './api'
+export { authKeys, meQuery, useLogout, useSwitchUser, switchUsersQuery, useCan, useAuthorization, useSetOwnPin } from './api'
+export { canSubmitPin, PIN_MIN_LENGTH, PIN_MAX_LENGTH } from './lib/pin-input'
+export { OwnPinDialog } from './components/OwnPinDialog'
 export { LoginPage } from './components/LoginPage'
 export { SwitchStaffDialog } from './components/SwitchStaffDialog'
 export { locales as authLocales } from './locales'
