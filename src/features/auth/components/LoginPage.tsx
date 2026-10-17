@@ -9,7 +9,7 @@ import { useLogin } from '../api'
 /** The TillumiPOS logo, centred at the top of the sign-in card. */
 function BrandLogo() {
   const { t } = useTranslation('auth')
-  return <img src="/tillumipos-logo.png" alt={t('brand.logoAlt')} className="mx-auto mb-6 block h-16 w-auto" />
+  return <img src="/tillumipos-logo.png" alt={t('brand.logoAlt')} className="mx-auto mb-8 block h-16 w-auto" />
 }
 
 /** The wide-screen left column: a photo of the till, then what it does in a few lines. Shown from 1024px up. */
@@ -63,9 +63,9 @@ export function LoginPage() {
           <div className="w-full max-w-sm space-y-6">
             <section className="rounded-[10px] border bg-card p-6 sm:p-8">
               <BrandLogo />
-              <h1 className="text-center text-xl font-semibold">{t('title')}</h1>
-              <p className="mt-1 text-center text-sm text-muted-foreground">{t('subtitle')}</p>
-              <form onSubmit={submit} className="mt-6 space-y-4">
+              <h1 className="mt-0 text-center text-xl font-semibold">{t('title')}</h1>
+              <p className="mt-2 text-center text-sm text-muted-foreground">{t('subtitle')}</p>
+              <form onSubmit={submit} className="mt-8 space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="username">{t('username')}</Label>
                   <Input
