@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { container } from 'tsyringe'
-import { ok, PASSWORD, resetDatabase, signIn } from '../../../test/harness'
+import { ok, PASSWORD, resetDatabase, signIn, signInWithRole } from '../../../test/harness'
 import { DomainNotFoundError } from '../../domains/errors/domain-not-found.error'
 import '../../modules/di-registrations'
 import type { IUnitOfWork } from '../../modules/shared/ports/unit-of-work.port'
@@ -122,6 +122,30 @@ describe('setting PINs over HTTP', () => {
 
     expect(result.status).toBe(400)
     expect(result.error?.value).toMatchObject({ code: 'INVALID_PIN' })
+  })
+
+  test('setting a PIN is in the audit log, without the PIN or its hash', async () => {
+    const owner = await signIn('owner')
+    const cashier = await signIn('cashier')
+
+    ok(await owner.api.users({ id: cashier.user.id }).pin.put({ pin: '4321' }))
+
+    const entries = ok(await owner.api['audit-logs'].get({ query: { action: 'user.pin_set' } })).items
+    expect(entries).toHaveLength(1)
+    expect(entries[0]).toMatchObject({ actorId: owner.user.id, entityId: String(cashier.user.id) })
+    expect(JSON.stringify(entries)).not.toContain('4321')
+  })
+
+  test('a non-owner who may manage users cannot set an owner PIN: 403 OWNER_PIN_SELF_ONLY', async () => {
+    const owner = await signIn('owner')
+    const role = ok(await owner.api.roles.post({ name: 'User manager', permissions: ['users.manage'] }))
+    const manager = await signInWithRole('manager', role.id)
+
+    const result = await manager.api.users({ id: owner.user.id }).pin.put({ pin: '4321' })
+
+    expect(result.status).toBe(403)
+    expect(result.error?.value).toMatchObject({ code: 'OWNER_PIN_SELF_ONLY' })
+    expect(ok(await owner.api.auth.me.get()).hasPin).toBe(false)
   })
 
   test('a cashier cannot set another user PIN', async () => {
