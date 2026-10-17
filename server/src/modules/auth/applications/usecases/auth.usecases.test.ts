@@ -8,6 +8,11 @@ import { DomainUnauthorizedError } from '../../../../domains/errors/domain-unaut
 import { AuthorizeSessionUseCase } from './authorize-session.usecase'
 import { LoginUseCase } from './login.usecase'
 import { SetOwnPinUseCase } from './set-own-pin.usecase'
+import { ListSwitchableUsersUseCase } from './list-switchable-users.usecase'
+import { SwitchUserUseCase } from './switch-user.usecase'
+import { mockPinGuard } from '../../../../__tests__/mocks'
+import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
+import { DomainError } from '../../../../domains/errors/domain-error'
 
 let repo: ReturnType<typeof mockUserRepository>
 
@@ -216,5 +221,107 @@ describe('SetOwnPinUseCase', () => {
 
   test('requires a current password', async () => {
     await expect(useCase.execute({ pin: '4321' }, actor)).rejects.toBeInstanceOf(ZodError)
+  })
+})
+
+describe('SwitchUserUseCase', () => {
+  let useCase: SwitchUserUseCase
+  let audit: ReturnType<typeof auditMock>
+  let hasher: ReturnType<typeof mockPasswordHasher>
+  let guard: ReturnType<typeof mockPinGuard>
+  const actor = { id: 1, displayName: 'เจ้าของ' }
+  const target = makeUser({ id: 3, displayName: 'สมชาย', hasPin: true })
+  const other = makeUser({ id: 4, displayName: 'สมหญิง', hasPin: true })
+
+  beforeEach(() => {
+    audit = auditMock()
+    hasher = mockPasswordHasher()
+    guard = mockPinGuard()
+    repo.findActiveById.mockImplementation(async (id) => [target, other].find((user) => user.id === id) ?? null)
+    repo.findPinHash.mockImplementation(async (id) => (id === 3 ? 'hashed:4321' : id === 4 ? 'hashed:9999' : null))
+    useCase = new SwitchUserUseCase(repo, hasher, guard, audit)
+  })
+
+  test('the right PIN returns the target and audits who handed over to whom', async () => {
+    const user = await useCase.execute({ userId: 3, pin: '4321' }, actor)
+
+    expect(user.id).toBe(3)
+    expect(guard.recordSuccess).toHaveBeenCalledWith(3)
+    const [auditActor, , entry] = audit.record.mock.calls[0]!
+    expect(auditActor).toEqual({ id: 1, name: 'เจ้าของ' })
+    expect(entry).toMatchObject({
+      action: 'auth.switch',
+      entityType: 'user',
+      entityId: '3',
+      before: { id: 1, displayName: 'เจ้าของ' },
+      after: { id: 3, displayName: 'สมชาย' },
+    })
+    expect(JSON.stringify(entry)).not.toContain('4321')
+  })
+
+  test('a wrong PIN is a 400-class PIN_INVALID, counts a failure and audits it without the PIN', async () => {
+    const attempt = useCase.execute({ userId: 3, pin: '1111' }, actor)
+
+    await expect(attempt).rejects.toBeInstanceOf(DomainError)
+    await expect(attempt).rejects.not.toBeInstanceOf(DomainUnauthorizedError)
+    await expect(attempt).rejects.toMatchObject({ code: 'PIN_INVALID', message: 'PIN ไม่ถูกต้อง' })
+    expect(guard.recordFailure).toHaveBeenCalledWith(3)
+    expect(guard.recordSuccess).not.toHaveBeenCalled()
+    const entry = audit.record.mock.calls[0]![2]
+    expect(entry).toMatchObject({ action: 'auth.switch_failed', entityId: '3' })
+    expect(JSON.stringify(audit.record.mock.calls)).not.toContain('1111')
+  })
+
+  test('a failure to write the failed-switch audit does not change the answer', async () => {
+    audit.record.mockRejectedValue(new Error('database down'))
+
+    await expect(useCase.execute({ userId: 3, pin: '1111' }, actor)).rejects.toMatchObject({ code: 'PIN_INVALID' })
+  })
+
+  test('after five wrong PINs the sixth try is PIN_LOCKED without checking the hash; another user still switches', async () => {
+    for (let i = 0; i < 5; i++)
+      await expect(useCase.execute({ userId: 3, pin: '1111' }, actor)).rejects.toMatchObject({ code: 'PIN_INVALID' })
+    hasher.verify.mockClear()
+
+    const attempt = useCase.execute({ userId: 3, pin: '4321' }, actor)
+
+    await expect(attempt).rejects.toBeInstanceOf(DomainConflictError)
+    await expect(attempt).rejects.toMatchObject({ code: 'PIN_LOCKED' })
+    expect(hasher.verify).not.toHaveBeenCalled()
+    expect((await useCase.execute({ userId: 4, pin: '9999' }, actor)).id).toBe(4)
+  })
+
+  test('a deactivated or missing target is PIN_NOT_SET and counts no failure', async () => {
+    repo.findActiveById.mockResolvedValue(null)
+    repo.findPinHash.mockResolvedValue(null)
+
+    await expect(useCase.execute({ userId: 3, pin: '4321' }, actor)).rejects.toMatchObject({ code: 'PIN_NOT_SET' })
+    await expect(useCase.execute({ userId: 999, pin: '4321' }, actor)).rejects.toMatchObject({ code: 'PIN_NOT_SET' })
+    expect(hasher.verify).not.toHaveBeenCalled()
+    expect(guard.recordFailure).not.toHaveBeenCalled()
+  })
+
+  test('a target without a PIN is PIN_NOT_SET', async () => {
+    repo.findPinHash.mockResolvedValue(null)
+
+    await expect(useCase.execute({ userId: 3, pin: '4321' }, actor)).rejects.toMatchObject({ code: 'PIN_NOT_SET' })
+    expect(hasher.verify).not.toHaveBeenCalled()
+  })
+
+  test.each([[{ userId: 3 }], [{ userId: 0, pin: '4321' }], [{ userId: 3, pin: '' }], [{ userId: 3, pin: '1'.repeat(21) }], [null]])(
+    'rejects malformed input %p without a lookup',
+    async (input) => {
+      await expect(useCase.execute(input, actor)).rejects.toBeInstanceOf(ZodError)
+      expect(repo.findPinHash).not.toHaveBeenCalled()
+    },
+  )
+})
+
+describe('ListSwitchableUsersUseCase', () => {
+  test('lists only what the repository says is switchable (active, with a PIN)', async () => {
+    repo.findSwitchable.mockResolvedValue([{ id: 4, displayName: 'สมหญิง' }])
+
+    expect(await new ListSwitchableUsersUseCase(repo).execute()).toEqual([{ id: 4, displayName: 'สมหญิง' }])
+    expect(repo.findSwitchable).toHaveBeenCalled()
   })
 })
