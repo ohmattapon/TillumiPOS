@@ -105,15 +105,9 @@ await db
   .update(branches)
   .set({ name: 'สาขาสุขุมวิท 39', address: SHOP.address, phone: SHOP.phone })
   .where(eq(branches.id, mainBranch!.id))
-const [siam] = await db
-  .insert(branches)
-  .values({ code: 'SIAM', name: 'สาขาสยามสแควร์', address: '256 ถนนพญาไท แขวงวังใหม่ เขตปทุมวัน กรุงเทพมหานคร 10330', phone: '02-987-6543' })
-  .onConflictDoUpdate({ target: branches.code, set: { name: 'สาขาสยามสแควร์' } })
-  .returning()
-
+// The shop has one branch, so every demo day is MAIN's.
 const BRANCHES = [
   { id: mainBranch!.id, code: 'MAIN', name: 'สาขาสุขุมวิท 39', address: SHOP.address, phone: SHOP.phone, perDay: 21, openingCash: 100_000 },
-  { id: siam!.id, code: 'SIAM', name: 'สาขาสยามสแควร์', address: siam!.address, phone: siam!.phone, perDay: 9, openingCash: 80_000 },
 ]
 
 const registerOf = new Map<number, number>()
@@ -138,7 +132,6 @@ const cashiersOf = new Map<number, { id: number; name: string }[]>()
 const cashierPlan = [
   { username: 'somying', displayName: 'สมหญิง ใจดี', branch: BRANCHES[0]! },
   { username: 'wichai', displayName: 'วิชัย รักงาน', branch: BRANCHES[0]! },
-  { username: 'mali', displayName: 'มาลี สดใส', branch: BRANCHES[1]! },
 ]
 for (const plan of cashierPlan) {
   const [found] = await db.select().from(users).where(eq(users.username, plan.username))
@@ -785,7 +778,7 @@ console.log(
   `Demo data added: ${summary.sales} sales (${summary.voided} voided) in ${summary.shifts} shifts, ` +
     `${summary.orders} paid table orders + ${live.length} open, ${summary.movements} stock movements, ${summary.qr} QR payments`,
 )
-console.log(`Open shifts: ${todayShift}. Cashiers somying, wichai (MAIN) and mali (SIAM) all use the password: ${password}`)
+console.log(`Open shifts: ${todayShift}. Cashiers somying and wichai (MAIN) use the password: ${password}`)
 
   // End of the transaction: either all of the demo data is written, or none of it.
 })
