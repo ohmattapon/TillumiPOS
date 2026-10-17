@@ -103,7 +103,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, toolbar, isPending,
                       </TableCell>
                     )
                   })}
-                  {actions && <TableCell className={cn(tableCell, 'text-right whitespace-nowrap')}>{actions(row)}</TableCell>}
+                  {actions && <TableCell className={cn(tableCell, 'py-2 text-right whitespace-nowrap')}>{actions(row)}</TableCell>}
                 </TableRow>
               )
             })}

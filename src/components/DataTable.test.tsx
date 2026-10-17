@@ -61,7 +61,8 @@ const occurrences = (html: string, text: string) => html.split(text).length - 1
 
 describe('DataTable behavior', () => {
   test('renders a row whose key is 0', () => {
-    expect(render({ rows: [{ id: 0, name: 'Zero' }] })).toContain('Zero')
+    // The phone list shows the row without TanStack, so look for the table cell itself.
+    expect(render({ rows: [{ id: 0, name: 'Zero' }] })).toMatch(/<td[^>]*>Zero</)
   })
 
   test('each row is a real tr with its cells and the actions cell', () => {
@@ -71,8 +72,9 @@ describe('DataTable behavior', () => {
     })
 
     expect(occurrences(html, '<tr')).toBe(3)
-    expect(html).toContain('act-A')
-    expect(html).toContain('act-B')
+    // The phone list repeats the buttons, so each one must be inside a table row.
+    expect(html).toMatch(/<tr[^>]*>(?:(?!<\/tr>)[\s\S])*act-A/)
+    expect(html).toMatch(/<tr[^>]*>(?:(?!<\/tr>)[\s\S])*act-B/)
   })
 
   test('wide-only columns are hidden below 1024px in the header and in every cell', () => {
@@ -113,6 +115,10 @@ describe('DataTable behavior', () => {
 
     expect(html).toContain('colSpan="3"')
     expect(html).toContain('ไม่มีข้อมูล')
+  })
+
+  test('the actions cell is tighter than a data cell, so a 44px action button keeps the row near 60px', () => {
+    expect(render({ actions: () => <button type="button">act</button> })).toMatch(/<td[^>]*py-2[^>]*><button/)
   })
 
   test('a selectable row is reachable from the keyboard', () => {
