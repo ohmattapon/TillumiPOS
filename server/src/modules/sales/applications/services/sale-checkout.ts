@@ -6,8 +6,6 @@ import { DomainConflictError } from '../../../../domains/errors/domain-conflict.
 import { lineKey, type LineOption } from '../../../../domains/modifier.domain'
 import type { PriceQuoteEntity, QuoteRequestLine } from '../../../../domains/price-quote.domain'
 import { SaleEntity, type SaleMember } from '../../../../domains/sale.domain'
-import { branchRepositoryToken } from '../../../branches/applications/ports/branch.repository'
-import type { IBranchRepository } from '../../../branches/applications/ports/branch.repository'
 import { stockLedgerToken } from '../../../inventory/applications/ports/stock-ledger.port'
 import { lineOptionsResolverToken } from '../../../modifiers/applications/ports/line-options-resolver.port'
 import type { ILineOptionsResolver } from '../../../modifiers/applications/ports/line-options-resolver.port'
@@ -49,7 +47,6 @@ export class SaleCheckout implements ISaleCheckout {
     @inject(qrPaymentClaimsToken) private readonly qrPayments: IQrPaymentClaims,
     @inject(TOKENS.CheckoutPolicy) private readonly checkoutPolicy: ICheckoutPolicy,
     @inject(TOKENS.ShiftLedger) private readonly shiftLedger: IShiftLedger,
-    @inject(branchRepositoryToken) private readonly branches: IBranchRepository,
     @inject(lineOptionsResolverToken) private readonly lineOptions: ILineOptionsResolver,
     @inject(memberRepositoryToken) private readonly members: IMemberRepository,
     @inject(quoteClaimsToken) private readonly quotes: IQuoteClaims,
@@ -135,7 +132,6 @@ export class SaleCheckout implements ISaleCheckout {
 
     // Read inside the caller's unit of work, so the sale is priced with the settings in force when it is recorded.
     const shop = await this.settings.get()
-    const sellingBranch = await this.branches.findById(branch.id)
 
     // Stock is the product's, whichever options the lines have, so it is checked for the total.
     const quantities = new Map<number, number>()
@@ -174,13 +170,14 @@ export class SaleCheckout implements ISaleCheckout {
       branchId: branch.id,
       shiftId: shiftId ?? null,
       cashier,
-      // Kept on the sale, so its receipt still reads the same after the shop is renamed or the branch moves.
+      // Kept on the sale, so its receipt still reads the same after the shop's details change. The shop has
+      // one branch, so new receipts carry the shop's address and phone and no branch line.
       seller: {
         shopName: shop.shopName,
         shopTaxId: shop.taxId,
-        branchName: sellingBranch?.name ?? null,
-        shopAddress: sellingBranch?.address ?? shop.address,
-        shopPhone: sellingBranch?.phone ?? shop.phone,
+        branchName: null,
+        shopAddress: shop.address,
+        shopPhone: shop.phone,
       },
     })
     // The pinned values are what the sale is made of, so this cannot differ; it guards the money all the same.

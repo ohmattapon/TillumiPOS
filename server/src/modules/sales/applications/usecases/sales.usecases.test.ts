@@ -67,7 +67,7 @@ describe('CompleteSaleUseCase', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork)
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork)
   })
 
   const sell = (overrides: Record<string, unknown> = {}) =>
@@ -103,7 +103,7 @@ describe('CompleteSaleUseCase', () => {
     expect(unitOfWork.run).toHaveBeenCalledTimes(1)
   })
 
-  test('keeps the shop and branch details the receipt is headed with', async () => {
+  test('keeps the shop details the receipt is headed with, and no branch line', async () => {
     settings.get.mockResolvedValue(
       new ShopSettingsEntity({ ...DEFAULT_SHOP_SETTINGS, shopName: 'ร้านสมชาย', taxId: '0105500000000', address: 'สำนักงานใหญ่', phone: '020000000' }),
     )
@@ -111,13 +111,11 @@ describe('CompleteSaleUseCase', () => {
 
     const sale = await sell()
 
-    expect(branches.findById).toHaveBeenCalledWith(1)
     expect(sale.toSnapshot()).toMatchObject({
       shopName: 'ร้านสมชาย',
       shopTaxId: '0105500000000',
-      branchName: 'สาขาสีลม',
-      // The branch's own address, and the shop's phone because the branch has none.
-      shopAddress: '1 ถนนสีลม',
+      branchName: null,
+      shopAddress: 'สำนักงานใหญ่',
       shopPhone: '020000000',
     })
   })
@@ -289,7 +287,7 @@ describe('QR payments in a sale', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork)
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork)
   })
 
   test('a promptpay payment backed by a QR is checked for this branch and amount, then used by the sale', async () => {
@@ -533,7 +531,7 @@ describe('SaleCheckout with options', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    checkout = new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, branches, lineOptions, mockMemberRepository(), mockQuoteClaims())
+    checkout = new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims())
   })
 
   test('a one-step line with option ids is resolved and sold at product plus options', async () => {
