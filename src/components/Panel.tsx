@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
-/** Header cell style shared by every data table: small caps with hairline column dividers. */
-export const tableHead =
-  'h-9 border-r px-3 text-[11px] font-medium tracking-wider text-muted-foreground uppercase last:border-r-0'
+/** Header cell style shared by every data table: small muted caps, no column dividers. */
+export const tableHead = 'h-11 px-4 text-[11px] font-medium tracking-wider text-muted-foreground uppercase'
 
-export const tableCell = 'px-3 py-2'
+/** A roomy cell: with one line of text a row is about 52px tall. */
+export const tableCell = 'px-4 py-4'
 
 interface Props {
   title: string
