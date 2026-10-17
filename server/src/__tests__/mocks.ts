@@ -338,3 +338,15 @@ export const mockRoleDirectory = (): Mocked<IRoleDirectory> => {
 }
 
 export const mockAuditLog = (): Mocked<IAuditLog> => ({ record: mock(async () => {}), list: mock<IAuditLog['list']>() })
+
+import type { IPinGuard } from '../modules/auth/applications/ports/pin-guard.port'
+
+/** Counts failures per user like the real guard (5 locks), without a clock: a lock lasts for the whole test. */
+export const mockPinGuard = (): Mocked<IPinGuard> => {
+  const failures = new Map<number, number>()
+  return {
+    check: mock((userId: number) => ((failures.get(userId) ?? 0) >= 5 ? 'locked' as const : 'ok' as const)),
+    recordFailure: mock((userId: number) => { failures.set(userId, (failures.get(userId) ?? 0) + 1) }),
+    recordSuccess: mock((userId: number) => { failures.delete(userId) }),
+  }
+}
