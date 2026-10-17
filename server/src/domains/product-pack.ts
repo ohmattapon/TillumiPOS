@@ -35,6 +35,9 @@ export function packUnitPriceSatang(productPriceSatang: number, pack: Pick<Produ
   return pack.priceSatang ?? pack.size * productPriceSatang
 }
 
+/** Throws AMOUNT_TOO_LARGE when the pieces cost more than an amount can hold, rather than failing to store the bill line. */
 export function packUnitCostSatang(productCostSatang: number, size: number): number {
-  return size * productCostSatang
+  const cost = size * productCostSatang
+  if (cost > MAX_AMOUNT_SATANG) throw new DomainError('ยอดเงินเกินกว่าที่ระบบรองรับ', 'AMOUNT_TOO_LARGE')
+  return cost
 }

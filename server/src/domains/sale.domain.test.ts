@@ -317,6 +317,13 @@ describe('SaleEntity.complete: packs', () => {
     expect(complete().items[0]).toMatchObject({ packId: null, packSize: 1 })
   })
 
+  test('a pack whose pieces cost more than the system can store is refused', () => {
+    const costly = makeProduct({ id: 3, priceSatang: 1500, costSatang: 1_000_000_000 })
+    const line = { product: costly, quantity: 1, pack: { id: 7, size: 6, unitPriceSatang: 8500 } }
+
+    expect(codeOf(() => complete({ lines: [line], payments: cash(8500) }))).toBe('AMOUNT_TOO_LARGE')
+  })
+
   test('a pack line cannot carry options', () => {
     const option = { groupId: 1, groupName: 'g', optionId: 2, name: 'o', priceSatang: 0, costSatang: 0 }
     expect(codeOf(() => complete({ lines: [{ ...packLine, options: [option] }], payments: cash(17000) }))).toBe('PACK_WITH_OPTIONS')

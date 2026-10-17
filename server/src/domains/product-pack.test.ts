@@ -15,8 +15,21 @@ describe('packUnitPriceSatang', () => {
   })
 })
 
-test('packUnitCostSatang multiplies the cost by the size', () => {
-  expect(packUnitCostSatang(1000, 24)).toBe(24000)
+describe('packUnitCostSatang', () => {
+  test('multiplies the cost by the size', () => {
+    expect(packUnitCostSatang(1000, 24)).toBe(24000)
+  })
+
+  test('accepts a cost up to the maximum amount', () => {
+    expect(packUnitCostSatang(MAX_AMOUNT_SATANG, 1)).toBe(MAX_AMOUNT_SATANG)
+  })
+
+  test('refuses a cost the system cannot store instead of failing at the database', () => {
+    const attempt = () => packUnitCostSatang(MAX_AMOUNT_SATANG, 2)
+
+    expect(attempt).toThrow(DomainError)
+    expect(attempt).toThrow(expect.objectContaining({ code: 'AMOUNT_TOO_LARGE' }))
+  })
 })
 
 describe('assertValidPack', () => {
