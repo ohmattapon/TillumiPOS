@@ -21,6 +21,7 @@ const th = {
     left: 'เหลือ {{count}}',
     packNeedsOptions: '"{{name}}" ต้องเลือกตัวเลือกก่อน ขายแบบแพ็คไม่ได้',
     packNotInOrders: 'ขายแบบแพ็คได้เฉพาะการขายหน้าร้าน ไม่ใช่ออเดอร์',
+    packInactive: 'แพ็ค {{barcode}} ปิดการขายแล้ว',
   },
   floor: {
     button: 'โต๊ะ',
@@ -181,6 +182,7 @@ const en = {
     left: '{{count}} left',
     packNeedsOptions: '"{{name}}" needs options and cannot be sold as a pack',
     packNotInOrders: 'Packs can only be sold at the till, not on an order',
+    packInactive: 'Pack {{barcode}} is no longer for sale',
   },
   floor: {
     button: 'Tables',

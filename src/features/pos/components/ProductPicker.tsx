@@ -19,6 +19,7 @@ import { useFormat } from '@/features/settings'
 import { cn } from '@/lib/utils'
 import { hasKeyboard } from '../lib/focus'
 import { chooseOptions, offeredGroups } from '../lib/options'
+import { matchScan } from '../lib/scan'
 import { useCartActions } from '../hooks/use-cart-actions'
 import { useCartStore } from '../store/cart.store'
 import { OptionsDialog } from './OptionsDialog'
@@ -95,7 +96,6 @@ export function ProductPicker({ searchRef }: Props) {
     event.preventDefault()
     const code = search.trim()
     if (code === '') return
-    const term = code.toLowerCase()
     const orderId = useCartStore.getState().orderId
     // Free the input immediately so a second scan is not erased when the first request finishes.
     setSearch('')
@@ -104,20 +104,12 @@ export function ProductPicker({ searchRef }: Props) {
       const exact = code.length <= 64 ? await client.fetchQuery(productsQuery({ code, limit: 2 })) : { items: [], total: 0 }
       const result = exact.total > 0 ? exact : await client.fetchQuery(productsQuery({ q: code, limit: 2 }))
       if (!mounted.current || useCartStore.getState().orderId !== orderId) return
-      const packHit = result.items.flatMap((product) => {
-        const pack = product.packs.find((candidate) => candidate.barcode === code && candidate.isActive)
-        return pack ? [{ product, pack }] : []
-      })[0]
-      const match = result.items.find((product) => product.barcode === code)
-        ?? packHit?.product
-        ?? (exact.total > 0 ? result.items.find((product) => product.sku.toLowerCase() === term) : undefined)
-        ?? (result.total === 1 ? result.items[0] : undefined)
-      // A product's own barcode wins over a pack that happens to share the scan, so only a pack-only match sells a pack.
-      const pack = match !== undefined && match.barcode !== code ? packHit?.pack : undefined
-      if (!match) toast.error(t('picker.notFound', { term: code }))
-      else if (pack) sellPack(match, pack, orderId)
-      else if (isOutOfStock(match)) toast.error(t('picker.outOfStock', { name: match.name }))
-      else pick(match)
+      const match = matchScan(code, exact.total > 0, result)
+      if (match.kind === 'none') toast.error(t('picker.notFound', { term: code }))
+      else if (match.kind === 'inactivePack') toast.error(t('picker.packInactive', { barcode: match.barcode }))
+      else if (match.kind === 'pack') sellPack(match.product, match.pack, orderId)
+      else if (isOutOfStock(match.product)) toast.error(t('picker.outOfStock', { name: match.product.name }))
+      else pick(match.product)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : tc('connectionFailed'))
     }
