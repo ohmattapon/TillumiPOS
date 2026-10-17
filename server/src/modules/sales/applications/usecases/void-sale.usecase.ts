@@ -42,7 +42,8 @@ export class VoidSaleUseCase {
           branchId: sale.branchId,
           productId: item.productId,
           type: 'void',
-          quantity: item.quantity,
+          // A pack line returns the pieces it held.
+          quantity: item.quantity * item.packSize,
           reference: voided.receiptNo,
           note: reason,
           userId: user.id,

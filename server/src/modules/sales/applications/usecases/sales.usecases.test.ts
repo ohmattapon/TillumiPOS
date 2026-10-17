@@ -380,6 +380,21 @@ describe('VoidSaleUseCase', () => {
     ])
   })
 
+  test('a pack line goes back to stock as the pieces it held', async () => {
+    sales.findByIdForUpdate.mockResolvedValue(
+      makeSale({
+        id: 15,
+        items: [
+          { productId: 3, productName: 'น้ำ', sku: 'W', unitPriceSatang: 8500, unitCostSatang: 6000, quantity: 2, lineTotalSatang: 17000, options: [], packId: 7, packSize: 6 },
+        ],
+      }),
+    )
+
+    await useCase.execute(15, { reason: 'คิดเงินผิด' }, { ...{ id: 9, role: 'owner' }, displayName: 'ผู้ทดสอบ' }, 1)
+
+    expect(ledger.record.mock.calls.map(([movement]) => movement.quantity)).toEqual([12])
+  })
+
   test("another branch's sale cannot be voided, and nothing is returned to stock", async () => {
     sales.findByIdForUpdate.mockResolvedValue(makeSale({ id: 15, branchId: 2 }))
 

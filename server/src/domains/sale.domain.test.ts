@@ -182,6 +182,8 @@ describe('SaleEntity.complete: lines', () => {
         quantity: 2,
         lineTotalSatang: 5000,
         options: [],
+        packId: null,
+        packSize: 1,
       },
     ])
     expect(sale).toMatchObject({ cashierId: 7, cashierName: 'สมชาย' })
@@ -289,5 +291,43 @@ describe('sale membership snapshot', () => {
   test('old sales and anonymous checkout expose null membership', () => {
     expect(complete().member).toBeNull()
     expect(makeSale().member).toBeNull()
+  })
+})
+
+describe('SaleEntity.complete: packs', () => {
+  const water = makeProduct({ id: 3, priceSatang: 1500, costSatang: 1000 })
+  const packLine = { product: water, quantity: 2, pack: { id: 7, size: 6, unitPriceSatang: 8500 } }
+
+  test('a pack line is priced per pack and costs the pieces it holds', () => {
+    const sale = complete({ lines: [packLine], payments: cash(17000) })
+
+    expect(sale.items[0]).toMatchObject({
+      productId: 3,
+      unitPriceSatang: 8500,
+      unitCostSatang: 6000,
+      quantity: 2,
+      lineTotalSatang: 17000,
+      packId: 7,
+      packSize: 6,
+    })
+    expect(sale.subtotalSatang).toBe(17000)
+  })
+
+  test('a line without a pack sells single pieces', () => {
+    expect(complete().items[0]).toMatchObject({ packId: null, packSize: 1 })
+  })
+
+  test('a pack line cannot carry options', () => {
+    const option = { groupId: 1, groupName: 'g', optionId: 2, name: 'o', priceSatang: 0, costSatang: 0 }
+    expect(codeOf(() => complete({ lines: [{ ...packLine, options: [option] }], payments: cash(17000) }))).toBe('PACK_WITH_OPTIONS')
+  })
+
+  test('a sale restored from a snapshot made before packs existed sells single pieces', () => {
+    const legacy = makeSale().toSnapshot()
+    const { packId: _packId, packSize: _packSize, ...bareItem } = legacy.items[0]!
+
+    const restored = new SaleEntity({ ...legacy, items: [bareItem as (typeof legacy.items)[number]] })
+
+    expect(restored.items[0]).toMatchObject({ packId: null, packSize: 1 })
   })
 })

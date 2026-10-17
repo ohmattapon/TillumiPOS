@@ -73,7 +73,7 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
         select i.product_id as "productId",
           (array_agg(i.product_name order by i.id desc))[1] as "productName",
           (array_agg(i.sku order by i.id desc))[1] as sku,
-          sum(i.quantity) as quantity, sum(i.line_total_satang) as "lineTotalSatang"
+          sum(i.quantity * i.pack_size) as quantity, sum(i.line_total_satang) as "lineTotalSatang"
         from sale_items i join period_sales s on s.id = i.sale_id
         where s.status = 'completed' group by i.product_id
       ),

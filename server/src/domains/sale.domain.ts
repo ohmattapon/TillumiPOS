@@ -3,6 +3,7 @@ import { DomainError } from './errors/domain-error'
 import type { LineOption } from './modifier.domain'
 import { calculateTotals, type VatMode } from './pricing'
 import type { ProductEntity } from './product.domain'
+import { packUnitCostSatang } from './product-pack'
 
 export const PAYMENT_METHODS = ['cash', 'promptpay', 'card'] as const
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
@@ -23,7 +24,14 @@ export interface SaleItem {
   lineTotalSatang: number
   /** The options chosen, as they were. Their price and cost are already in the unit price and cost. */
   options: LineOption[]
+  /** The pack sold on this line; null when single pieces were sold. One unit of the line is then one pack. */
+  packId: number | null
+  /** Pieces of the product in one unit of the line: the pack's size, or 1. Stock moves by quantity x this. */
+  packSize: number
 }
+
+/** A line as stored before packs were kept: such a line sold single pieces. */
+export type StoredSaleItem = Omit<SaleItem, 'packId' | 'packSize'> & Partial<Pick<SaleItem, 'packId' | 'packSize'>>
 
 export interface SalePayment {
   method: PaymentMethod
@@ -107,7 +115,8 @@ export interface NewSale extends SaleTotals, SaleSeller {
   payments: SalePayment[]
 }
 
-export interface SaleEntityProps extends NewSale {
+export interface SaleEntityProps extends Omit<NewSale, 'items'> {
+  items: StoredSaleItem[]
   id: number
   receiptNo: string
   status: SaleStatus
@@ -120,7 +129,16 @@ export interface SaleEntityProps extends NewSale {
 export interface CompleteSaleInput {
   member?: SaleMember | null
   promotion?: SalePromotion | null
-  lines: { product: ProductEntity; quantity: number; options?: readonly LineOption[] }[]
+  /**
+   * A line with a pack sells whole packs at the pack's price; its cost is the pieces it holds. The checkout
+   * has already checked the pack can be sold and worked out its price.
+   */
+  lines: {
+    product: ProductEntity
+    quantity: number
+    options?: readonly LineOption[]
+    pack?: { id: number; size: number; unitPriceSatang: number }
+  }[]
   discountSatang: number
   payments: SalePayment[]
   vatMode: VatMode
@@ -207,7 +225,13 @@ export class SaleEntity {
     this.voidReason = props.voidReason
     this.createdAt = props.createdAt
     // `?? []`: a sale restored from a snapshot stored before options were kept has none on its lines.
-    this.items = props.items.map((item) => ({ ...item, options: item.options ?? [] }))
+    // `?? null` / `?? 1`: one stored before packs were kept sold single pieces.
+    this.items = props.items.map((item) => ({
+      ...item,
+      options: item.options ?? [],
+      packId: item.packId ?? null,
+      packSize: item.packSize ?? 1,
+    }))
     this.payments = props.payments
   }
 
@@ -224,8 +248,24 @@ export class SaleEntity {
       throw new DomainError('ส่วนลดไม่ตรงกับโปรโมชันที่ใช้', 'INVALID_DISCOUNT')
     if (payments.some((payment) => !isWholeAmount(payment.amountSatang) || payment.amountSatang < 1))
       throw new DomainError('ยอดชำระแต่ละรายการต้องเป็นจำนวนเต็มสตางค์ตั้งแต่ 1 ขึ้นไป', 'INVALID_PAYMENT')
+    if (lines.some((line) => line.pack && (line.options?.length ?? 0) > 0))
+      throw new DomainError('แพ็กสินค้าเลือกตัวเลือกเพิ่มไม่ได้', 'PACK_WITH_OPTIONS')
 
-    const items: SaleItem[] = lines.map(({ product, quantity, options = [] }) => {
+    const items: SaleItem[] = lines.map(({ product, quantity, options = [], pack }) => {
+      if (pack) {
+        return {
+          productId: product.id,
+          productName: product.name,
+          sku: product.sku,
+          unitPriceSatang: pack.unitPriceSatang,
+          unitCostSatang: packUnitCostSatang(product.costSatang, pack.size),
+          quantity,
+          lineTotalSatang: pack.unitPriceSatang * quantity,
+          options: [],
+          packId: pack.id,
+          packSize: pack.size,
+        }
+      }
       const unitPriceSatang = product.priceSatang + sum(options.map((option) => option.priceSatang))
       return {
         productId: product.id,
@@ -236,6 +276,8 @@ export class SaleEntity {
         quantity,
         lineTotalSatang: unitPriceSatang * quantity,
         options: [...options],
+        packId: null,
+        packSize: 1,
       }
     })
 
@@ -284,7 +326,7 @@ export class SaleEntity {
     return new SaleEntity({ ...this.toSnapshot(), status: 'voided', voidedById, voidedAt: at, voidReason: reason })
   }
 
-  toSnapshot(): SaleEntityProps & { member: SaleMember | null; promotion: SalePromotion | null } {
+  toSnapshot(): Omit<SaleEntityProps, 'items'> & { member: SaleMember | null; promotion: SalePromotion | null; items: SaleItem[] } {
     return {
       member: copyMember(this.member),
       promotion: copyPromotion(this.promotion),

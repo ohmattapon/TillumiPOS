@@ -43,8 +43,8 @@ describe('completing a sale', () => {
     })
     expect(sale.receiptNo).toMatch(/^MAIN-\d{8}-00001$/)
     expect(sale.items).toEqual([
-      { productId: tea.id, productName: 'Tea', sku: tea.sku, unitPriceSatang: 2500, quantity: 2, lineTotalSatang: 5000, options: [] },
-      { productId: cake.id, productName: 'Cake', sku: cake.sku, unitPriceSatang: 5700, quantity: 1, lineTotalSatang: 5700, options: [] },
+      { productId: tea.id, productName: 'Tea', sku: tea.sku, unitPriceSatang: 2500, quantity: 2, lineTotalSatang: 5000, options: [], packId: null, packSize: 1 },
+      { productId: cake.id, productName: 'Cake', sku: cake.sku, unitPriceSatang: 5700, quantity: 1, lineTotalSatang: 5700, options: [], packId: null, packSize: 1 },
     ])
     expect(sale.payments).toEqual(cash(20000))
 
@@ -161,6 +161,36 @@ describe('completing a sale', () => {
 
     expect(await stockOf(service.id)).toBe(0)
     expect(ok(await owner.api.inventory.movements.get({ query: { productId: service.id } })).items).toHaveLength(0)
+  })
+})
+
+describe('selling a pack', () => {
+  test('takes the pieces of the pack out of stock, puts them back on void, and keeps the sold pack', async () => {
+    const water = await seedProduct(owner, {
+      priceSatang: 1500,
+      costSatang: 1000,
+      packs: [{ barcode: 'BOX6', size: 6, priceSatang: 8500 }],
+    })
+    ok(await owner.api.inventory.receive.post({ productId: water.id, quantity: 24 }))
+    const packId = water.packs[0]!.id
+
+    const sale = ok(await cashier.api.sales.post({ items: [{ productId: water.id, packId, quantity: 1 }], payments: cash(8500) }))
+
+    expect(sale.items).toEqual([
+      expect.objectContaining({ productId: water.id, packId, packSize: 6, quantity: 1, unitPriceSatang: 8500, lineTotalSatang: 8500 }),
+    ])
+    expect(await stockOf(water.id)).toBe(18)
+    const [movement] = ok(await owner.api.inventory.movements.get({ query: { productId: water.id } })).items
+    expect(movement).toMatchObject({ type: 'sale', quantity: -6, balanceAfter: 18, reference: sale.receiptNo })
+
+    ok(await owner.api.sales({ id: sale.id }).void.post({ reason: 'mistake' }))
+    expect(await stockOf(water.id)).toBe(24)
+
+    const removal = await owner.api.catalog.products({ id: water.id }).patch({ packs: [] })
+    expect(removal.status).toBe(409)
+    expect(removal.error?.value).toMatchObject({ code: 'PACK_IN_USE' })
+    const after = ok(await owner.api.catalog.products({ id: water.id }).get())
+    expect(after.packs).toEqual([expect.objectContaining({ id: packId, barcode: 'BOX6', size: 6 })])
   })
 })
 

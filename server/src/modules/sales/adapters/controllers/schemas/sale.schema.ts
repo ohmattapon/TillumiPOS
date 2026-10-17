@@ -62,12 +62,17 @@ const saleItem = t.Object({
   quantity: t.Integer(),
   lineTotalSatang: t.Integer(),
   options: t.Array(lineOption),
+  // The pack sold on this line, or null for single pieces; packSize is the pieces in one unit (1 without a pack).
+  packId: t.Nullable(t.Integer()),
+  packSize: t.Integer(),
 })
 
 const itemRequest = t.Object({
   productId: t.Integer(),
   quantity: t.Integer({ minimum: 1 }),
   options: t.Optional(t.Array(t.Integer({ minimum: 1 }), { maxItems: 40 })),
+  // The pack scanned: quantity then counts packs. Cannot be combined with options.
+  packId: t.Optional(t.Integer({ minimum: 1 })),
 })
 
 const payment = t.Object({ method, amountSatang: satang({ minimum: 1 }) })

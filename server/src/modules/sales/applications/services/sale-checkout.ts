@@ -5,6 +5,7 @@ import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { lineKey, type LineOption } from '../../../../domains/modifier.domain'
 import type { PriceQuoteEntity, QuoteRequestLine } from '../../../../domains/price-quote.domain'
+import { packUnitPriceSatang, type ProductPack } from '../../../../domains/product-pack'
 import { SaleEntity, type SaleMember } from '../../../../domains/sale.domain'
 import { stockLedgerToken } from '../../../inventory/applications/ports/stock-ledger.port'
 import { lineOptionsResolverToken } from '../../../modifiers/applications/ports/line-options-resolver.port'
@@ -93,62 +94,90 @@ export class SaleCheckout implements ISaleCheckout {
       member = selectedMember ? { id: selectedMember.id, code: selectedMember.code, name: selectedMember.name } : null
     }
 
-    // Lines are the product with its options: the same choice repeated is merged, a Map keeps the order
-    // they were added, and the first quoted price of a line wins.
+    // Lines are the product with its options or its pack: the same choice repeated is merged, a Map keeps
+    // the order they were added, and the first quoted price of a line wins.
     interface WantedLine {
       productId: number
       options: LineOption[]
+      packId: number | undefined
       quantity: number
       quotedUnitPriceSatang: number | undefined
     }
+    const keyOf = (productId: number, options: readonly LineOption[], packId: number | undefined) =>
+      `${productId}:${lineKey(options)}:${packId ?? ''}`
     const wanted = new Map<string, WantedLine>()
     if (quote) {
       // The quote has the options and the price of every line; nothing is resolved or priced again.
       for (const line of quote.lines) {
-        const key = `${line.productId}:${lineKey(line.options)}`
+        const key = keyOf(line.productId, line.options, undefined)
         const existing = wanted.get(key)
         if (existing) existing.quantity += line.quantity
         else
           wanted.set(key, {
             productId: line.productId,
             options: [...line.options],
+            packId: undefined,
             quantity: line.quantity,
             quotedUnitPriceSatang: line.unitPriceSatang,
           })
       }
     } else {
       for (const line of requested) {
+        if (line.packId !== undefined && ((line.optionIds?.length ?? 0) > 0 || (line.options?.length ?? 0) > 0))
+          throw new DomainError('แพ็กสินค้าเลือกตัวเลือกเพิ่มไม่ได้', 'PACK_WITH_OPTIONS')
         // An order has already resolved its options and quoted a price; a one-step sale is resolved here.
+        // A pack is resolved with no options, so a product that needs a choice cannot be sold as a pack.
         const options = line.options
           ? [...line.options]
           : (await this.lineOptions.resolve(line.productId, line.optionIds ?? [])).options
-        const key = `${line.productId}:${lineKey(options)}`
+        const key = keyOf(line.productId, options, line.packId)
         const existing = wanted.get(key)
         if (existing) existing.quantity += line.quantity
         else
-          wanted.set(key, { productId: line.productId, options, quantity: line.quantity, quotedUnitPriceSatang: line.unitPriceSatang })
+          wanted.set(key, {
+            productId: line.productId,
+            options,
+            packId: line.packId,
+            quantity: line.quantity,
+            quotedUnitPriceSatang: line.unitPriceSatang,
+          })
       }
     }
 
     // Read inside the caller's unit of work, so the sale is priced with the settings in force when it is recorded.
     const shop = await this.settings.get()
 
-    // Stock is the product's, whichever options the lines have, so it is checked for the total.
-    const quantities = new Map<number, number>()
-    for (const line of wanted.values())
-      quantities.set(line.productId, (quantities.get(line.productId) ?? 0) + line.quantity)
-
     // Locked until the sale commits, so two tills cannot sell the same last unit.
-    const locked = await this.products.findManyForUpdate([...quantities.keys()], branch.id)
+    const productIds = [...new Set([...wanted.values()].map((line) => line.productId))]
+    const locked = await this.products.findManyForUpdate(productIds, branch.id)
     const productsById = new Map(locked.map((product) => [product.id, product]))
-    for (const [productId, quantity] of quantities) {
+    // Products are checked in cart order, so the first problem in the cart is the one reported.
+    const packs = new Map<WantedLine, ProductPack>()
+    for (const productId of productIds) {
       const product = productsById.get(productId)
       if (!product) throw new DomainError('ไม่พบสินค้ารหัส ' + productId, 'PRODUCT_NOT_FOUND', { productId })
-      product.assertSellable(quantity)
+      // Stock is the product's in pieces, whichever options or packs the lines have, so it is checked for the
+      // total. Packs are read from the locked product, so one switched off by another till cannot slip through.
+      let pieces = 0
+      for (const line of wanted.values()) {
+        if (line.productId !== productId) continue
+        const pack = line.packId === undefined ? undefined : product.packForSale(line.packId)
+        if (pack) packs.set(line, pack)
+        pieces += line.quantity * (pack?.size ?? 1)
+      }
+      product.assertSellable(pieces)
     }
 
     const lines = [...wanted.values()].map((line) => {
       const product = productsById.get(line.productId)!
+      const pack = packs.get(line)
+      // A pack is always charged its own price; orders and quotes do not carry packs.
+      if (pack)
+        return {
+          product,
+          quantity: line.quantity,
+          pack: { id: pack.id, size: pack.size, unitPriceSatang: packUnitPriceSatang(product.priceSatang, pack) },
+        }
       if (line.quotedUnitPriceSatang === undefined) return { product, quantity: line.quantity, options: line.options }
       // The quote includes the options and the entity adds them back, so the product carries the base price.
       const optionsPrice = line.options.reduce((total, option) => total + option.priceSatang, 0)
@@ -195,7 +224,8 @@ export class SaleCheckout implements ISaleCheckout {
         branchId: branch.id,
         productId: item.productId,
         type: 'sale',
-        quantity: -item.quantity,
+        // A pack line takes out the pieces it holds.
+        quantity: -(item.quantity * item.packSize),
         reference: sale.receiptNo,
         userId: cashier.id,
       })
