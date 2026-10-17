@@ -12,7 +12,7 @@ import { userRepositoryToken } from '../ports/user.repository'
 import type { IUserRepository } from '../ports/user.repository'
 import { setPinSchema } from '../schemas/user-schemas'
 
-/** Command: a user manager sets or clears another user's quick-switch PIN. */
+/** Command: a user manager sets or clears another user's quick-switch PIN (never their own, nor an owner's). */
 @injectable()
 export class SetUserPinUseCase {
   constructor(
@@ -26,12 +26,15 @@ export class SetUserPinUseCase {
     requirePermission(actor, 'users.manage')
     const { pin } = setPinSchema.parse(input)
     if (pin !== null) assertValidPin(pin)
+    // One's own PIN needs one's own password, which only the account menu (PUT /auth/me/pin) asks for.
+    if (targetId === actor.id)
+      throw new DomainForbiddenError('ตั้ง PIN ของตนเองได้ที่เมนูบัญชี ซึ่งต้องใส่รหัสผ่านปัจจุบัน', 'OWN_PIN_USE_ACCOUNT')
 
     return this.unitOfWork.run(async () => {
       const target = await this.users.findByIdForUpdate(targetId)
       if (!target) throw new DomainNotFoundError('ไม่พบผู้ใช้')
       // A manager must not be able to take over an owner's quick switch by choosing the owner's PIN.
-      if (target.role === 'owner' && target.id !== actor.id)
+      if (target.role === 'owner')
         throw new DomainForbiddenError('PIN ของเจ้าของร้านตั้งได้เฉพาะเจ้าของเอง', 'OWNER_PIN_SELF_ONLY')
 
       await this.users.setPinHash(targetId, pin === null ? null : await this.hasher.hash(pin))
