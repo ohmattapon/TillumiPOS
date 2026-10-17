@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
+import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
 import { tableCell, tableHead } from '@/components/Panel'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { splitColumns, type Column } from '@/lib/data-table'
+import { splitColumns, toColumnDefs, type Column } from '@/lib/data-table'
 import { barWidth } from '@/lib/skeleton'
 import { cn } from '@/lib/utils'
 
@@ -37,6 +38,13 @@ export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions,
   const { primary, secondary } = splitColumns(columns)
   const { t } = useTranslation()
   const isEmpty = !isPending && rows.length === 0
+  // Core row model only: no sorting, filtering or selection (the owner left those out of this project).
+  const table = useReactTable({
+    data: rows,
+    columns: toColumnDefs(columns),
+    getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => String(rowKey(row)),
+  })
 
   return (
     <>
@@ -45,11 +53,14 @@ export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions,
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              {columns.map((column) => (
-                <TableHead key={column.id} className={cn(tableHead, column.align === 'right' && 'text-right', wideOnly(column))}>
-                  {column.header}
-                </TableHead>
-              ))}
+              {table.getHeaderGroups()[0].headers.map((header) => {
+                const column = header.column.columnDef.meta!.column
+                return (
+                  <TableHead key={header.id} className={cn(tableHead, column.align === 'right' && 'text-right', wideOnly(column))}>
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                )
+              })}
               {actions && <TableHead className={cn(tableHead, 'w-0')} />}
             </TableRow>
           </TableHeader>
@@ -69,23 +80,29 @@ export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions,
                   )}
                 </TableRow>
               ))}
-            {rows.map((row) => (
-              <TableRow
-                key={rowKey(row)}
-                className={cn('hover:bg-muted/50', muted?.(row) && 'text-muted-foreground', onSelect && 'cursor-pointer')}
-                // A row that opens something is reachable from the keyboard as well as by the mouse.
-                tabIndex={onSelect ? 0 : undefined}
-                onClick={onSelect && (() => onSelect(row))}
-                onKeyDown={onSelect && ((event) => event.key === 'Enter' && onSelect(row))}
-              >
-                {columns.map((column) => (
-                  <TableCell key={column.id} className={cn(tableCell, column.align === 'right' && 'text-right tabular-nums', column.className, wideOnly(column))}>
-                    {column.cell(row)}
-                  </TableCell>
-                ))}
-                {actions && <TableCell className={cn(tableCell, 'text-right whitespace-nowrap')}>{actions(row)}</TableCell>}
-              </TableRow>
-            ))}
+            {table.getRowModel().rows.map((tableRow) => {
+              const row = tableRow.original
+              return (
+                <TableRow
+                  key={tableRow.id}
+                  className={cn('hover:bg-muted/50', muted?.(row) && 'text-muted-foreground', onSelect && 'cursor-pointer')}
+                  // A row that opens something is reachable from the keyboard as well as by the mouse.
+                  tabIndex={onSelect ? 0 : undefined}
+                  onClick={onSelect && (() => onSelect(row))}
+                  onKeyDown={onSelect && ((event) => event.key === 'Enter' && onSelect(row))}
+                >
+                  {tableRow.getVisibleCells().map((cell) => {
+                    const column = cell.column.columnDef.meta!.column
+                    return (
+                      <TableCell key={cell.id} className={cn(tableCell, column.align === 'right' && 'text-right tabular-nums', column.className, wideOnly(column))}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    )
+                  })}
+                  {actions && <TableCell className={cn(tableCell, 'text-right whitespace-nowrap')}>{actions(row)}</TableCell>}
+                </TableRow>
+              )
+            })}
             {isEmpty && (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={columns.length + (actions ? 1 : 0)} className="h-24 text-center text-muted-foreground">
