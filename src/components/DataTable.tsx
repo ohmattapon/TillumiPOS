@@ -39,6 +39,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions,
   const { t } = useTranslation()
   const isEmpty = !isPending && rows.length === 0
   // Core row model only: no sorting, filtering or selection (the owner left those out of this project).
+  // oxlint-disable-next-line react/incompatible-library -- TanStack's table object cannot be memoized; the table is rebuilt every render, which is cheap with the core model.
   const table = useReactTable({
     data: rows,
     columns: toColumnDefs(columns),
