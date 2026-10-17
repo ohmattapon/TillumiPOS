@@ -272,4 +272,36 @@
   html {
     @apply font-sans;
   }
+
+  /* Hide vertical scrollbars app-wide (scroll still works); keep horizontal visible. */
+  html,
+  body {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .overflow-y-auto,
+  .overflow-y-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  ::-webkit-scrollbar:vertical {
+    display: none;
+    width: 0;
+  }
+  ::-webkit-scrollbar:horizontal {
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb:horizontal {
+    background: var(--border);
+    border-radius: 8px;
+  }
+
+  /* Utility already used by the sidebar; define it so it actually hides scrollbars. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
