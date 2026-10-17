@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { meQuery, switchUsersQuery, useSwitchUser } from '../api'
+import { lockScreenMayClose, type LockScreenCloseReason } from '../lib/lock-screen'
 import { canSubmitPin } from '../lib/pin-input'
 import { PinPad } from './PinPad'
 
@@ -26,7 +27,7 @@ export function SwitchStaffDialog({ open, onOpenChange, onSwitched, onUsePasswor
   const [pin, setPin] = useState('')
   const switchUser = useSwitchUser({
     onHandOver: (newUserId) => {
-      close(false)
+      close(false, 'hand-over')
       onSwitched(newUserId)
     },
   })
@@ -37,8 +38,8 @@ export function SwitchStaffDialog({ open, onOpenChange, onSwitched, onUsePasswor
     switchUser.reset()
   }
 
-  function close(next: boolean) {
-    if (!next && switchUser.isPending) return
+  function close(next: boolean, reason: LockScreenCloseReason = 'user') {
+    if (!next && !lockScreenMayClose(reason, switchUser.isPending)) return
     if (!next) back()
     onOpenChange(next)
   }
