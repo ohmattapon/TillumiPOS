@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 import { Download, LoaderCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { useActiveBranch } from '@/features/branches'
+import { branchesQuery } from '@/features/branches'
 import { settingsQuery, useFormat, useSettings } from '@/features/settings'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
@@ -24,7 +24,7 @@ export function ReportsPage() {
   const shop = useSettings()
   const settings = useQuery(settingsQuery)
   const { money, currency, locale } = useFormat()
-  const { branch } = useActiveBranch()
+  const branchName = useQuery(branchesQuery).data?.[0]?.name ?? ''
   const [params, setParams] = useSearchParams()
   const [exporting, setExporting] = useState(false)
   const today = todayInTimeZone(shop.timeZone)
@@ -39,11 +39,10 @@ export function ReportsPage() {
   }
   const productOffset = offset('products')
   const branchOffset = offset('branches')
-  const enabled = Boolean(branch) && Boolean(settings.data) && validRange(filters.from, filters.to)
-  const branchId = branch?.id ?? 0
-  const report = useQuery({ ...reportQuery(filters, branchId), enabled })
-  const products = useQuery({ ...productsReportQuery(filters, branchId, productOffset), enabled })
-  const branches = useQuery({ ...branchesReportQuery(filters, branchId, branchOffset), enabled })
+  const enabled = Boolean(settings.data) && validRange(filters.from, filters.to)
+  const report = useQuery({ ...reportQuery(filters), enabled })
+  const products = useQuery({ ...productsReportQuery(filters, productOffset), enabled })
+  const branches = useQuery({ ...branchesReportQuery(filters, branchOffset), enabled })
   const summary = report.data?.summary
   const setPage = (name: string, value: number) => {
     const next = new URLSearchParams(params)
@@ -51,21 +50,20 @@ export function ReportsPage() {
     setParams(next)
   }
   const exportExcel = async () => {
-    if (!branch || exporting || !enabled) return
+    if (exporting || !enabled) return
     setExporting(true)
     try {
-      // Pin the branch header for the whole export, even if the sidebar changes mid-download.
       const [fresh, allProducts, allBranches, { downloadReportWorkbook }] = await Promise.all([
-        readReport(filters, branch.id),
-        collectPages((offset, limit) => readProducts(filters, branch.id, offset, limit)),
-        collectPages((offset, limit) => readBranches(filters, branch.id, offset, limit)),
+        readReport(filters),
+        collectPages((offset, limit) => readProducts(filters, offset, limit)),
+        collectPages((offset, limit) => readBranches(filters, offset, limit)),
         import('../lib/export-workbook'),
       ])
       if (new Set(allProducts.map((row) => row.productId)).size !== allProducts.length
         || new Set(allBranches.map((row) => row.branchId)).size !== allBranches.length) throw new Error('REPORT_CHANGED')
       await downloadReportWorkbook({
         report: fresh, products: allProducts, branches: allBranches,
-        branchName: filters.scope === 'all' ? t('allBranches') : branch.name,
+        branchName: filters.scope === 'all' ? t('allBranches') : branchName,
         currency, fractionDigits: money.fractionDigits, locale,
       })
       toast.success(t('exported'))
@@ -89,8 +87,8 @@ export function ReportsPage() {
         </Button>
       </PageHeader>
       <main className="flex-1 space-y-4 overflow-y-auto p-4">
-        <ReportFilters key={`${filters.from}-${filters.to}-${filters.scope}-${shop.timeZone}-${branchId}`}
-          filters={filters} today={today} branchName={branch?.name ?? t('scope')}
+        <ReportFilters key={`${filters.from}-${filters.to}-${filters.scope}-${shop.timeZone}`}
+          filters={filters} today={today} branchName={branchName || t('scope')}
           onApply={(next) => setParams({ ...next })} />
         <p className="text-xs text-muted-foreground">{t('zone', { zone: report.data?.timeZone ?? shop.timeZone })} · {currency}</p>
         {failure(settings.error, () => void settings.refetch())}

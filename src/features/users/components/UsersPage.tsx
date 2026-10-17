@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { meQuery } from '@/features/auth'
 import { roleOptionsQuery } from '@/features/roles'
-import { branchesQuery, useActiveBranch } from '@/features/branches'
+import { branchesQuery } from '@/features/branches'
 import { usersQuery, useUpdateUser } from '../api'
 import { UserFormDialog } from './UserFormDialog'
 
@@ -33,7 +33,6 @@ export function UsersPage() {
   const roles = useQuery(roleOptionsQuery)
   const branches = useQuery(branchesQuery)
   const me = useQuery(meQuery).data
-  const { branch: workingBranch } = useActiveBranch()
   const update = useUpdateUser()
   const [dialog, setDialog] = useState<OpenDialog>(null)
 
@@ -121,7 +120,7 @@ export function UsersPage() {
         <UserFormDialog
           user={dialog.user}
           branches={openBranches}
-          defaultBranchId={workingBranch?.id}
+          defaultBranchId={openBranches[0]?.id}
           onClose={() => setDialog(null)}
         />
       )}
