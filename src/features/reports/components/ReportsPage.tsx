@@ -4,13 +4,12 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 import { Download, LoaderCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { branchesQuery } from '@/features/branches'
 import { settingsQuery, useFormat, useSettings } from '@/features/settings'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { reportQuery, productsReportQuery, branchesReportQuery, readReport, readProducts, readBranches } from '../api'
+import { reportQuery, productsReportQuery, readReport, readProducts } from '../api'
 import { validRange, todayInTimeZone, type ReportFilters as Filters } from '../lib/date-range'
 import { collectPages } from '../lib/collect-pages'
 import { ReportFilters } from './ReportFilters'
@@ -24,25 +23,21 @@ export function ReportsPage() {
   const shop = useSettings()
   const settings = useQuery(settingsQuery)
   const { money, currency, locale } = useFormat()
-  const branchName = useQuery(branchesQuery).data?.[0]?.name ?? ''
   const [params, setParams] = useSearchParams()
   const [exporting, setExporting] = useState(false)
   const today = todayInTimeZone(shop.timeZone)
   const filters: Filters = {
     from: params.get('from') ?? today.slice(0, 7) + '-01',
     to: params.get('to') ?? today,
-    scope: params.get('scope') === 'all' ? 'all' : 'branch',
   }
   const offset = (name: string) => {
     const value = Number(params.get(name) ?? 0)
     return Number.isSafeInteger(value) && value >= 0 && value <= 1000000 ? value : 0
   }
   const productOffset = offset('products')
-  const branchOffset = offset('branches')
   const enabled = Boolean(settings.data) && validRange(filters.from, filters.to)
   const report = useQuery({ ...reportQuery(filters), enabled })
   const products = useQuery({ ...productsReportQuery(filters, productOffset), enabled })
-  const branches = useQuery({ ...branchesReportQuery(filters, branchOffset), enabled })
   const summary = report.data?.summary
   const setPage = (name: string, value: number) => {
     const next = new URLSearchParams(params)
@@ -53,17 +48,14 @@ export function ReportsPage() {
     if (exporting || !enabled) return
     setExporting(true)
     try {
-      const [fresh, allProducts, allBranches, { downloadReportWorkbook }] = await Promise.all([
+      const [fresh, allProducts, { downloadReportWorkbook }] = await Promise.all([
         readReport(filters),
         collectPages((offset, limit) => readProducts(filters, offset, limit)),
-        collectPages((offset, limit) => readBranches(filters, offset, limit)),
         import('../lib/export-workbook'),
       ])
-      if (new Set(allProducts.map((row) => row.productId)).size !== allProducts.length
-        || new Set(allBranches.map((row) => row.branchId)).size !== allBranches.length) throw new Error('REPORT_CHANGED')
+      if (new Set(allProducts.map((row) => row.productId)).size !== allProducts.length) throw new Error('REPORT_CHANGED')
       await downloadReportWorkbook({
-        report: fresh, products: allProducts, branches: allBranches,
-        branchName: filters.scope === 'all' ? t('allBranches') : branchName,
+        report: fresh, products: allProducts,
         currency, fractionDigits: money.fractionDigits, locale,
       })
       toast.success(t('exported'))
@@ -87,8 +79,8 @@ export function ReportsPage() {
         </Button>
       </PageHeader>
       <main className="flex-1 space-y-4 overflow-y-auto p-4">
-        <ReportFilters key={`${filters.from}-${filters.to}-${filters.scope}-${shop.timeZone}`}
-          filters={filters} today={today} branchName={branchName || t('scope')}
+        <ReportFilters key={`${filters.from}-${filters.to}-${shop.timeZone}`}
+          filters={filters} today={today}
           onApply={(next) => setParams({ ...next })} />
         <p className="text-xs text-muted-foreground">{t('zone', { zone: report.data?.timeZone ?? shop.timeZone })} · {currency}</p>
         {failure(settings.error, () => void settings.refetch())}
@@ -136,14 +128,6 @@ export function ReportsPage() {
               <ReportDataTable headers={[t('sku'), t('product'), t('quantity'), t('itemSales')]} numberFrom={2}
                 rows={(products.data?.items ?? []).map((row) => [row.sku, row.productName, row.quantity, money.plain(row.lineTotalSatang)])} />
               <PaginationBar page={Math.floor(productOffset / 10)} pageSize={10} total={products.data?.total ?? 0} isLoading={products.isFetching} onPageChange={(value) => setPage('products', value * 10)} />
-            </>}
-          </Panel>
-          <Panel title={t('branches')} description={t('branchesNote')}>
-            {failure(branches.error, () => void branches.refetch())}
-            {branches.isPending ? <Skeleton className="m-4 h-24" /> : !branches.error && <>
-              <ReportDataTable headers={[t('branch'), t('bills'), t('revenue'), t('profit')]}
-                rows={(branches.data?.items ?? []).map((row) => [row.branchName, row.saleCount, money.plain(row.totalSatang), money.plain(row.profitSatang)])} />
-              <PaginationBar page={Math.floor(branchOffset / 10)} pageSize={10} total={branches.data?.total ?? 0} isLoading={branches.isFetching} onPageChange={(value) => setPage('branches', value * 10)} />
             </>}
           </Panel>
           <p className="pb-2 text-xs leading-relaxed text-muted-foreground">{t('basis')}</p>

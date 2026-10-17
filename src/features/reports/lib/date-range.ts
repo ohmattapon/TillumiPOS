@@ -1,4 +1,4 @@
-export interface ReportFilters { from: string; to: string; scope: 'branch' | 'all' }
+export interface ReportFilters { from: string; to: string }
 
 /** Eden decodes ISO calendar-date response strings into Date objects at runtime. */
 export function calendarDate(value: string | Date): string {

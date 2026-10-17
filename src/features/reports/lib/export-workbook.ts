@@ -1,12 +1,10 @@
-import type { SalesReport, ReportProduct, ReportBranch } from '@pos/api/types'
+import type { SalesReport, ReportProduct } from '@pos/api/types'
 import type { Locale } from '@/lib/money'
 import { reportsLocales } from '../locales'
 
 export interface ReportExportData {
   report: SalesReport
   products: ReportProduct[]
-  branches: ReportBranch[]
-  branchName: string
   currency: string
   fractionDigits: number
   locale: Locale
@@ -36,7 +34,7 @@ export async function buildReportWorkbook(data: ReportExportData) {
   }
   const s = data.report.summary
   const summarySheet = sheet(t.summarySheet, [t.summarySheet, data.currency], [
-    [t.from, data.report.from], [t.to, data.report.to], [t.scope, data.branchName],
+    [t.from, data.report.from], [t.to, data.report.to],
     [t.zone.replace('{{zone}}', data.report.timeZone), ''], [t.currency, data.currency],
     [t.generated, new Date().toISOString()], [t.bills, s.saleCount], [t.voidedBills, s.voidedCount],
     [t.revenue, amount(s.totalSatang)], [t.vat, amount(s.vatSatang)], [t.netSales, amount(s.netSalesSatang)],
@@ -44,8 +42,8 @@ export async function buildReportWorkbook(data: ReportExportData) {
     [t.average, s.saleCount ? amount(Math.round(s.totalSatang / s.saleCount)) : 0],
     [t.basis + '\n' + t.productsNote, ''],
   ], [2])
+  summarySheet.getCell('B7').numFmt = '#,##0'
   summarySheet.getCell('B8').numFmt = '#,##0'
-  summarySheet.getCell('B9').numFmt = '#,##0'
   const noteRow = summarySheet.rowCount
   summarySheet.mergeCells(`A${noteRow}:B${noteRow}`)
   summarySheet.getCell(`A${noteRow}`).alignment = { wrapText: true, vertical: 'top' }
@@ -54,8 +52,6 @@ export async function buildReportWorkbook(data: ReportExportData) {
     data.report.days.items.map((row) => [row.day, row.saleCount, amount(row.totalSatang), amount(row.vatSatang), amount(row.netSalesSatang), amount(row.costSatang), amount(row.profitSatang)]), [3, 4, 5, 6, 7])
   sheet(t.productsSheet, [t.sku, t.product, t.quantity, t.itemSales],
     data.products.map((row) => [row.sku, row.productName, row.quantity, amount(row.lineTotalSatang)]), [4])
-  sheet(t.branchesSheet, [t.branch, t.bills, t.revenue, t.netSales, t.cost, t.profit],
-    data.branches.map((row) => [row.branchName, row.saleCount, amount(row.totalSatang), amount(row.netSalesSatang), amount(row.costSatang), amount(row.profitSatang)]), [3, 4, 5, 6])
   sheet(t.methodsSheet, [t.methods, data.currency],
     data.report.byMethod.map((row) => [t[row.method], amount(row.amountSatang)]), [2])
   return workbook

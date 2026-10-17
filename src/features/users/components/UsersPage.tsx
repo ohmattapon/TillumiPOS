@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { meQuery } from '@/features/auth'
 import { roleOptionsQuery } from '@/features/roles'
-import { branchesQuery } from '@/features/branches'
 import { usersQuery, useUpdateUser } from '../api'
 import { UserFormDialog } from './UserFormDialog'
 
@@ -31,15 +30,12 @@ export function UsersPage() {
   const { t: tc } = useTranslation()
   const users = useQuery(usersQuery)
   const roles = useQuery(roleOptionsQuery)
-  const branches = useQuery(branchesQuery)
   const me = useQuery(meQuery).data
   const update = useUpdateUser()
   const [dialog, setDialog] = useState<OpenDialog>(null)
 
   const paging = useListPagination('users')
   const all = users.data ?? []
-  const branchName = new Map((branches.data ?? []).map((branch) => [branch.id, branch.name]))
-  const openBranches = (branches.data ?? []).filter((branch) => branch.isActive)
 
   const setActive = (user: User, isActive: boolean) =>
     update.mutate(
@@ -84,7 +80,6 @@ export function UsersPage() {
               },
               { id: 'username', header: t('columns.username'), priority: 'secondary', cell: (user) => user.username },
               { id: 'role', header: t('columns.role'), priority: 'secondary', cell: (user) => roles.data?.find((role) => role.id === user.roleId)?.name ?? t(`roles.${user.role}`) },
-              { id: 'branch', header: t('columns.branch'), priority: 'wide-only', cell: (user) => branchName.get(user.branchId) ?? t('unknownBranch') },
               {
                 id: 'status',
                 header: t('columns.status'),
@@ -119,8 +114,6 @@ export function UsersPage() {
       {dialog && (
         <UserFormDialog
           user={dialog.user}
-          branches={openBranches}
-          defaultBranchId={openBranches[0]?.id}
           onClose={() => setDialog(null)}
         />
       )}

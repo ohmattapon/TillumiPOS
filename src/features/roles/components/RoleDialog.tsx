@@ -1,4 +1,4 @@
-import { PERMISSION_GROUPS, PERMISSIONS } from '@pos/api/permissions'
+import { PERMISSIONS } from '@pos/api/permissions'
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useCreateRole, useUpdateRole, type Role } from '../api'
+import { groupPermissions } from '../lib/permission-groups'
 
 export function RoleDialog({ role, onClose }: { role?: Role; onClose: () => void }) {
   const { t } = useTranslation('roles')
@@ -29,7 +30,7 @@ export function RoleDialog({ role, onClose }: { role?: Role; onClose: () => void
       <form onSubmit={submit} className="space-y-4">
         <div className="space-y-2"><Label htmlFor="role-name">{t('name')}</Label><Input id="role-name" className="h-11" value={name} onChange={(event) => setName(event.target.value)} maxLength={60} required disabled={Boolean(role?.systemKey)} autoFocus={!role?.systemKey} /></div>
         <div className="grid gap-4 sm:grid-cols-2">
-          {PERMISSION_GROUPS.map((group) => <fieldset key={group.key} className="min-w-0 rounded-lg border p-3">
+          {groupPermissions(PERMISSIONS).map((group) => <fieldset key={group.key} className="min-w-0 rounded-lg border p-3">
             <legend className="px-1 text-sm font-medium">{t(`groups.${group.key}`)}</legend>
             {group.permissions.map((permission) => <label key={permission} className="flex min-h-11 cursor-pointer items-center gap-3 py-1 text-sm">
               <input type="checkbox" className="size-4 shrink-0 accent-primary" checked={permissions.includes(permission)} disabled={owner || mutation.isPending}

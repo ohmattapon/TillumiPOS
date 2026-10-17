@@ -9,8 +9,7 @@ const fixture: ReportExportData = {
     byMethod: [{ method: 'cash', amountSatang: 10700 }],
   },
   products: [{ productId: 1, sku: '00123', productName: '=HYPERLINK("https://example.com")', quantity: 2, lineTotalSatang: 10700 }],
-  branches: [{ branchId: 1, branchName: 'สาขาหลัก', ...metrics }],
-  branchName: 'ทุกสาขา', currency: 'THB', fractionDigits: 2, locale: 'th',
+  currency: 'THB', fractionDigits: 2, locale: 'th',
 }
 test('XLSX roundtrip keeps money numeric, Thai text and SKU intact, and formula-looking names literal', async () => {
   const workbook = await buildReportWorkbook(fixture)
@@ -18,7 +17,7 @@ test('XLSX roundtrip keeps money numeric, Thai text and SKU intact, and formula-
   const { default: ExcelJS } = await import('exceljs')
   const loaded = new ExcelJS.Workbook()
   await loaded.xlsx.load(bytes)
-  expect(loaded.worksheets.length).toBe(5)
+  expect(loaded.worksheets.length).toBe(4)
   const daily = loaded.getWorksheet('รายวัน')!
   expect(daily.getCell('C2').value).toBe(107)
   expect(daily.getCell('G2').value).toBe(40)
@@ -26,7 +25,6 @@ test('XLSX roundtrip keeps money numeric, Thai text and SKU intact, and formula-
   expect(products.getCell('A2').value).toBe('00123')
   expect(products.getCell('B2').value).toBe(fixture.products[0]!.productName)
   expect(products.getCell('B2').type).toBe(ExcelJS.ValueType.String)
-  expect(loaded.getWorksheet('สาขา')!.getCell('A2').value).toBe('สาขาหลัก')
 }, 30000)
 test('a zero-decimal currency is exported without scaling its values', async () => {
   const workbook = await buildReportWorkbook({ ...fixture, locale: 'en', currency: 'JPY', fractionDigits: 0 })
