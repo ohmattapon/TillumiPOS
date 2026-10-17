@@ -11,7 +11,7 @@ interface MediaSettings {
 }
 
 /**
- * Talks to the image Worker in apps/media, which fronts the R2 bucket. Created by a factory in the
+ * Talks to the image Worker in workers/media, which fronts the R2 bucket. Created by a factory in the
  * shared module (not by the container), so a test can hand it its own settings.
  */
 export class WorkerMediaStorage implements IMediaStorage {
