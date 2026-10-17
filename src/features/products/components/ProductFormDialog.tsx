@@ -1,6 +1,7 @@
 import type { Category, Product } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
-import { ImagePlus, Trash2 } from 'lucide-react'
+import { packUnitPriceSatang } from '@pos/api/packs'
+import { ImagePlus, Plus, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -15,6 +16,7 @@ import { modifierGroupsQuery } from '@/features/modifiers'
 import { useCan } from '@/features/auth'
 import { useFeatures, useFormat, useSettings } from '@/features/settings'
 import { imageStorageQuery, useSaveProduct } from '../api'
+import { MAX_PACKS, toPackInput, toPackRows, type PackRow } from '../lib/packs'
 
 // Radix Select cannot use an empty string as an item value.
 const NO_CATEGORY = 'none'
@@ -42,6 +44,10 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
     cost: product ? money.toInput(product.costSatang) : '',
     trackStock: product?.trackStock ?? true,
   })
+  const [packs, setPacks] = useState<PackRow[]>(() => toPackRows(product?.packs ?? [], money.toInput))
+  const [packError, setPackError] = useState<{ error: 'size' | 'price'; index: number } | null>(null)
+  const setPack = (index: number, patch: Partial<PackRow>) =>
+    setPacks(packs.map((row, i) => (i === index ? { ...row, ...patch } : row)))
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm({ ...form, [key]: value })
 
   const groups = useQuery(modifierGroupsQuery).data ?? []
@@ -77,6 +83,12 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (priceSatang === null || costSatang === null) return
+    const packInput = toPackInput(packs, money.parse)
+    if ('error' in packInput) {
+      setPackError(packInput)
+      return
+    }
+    setPackError(null)
     save.mutate(
       {
         id: product?.id,
@@ -91,6 +103,8 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
           priceSatang,
           costSatang,
           trackStock: form.trackStock,
+          // An existing product always sends the list so removals apply; a new one with none sends nothing.
+          packs: product || packInput.packs.length > 0 ? packInput.packs : undefined,
         },
       },
       {
@@ -197,6 +211,80 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
                 </SelectContent>
               </Select>
             </div>
+            <fieldset className="col-span-2 space-y-3 rounded-lg border p-3">
+              <legend className="px-1 text-sm font-medium">{t('form.packs')}</legend>
+              {packs.map((row, index) => {
+                const size = /^\d+$/.test(row.size.trim()) ? Number(row.size) : null
+                const autoPrice =
+                  priceSatang !== null && size !== null && size > 0
+                    ? money.plain(packUnitPriceSatang(priceSatang, { size, priceSatang: null }))
+                    : ''
+                const rowError = packError?.index === index ? packError.error : null
+                return (
+                  <div key={row.id ?? `new-${index}`} className="space-y-2">
+                    <div className="grid grid-cols-[1fr_5rem] gap-2 sm:grid-cols-[1fr_5rem_8rem]">
+                      <Input
+                        className="h-11"
+                        aria-label={t('form.packBarcode')}
+                        placeholder={t('form.packBarcode')}
+                        value={row.barcode}
+                        onChange={(event) => setPack(index, { barcode: event.target.value })}
+                      />
+                      <Input
+                        className="h-11 text-right tabular-nums"
+                        inputMode="numeric"
+                        aria-label={t('form.packSize')}
+                        placeholder={t('form.packSize')}
+                        aria-invalid={rowError === 'size'}
+                        value={row.size}
+                        onChange={(event) => setPack(index, { size: event.target.value })}
+                      />
+                      <Input
+                        className="col-span-2 h-11 text-right tabular-nums sm:col-span-1"
+                        inputMode="decimal"
+                        aria-label={t('form.packPrice', { currency })}
+                        placeholder={autoPrice ? t('form.packAutoPrice', { price: autoPrice }) : t('form.packPrice', { currency })}
+                        aria-invalid={rowError === 'price'}
+                        value={row.price}
+                        onChange={(event) => setPack(index, { price: event.target.value })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="flex min-h-11 items-center gap-2 text-sm">
+                        <Switch checked={row.isActive} onCheckedChange={(checked) => setPack(index, { isActive: checked })} />
+                        {t('form.packActive')}
+                      </label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-11 text-muted-foreground"
+                        aria-label={t('form.removePack')}
+                        onClick={() => setPacks(packs.filter((_, i) => i !== index))}
+                      >
+                        <X />
+                      </Button>
+                    </div>
+                    {rowError && (
+                      <p role="alert" className="text-sm text-destructive">
+                        {t(rowError === 'size' ? 'form.packSizeInvalid' : 'form.packPriceInvalid')}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11"
+                disabled={packs.length >= MAX_PACKS}
+                onClick={() => setPacks([...packs, { barcode: '', size: '', price: '', isActive: true }])}
+              >
+                <Plus />
+                {t('form.addPack')}
+              </Button>
+            </fieldset>
+
             <label className="col-span-2 flex items-center justify-between gap-4 rounded-lg border p-3">
               <span>
                 <span className="block text-sm font-medium">{t('form.trackStock')}</span>

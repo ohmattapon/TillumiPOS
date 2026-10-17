@@ -3,6 +3,7 @@ import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query
 import { modifierKeys } from '@/features/modifiers'
 import { api, apiV2, unwrap } from '@/lib/api'
 import { prepareImage } from './lib/image'
+import type { PackInput } from './lib/packs'
 
 export const productKeys = {
   /** Prefix of every product query: invalidate this after anything that changes products or stock. */
@@ -50,6 +51,8 @@ export interface ProductInput {
   priceSatang: number
   costSatang: number
   trackStock: boolean
+  /** Omit to leave the packs as they are; a list replaces the whole set. */
+  packs?: PackInput[]
 }
 
 export interface SaveProductVariables {
