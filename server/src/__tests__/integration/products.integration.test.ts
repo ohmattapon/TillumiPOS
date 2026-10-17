@@ -122,6 +122,7 @@ describe('products', () => {
       stockQty: 0,
       isActive: true,
       imageUrl: null,
+      packs: [],
     })
   })
 
@@ -131,5 +132,30 @@ describe('products', () => {
     const unchanged = ok(await owner.api.catalog.products({ id: product.id }).patch({}))
 
     expect(unchanged).toEqual(product)
+  })
+
+  test('packs are created, returned with ids, and found by their barcode', async () => {
+    const created = ok(await owner.api.catalog.products.post({
+      sku: 'PK-1',
+      name: 'น้ำดื่ม',
+      priceSatang: 1000,
+      packs: [{ barcode: 'BOX12', size: 12, priceSatang: null }, { barcode: 'BOX24', size: 24, priceSatang: 20000 }],
+    }))
+
+    expect(created.packs).toEqual([
+      { id: expect.any(Number), barcode: 'BOX12', size: 12, priceSatang: null, isActive: true },
+      { id: expect.any(Number), barcode: 'BOX24', size: 24, priceSatang: 20000, isActive: true },
+    ])
+    const found = ok(await owner.api.catalog.products.get({ query: { code: 'BOX24' } }))
+    expect(found.items.map((item) => item.id)).toEqual([created.id])
+  })
+
+  test('a cashier cannot change packs', async () => {
+    const product = await seedProduct(owner)
+    const cashier = await signIn('cashier')
+
+    const result = await cashier.api.catalog.products({ id: product.id }).patch({ packs: [{ barcode: 'X', size: 2, priceSatang: null }] })
+
+    expect(result.status).toBe(403)
   })
 })

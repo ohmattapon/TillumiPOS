@@ -9,6 +9,8 @@ import { updateProductSchema } from '../schemas/product-schemas'
 import { productRepositoryToken } from '../ports/product.repository'
 import type { IProductRepository } from '../ports/product.repository'
 
+import { auditPack } from './audit-pack'
+
 /** Command. */
 @injectable()
 export class UpdateProductUseCase {
@@ -23,8 +25,18 @@ export class UpdateProductUseCase {
       const existing = await this.products.findById(id, branchId)
       if (!existing) throw new DomainNotFoundError('ไม่พบสินค้า')
 
-      const updated = await this.products.update(existing.with(changes), branchId)
-      const delta = auditChanges(existing, updated, ['name', 'priceSatang', 'costSatang', 'isActive', 'categoryId', 'sku', 'barcode'])
+      const { packs, ...fields } = changes
+      const next = existing.with({
+        ...fields,
+        // A pack sent without an id is new (0); omitted packs leave the stored set alone.
+        ...(packs && { packs: packs.map((pack) => ({ id: pack.id ?? 0, barcode: pack.barcode, size: pack.size, priceSatang: pack.priceSatang, isActive: pack.isActive ?? true })) }),
+      })
+      const updated = await this.products.update(next, branchId)
+      const delta = auditChanges(
+        { ...existing, packs: existing.packs.map(auditPack) },
+        { ...updated, packs: updated.packs.map(auditPack) },
+        ['name', 'priceSatang', 'costSatang', 'isActive', 'categoryId', 'sku', 'barcode', 'packs'],
+      )
       if (delta.changed) await this.audit.record({ id: actor.id, name: actor.displayName }, branchId, buildAuditEntry({
         action: 'product.update',
         entityType: 'product',

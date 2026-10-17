@@ -18,6 +18,7 @@ const product = (overrides: Partial<Product>): Product => ({
   stockQty: 10,
   isActive: true,
   imageUrl: null,
+  packs: [],
   ...overrides,
 })
 

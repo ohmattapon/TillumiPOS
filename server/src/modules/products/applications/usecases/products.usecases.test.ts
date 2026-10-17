@@ -117,6 +117,25 @@ describe('CreateProductUseCase', () => {
     expect(repo.create.mock.calls[0]![0].toSnapshot()).toMatchObject({ stockQty: 0, imageKey: null, isActive: true })
   })
 
+  test('passes packs to the repository as new active packs', async () => {
+    await useCase.execute({ sku: 'P', name: 'p', priceSatang: 100, packs: [
+      { barcode: 'B12', size: 12, priceSatang: null },
+      { barcode: 'B24', size: 24, priceSatang: 2000 },
+    ] }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
+
+    expect(repo.create.mock.calls[0]![0].packs).toEqual([
+      { id: 0, barcode: 'B12', size: 12, priceSatang: null, isActive: true },
+      { id: 0, barcode: 'B24', size: 24, priceSatang: 2000, isActive: true },
+    ])
+  })
+
+  test('rejects more than 10 packs', async () => {
+    const packs = Array.from({ length: 11 }, (_, i) => ({ barcode: `B${i}`, size: 2, priceSatang: null }))
+
+    await expect(useCase.execute({ sku: 'P', name: 'p', priceSatang: 100, packs }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })).rejects.toBeInstanceOf(ZodError)
+    expect(repo.create).not.toHaveBeenCalled()
+  })
+
   test.each([
     ['a missing price', { sku: 'A', name: 'a' }],
     ['a negative price', { sku: 'A', name: 'a', priceSatang: -1 }],
@@ -161,6 +180,37 @@ describe('UpdateProductUseCase', () => {
     const updated = await useCase.execute(4, {}, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
 
     expect(updated.toSnapshot()).toEqual(makeProduct({ id: 4, barcode: '885', categoryId: 2, stockQty: 5 }).toSnapshot())
+  })
+
+  describe('packs', () => {
+    const pack = { id: 3, barcode: 'B12', size: 12, priceSatang: null, isActive: true }
+    let audit: ReturnType<typeof auditMock>
+
+    beforeEach(() => {
+      repo.findById.mockResolvedValue(makeProduct({ id: 4, packs: [pack] }))
+      audit = auditMock()
+      useCase = new UpdateProductUseCase(repo, auditUnitOfWork(), audit)
+    })
+
+    test('omitted packs are left untouched', async () => {
+      const updated = await useCase.execute(4, { name: 'x' }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
+
+      expect(updated.packs).toEqual([pack])
+    })
+
+    test('an empty list removes every pack', async () => {
+      const updated = await useCase.execute(4, { packs: [] }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
+
+      expect(updated.packs).toEqual([])
+    })
+
+    test('a pack price change is audited with before and after packs', async () => {
+      await useCase.execute(4, { packs: [{ id: 3, barcode: 'B12', size: 12, priceSatang: 900 }] }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
+
+      const entry = audit.record.mock.calls[0]![2]
+      expect(entry.before).toEqual({ packs: [{ barcode: 'B12', size: 12, priceSatang: null, isActive: true }] })
+      expect(entry.after).toEqual({ packs: [{ barcode: 'B12', size: 12, priceSatang: 900, isActive: true }] })
+    })
   })
 
   test('an unknown id is not found, and nothing is written', async () => {

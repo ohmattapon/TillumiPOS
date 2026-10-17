@@ -8,6 +8,8 @@ import { createProductSchema } from '../schemas/product-schemas'
 import { productRepositoryToken } from '../ports/product.repository'
 import type { IProductRepository } from '../ports/product.repository'
 
+import { auditPack } from './audit-pack'
+
 /** Command. */
 @injectable()
 export class CreateProductUseCase {
@@ -33,6 +35,7 @@ export class CreateProductUseCase {
           stockQty: 0,
           isActive: true,
           imageKey: null,
+          packs: (dto.packs ?? []).map((pack) => ({ id: 0, barcode: pack.barcode, size: pack.size, priceSatang: pack.priceSatang, isActive: pack.isActive ?? true })),
         }),
         branchId,
       )
@@ -41,7 +44,7 @@ export class CreateProductUseCase {
         entityType: 'product',
         entityId: String(result.id),
         summary: 'สร้างสินค้า',
-        after: { name: result.name, sku: result.sku, priceSatang: result.priceSatang, costSatang: result.costSatang, categoryId: result.categoryId, barcode: result.barcode, isActive: result.isActive },
+        after: { name: result.name, sku: result.sku, priceSatang: result.priceSatang, costSatang: result.costSatang, categoryId: result.categoryId, barcode: result.barcode, isActive: result.isActive, packs: result.packs.map(auditPack) },
       }))
       return result
     })
