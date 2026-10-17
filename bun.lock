@@ -51,7 +51,7 @@
         "vite": "^8.3.0",
       },
     },
-    "apps/cloud": {
+    "workers/cloud": {
       "name": "@pos/cloud",
       "dependencies": {
         "@cloudflare/containers": "^0.3.7",
@@ -61,7 +61,7 @@
         "wrangler": "^4.149.0",
       },
     },
-    "apps/media": {
+    "workers/media": {
       "name": "@pos/media",
       "devDependencies": {
         "typescript": "~6.0.2",
@@ -356,9 +356,9 @@
 
     "@poppinss/exception": ["@poppinss/exception@1.2.3", "", {}, "sha512-dCED+QRChTVatE9ibtoaxc+WkdzOSjYTKi/+uacHWIsfodVfpsueo3+DKpgU5Px8qXjgmXkSvhXvSCz3fnP9lw=="],
 
-    "@pos/cloud": ["@pos/cloud@workspace:apps/cloud"],
+    "@pos/cloud": ["@pos/cloud@workspace:workers/cloud"],
 
-    "@pos/media": ["@pos/media@workspace:apps/media"],
+    "@pos/media": ["@pos/media@workspace:workers/media"],
 
     "@radix-ui/number": ["@radix-ui/number@1.1.3", "", {}, "sha512-Road2bidD0uu/1BGDOWNdPI06g0lIRy6IF9GZcIrDK2KGItfor8IQwQa+yM2ERgHM1MmHxaxpTzk0/Jp42lNfA=="],
 
