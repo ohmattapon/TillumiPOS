@@ -169,7 +169,7 @@ Design and test at three sizes. These values match the Tailwind breakpoints `sm`
 - Main menu: on a large screen the sidebar is expanded with names. On a tablet it is a 48px icon rail by default. On a phone the sidebar is hidden and a bottom bar with 4 slots (Sell, Today, Shift, Menu) is used. The remaining items open from the "Menu" button.
 - Cart: on a large screen it is a fixed right panel. Below 1024px it is a bottom bar showing the count, the total and the pay button. Tapping it opens the whole cart as a sheet from the bottom.
 - Buttons in the header bar: every button is 44px tall. Below 640px they are gathered into a "More actions" button. A long title can wrap, and never breaks in the middle of a word.
-- Tables: always use `DataTable`. A `primary` column is the title of a row on a phone, `secondary` is the secondary line, and `wide-only` is shown from 1024px up.
+- Tables: always use `DataTable`. A `primary` column is the title of a row on a phone, `secondary` is the secondary line, and `wide-only` is shown from 1024px up. A table can carry a toolbar inside its card (the `toolbar` prop, usually a `TableSearch`); the toolbar is drawn once, above both the table and the phone list.
 - Dialogs: at most `100svh - 2rem` tall and scrollable inside. A dialog without a form uses `DialogFooter sticky` so the buttons stay at the bottom. A dialog with a form puts its buttons at the end of the form, and you scroll down to reach them.
 - Table floor plan: below 640px it is a list where you can edit the name and seats and turn a table on or off. Positions cannot be dragged.
 - No page scrolls horizontally at 390, 768 and 1366px (checked by e2e).
