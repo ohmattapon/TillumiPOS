@@ -1,6 +1,6 @@
 import { asc, eq } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
-import { SlideEntity } from '../../../../domains/slide.domain'
+import { SlideEntity, type SlideEntityProps } from '../../../../domains/slide.domain'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import { displaySlides } from '../../../../infrastructure/database/schema/display-slides'
@@ -54,18 +54,19 @@ export class DrizzleSlideRepository implements ISlideRepository {
 
   async update(entity: SlideEntity) {
     const { id, ...values } = entity.toSnapshot()
+    let row: SlideEntityProps | undefined
     try {
-      const [row] = await currentExecutor()
+      ;[row] = await currentExecutor()
         .update(displaySlides)
         .set(values)
         .where(eq(displaySlides.id, id))
         .returning(columns)
-      // Only reachable if the row vanished between the use case's read and this write.
-      if (!row) throw new DomainNotFoundError('ไม่พบสไลด์')
-      return new SlideEntity(row)
     } catch (error) {
       if (isUniqueViolation(error)) throw duplicate()
       throw error
     }
+    // Only reachable if the row vanished between the use case's read and this write.
+    if (!row) throw new DomainNotFoundError('ไม่พบสไลด์')
+    return new SlideEntity(row)
   }
 }
