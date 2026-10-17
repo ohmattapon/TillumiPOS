@@ -29,13 +29,10 @@ describe('assertValidPack', () => {
     ['a negative price', { priceSatang: -1 }],
     ['a price over the maximum', { priceSatang: MAX_AMOUNT_SATANG + 1 }],
   ])('rejects %s', (_label, overrides) => {
-    try {
-      assertValidPack({ ...valid, ...overrides })
-      throw new Error('did not throw')
-    } catch (error) {
-      expect(error).toBeInstanceOf(DomainError)
-      expect((error as DomainError).code).toBe('INVALID_PRODUCT')
-    }
+    const attempt = () => assertValidPack({ ...valid, ...overrides })
+
+    expect(attempt).toThrow(DomainError)
+    expect(attempt).toThrow(expect.objectContaining({ code: 'INVALID_PRODUCT' }))
   })
 
   test.each<[string, Partial<ProductPack>]>([
