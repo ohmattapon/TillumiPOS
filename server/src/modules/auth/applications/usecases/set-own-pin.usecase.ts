@@ -25,12 +25,23 @@ export class SetOwnPinUseCase {
     const { currentPassword, pin } = setOwnPinSchema.parse(input)
     if (pin !== null) assertValidPin(pin)
 
-    return this.unitOfWork.run(async () => {
-      const passwordHash = await this.users.findPasswordHashById(actor.id)
+    // Checked before the unit of work, so the failure can be audited without being rolled back with it.
+    const passwordHash = await this.users.findPasswordHashById(actor.id)
+    if (!passwordHash || !(await this.hasher.verify(currentPassword, passwordHash))) {
+      // Outside any transaction, like a failed login: the audit write must never change the answer.
+      try {
+        await this.audit.record({ id: actor.id, name: actor.displayName }, null, buildAuditEntry({
+          action: 'auth.pin_password_failed',
+          entityType: 'user',
+          entityId: String(actor.id),
+          summary: 'ตั้ง PIN ของตนเองไม่สำเร็จ รหัสผ่านไม่ถูกต้อง',
+        }))
+      } catch (error) { console.error('audit: pin_password_failed not recorded', error) }
       // 400, not 401: a 401 would make the web treat the till as signed out.
-      if (!passwordHash || !(await this.hasher.verify(currentPassword, passwordHash)))
-        throw new DomainError('รหัสผ่านปัจจุบันไม่ถูกต้อง', 'INVALID_PASSWORD')
+      throw new DomainError('รหัสผ่านปัจจุบันไม่ถูกต้อง', 'INVALID_PASSWORD')
+    }
 
+    return this.unitOfWork.run(async () => {
       const before = await this.users.findById(actor.id)
       if (!before) throw new DomainNotFoundError('ไม่พบผู้ใช้')
       await this.users.setPinHash(actor.id, pin === null ? null : await this.hasher.hash(pin))

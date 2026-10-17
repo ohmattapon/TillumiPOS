@@ -173,4 +173,17 @@ describe('setting PINs over HTTP', () => {
     expect(result.error?.value).toMatchObject({ code: 'INVALID_PASSWORD' })
     expect(ok(await cashier.api.auth.me.get()).hasPin).toBe(false)
   })
+
+  test('a wrong current password leaves a trace in the audit log, without the password or the PIN', async () => {
+    const owner = await signIn('owner')
+    const cashier = await signIn('cashier')
+
+    expect((await cashier.api.auth.me.pin.put({ currentPassword: 'wrong-password', pin: '4321' })).status).toBe(400)
+
+    const entries = ok(await owner.api['audit-logs'].get({ query: { action: 'auth.pin_password_failed' } })).items
+    expect(entries).toHaveLength(1)
+    expect(entries[0]).toMatchObject({ actorId: cashier.user.id, entityId: String(cashier.user.id) })
+    expect(JSON.stringify(entries)).not.toContain('wrong-password')
+    expect(JSON.stringify(entries)).not.toContain('4321')
+  })
 })
