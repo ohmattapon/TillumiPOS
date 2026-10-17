@@ -6,7 +6,7 @@ import { auditLogToken, type IAuditLog } from '../../../audit/applications/ports
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import { TOKENS } from '../../../tokens'
 import { slideRepositoryToken, type ISlideRepository } from '../ports/slide.repository'
-import { updateSlideSchema } from '../schemas/slide-schemas'
+import { slideIdSchema, updateSlideSchema } from '../schemas/slide-schemas'
 
 /** Command: reorders a slide or switches it on or off. */
 @injectable()
@@ -18,11 +18,12 @@ export class UpdateSlideUseCase {
   ) {}
 
   async execute(id: number, input: unknown, actor: Actor & { id: number; displayName: string }) {
+    const slideId = slideIdSchema.parse(id)
     const changes = updateSlideSchema.parse(input)
     requirePermission(actor, 'promotions.write', 'เฉพาะเจ้าของร้านจัดการสไลด์ได้')
 
     return this.unitOfWork.run(async () => {
-      const existing = await this.slides.findById(id)
+      const existing = await this.slides.findById(slideId)
       if (!existing) throw new DomainNotFoundError('ไม่พบสไลด์')
 
       const updated = await this.slides.update(existing.with(changes))
