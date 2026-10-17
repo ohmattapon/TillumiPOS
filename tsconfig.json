@@ -1,7 +1,11 @@
 {
   "files": [],
   "compilerOptions": {
-    // Read by Bun (tests, scripts) and editors; tsconfig.app.json repeats it for tsc -b.
+    // Bun applies the tsconfig of the working directory, and `bun run dev` and the seeds run the server from here:
+    // tsyringe needs decorator metadata to build the use cases. (files is empty, so tsc -b does not compile with this.)
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    // Read by Bun (tests, scripts) and editors; it must match tsconfig.app.json and vite.config.ts.
     "paths": {
       "@/*": ["./src/*"],
       "@pos/api": ["./server/src/app.ts"],
