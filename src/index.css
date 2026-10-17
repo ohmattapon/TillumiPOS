@@ -273,3 +273,24 @@
     @apply font-sans;
   }
 }
+
+/* Printing a sale prints only the receipt, sized to the paper loaded in the printer. */
+@media print {
+  [data-receipt-paper='58'] {
+    width: 48mm;
+    max-width: 48mm;
+  }
+  [data-receipt-paper='80'] {
+    width: 72mm;
+    max-width: 72mm;
+  }
+  /* The receipt body fills the dialog; it must not re-apply the paper width inside the dialog padding. */
+  [data-receipt-paper] [data-receipt-paper] {
+    width: auto;
+    max-width: none;
+  }
+  /* While a receipt dialog is open, the app behind it must not print. */
+  body:has([data-receipt-paper]) #root {
+    display: none;
+  }
+}
