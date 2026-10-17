@@ -1,6 +1,6 @@
 import type { Product } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
-import { MoreHorizontal, PackagePlus, Plus, Search } from 'lucide-react'
+import { MoreHorizontal, PackagePlus, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
 import { DataTable } from '@/components/DataTable'
 import { PaginationBar } from '@/components/PaginationBar'
+import { TableSearch } from '@/components/TableSearch'
 import { useListPagination } from '@/hooks/use-list-pagination'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { ProductFormDialog } from './ProductFormDialog'
@@ -23,7 +24,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
 import { categoriesQuery, CategoryDot } from '@/features/categories'
 import { useFormat, useSettings } from '@/features/settings'
 import { useAuthorization } from '@/features/auth'
@@ -101,21 +101,12 @@ export function ProductsPage() {
               { value: 'inactive', label: t('filters.inactive'), count: inactiveCount.data?.total },
             ]}
           />
-          <div className="relative ml-auto w-full max-w-xs">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="h-9 pl-9"
-              placeholder={t('search.placeholder')}
-              aria-label={t('search.label')}
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
         </div>
 
         <Panel title={t('list.title')} description={products.isPending ? undefined : t('list.description', { shown: visible.length, total: products.data?.total ?? 0 })}>
           {products.error && <p className="p-4 text-sm text-destructive">{products.error.message}</p>}
           <DataTable
+            toolbar={<TableSearch value={search} onChange={setSearch} label={t('search.label')} placeholder={t('search.placeholder')} />}
             rows={visible}
             rowKey={(product) => product.id}
             isPending={products.isPending || searching}
