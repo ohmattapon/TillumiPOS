@@ -108,13 +108,16 @@ Every operation is a use case that is exactly one of a command or a query, and t
 - Every error response is RFC 9457 Problem Details (`application/problem+json`): `type`, `title`, `status`, `detail`, `code`, and `errors` for validation errors only. The user-facing message goes in `detail`. Never add a `message` field.
 - A repository converts database errors (duplicate value, foreign key) into domain errors before they leave the adapter
 
-### Branches (shop branches)
+### Branches (one fixed branch)
 
-- Stock, sales bills, stock movements and the receipt number counter belong to a branch. The product list, categories, prices and the shop settings are shared by all branches.
-- The branch being worked in comes from the `X-Branch-Id` header (not sent = the user's own branch). Only the shop owner may choose another branch. Controllers read it from `await branch()` in the `auth` context, which checks the permission and the branch status. Never read the header yourself.
+- The shop has one branch, `MAIN`, created with the database. Every request works in `MAIN`: `ResolveBranchUseCase` ignores the `X-Branch-Id` header and the user's own branch, so old clients that still send them keep working in `MAIN`. Controllers read the branch from `await branch()` in the `auth` context. Never read the header yourself.
+- Creating a branch always answers `SINGLE_BRANCH_ONLY` (409), and `MAIN` cannot be closed (`MAIN_BRANCH_REQUIRED`, 409). The route stays in v1 so nothing disappears. Its code and name can still be changed.
+- The web has no branch screens, switcher or header. Branch data is not shown except on old receipts, which still print the branch they were sold in when no header was stored with the bill.
+- The branch permissions `branches.manage` and `branches.switch` still exist in the API, but the role editor does not offer them.
+- Exception to the QR money rule: a paid QR with no bill, a QR with an unknown outcome, a quote reserved by a QR and an open shift in a branch other than `MAIN` that existed before the one-branch change are unreachable from the system. Only demo databases had a second branch, so no check was added. New data never goes to another branch.
 - A use case that touches stock or bills takes `branchId` as an explicit parameter, and the repository ports that deal with stock or bills take `branchId` too. Never use a hidden ambient value (such as AsyncLocalStorage). A bill of another branch must answer "not found".
 - The stock level lives in the `branch_stock` table. There is no `products.stock_qty` column. A product with no row has no stock in that branch. Lock the `products` row first and only then read the level (in the next statement). Locking together with a join returns a stale level and oversells.
-- A branch can be closed but not deleted, and its code cannot be changed because it is the prefix of the receipt number
+- A branch's code cannot be changed, because it is the prefix of the receipt number. `MAIN` is never closed.
 
 ### Orders
 
@@ -346,7 +349,7 @@ Pragmatic choices that are allowed, and places where the code does not yet follo
 ### Evolving the contract
 
 - **Additive only in a published version.** New optional fields, new routes and relaxed requirements are fine. Removing a field, changing a type, tightening validation or changing an error `code` that clients switch on is a breaking change and needs a new version.
-- **Keep error codes stable.** Clients switch on `code`. Reuse an existing code for the same situation (for example `BRANCH_FORBIDDEN`) instead of introducing a more generic one.
+- **Keep error codes stable.** Clients switch on `code`. Reuse an existing code for the same situation (for example `BRANCH_NOT_FOUND`) instead of introducing a more generic one.
 - **Keep old and new representations in step during a transition** (as `users.role` and `users.role_id` are), and write down which one is the source of truth.
 - **Review the OpenAPI diff** before recording a baseline. Every change must be explainable as additive, and the project owner is told first.
 
@@ -446,6 +449,6 @@ Run from the root of the repo:
 
 - Money is always an integer number of satang. Never use decimals.
 - A sales bill must never be edited or deleted. Mistakes are fixed by voiding the bill.
-- The receipt header (shop name, tax id, branch name, address, phone number) is stored on the bill at sale time in `SaleCheckout`. A receipt must be shown from the values on the bill, and current data is used only for old bills whose values are null (see `receiptHeading` in `src/features/sales/lib`).
+- The receipt header (shop name, tax id, branch name, address, phone number) is stored on the bill at sale time in `SaleCheckout`. New bills take the address and phone from shop settings and store no branch name. A receipt must be shown from the values on the bill, and current data is used only for old bills whose values are null (see `receiptHeading` in `src/features/sales/lib`).
 - Stock changes only through the `IStockLedger` port of the `inventory` module, and every change must have a movement record with the branch
 - Before saying that work is done, `bun run typecheck` and `bun run test` must pass
