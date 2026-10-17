@@ -1,0 +1,113 @@
+import { and, count, eq, sql } from 'drizzle-orm'
+import { injectable } from 'tsyringe'
+import { DomainError } from '../../../../domains/errors/domain-error'
+import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
+import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
+import { UserEntity } from '../../../../domains/user.domain'
+import { users } from '../../../../infrastructure/database/schema/users'
+import { isForeignKeyViolation, isUniqueViolation } from '../../../../libs/pg-error'
+import { currentExecutor } from '../../../../libs/transaction-context'
+import type { IUserRepository } from '../../applications/ports/user.repository'
+
+// passwordHash is deliberately absent: it is selected only by findCredentialsByUsername.
+const columns = {
+  id: users.id,
+  username: users.username,
+  displayName: users.displayName,
+  role: users.role,
+  roleId: users.roleId,
+  branchId: users.branchId,
+  isActive: users.isActive,
+}
+
+const duplicate = () => new DomainConflictError('ข้อมูลซ้ำกับที่มีอยู่แล้ว', 'DUPLICATE')
+
+@injectable()
+export class DrizzleUserRepository implements IUserRepository {
+  async lockOwnerChangesForUpdate(): Promise<void> {
+    await currentExecutor().execute(sql`select pg_advisory_xact_lock(731092447)`)
+  }
+  async findAll() {
+    const rows = await currentExecutor().select(columns).from(users).orderBy(users.id)
+    return rows.map((row) => new UserEntity(row))
+  }
+
+  async findById(id: number) {
+    const [row] = await currentExecutor().select(columns).from(users).where(eq(users.id, id))
+    return row ? new UserEntity(row) : null
+  }
+
+  async findByIdForUpdate(id: number) {
+    const [row] = await currentExecutor().select(columns).from(users).where(eq(users.id, id)).for('update')
+    return row ? new UserEntity(row) : null
+  }
+
+  async findActiveById(id: number) {
+    const [row] = await currentExecutor()
+      .select(columns)
+      .from(users)
+      .where(and(eq(users.id, id), eq(users.isActive, true)))
+    return row ? new UserEntity(row) : null
+  }
+
+  async findCredentialsByUsername(username: string) {
+    const [row] = await currentExecutor()
+      .select({ ...columns, passwordHash: users.passwordHash })
+      .from(users)
+      .where(eq(users.username, username))
+    if (!row) return null
+
+    const { passwordHash, ...props } = row
+    return { user: new UserEntity(props), passwordHash }
+  }
+
+  async create(entity: UserEntity, passwordHash: string) {
+    if (entity.roleId === null) throw new DomainError('ต้องระบุบทบาท', 'INVALID_USER')
+    const { id: _unassigned, ...values } = entity.toSnapshot()
+    try {
+      const [row] = await currentExecutor()
+        .insert(users)
+        .values({ ...values, roleId: entity.roleId, passwordHash })
+        .returning(columns)
+      return new UserEntity(row!)
+    } catch (error) {
+      if (isUniqueViolation(error)) throw duplicate()
+      if (isForeignKeyViolation(error)) throw new DomainConflictError('บทบาทหรือสาขาถูกเปลี่ยน กรุณาลองใหม่', 'IN_USE')
+      throw error
+    }
+  }
+
+  async update(entity: UserEntity, passwordHash?: string) {
+    if (entity.roleId === null) throw new DomainError('ต้องระบุบทบาท', 'INVALID_USER')
+    // The username is not updatable, so it is left out of the SET clause.
+    const { id, username: _fixed, ...values } = entity.toSnapshot()
+    try {
+    const [row] = await currentExecutor()
+      .update(users)
+      .set({ ...values, roleId: entity.roleId, ...(passwordHash && { passwordHash }) })
+      .where(eq(users.id, id))
+      .returning(columns)
+    if (!row) throw new DomainNotFoundError('ไม่พบผู้ใช้')
+    return new UserEntity(row)
+    } catch (error) {
+      if (isForeignKeyViolation(error)) throw new DomainConflictError('บทบาทหรือสาขาถูกเปลี่ยน กรุณาลองใหม่', 'IN_USE')
+      throw error
+    }
+  }
+
+  async countActiveOwners() {
+    const [row] = await currentExecutor()
+      .select({ total: count() })
+      .from(users)
+      .where(and(eq(users.role, 'owner'), eq(users.isActive, true)))
+    return row!.total
+  }
+
+  async countActiveInBranch(branchId: number) {
+    const [row] = await currentExecutor()
+      .select({ total: count() })
+      .from(users)
+      .where(and(eq(users.branchId, branchId), eq(users.isActive, true)))
+    return row!.total
+  }
+}

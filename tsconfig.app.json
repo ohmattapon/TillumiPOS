@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "types": ["vite/client", "bun"],
+    "strict": true,
+    // The API's source is type-checked here through the Eden `App` type, and it uses decorators.
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@pos/api": ["./server/src/app.ts"],
+      "@pos/api/types": ["./server/src/types.ts"],
+      "@pos/api/pricing": ["./server/src/domains/pricing.ts"],
+      "@pos/api/shop-settings": ["./server/src/domains/shop-settings.domain.ts"],
+      "@pos/api/modifiers": ["./server/src/domains/modifier.domain.ts"],
+      "@pos/api/promotions": ["./server/src/domains/promotion.domain.ts"],
+      "@pos/api/dining-table": ["./server/src/domains/dining-table.domain.ts"],
+      "@pos/api/permissions": ["./server/src/permissions.ts"]
+    },
+    "allowArbitraryExtensions": true,
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}

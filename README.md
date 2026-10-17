@@ -1,4 +1,6 @@
-# EasyPOS
+<h1 align="center">
+  <img src="docs/brand/logo-with-white.jpg" alt="TillumiPOS" width="360" />
+</h1>
 
 <p align="center">
   ระบบขายหน้าร้านสำหรับร้านค้าปลีกและร้านอาหาร รองรับการทำงานหลายสาขา
@@ -12,7 +14,7 @@
   <img alt="TypeScript" src="https://img.shields.io/badge/Language-TypeScript-3178C6?logo=typescript&logoColor=white" />
 </p>
 
-EasyPOS รวมงานขาย การจัดการสินค้าและสต็อก ออเดอร์สำหรับร้านอาหาร และการดูแลกะไว้ในระบบเดียว หน้าจอรองรับภาษาไทยและอังกฤษ ส่วน API แยกกฎธุรกิจออกจากฐานข้อมูลและเว็บไคลเอนต์
+TillumiPOS รวมงานขาย การจัดการสินค้าและสต็อก ออเดอร์สำหรับร้านอาหาร และการดูแลกะไว้ในระบบเดียว หน้าจอรองรับภาษาไทยและอังกฤษ ส่วน API แยกกฎธุรกิจออกจากฐานข้อมูลและเว็บไคลเอนต์
 
 ## ความสามารถ
 
@@ -37,11 +39,11 @@ flowchart LR
     Media --> R2[("Cloudflare R2")]
 ```
 
-| แอป | หน้าที่และเทคโนโลยี |
+| โฟลเดอร์ | หน้าที่และเทคโนโลยี |
 |---|---|
-| `apps/web` | React, Vite, Tailwind, shadcn/ui, TanStack Query และ Zustand; เรียก API ผ่าน Elysia Eden ที่ใช้ type จากฝั่งเซิร์ฟเวอร์ |
-| `apps/api` | Bun, Elysia, Drizzle, PostgreSQL, tsyringe และ Zod; จัดโค้ดตาม Hexagonal Architecture และ CQRS |
-| `apps/media` | Cloudflare Worker สำหรับเก็บและให้บริการรูปสินค้าผ่าน R2 |
+| `src/` (ที่ root) | React, Vite, Tailwind, shadcn/ui, TanStack Query และ Zustand; เรียก API ผ่าน Elysia Eden ที่ใช้ type จากฝั่งเซิร์ฟเวอร์ |
+| `server/` | Bun, Elysia, Drizzle, PostgreSQL, tsyringe และ Zod; จัดโค้ดตาม Hexagonal Architecture และ CQRS |
+| `workers/media` | Cloudflare Worker สำหรับเก็บและให้บริการรูปสินค้าผ่าน R2 |
 
 ## เริ่มใช้งานในเครื่อง
 
@@ -105,10 +107,9 @@ bun run e2e
 
 `bun run test` รันชุดทดสอบ API และเว็บ ส่วน integration tests และ E2E ต้องใช้ PostgreSQL ใน Docker โดย E2E จะลบแล้วสร้างฐานข้อมูลทดสอบชื่อ `pos_e2e` ใหม่ทุกครั้ง อย่าใช้ฐานข้อมูลชื่อนี้เก็บข้อมูลที่ต้องการรักษาไว้
 
-ตรวจสัญญา OpenAPI ได้จากแพ็กเกจ API:
+ตรวจสัญญา OpenAPI:
 
 ```sh
-cd apps/api
 bun run openapi:check
 ```
 

@@ -1,10 +1,10 @@
 # Demo product catalog
 
-The demo catalog contains 450 packaged food and drink products listed in Open Food Facts with Thailand as a country tag. Each entry keeps its barcode, available Thai and original product names, brand, quantity, category tags, product page, and image source URL in `apps/api/src/infrastructure/database/demo-product-catalog.json`. A matching 400-pixel JPEG is stored beside the manifest.
+The demo catalog contains 450 packaged food and drink products listed in Open Food Facts with Thailand as a country tag. Each entry keeps its barcode, available Thai and original product names, brand, quantity, category tags, product page, and image source URL in `server/src/infrastructure/database/demo-product-catalog.json`. A matching 400-pixel JPEG is stored beside the manifest.
 
 Open Food Facts recommends its public image dataset for bulk downloads. That bucket provides raw photos, and the sample showed that some are side or back-of-package shots rather than the selected front image. Since the POS needs recognizable shelf thumbnails, this demo uses the selected 400-pixel front images and downloads them one at a time from the official image host.
 
-Open Food Facts says its product data is contributed by volunteers and is not guaranteed to be accurate or complete. Names, barcodes, and packaging may change. The demo selling prices, costs, and starting stock in EasyPOS are generated for demonstration and are not taken from Open Food Facts or a retailer.
+Open Food Facts says its product data is contributed by volunteers and is not guaranteed to be accurate or complete. Names, barcodes, and packaging may change. The demo selling prices, costs, and starting stock in TillumiPOS are generated for demonstration and are not taken from Open Food Facts or a retailer.
 
 ## Attribution and licenses
 
