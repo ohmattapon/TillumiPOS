@@ -35,6 +35,9 @@ const th = {
     thanks: 'ขอบคุณที่ใช้บริการ',
     change: 'เงินทอน',
   },
+  slideshow: {
+    alt: 'รูปประชาสัมพันธ์รูปที่ {{index}} จาก {{total}}',
+  },
 }
 
 const en = {
@@ -73,6 +76,9 @@ const en = {
     title: 'Paid',
     thanks: 'Thank you',
     change: 'Change',
+  },
+  slideshow: {
+    alt: 'Promotional image {{index}} of {{total}}',
   },
 } satisfies typeof th
 
