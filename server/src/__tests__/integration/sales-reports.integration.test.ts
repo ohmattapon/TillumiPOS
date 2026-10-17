@@ -64,3 +64,13 @@ test('DST day boundaries follow the shop zone instead of a fixed 24-hour interva
   expect(result.timeZone).toBe('America/New_York')
   expect(result.summary.saleCount).toBe(2)
 })
+test('the products report counts a pack line in pieces', async () => {
+  const water = await seedProduct(owner, { priceSatang: 1500, costSatang: 1000, stock: 24, packs: [{ barcode: 'BOX6', size: 6, priceSatang: 8500 }] })
+  const sale = ok(await owner.api.sales.post({
+    items: [{ productId: water.id, packId: water.packs[0]!.id, quantity: 1 }, { productId: water.id, quantity: 2 }],
+    payments: [{ method: 'cash', amountSatang: 11500 }],
+  }))
+  await dateSale(sale.id, '2026-01-02T03:00:00Z')
+  const report = ok(await owner.api.sales.reports.products.get({ query: range }))
+  expect(report.items).toEqual([expect.objectContaining({ productId: water.id, quantity: 8, lineTotalSatang: 11500 })])
+})
