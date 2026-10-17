@@ -82,7 +82,7 @@ components:
 
 # TillumiPOS Design System
 
-This document describes the look and the design rules of the web app in `apps/web`. All the actual values live in `apps/web/src/index.css`. If this document disagrees with that file, treat the file as the source of truth and fix this document.
+This document describes the look and the design rules of the web app (`src/` at the repo root). All the actual values live in `src/index.css`. If this document disagrees with that file, treat the file as the source of truth and fix this document.
 
 ## Overview
 
@@ -131,7 +131,7 @@ Rules for using color:
 - **Inter Variable** is used for Latin letters and digits. **IBM Plex Sans Thai** is used for Thai letters. Both are installed in the project through `@fontsource`, so they work without an internet connection.
 - There are three weights: 400 for body text, 500 for labels and buttons, 600 for headings and key figures. Do not use bold 700, except on the receipt.
 - Every money figure and every quantity needs the `tabular-nums` class so the digits line up in a column.
-- Money is always shown with two decimal places, through `formatBaht` in `apps/web/src/lib/money.ts`, and is prefixed with `฿` when it appears outside a table.
+- Money is always shown with two decimal places, through `formatBaht` in `src/lib/money.ts`, and is prefixed with `฿` when it appears outside a table.
 - Table headers are 11px with letter spacing, in `muted-foreground`, and uppercase when the text is Latin.
 - The receipt uses `font-mono` so the columns line up on a thermal printer.
 
@@ -195,7 +195,7 @@ Depth comes mainly from borders. Shadows are used sparingly and are soft:
 
 ## Components
 
-Always use components from `apps/web/src/components/ui` (shadcn/ui) first, and use the shared components below when the pattern matches. Do not create a duplicate pattern.
+Always use components from `src/components/ui` (shadcn/ui) first, and use the shared components below when the pattern matches. Do not create a duplicate pattern.
 
 | Component | File | Use when |
 |---|---|---|

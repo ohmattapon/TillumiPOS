@@ -6,5 +6,5 @@ node_modules
 !.env.example
 backups
 .superpowers
-apps/web/dist
+dist
 **/.wrangler

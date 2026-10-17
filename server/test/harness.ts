@@ -1,6 +1,7 @@
 import { treaty } from '@elysiajs/eden'
 import { container } from 'tsyringe'
 import { app, type App } from '../src/app'
+import { MIGRATIONS_FOLDER } from '../src/infrastructure/database/migrations-folder'
 import { migrate } from 'drizzle-orm/bun-sql/migrator'
 import { client as sqlClient, db } from '../src/libs/db'
 import { toProductResponse } from '../src/modules/products/adapters/controllers/product.presenter'
@@ -26,7 +27,7 @@ export { fakeMedia }
 // rather than in the preload script, which unit tests also load.
 await ensureTestDatabase()
 await assertConnectedTestDatabase(sqlClient)
-await migrate(db, { migrationsFolder: './drizzle' })
+await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER })
 
 app.listen(0)
 const origin = `http://localhost:${app.server!.port}`

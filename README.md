@@ -39,11 +39,11 @@ flowchart LR
     Media --> R2[("Cloudflare R2")]
 ```
 
-| แอป | หน้าที่และเทคโนโลยี |
+| โฟลเดอร์ | หน้าที่และเทคโนโลยี |
 |---|---|
-| `apps/web` | React, Vite, Tailwind, shadcn/ui, TanStack Query และ Zustand; เรียก API ผ่าน Elysia Eden ที่ใช้ type จากฝั่งเซิร์ฟเวอร์ |
-| `apps/api` | Bun, Elysia, Drizzle, PostgreSQL, tsyringe และ Zod; จัดโค้ดตาม Hexagonal Architecture และ CQRS |
-| `apps/media` | Cloudflare Worker สำหรับเก็บและให้บริการรูปสินค้าผ่าน R2 |
+| `src/` (ที่ root) | React, Vite, Tailwind, shadcn/ui, TanStack Query และ Zustand; เรียก API ผ่าน Elysia Eden ที่ใช้ type จากฝั่งเซิร์ฟเวอร์ |
+| `server/` | Bun, Elysia, Drizzle, PostgreSQL, tsyringe และ Zod; จัดโค้ดตาม Hexagonal Architecture และ CQRS |
+| `workers/media` | Cloudflare Worker สำหรับเก็บและให้บริการรูปสินค้าผ่าน R2 |
 
 ## เริ่มใช้งานในเครื่อง
 
@@ -107,10 +107,9 @@ bun run e2e
 
 `bun run test` รันชุดทดสอบ API และเว็บ ส่วน integration tests และ E2E ต้องใช้ PostgreSQL ใน Docker โดย E2E จะลบแล้วสร้างฐานข้อมูลทดสอบชื่อ `pos_e2e` ใหม่ทุกครั้ง อย่าใช้ฐานข้อมูลชื่อนี้เก็บข้อมูลที่ต้องการรักษาไว้
 
-ตรวจสัญญา OpenAPI ได้จากแพ็กเกจ API:
+ตรวจสัญญา OpenAPI:
 
 ```sh
-cd apps/api
 bun run openapi:check
 ```
 
