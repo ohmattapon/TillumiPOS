@@ -11,3 +11,12 @@ export async function handOverSession(queryClient: QueryClient, meKey: QueryKey)
   queryClient.removeQueries({ predicate: (query) => query.queryHash !== meHash })
   await queryClient.invalidateQueries({ queryKey: meKey })
 }
+
+/**
+ * Runs after the server accepted the PIN. The till's own state moves to the new person first (synchronously),
+ * so by the time the refetched user makes the screen recompute from `me.id`, their register is already set.
+ */
+export async function completeHandOver(queryClient: QueryClient, meKey: QueryKey, newUserId: number, onHandOver: (newUserId: number) => void) {
+  onHandOver(newUserId)
+  await handOverSession(queryClient, meKey)
+}

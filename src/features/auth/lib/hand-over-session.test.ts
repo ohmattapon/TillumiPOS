@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { QueryClient } from '@tanstack/react-query'
 import { useCartStore } from '../../pos/store/cart.store'
 import { useRegisterSelectionStore } from '../../shifts/store/register-selection'
-import { handOverSession } from './hand-over-session'
+import { completeHandOver, handOverSession } from './hand-over-session'
 
 const ME = ['auth', 'me'] as const
 
@@ -40,5 +40,17 @@ describe('handOverSession', () => {
     expect(cart.memberId).toBe(9)
     expect(cart.discount).toBe('10')
     expect(useRegisterSelectionStore.getState().selections).toEqual({ '7': 3 })
+  })
+})
+
+describe('completeHandOver', () => {
+  test('moves the till to the new person before the signed-in user is refetched', async () => {
+    const calls: string[] = []
+    const queryClient = new QueryClient()
+    queryClient.invalidateQueries = (async () => { calls.push('invalidate-me') }) as typeof queryClient.invalidateQueries
+
+    await completeHandOver(queryClient, ME, 7, (id) => calls.push(`hand-over-${id}`))
+
+    expect(calls).toEqual(['hand-over-7', 'invalidate-me'])
   })
 })

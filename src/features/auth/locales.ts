@@ -14,6 +14,8 @@ const th = {
     cancel: 'ยกเลิก',
     usePassword: 'เข้าสู่ระบบด้วยรหัสผ่านแทน',
     you: 'คุณ',
+    loading: 'กำลังโหลดรายชื่อ',
+    retry: 'ลองอีกครั้ง',
     empty: 'ยังไม่มีใครตั้ง PIN ไว้ ให้ตั้งที่หน้าผู้ใช้งาน',
   },
   pin: {
@@ -47,6 +49,8 @@ const en = {
     cancel: 'Cancel',
     usePassword: 'Sign in with password instead',
     you: 'You',
+    loading: 'Loading names',
+    retry: 'Try again',
     empty: 'No one has set a PIN yet. Set one on the users page.',
   },
   pin: {

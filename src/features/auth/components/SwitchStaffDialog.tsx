@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { meQuery, switchUsersQuery, useSwitchUser } from '../api'
@@ -37,6 +38,7 @@ export function SwitchStaffDialog({ open, onOpenChange, onSwitched, onUsePasswor
   }
 
   function close(next: boolean) {
+    if (!next && switchUser.isPending) return
     if (!next) back()
     onOpenChange(next)
   }
@@ -60,13 +62,26 @@ export function SwitchStaffDialog({ open, onOpenChange, onSwitched, onUsePasswor
           <div className="flex flex-col gap-3">
             <PinPad pin={pin} onChange={setPin} onSubmit={submit} disabled={switchUser.isPending} />
             {switchUser.error && <p role="alert" className="text-center text-sm text-destructive">{switchUser.error.message}</p>}
-            <Button type="button" variant="outline" className="h-11" onClick={back}>
+            <Button type="button" variant="outline" className="h-11" disabled={switchUser.isPending} onClick={back}>
               {t('switch.cancel')}
             </Button>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {users.isError && <p role="alert" className="text-sm text-destructive">{users.error.message}</p>}
+            {users.isPending && (
+              <div className="flex flex-col gap-2" role="status" aria-label={t('switch.loading')}>
+                <Skeleton className="h-11" />
+                <Skeleton className="h-11" />
+              </div>
+            )}
+            {users.isError && (
+              <div className="flex flex-col gap-2">
+                <p role="alert" className="text-sm text-destructive">{users.error.message}</p>
+                <Button type="button" variant="outline" className="h-11" onClick={() => users.refetch()}>
+                  {t('switch.retry')}
+                </Button>
+              </div>
+            )}
             {users.isSuccess && items.length === 0 && <p className="text-sm text-muted-foreground">{t('switch.empty')}</p>}
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {items.map((user) => (
@@ -82,7 +97,7 @@ export function SwitchStaffDialog({ open, onOpenChange, onSwitched, onUsePasswor
           </div>
         )}
 
-        <Button type="button" variant="link" className="h-11" onClick={onUsePassword}>
+        <Button type="button" variant="link" className="h-11" disabled={switchUser.isPending} onClick={onUsePassword}>
           {t('switch.usePassword')}
         </Button>
       </DialogContent>
