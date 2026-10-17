@@ -52,7 +52,7 @@ const translate = (error: unknown): unknown => {
 const barcodeTaken = (barcode: string) =>
   new DomainConflictError(`บาร์โค้ด ${barcode} ถูกใช้แล้ว`, 'BARCODE_TAKEN', { barcode })
 
-const packNotFound = (packId: number) => new DomainError('ไม่พบแพ็กสินค้านี้', 'PACK_NOT_FOUND', { packId })
+const packNotFound = (packId: number) => new DomainError('ไม่พบแพ็คสินค้านี้', 'PACK_NOT_FOUND', { packId })
 
 const packValues = (pack: ProductPack) => ({
   barcode: pack.barcode,
@@ -250,7 +250,7 @@ export class DrizzleProductRepository implements IProductRepository {
         await currentExecutor().delete(productPacks).where(eq(productPacks.id, removed.id))
       } catch (error) {
         if (!isForeignKeyViolation(error)) throw error
-        throw new DomainConflictError(`แพ็ก ${removed.barcode} ถูกขายไปแล้ว ลบไม่ได้ ให้ปิดการขายแทน`, 'PACK_IN_USE', {
+        throw new DomainConflictError(`แพ็ค ${removed.barcode} ถูกขายไปแล้ว ลบไม่ได้ ให้ปิดการขายแทน`, 'PACK_IN_USE', {
           barcode: removed.barcode,
         })
       }

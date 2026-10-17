@@ -56,7 +56,7 @@ export class ProductEntity {
     if (!Number.isInteger(props.stockQty)) throw invalid('จำนวนสต็อกต้องเป็นจำนวนเต็ม')
 
     const packs = props.packs ?? []
-    if (packs.length > MAX_PACKS_PER_PRODUCT) throw invalid(`สินค้าหนึ่งรายการมีแพ็กได้ไม่เกิน ${MAX_PACKS_PER_PRODUCT} แบบ`)
+    if (packs.length > MAX_PACKS_PER_PRODUCT) throw invalid(`สินค้าหนึ่งรายการมีแพ็คได้ไม่เกิน ${MAX_PACKS_PER_PRODUCT} แบบ`)
     const taken = new Set<string>(props.barcode === null ? [] : [props.barcode])
     const storedIds = new Set<number>()
     for (const pack of packs) {
@@ -117,9 +117,9 @@ export class ProductEntity {
   packForSale(packId: number): ProductPack {
     this.assertActive()
     const pack = this.findPack(packId)
-    if (!pack) throw new DomainError('ไม่พบแพ็กสินค้านี้', 'PACK_NOT_FOUND', { packId })
+    if (!pack) throw new DomainError('ไม่พบแพ็คสินค้านี้', 'PACK_NOT_FOUND', { packId })
     if (!pack.isActive)
-      throw new DomainConflictError(`แพ็ก ${pack.barcode} ปิดการขายแล้ว`, 'PACK_INACTIVE', { barcode: pack.barcode })
+      throw new DomainConflictError(`แพ็ค ${pack.barcode} ปิดการขายแล้ว`, 'PACK_INACTIVE', { barcode: pack.barcode })
     return pack
   }
 

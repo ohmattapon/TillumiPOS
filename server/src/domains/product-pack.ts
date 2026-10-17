@@ -19,16 +19,16 @@ export const MAX_PACKS_PER_PRODUCT = 10
 const invalid = (message: string) => new DomainError(message, 'INVALID_PRODUCT')
 
 export function assertValidPack(pack: ProductPack): void {
-  if (pack.barcode.length < 1 || pack.barcode.length > 64) throw invalid('บาร์โค้ดแพ็กต้องยาว 1 ถึง 64 ตัวอักษร')
+  if (pack.barcode.length < 1 || pack.barcode.length > 64) throw invalid('บาร์โค้ดแพ็คต้องยาว 1 ถึง 64 ตัวอักษร')
   if (!Number.isInteger(pack.size) || pack.size < 2 || pack.size > MAX_PACK_SIZE)
-    throw invalid(`จำนวนต่อแพ็กต้องเป็นจำนวนเต็ม 2 ถึง ${MAX_PACK_SIZE}`)
+    throw invalid(`จำนวนต่อแพ็คต้องเป็นจำนวนเต็ม 2 ถึง ${MAX_PACK_SIZE}`)
   if (pack.priceSatang !== null && (!Number.isInteger(pack.priceSatang) || pack.priceSatang < 0 || pack.priceSatang > MAX_AMOUNT_SATANG))
-    throw invalid('ราคาแพ็กต้องเป็นจำนวนเต็มสตางค์ที่ไม่ติดลบและไม่เกินกำหนด')
+    throw invalid('ราคาแพ็คต้องเป็นจำนวนเต็มสตางค์ที่ไม่ติดลบและไม่เกินกำหนด')
 }
 
 /** A pack is a fixed box of the product, so a line that sells one carries no options. */
 export function assertPackHasNoOptions(hasPack: boolean, optionCount: number): void {
-  if (hasPack && optionCount > 0) throw new DomainError('แพ็กสินค้าเลือกตัวเลือกเพิ่มไม่ได้', 'PACK_WITH_OPTIONS')
+  if (hasPack && optionCount > 0) throw new DomainError('แพ็คสินค้าเลือกตัวเลือกเพิ่มไม่ได้', 'PACK_WITH_OPTIONS')
 }
 
 export function packUnitPriceSatang(productPriceSatang: number, pack: Pick<ProductPack, 'size' | 'priceSatang'>): number {
