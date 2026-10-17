@@ -56,6 +56,7 @@ describe('CreateUserUseCase', () => {
       role: 'cashier',
       branchId: 1,
       isActive: true,
+      hasPin: false,
     })
     const [entity, passwordHash] = repo.create.mock.calls[0]!
     expect(entity.toSnapshot()).toMatchObject({ id: 0, username: 'somchai', isActive: true })
