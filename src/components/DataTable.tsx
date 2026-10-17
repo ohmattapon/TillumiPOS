@@ -53,7 +53,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions,
       <div className="hidden sm:block">
         <Table>
           <TableHeader>
-            <TableRow className="hover:bg-transparent">
+            <TableRow className="border-border/60 hover:bg-transparent">
               {table.getHeaderGroups()[0].headers.map((header) => {
                 const column = header.column.columnDef.meta!.column
                 return (
@@ -68,7 +68,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions,
           <TableBody>
             {isPending &&
               Array.from({ length: PLACEHOLDER_ROWS }, (_, row) => (
-                <TableRow key={row} className="hover:bg-transparent" aria-hidden>
+                <TableRow key={row} className="border-border/60 hover:bg-transparent" aria-hidden>
                   {columns.map((column, index) => (
                     <TableCell key={column.id} className={cn(tableCell, wideOnly(column))}>
                       <Skeleton className={cn('h-4', barWidth(row + index), column.align === 'right' && 'ml-auto')} />
@@ -86,7 +86,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions,
               return (
                 <TableRow
                   key={tableRow.id}
-                  className={cn('hover:bg-muted/50', muted?.(row) && 'text-muted-foreground', onSelect && 'cursor-pointer')}
+                  className={cn('border-border/60 hover:bg-muted/50', muted?.(row) && 'text-muted-foreground', onSelect && 'cursor-pointer')}
                   // A row that opens something is reachable from the keyboard as well as by the mouse.
                   tabIndex={onSelect ? 0 : undefined}
                   onClick={onSelect && (() => onSelect(row))}

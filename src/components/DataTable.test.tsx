@@ -18,9 +18,9 @@ const columns = [
   { id: 'name', header: 'ชื่อ', priority: 'primary', cell: (row: { name: string }) => row.name },
 ] as const
 
-describe('DataTable (compact admin rows)', () => {
-  test('rows are compact (~40px) with hover', () => {
-    const html = renderToStaticMarkup(
+describe('DataTable (roomy rows)', () => {
+  const html = () =>
+    renderToStaticMarkup(
       <DataTable
         columns={columns.map((c) => ({ ...c }))}
         rows={[{ name: 'กาแฟ' }]}
@@ -28,8 +28,19 @@ describe('DataTable (compact admin rows)', () => {
         empty="ไม่มีข้อมูล"
       />,
     )
-    expect(html).toContain('px-3')
-    expect(html).toContain('hover:bg-muted/50')
+
+  test('rows are roomy (about 52px) with hover', () => {
+    expect(html()).toMatch(/<td[^>]*px-4 py-4/)
+    expect(html()).toMatch(/<th[^>]*h-11 px-4/)
+    expect(html()).toContain('hover:bg-muted/50')
+  })
+
+  test('header cells have no vertical divider', () => {
+    expect(html()).not.toContain('border-r')
+  })
+
+  test('row dividers are faint', () => {
+    expect(html()).toMatch(/<tr[^>]*border-border\/60[^>]*hover:bg-muted\/50|<tr[^>]*hover:bg-muted\/50[^>]*border-border\/60/)
   })
 })
 
