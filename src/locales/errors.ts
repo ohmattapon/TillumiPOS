@@ -101,5 +101,7 @@ export const errors = {
     BRANCH_INACTIVE: 'This branch is closed.',
     BRANCH_CODE_TAKEN: 'This branch code is already used.',
     BRANCH_IN_USE: 'The last open branch, or one that still has active staff, cannot be closed.',
+    SINGLE_BRANCH_ONLY: 'This system runs on one branch, so no branch can be added.',
+    MAIN_BRANCH_REQUIRED: 'The main branch cannot be closed.',
   },
 }

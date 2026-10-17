@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { ZodError } from 'zod'
 import { makeBranch, makeUser } from '../../../../__tests__/factories'
-import { mockBranchRepository, mockRegisterRepository, mockUnitOfWork, mockUserRepository } from '../../../../__tests__/mocks'
-import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
+import { mockBranchRepository, mockUnitOfWork, mockUserRepository } from '../../../../__tests__/mocks'
 import { CreateBranchUseCase } from './create-branch.usecase'
 import { ListBranchesUseCase } from './list-branches.usecase'
 import { ResolveBranchUseCase } from './resolve-branch.usecase'
@@ -31,53 +29,17 @@ describe('ListBranchesUseCase', () => {
 
 describe('CreateBranchUseCase', () => {
   let useCase: CreateBranchUseCase
-  let registers: ReturnType<typeof mockRegisterRepository>
 
   beforeEach(() => {
-    repo.create.mockImplementation(async (entity) => makeBranch({ ...entity.toSnapshot(), id: 7 }))
-    registers = mockRegisterRepository()
-    useCase = new CreateBranchUseCase(repo, registers, mockUnitOfWork())
+    useCase = new CreateBranchUseCase()
   })
 
-  test('stores an active branch with an upper-case code', async () => {
-    const created = await useCase.execute({ code: ' bkk01 ', name: 'สาขากรุงเทพ', phone: '02-000-0000' })
-
-    expect(created.toSnapshot()).toEqual({
-      id: 7,
-      code: 'BKK01',
-      name: 'สาขากรุงเทพ',
-      address: null,
-      phone: '02-000-0000',
-      isActive: true,
-    })
-    expect(registers.createMainForBranch).toHaveBeenCalledWith(7)
+  test('refuses every new branch, because the shop has one branch', async () => {
+    await expect(useCase.execute({ code: 'BKK', name: 'สาขากรุงเทพ' })).rejects.toMatchObject({ code: 'SINGLE_BRANCH_ONLY' })
   })
 
-  test('blank address and phone are stored as none', async () => {
-    await useCase.execute({ code: 'BKK', name: 'สาขา', address: '  ', phone: '' })
-
-    expect(repo.create.mock.calls[0]![0].toSnapshot()).toMatchObject({ address: null, phone: null })
-  })
-
-  test.each([
-    ['a missing name', { code: 'BKK' }],
-    ['a code of one character', { code: 'B', name: 'สาขา' }],
-    ['an empty name', { code: 'BKK', name: ' ' }],
-  ])('rejects %s without storing anything', async (_label, bad) => {
-    await expect(useCase.execute(bad)).rejects.toBeInstanceOf(ZodError)
-    expect(repo.create).not.toHaveBeenCalled()
-  })
-
-  test('rejects a code with characters outside A-Z and 0-9', async () => {
-    await expect(useCase.execute({ code: 'BK-1', name: 'สาขา' })).rejects.toMatchObject({ code: 'INVALID_BRANCH' })
-    expect(repo.create).not.toHaveBeenCalled()
-  })
-
-  test('passes a taken code on as the repository reports it', async () => {
-    const taken = new DomainConflictError('รหัสสาขานี้มีอยู่แล้ว', 'BRANCH_CODE_TAKEN')
-    repo.create.mockRejectedValue(taken)
-
-    await expect(useCase.execute({ code: 'MAIN', name: 'ซ้ำ' })).rejects.toBe(taken)
+  test('refuses before it reads the input, so a malformed request gets the same answer', async () => {
+    await expect(useCase.execute(null)).rejects.toMatchObject({ code: 'SINGLE_BRANCH_ONLY' })
   })
 })
 
@@ -125,6 +87,20 @@ describe('UpdateBranchUseCase', () => {
 
     await expect(useCase.execute(2, { isActive: false })).rejects.toMatchObject({ code: 'BRANCH_IN_USE' })
     expect(repo.update).not.toHaveBeenCalled()
+  })
+
+  test('MAIN can never be closed, even while other branches are open', async () => {
+    repo.findByIdForUpdate.mockResolvedValue(makeBranch({ id: 1, code: 'MAIN' }))
+    repo.countActive.mockResolvedValue(2)
+
+    await expect(useCase.execute(1, { isActive: false })).rejects.toMatchObject({ code: 'MAIN_BRANCH_REQUIRED' })
+    expect(repo.update).not.toHaveBeenCalled()
+  })
+
+  test('MAIN can still be renamed', async () => {
+    repo.findByIdForUpdate.mockResolvedValue(makeBranch({ id: 1, code: 'MAIN' }))
+
+    expect((await useCase.execute(1, { name: 'ร้านใหม่' })).toSnapshot()).toMatchObject({ code: 'MAIN', name: 'ร้านใหม่' })
   })
 
   test('reopening a closed branch needs none of those checks', async () => {

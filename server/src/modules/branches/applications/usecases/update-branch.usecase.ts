@@ -26,6 +26,10 @@ export class UpdateBranchUseCase {
       const existing = await this.branches.findByIdForUpdate(id)
       if (!existing) throw new DomainNotFoundError('ไม่พบสาขา', 'BRANCH_NOT_FOUND')
 
+      // MAIN is the one branch every request works in; closing it would stop the shop.
+      if (existing.code === 'MAIN' && changes.isActive === false)
+        throw new DomainConflictError('ปิดสาขาหลักไม่ได้', 'MAIN_BRANCH_REQUIRED')
+
       if (existing.isActive && changes.isActive === false) {
         if ((await this.branches.countActive()) <= 1)
           throw new DomainConflictError('ต้องมีสาขาที่เปิดใช้งานอย่างน้อย 1 สาขา', 'BRANCH_IN_USE')
