@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { meQuery, switchUsersQuery, useSwitchUser } from '../api'
+import { meQuery, switchUsersQuery, useCan, useSwitchUser } from '../api'
 import { lockScreenMayClose, type LockScreenCloseReason } from '../lib/lock-screen'
 import { canSubmitPin } from '../lib/pin-input'
 import { PinPad } from './PinPad'
@@ -22,6 +22,7 @@ interface Props {
 export function SwitchStaffDialog({ open, onOpenChange, onSwitched, onUsePassword }: Props) {
   const { t } = useTranslation('auth')
   const me = useQuery(meQuery).data
+  const canManageUsers = useCan('users.manage')
   const users = useQuery({ ...switchUsersQuery, enabled: open })
   const [chosen, setChosen] = useState<{ id: number; displayName: string } | null>(null)
   const [pin, setPin] = useState('')
@@ -63,9 +64,14 @@ export function SwitchStaffDialog({ open, onOpenChange, onSwitched, onUsePasswor
           <div className="flex flex-col gap-3">
             <PinPad pin={pin} onChange={setPin} onSubmit={submit} disabled={switchUser.isPending} />
             {switchUser.error && <p role="alert" className="text-center text-sm text-destructive">{switchUser.error.message}</p>}
-            <Button type="button" variant="outline" className="h-11" disabled={switchUser.isPending} onClick={back}>
-              {t('switch.cancel')}
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button type="button" variant="outline" className="h-11" disabled={switchUser.isPending} onClick={back}>
+                {t('switch.back')}
+              </Button>
+              <Button type="button" variant="outline" className="h-11" disabled={switchUser.isPending} onClick={() => close(false)}>
+                {t('switch.cancel')}
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -83,7 +89,10 @@ export function SwitchStaffDialog({ open, onOpenChange, onSwitched, onUsePasswor
                 </Button>
               </div>
             )}
-            {users.isSuccess && items.length === 0 && <p className="text-sm text-muted-foreground">{t('switch.empty')}</p>}
+            {users.isSuccess && items.length === 0 && (
+              // Only people who may open the users page are sent there; anyone can set their own PIN from the account menu.
+              <p className="text-sm text-muted-foreground">{canManageUsers ? t('switch.empty') : t('switch.emptyOwnPin')}</p>
+            )}
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {items.map((user) => (
                 <Button key={user.id} type="button" variant="outline" className="h-11 justify-between px-3" onClick={() => setChosen(user)}>
