@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test'
+import { beforeEach, describe, expect, mock, test } from 'bun:test'
 import { ZodError } from 'zod'
 import { makeSlide } from '../../../../__tests__/factories'
 import {
@@ -16,6 +16,7 @@ import { ListActiveSlidesUseCase } from './list-active-slides.usecase'
 import { ListSlidesUseCase } from './list-slides.usecase'
 import { UpdateSlideUseCase } from './update-slide.usecase'
 import { UploadSlideImageUseCase } from './upload-slide-image.usecase'
+import type { ISlideIdGenerator } from '../ports/slide-id-generator.port'
 
 let repo: ReturnType<typeof mockSlideRepository>
 let media: ReturnType<typeof mockMediaStorage>
@@ -29,6 +30,10 @@ const owner = { role: 'owner' as const, id: 1, displayName: 'เจ้าขอ�
 const cashier = { role: 'cashier' as const, id: 2, displayName: 'แคชเชียร์' }
 const png = (size = 10) => new Blob(['x'.repeat(size)], { type: 'image/png' })
 const notFound = { code: 'NOT_FOUND', message: 'ไม่พบสไลด์' }
+
+/** Fixed UUID so tests prove the minted id flows verbatim into the storage key. */
+const slideUuid = '550e8400-e29b-41d4-a716-446655440000'
+const mockSlideIds = (id = slideUuid): ISlideIdGenerator => ({ newId: mock(() => id) })
 
 describe('ListActiveSlidesUseCase', () => {
   test('returns only the visible slides, in order', async () => {
@@ -64,12 +69,14 @@ describe('UploadSlideImageUseCase', () => {
     repo.findAll.mockResolvedValue([makeSlide({ id: 1, sortOrder: 0 }), makeSlide({ id: 2, sortOrder: 4 })])
     repo.create.mockImplementation(async (entity) => makeSlide({ ...entity.toSnapshot(), id: 9 }))
     const audit = mockAuditLog()
-    const useCase = new UploadSlideImageUseCase(repo, media, mockUnitOfWork(), audit)
+    const ids = mockSlideIds()
+    const useCase = new UploadSlideImageUseCase(repo, media, mockUnitOfWork(), audit, ids)
 
     const created = await useCase.execute({ file: png() }, owner)
 
     const [key, uploaded] = media.put.mock.calls[0]!
-    expect(key).toMatch(/^slides\/[0-9a-f-]{36}\.png$/)
+    expect(ids.newId).toHaveBeenCalledTimes(1)
+    expect(key).toBe(`slides/${slideUuid}.png`)
     expect(uploaded).toBeInstanceOf(Blob)
     expect(created.toSnapshot()).toMatchObject({ id: 9, imageKey: key, sortOrder: 5, isActive: true })
     expect(audit.record).toHaveBeenCalled()
@@ -78,7 +85,7 @@ describe('UploadSlideImageUseCase', () => {
   test('an explicit order and visibility are kept', async () => {
     repo.findAll.mockResolvedValue([])
     repo.create.mockImplementation(async (entity) => makeSlide({ ...entity.toSnapshot(), id: 9 }))
-    const useCase = new UploadSlideImageUseCase(repo, media, mockUnitOfWork(), mockAuditLog())
+    const useCase = new UploadSlideImageUseCase(repo, media, mockUnitOfWork(), mockAuditLog(), mockSlideIds())
 
     const created = await useCase.execute({ file: png(), sortOrder: 2, isActive: false }, owner)
 
@@ -86,7 +93,7 @@ describe('UploadSlideImageUseCase', () => {
   })
 
   test('a cashier cannot upload', async () => {
-    const useCase = new UploadSlideImageUseCase(repo, media, mockUnitOfWork(), mockAuditLog())
+    const useCase = new UploadSlideImageUseCase(repo, media, mockUnitOfWork(), mockAuditLog(), mockSlideIds())
 
     await expect(useCase.execute({ file: png() }, cashier)).rejects.toMatchObject({
       code: 'PERMISSION_DENIED',
@@ -97,7 +104,7 @@ describe('UploadSlideImageUseCase', () => {
   })
 
   test('a non-image file is rejected before anything is stored', async () => {
-    const useCase = new UploadSlideImageUseCase(repo, media, mockUnitOfWork(), mockAuditLog())
+    const useCase = new UploadSlideImageUseCase(repo, media, mockUnitOfWork(), mockAuditLog(), mockSlideIds())
     const file = new Blob(['%PDF'], { type: 'application/pdf' })
 
     await expect(useCase.execute({ file }, owner)).rejects.toMatchObject({
@@ -108,7 +115,7 @@ describe('UploadSlideImageUseCase', () => {
   })
 
   test('a file over 5 MB is rejected before anything is stored', async () => {
-    const useCase = new UploadSlideImageUseCase(repo, media, mockUnitOfWork(), mockAuditLog())
+    const useCase = new UploadSlideImageUseCase(repo, media, mockUnitOfWork(), mockAuditLog(), mockSlideIds())
 
     await expect(useCase.execute({ file: png(5 * 1024 * 1024 + 1) }, owner)).rejects.toMatchObject({
       code: 'IMAGE_TOO_LARGE',
@@ -119,7 +126,7 @@ describe('UploadSlideImageUseCase', () => {
 
   test('a shop without image storage gets a clear error and stores nothing', async () => {
     media.isEnabled.mockReturnValue(false)
-    const useCase = new UploadSlideImageUseCase(repo, media, mockUnitOfWork(), mockAuditLog())
+    const useCase = new UploadSlideImageUseCase(repo, media, mockUnitOfWork(), mockAuditLog(), mockSlideIds())
 
     const attempt = useCase.execute({ file: png() }, owner)
 
@@ -132,7 +139,7 @@ describe('UploadSlideImageUseCase', () => {
   test.each([[{}], [{ file: 'not-a-blob' }], [{ file: png(), sortOrder: -1 }]])(
     'rejects the invalid input %p without storing anything',
     async (input) => {
-      const useCase = new UploadSlideImageUseCase(repo, media, mockUnitOfWork(), mockAuditLog())
+      const useCase = new UploadSlideImageUseCase(repo, media, mockUnitOfWork(), mockAuditLog(), mockSlideIds())
 
       await expect(useCase.execute(input, owner)).rejects.toBeInstanceOf(ZodError)
       expect(media.put).not.toHaveBeenCalled()
