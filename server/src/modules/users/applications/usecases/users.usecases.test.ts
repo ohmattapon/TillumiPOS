@@ -339,3 +339,60 @@ describe('SetUserPinUseCase', () => {
     expect(repo.setPinHash).not.toHaveBeenCalled()
   })
 })
+
+describe('UpdateUserUseCase and the PIN of a new owner', () => {
+  let audit: ReturnType<typeof auditMock>
+  let useCase: UpdateUserUseCase
+  const manager = { id: 9, displayName: 'ผู้จัดการ' }
+
+  beforeEach(() => {
+    audit = auditMock()
+    repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 4, hasPin: true }))
+    repo.update.mockImplementation(async (entity) => entity)
+    repo.setPinHash.mockResolvedValue(undefined)
+    repo.findById.mockResolvedValue(makeUser({ id: 4, role: 'owner', hasPin: false }))
+    useCase = new UpdateUserUseCase(repo, branches, hasher, mockUnitOfWork(), roles, audit)
+  })
+
+  // An owner's PIN is set only by that owner, so a PIN someone else chose must not survive the promotion.
+  test('making someone else an owner clears the PIN they had, and audits it in the same unit of work', async () => {
+    const updated = await useCase.execute(4, { role: 'owner' }, manager)
+
+    expect(repo.setPinHash).toHaveBeenCalledWith(4, null)
+    expect(updated.hasPin).toBe(false)
+    const actions = audit.record.mock.calls.map(([, , entry]) => entry.action)
+    expect(actions).toContain('user.pin_cleared')
+    const cleared = audit.record.mock.calls.find(([, , entry]) => entry.action === 'user.pin_cleared')!
+    expect(cleared[0]).toEqual({ id: 9, name: 'ผู้จัดการ' })
+    expect(cleared[2]).toMatchObject({ entityType: 'user', entityId: '4', before: { hasPin: true }, after: { hasPin: false } })
+  })
+
+  test('a new owner without a PIN has nothing to clear', async () => {
+    repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 4, hasPin: false }))
+
+    await useCase.execute(4, { role: 'owner' }, manager)
+
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+    expect(audit.record.mock.calls.map(([, , entry]) => entry.action)).not.toContain('user.pin_cleared')
+  })
+
+  test('an edit that does not make them an owner keeps the PIN', async () => {
+    await useCase.execute(4, { displayName: 'สมชาย ใจดี' }, manager)
+
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+  })
+
+  test('making oneself an owner keeps the PIN one chose oneself', async () => {
+    await useCase.execute(4, { role: 'owner' }, { id: 4, displayName: 'สมชาย' })
+
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+  })
+
+  test('someone who already is an owner keeps their own PIN on other edits', async () => {
+    repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 4, role: 'owner', hasPin: true }))
+
+    await useCase.execute(4, { role: 'owner', displayName: 'เจ้าของ' }, manager)
+
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+  })
+})
