@@ -1,6 +1,6 @@
 const th = {
   title: 'โปรโมชัน',
-  description: 'ส่วนลดท้ายบิลที่ระบบเลือกให้เองตามเงื่อนไข ใช้ร่วมทุกสาขา',
+  description: 'ส่วนลดท้ายบิลที่ระบบเลือกให้เองตามเงื่อนไข',
   create: 'เพิ่มโปรโมชัน',
   retry: 'ลองอีกครั้ง',
   list: {
@@ -71,7 +71,7 @@ const th = {
 
 const en = {
   title: 'Promotions',
-  description: 'Bill discounts the system picks by itself when their conditions are met. Shared by every branch.',
+  description: 'Bill discounts the system picks by itself when their conditions are met.',
   create: 'Add promotion',
   retry: 'Try again',
   list: {
