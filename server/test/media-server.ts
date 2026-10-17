@@ -7,7 +7,7 @@ interface FakeMedia {
   reset(): void
 }
 
-/** In-memory stand-in for the apps/media Worker: same contract, no network. */
+/** In-memory stand-in for the workers/media Worker: same contract, no network. */
 function start(): FakeMedia {
   const objects = new Map<string, Blob>()
   let failing = false

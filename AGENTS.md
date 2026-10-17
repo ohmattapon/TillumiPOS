@@ -42,10 +42,10 @@ gitcz --non-interactive --type=feat --scope=sales --subject="hold an order open 
 
 ## API architecture: Hexagonal
 
-`apps/api` is a Hexagonal Architecture (Ports & Adapters) split by business module. The reference for the pattern is the `categories` module. Open it before writing a new module.
+The API in `server/` is a Hexagonal Architecture (Ports & Adapters) split by business module. The reference for the pattern is the `categories` module. Open it before writing a new module.
 
 ```
-apps/api/src/
+server/src/
 ├── domains/            entities (*.domain.ts), value objects (*.vo.ts) and errors/ for every module
 ├── infrastructure/     database/schema (all Drizzle tables), migrate.ts, seed.ts
 ├── libs/               env, db, transaction-context, http-error.factory, http-schemas
@@ -158,7 +158,7 @@ Every operation is a use case that is exactly one of a command or a query, and t
 - `GET /api/v2/payments/qr/{id}` is a pure query. It must not ask the bank or write data. Asking the bank is the command `POST .../refresh`.
 - The shifts module reads the QR status only through the `IQrShiftReadiness` port, which must not call the bank because it is used while the shift is locked. A shift cannot start counting if there is an attempt with an unknown outcome or money that was paid and has no bill yet, and it cannot close if money arrives during counting.
 - Money from a QR that has been paid must never be turned back into pending or deleted: it must get a bill, or the owner must dismiss it (`dismiss`) with a reason
-- SCB values are tested against the fake SCB in `apps/api/test/scb-server.ts` only. The test suite must never call the real SCB.
+- SCB values are tested against the fake SCB in `server/test/scb-server.ts` only. The test suite must never call the real SCB.
 - Secrets must not be in committed files: `.env.example` must always hold placeholder values (starting with `your-`). If a real key is committed by mistake, tell the project owner to issue a new key, because rewriting git history is not enough.
 
 ### Permissions and audit (permissions, audit)
@@ -187,7 +187,7 @@ Every operation is a use case that is exactly one of a command or a query, and t
 - The API serves the built web itself when `WEB_DIST` is set (`modules/web.plugin.ts`). This plugin must be last in `app.ts` and must never answer in place of `/api` or `/openapi` routes.
 - Installation uses `docker-compose.yml` (the database, the app, and Caddy in the `https` profile), run by `podman compose` (Podman is the only container engine; Docker is not used). The compose file names keep their `docker-` prefix on purpose. `docker-compose.dev.yml` is only for starting just the database during development. The scripts `scripts/install`, `backup` and `restore` (both `.sh` and `.ps1`) use `docker-compose.yml` only, and `restore` replaces the whole database so it must ask for confirmation.
 - `*.sh` files, `Dockerfile` and `Caddyfile` must be LF (set in `.gitattributes`). With CRLF they cannot run in the container.
-- When changing the install scripts or the container setup, try it with a separate compose project (`COMPOSE_PROJECT_NAME`) in a worktree that has its own `.env`. Never point it at a live database. `apps/api/src/__tests__/repo-secrets.test.ts` must always pass, because it checks that no `.env` or real password is in a tracked file.
+- When changing the install scripts or the container setup, try it with a separate compose project (`COMPOSE_PROJECT_NAME`) in a worktree that has its own `.env`. Never point it at a live database. `server/src/__tests__/repo-secrets.test.ts` must always pass, because it checks that no `.env` or real password is in a tracked file.
 
 ### The API contract
 
@@ -201,14 +201,14 @@ Every operation is a use case that is exactly one of a command or a query, and t
 - Entities and value objects: a test file next to them, covering every rule
 - Use cases: tested against mock ports from `src/__tests__/mocks.ts`, covering the success case and every rejected case. They must run without a database (`bun run test:unit`).
 - Behavior over HTTP: `src/__tests__/integration/*.integration.test.ts`, run against a real PostgreSQL
-- `bun run openapi:check` (in `apps/api`) must pass. If you intentionally change the API contract, tell the project owner before recording `test/openapi-baseline.json` again.
+- `bun run openapi:check` must pass. If you intentionally change the API contract, tell the project owner before recording `server/test/openapi-baseline.json` again.
 
 ## Web architecture: split by feature
 
-`apps/web` organizes folders by feature (by business area), not by file type. To add a new capability, add it as a new feature or into a related feature.
+The web (`src/` at the repo root) organizes folders by feature (by business area), not by file type. To add a new capability, add it as a new feature or into a related feature.
 
 ```
-apps/web/src/
+src/
 ├── app/                  assembles the app: App.tsx (routes), AppSidebar.tsx, i18n.ts (gathers the language files of every feature)
 ├── features/
 │   └── <feature>/        auth, branches, categories, modifiers, orders, products, sales, pos, settings, setup, shifts, tables, users
@@ -405,10 +405,13 @@ Pragmatic choices that are allowed, and places where the code does not yet follo
 
 ## Project structure
 
-- `apps/api`: Bun + Elysia + Drizzle + tsyringe, per the architecture section above
-- `apps/web`: React + Vite + Tailwind + shadcn/ui + TanStack Query + zustand, split by feature per the web architecture section, calling the API through an Eden client typed from `apps/api`
-- `apps/media`: a Cloudflare Worker that stores product images in R2
-- `apps/cloud`: a Cloudflare Worker that runs the Docker image (API and web) in one Cloudflare Container, see `docs/cloudflare.md`
+The repo is one package (`package.json` at the root holds the API and the web), laid out like the team's other projects. Only the Workers keep a `package.json` of their own, because wrangler builds them.
+
+- `server/`: the API. Bun + Elysia + Drizzle + tsyringe, per the architecture section above. `server/test/` holds the test harness, the fake SCB and the OpenAPI baselines. API tests run with `server/` as the working directory so `server/bunfig.toml` preloads `test/setup.ts`.
+- `src/`, `public/`, `index.html`, `vite.config.ts`: the web. React + Vite + Tailwind + shadcn/ui + TanStack Query + zustand, split by feature per the web architecture section, calling the API through an Eden client typed from `server/`. The web imports the server's shared code as `@pos/api/...`, a path alias listed in both `vite.config.ts` and the `tsconfig` files; add a new entry to both.
+- `drizzle/` and `drizzle.config.ts`: migrations and their config. `e2e/`: browser tests and screenshots.
+- `workers/media`: a Cloudflare Worker that stores product images in R2
+- `workers/cloud`: a Cloudflare Worker that runs the Docker image (API and web) in one Cloudflare Container, see `docs/cloudflare.md`
 - `Dockerfile`, `docker-compose.yml`, `docker-compose.dev.yml`, `Caddyfile`, `docker/entrypoint.sh`, `scripts/`: the install kit for shops (the guide for installers is `docs/install.md`), per the section "Installation and first-run setup"
 - `LICENSE`: AGPL-3.0
 - `DESIGN.md`: the design system of the web pages (colors, typography, components and interaction rules). Read it before changing or adding a screen.
@@ -429,19 +432,20 @@ Run from the root of the repo:
 | `bun run scb:inquiry <ref1>` | Ask SCB whether it knows this QR record and print the raw answer (read-only, uses your `.env`) |
 | `bun run dev` | Start the API (3000, routes under `/api/v1`), the web (5173) and the local Worker (8787) |
 | `bun run hooks:install` | Install the git hooks from `lefthook.yml` (once per clone) |
-| `bun run typecheck` | Type-check every package |
+| `bun run typecheck` | Type-check the web, the server and the Workers |
 | `bun run test` | Run all API and web tests (the database must be running) |
-| `bun run test:unit` | Run unit tests only, no database needed |
+| `bun run test:unit` | Run the API unit tests only, no database needed |
+| `bun run test:web` | Run the web tests only |
 | `bun run lint` | Lint the web |
 | `bun run e2e` | Test the real web app in headless Chrome (shift work, two sessions), using the `pos_e2e` database and its own server, without touching the dev database |
 | `bun run screenshots` | Take images of every page at 390, 390×500, 768 and 1366px into `screenshots/` (git-ignored), using the `pos_e2e_shots` database, without touching the dev database |
 
 ## Other rules
 
-- All configuration and secrets live in a single `.env` at the root of the repo (an example is in `.env.example`). Never create a `.env` or `.dev.vars` inside an app folder. When adding a new variable, add it to `.env.example` too, and the Worker in `apps/media` can read only the names listed in `secrets.required` of `wrangler.jsonc`.
+- All configuration and secrets live in a single `.env` at the root of the repo (an example is in `.env.example`). Never create a `.env` or `.dev.vars` anywhere else (the committed `server/.env.test` is test-only config, not secrets). When adding a new variable, add it to `.env.example` too, and the Worker in `workers/media` can read only the names listed in `secrets.required` of `wrangler.jsonc`.
 
 - Money is always an integer number of satang. Never use decimals.
 - A sales bill must never be edited or deleted. Mistakes are fixed by voiding the bill.
-- The receipt header (shop name, tax id, branch name, address, phone number) is stored on the bill at sale time in `SaleCheckout`. A receipt must be shown from the values on the bill, and current data is used only for old bills whose values are null (see `receiptHeading` in `apps/web/src/features/sales/lib`).
+- The receipt header (shop name, tax id, branch name, address, phone number) is stored on the bill at sale time in `SaleCheckout`. A receipt must be shown from the values on the bill, and current data is used only for old bills whose values are null (see `receiptHeading` in `src/features/sales/lib`).
 - Stock changes only through the `IStockLedger` port of the `inventory` module, and every change must have a movement record with the branch
 - Before saying that work is done, `bun run typecheck` and `bun run test` must pass

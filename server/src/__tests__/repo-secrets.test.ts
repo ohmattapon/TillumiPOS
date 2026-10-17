@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-const root = new URL('../../../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
+const root = new URL('../../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 
 async function tracked(): Promise<string[]> {
   const out = await Bun.$`git -C ${root} ls-files`.text()

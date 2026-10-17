@@ -29,5 +29,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
-  }
+  },
+  // Only the server: the web at the repo root has its own tsconfig with DOM types.
+  "include": ["src", "test", "scripts"]
 }

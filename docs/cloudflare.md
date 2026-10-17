@@ -1,12 +1,12 @@
 # รัน TillumiPOS บน Cloudflare
 
-ทางเลือกนี้ไม่ต้องมีเครื่องหรือ VPS ของตัวเอง Worker ใน `apps/cloud` ส่งทุก request ไปยัง Cloudflare Container ตัวเดียว ที่รัน image จาก `Dockerfile` ของ repo (API และหน้าเว็บอยู่ใน image เดียวกัน) ส่วนรูปสินค้าเก็บใน R2 ผ่าน Worker ใน `apps/media`
+ทางเลือกนี้ไม่ต้องมีเครื่องหรือ VPS ของตัวเอง Worker ใน `workers/cloud` ส่งทุก request ไปยัง Cloudflare Container ตัวเดียว ที่รัน image จาก `Dockerfile` ของ repo (API และหน้าเว็บอยู่ใน image เดียวกัน) ส่วนรูปสินค้าเก็บใน R2 ผ่าน Worker ใน `workers/media`
 
 ## สิ่งที่ต้องมี
 
 - บัญชี Cloudflare แผน **Workers Paid** (Containers ใช้กับแผนฟรีไม่ได้)
 - PostgreSQL ที่เข้าถึงได้จากอินเทอร์เน็ต เช่น Neon, Aiven, Supabase (ระบบไม่ได้สร้างฐานข้อมูลให้)
-- R2 bucket ชื่อ `pos-media` และ Worker `pos-media` จาก `apps/media` ที่ตั้ง secret `MEDIA_TOKEN` แล้ว
+- R2 bucket ชื่อ `pos-media` และ Worker `pos-media` จาก `workers/media` ที่ตั้ง secret `MEDIA_TOKEN` แล้ว
 
 ## ข้อจำกัด
 
@@ -20,13 +20,13 @@
 1. Worker เก็บรูป (ครั้งเดียว):
 
    ```bash
-   cd apps/media
+   cd workers/media
    bunx wrangler r2 bucket create pos-media
    bunx wrangler secret put MEDIA_TOKEN      # ค่าสุ่มยาว ๆ จดไว้ใช้ในข้อ 2
    bunx wrangler deploy
    ```
 
-2. ตั้ง secret ของ Worker `tillumipos` (ใน dashboard: Workers & Pages → tillumipos → Settings → Variables and Secrets หรือ `bunx wrangler secret put <ชื่อ>` ใน `apps/cloud`):
+2. ตั้ง secret ของ Worker `tillumipos` (ใน dashboard: Workers & Pages → tillumipos → Settings → Variables and Secrets หรือ `bunx wrangler secret put <ชื่อ>` ใน `workers/cloud`):
 
    | ชื่อ | ค่า |
    |---|---|
@@ -37,7 +37,7 @@
 
 3. ใน Workers Builds ของ project `tillumipos` (Settings → Build):
    - Build variable `BUN_VERSION` = เวอร์ชันเดียวกับที่สร้าง `bun.lock` (`bun --version`)
-   - Deploy command: `cd apps/cloud && bun run deploy`
+   - Deploy command: `cd workers/cloud && bun run deploy`
 
    Workers Builds มี Docker จึงสร้าง image ให้เอง ถ้า deploy จากเครื่องตัวเองต้องเปิด Docker ไว้
 
