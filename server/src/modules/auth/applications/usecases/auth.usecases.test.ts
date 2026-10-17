@@ -259,13 +259,20 @@ describe('SwitchUserUseCase', () => {
     expect(JSON.stringify(entry)).not.toContain('4321')
   })
 
+  test('the attempt is cleared only after the switch is audited', async () => {
+    audit.record.mockRejectedValue(new Error('database down'))
+
+    await expect(useCase.execute({ userId: 3, pin: '4321' }, actor)).rejects.toThrow('database down')
+    expect(guard.recordSuccess).not.toHaveBeenCalled()
+  })
+
   test('a wrong PIN is a 400-class PIN_INVALID, counts a failure and audits it without the PIN', async () => {
     const attempt = useCase.execute({ userId: 3, pin: '1111' }, actor)
 
     await expect(attempt).rejects.toBeInstanceOf(DomainError)
     await expect(attempt).rejects.not.toBeInstanceOf(DomainUnauthorizedError)
     await expect(attempt).rejects.toMatchObject({ code: 'PIN_INVALID', message: 'PIN ไม่ถูกต้อง' })
-    expect(guard.recordFailure).toHaveBeenCalledWith(3)
+    expect(guard.begin).toHaveBeenCalledWith(3)
     expect(guard.recordSuccess).not.toHaveBeenCalled()
     const entry = audit.record.mock.calls[0]![2]
     expect(entry).toMatchObject({ action: 'auth.switch_failed', entityId: '3' })
@@ -291,6 +298,20 @@ describe('SwitchUserUseCase', () => {
     expect((await useCase.execute({ userId: 4, pin: '9999' }, actor)).id).toBe(4)
   })
 
+  test('parallel wrong PINs cannot get past the lock: at most five reach the hash check', async () => {
+    const pending: (() => void)[] = []
+    hasher.verify.mockImplementation(() => new Promise<boolean>((resolve) => pending.push(() => resolve(false))))
+
+    const attempts = Array.from({ length: 6 }, () => useCase.execute({ userId: 3, pin: '1111' }, actor).catch((error) => error))
+    // Let every request reach the hash check (or be refused) before any check finishes.
+    for (let i = 0; i < 20; i++) await Promise.resolve()
+    pending.forEach((release) => release())
+    const results = await Promise.all(attempts)
+
+    expect(results.filter((error) => error.code === 'PIN_LOCKED').length).toBeGreaterThanOrEqual(1)
+    expect(hasher.verify.mock.calls.length).toBeLessThanOrEqual(5)
+  })
+
   test('a deactivated or missing target is PIN_NOT_SET and counts no failure', async () => {
     repo.findActiveById.mockResolvedValue(null)
     repo.findPinHash.mockResolvedValue(null)
@@ -298,7 +319,7 @@ describe('SwitchUserUseCase', () => {
     await expect(useCase.execute({ userId: 3, pin: '4321' }, actor)).rejects.toMatchObject({ code: 'PIN_NOT_SET' })
     await expect(useCase.execute({ userId: 999, pin: '4321' }, actor)).rejects.toMatchObject({ code: 'PIN_NOT_SET' })
     expect(hasher.verify).not.toHaveBeenCalled()
-    expect(guard.recordFailure).not.toHaveBeenCalled()
+    expect(guard.begin).not.toHaveBeenCalled()
   })
 
   test('a target without a PIN is PIN_NOT_SET', async () => {

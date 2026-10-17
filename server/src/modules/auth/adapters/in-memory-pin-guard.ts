@@ -14,26 +14,27 @@ export class InMemoryPinGuard implements IPinGuard {
   /** `now` is injectable so a test can move the clock. */
   constructor(private readonly now: () => number = Date.now) {}
 
-  check(userId: number): PinGuardCheck {
+  /** Synchronous on purpose: the check and the count happen together, with no await in between. */
+  begin(userId: number): PinGuardCheck {
     const until = this.lockedUntil.get(userId)
-    if (until === undefined) return 'ok'
-    if (this.now() < until) return 'locked'
-    this.lockedUntil.delete(userId)
-    return 'ok'
-  }
-
-  recordFailure(userId: number) {
+    if (until !== undefined) {
+      if (this.now() < until) return 'locked'
+      this.lockedUntil.delete(userId)
+    }
     const failures = (this.failures.get(userId) ?? 0) + 1
     if (failures >= MAX_FAILURES) {
       this.lockedUntil.set(userId, this.now() + LOCK_MS)
       this.failures.delete(userId)
-      return
+    } else {
+      this.failures.set(userId, failures)
     }
-    this.failures.set(userId, failures)
+    return 'ok'
   }
 
+  /** Also lifts a lock that this request's own attempt set: whoever got here knew the PIN. */
   recordSuccess(userId: number) {
     this.failures.delete(userId)
+    this.lockedUntil.delete(userId)
   }
 
   /** For tests only: the singleton outlives a test, so each one starts clean. Not part of the port. */
