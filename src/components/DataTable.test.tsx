@@ -125,3 +125,23 @@ describe('DataTable behavior', () => {
     expect(render()).not.toMatch(/<tr[^>]*text-muted-foreground/)
   })
 })
+
+describe('DataTable toolbar', () => {
+  const toolbar = <span>find-me</span>
+
+  test('renders the toolbar exactly once, not in both the table and the phone list', () => {
+    expect(occurrences(render({ toolbar }), 'find-me')).toBe(1)
+  })
+
+  test('keeps the toolbar while loading', () => {
+    expect(occurrences(render({ toolbar, isPending: true }), 'find-me')).toBe(1)
+  })
+
+  test('keeps the toolbar when there are no rows', () => {
+    expect(occurrences(render({ toolbar, rows: [] }), 'find-me')).toBe(1)
+  })
+
+  test('renders no toolbar wrapper when none is given', () => {
+    expect(render()).not.toContain('border-b px-4 py-3')
+  })
+})

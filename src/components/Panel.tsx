@@ -7,6 +7,9 @@ export const tableHead = 'h-11 px-4 text-[11px] font-medium tracking-wider text-
 /** A roomy cell: with one line of text a row is about 52px tall. */
 export const tableCell = 'px-4 py-4'
 
+/** The row above a table inside its card: the page's search sits here. */
+export const tableToolbar = 'flex flex-wrap items-center gap-3 border-b px-4 py-3'
+
 interface Props {
   title: string
   description?: string
