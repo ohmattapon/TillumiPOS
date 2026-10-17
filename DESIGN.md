@@ -92,7 +92,7 @@ TillumiPOS is a work tool, not a landing page. Staff use the sales screen hundre
 2. **Calm.** White cards on a pale mint canvas, thin lines, a single accent color (teal). Other colors appear only when they carry meaning (status, category, or telling the figures in a summary card apart).
 3. **Hard to get wrong.** Actions that cannot be undone must ask for confirmation and say what will happen. A button that cannot be pressed must look like it cannot be pressed.
 
-The approach comes from the restraint of Attio mixed with Linear: a white sidebar, the selected menu item on a soft mint background with teal text, a white page header with a navigation breadcrumb, and compact tables that can be read densely without taking a hand off the mouse or keyboard.
+The approach comes from the restraint of Attio mixed with Linear: a white sidebar, the selected menu item on a soft mint background with teal text, a white page header with a navigation breadcrumb, and roomy tables in a white card, with rows tall enough to read at a glance and to tap.
 
 ## Colors
 
@@ -201,7 +201,7 @@ Always use components from `src/components/ui` (shadcn/ui) first, and use the sh
 |---|---|---|
 | `PageHeader` | `components/PageHeader.tsx` | The header of every page: a faint breadcrumb on top (the `breadcrumb` prop), the page title, a one-line description and the primary button on the right |
 | `Panel` | `components/Panel.tsx` | A card with a header, a description and a table or list inside. 10px corners, a border, no shadow |
-| `tableHead`, `tableCell` | `components/Panel.tsx` | The classes for a table header and a cell, used on every data table |
+| `tableHead`, `tableCell` | `components/Panel.tsx` | The classes for a table header and a cell, used on every data table: roomy spacing (`px-4`, `py-4`) and no vertical dividers between columns |
 | `StatusBadge` | `components/StatusBadge.tsx` | A status badge with a colored dot in front. Four tones: `success`, `warning`, `danger`, `neutral` |
 | `SegmentedTabs` | `components/SegmentedTabs.tsx` | A filter that picks one of a few options. Use `size="touch"` on the sales page |
 | `DatePicker` | `components/DatePicker.tsx` | Choosing a day with the shadcn Calendar + Popover. The button and the days are at least 44px tall. It takes the language and the Buddhist/Gregorian year from `useFormat()`. The value in a form is still `YYYY-MM-DD` and is converted through `lib/calendar-date.ts` without shifting the day because of the timezone |
@@ -214,7 +214,7 @@ Size of tappable elements:
 | Context | Height |
 |---|---|
 | Buttons on management pages and in the page header | 36px |
-| A table row on a management page (`DataTable`) | About 40px, with hover |
+| A table row on a management page (`DataTable`) | About 52px, with hover |
 | Buttons in a dialog | 40px |
 | Everything on the sales page and in the payment dialog | At least 44px |
 | The pay button | 56px |
