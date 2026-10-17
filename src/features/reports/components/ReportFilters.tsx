@@ -6,8 +6,8 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { useFormat } from '@/features/settings'
 import { presetRange, validRange, type Preset, type ReportFilters as Filters } from '../lib/date-range'
 
-export function ReportFilters({ filters, today, branchName, onApply }: {
-  filters: Filters; today: string; branchName: string; onApply: (filters: Filters) => void
+export function ReportFilters({ filters, today, onApply }: {
+  filters: Filters; today: string; onApply: (filters: Filters) => void
 }) {
   const { t } = useTranslation('reports')
   const { date, locale } = useFormat()
@@ -30,14 +30,6 @@ export function ReportFilters({ filters, today, branchName, onApply }: {
           <DatePicker id={`${id}-to`} label={t('to')} value={draft.to} today={today} locale={locale} dateFormat={date}
             invalid={!valid} describedBy={!valid ? `${id}-error` : undefined} onChange={(to) => setDraft({ ...draft, to })} />
         </Field>
-        <Field className="min-w-40 flex-1">
-          <FieldLabel htmlFor={`${id}-scope`}>{t('scope')}</FieldLabel>
-          <select id={`${id}-scope`} aria-label={t('scope')} value={draft.scope} onChange={(event) => setDraft({ ...draft, scope: event.target.value === 'all' ? 'all' : 'branch' })}
-            className="h-11 rounded-md border bg-background px-3 text-sm text-foreground">
-            <option value="branch">{branchName}</option>
-            <option value="all">{t('allBranches')}</option>
-          </select>
-        </Field>
         <Button className="h-11" type="submit" disabled={!valid}>{t('apply')}</Button>
       </FieldGroup>
       <div className="flex flex-wrap gap-1.5">
@@ -45,7 +37,7 @@ export function ReportFilters({ filters, today, branchName, onApply }: {
           const range = presetRange(preset, today)
           const selected = filters.from === range.from && filters.to === range.to
           return <Button key={preset} type="button" className="h-11" variant={selected ? 'secondary' : 'ghost'}
-            onClick={() => onApply({ ...range, scope: draft.scope })}>{t(preset)}</Button>
+            onClick={() => onApply(range)}>{t(preset)}</Button>
         })}
       </div>
       {!valid && <p id={`${id}-error`} role="alert" className="text-xs text-destructive">{t('invalidRange')}</p>}

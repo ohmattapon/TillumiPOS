@@ -4,7 +4,6 @@ import { isSetupFormFilled } from './setup-form'
 const filled = {
   setupCode: 'ABCDEFGHJKMN',
   shopName: 'ร้านกาแฟ',
-  branchName: 'สาขาหลัก',
   username: 'owner',
   displayName: 'เจ้าของ',
   password: 'correct-horse',

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { baseUrl, ok, resetDatabase, seedBranch, seedProduct, signIn, type Session } from '../../../test/harness'
+import { baseUrl, ok, resetDatabase, seedProduct, signIn, type Session } from '../../../test/harness'
 
 let owner: Session
 let cashier: Session
@@ -89,12 +89,4 @@ describe('reading and cancelling', () => {
     expect(ok(await cashier.api.quotes({ id: made.id }).get()).status).toBe('cancelled')
   })
 
-  test("another branch's quote is not found", async () => {
-    const tea = await seedProduct(owner, { priceSatang: 2500, stock: 10 })
-    const made = ok(await cashier.api.quotes.post({ lines: [{ productId: tea.id, quantity: 1 }] }))
-    const other = await seedBranch('BKK', 'สาขากรุงเทพ')
-    const away = await signIn('cashier', 'bkk-cashier', { branchId: other.id })
-    expect((await away.api.quotes({ id: made.id }).get()).status).toBe(404)
-    expect((await away.api.quotes({ id: made.id }).cancel.post()).status).toBe(404)
-  })
 })

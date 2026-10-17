@@ -2,7 +2,6 @@ import type { User } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
 import {
   Armchair,
-  Building2,
   ChartNoAxesCombined,
   CalendarCheck,
   ChefHat,
@@ -56,9 +55,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { BranchSwitcher, useActiveBranch } from '@/features/branches'
-import { clearCart } from '@/features/pos'
-import { useRegisterSelectionStore } from '@/features/shifts'
 import { LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
 import { useFeatures, useSettings } from '@/features/settings'
 import { useAuthorization } from '@/features/auth'
@@ -81,12 +77,10 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
   const { pathname } = useLocation()
   const { shopName, homeView } = useSettings()
   const { theme, setTheme } = useTheme()
-  const { branch, canSwitch } = useActiveBranch()
   const { can, user: currentUser } = useAuthorization()
   const features = useFeatures()
   const products = useQuery(productsQuery({ stockAtMost: LOW_STOCK_THRESHOLD, limit: 1 }))
   const lowStockCount = products.data?.total ?? 0
-  const clearRegisterSelection = useRegisterSelectionStore((state) => state.clear)
 
   const groups: { label: string; items: NavItem[] }[] = [
     {
@@ -115,7 +109,6 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
               ...(features.modifiers && can('modifiers.write') ? [{ to: '/modifiers', label: t('nav.modifiers'), icon: SlidersHorizontal }] : []),
               ...(features.tables && can('tables.write') ? [{ to: '/tables', label: t('nav.tables'), icon: LayoutGrid }] : []),
               ...(features.kitchen && can('kitchen.write') ? [{ to: '/kitchen-stations', label: t('nav.kitchenStations'), icon: Utensils }] : []),
-              ...(can('branches.manage') ? [{ to: '/branches', label: t('nav.branches'), icon: Building2 }] : []),
               ...(can('users.manage') ? [{ to: '/users', label: t('nav.users'), icon: Users }] : []),
               ...(can('settings.write') ? [{ to: '/settings', label: t('nav.settings'), icon: Settings }] : []),
               ...(can('roles.manage') ? [{ to: '/roles', label: t('nav.roles'), icon: ShieldCheck }] : []),
@@ -138,19 +131,6 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        {canSwitch ? (
-          <div className="px-2 group-data-[collapsible=icon]:hidden">
-            {/* The cart is for the branch it was rung up in, so a switch starts a fresh one. */}
-            <BranchSwitcher onSwitched={() => { clearCart(); clearRegisterSelection() }} />
-          </div>
-        ) : (
-          branch &&
-          branch.name !== shopName && (
-            <p className="truncate px-4 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-              {branch.name}
-            </p>
-          )
-        )}
       </SidebarHeader>
 
       <SidebarContent>

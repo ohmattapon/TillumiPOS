@@ -6,7 +6,6 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { LoginPage, meQuery, useLogout, useAuthorization } from '@/features/auth'
 import { RolesPage } from '@/features/roles'
 import { AuditPage } from '@/features/audit'
-import { BranchesPage, useActiveBranch } from '@/features/branches'
 import { CategoriesPage } from '@/features/categories'
 import { KitchenBoardPage, KitchenStationsPage } from '@/features/kitchen'
 import { CustomerDisplayPage, isCustomerScreenPath } from '@/features/customer-display'
@@ -32,9 +31,6 @@ function Shell({ user }: { user: User }) {
   const { locale, homeView } = useSettings()
   const { can } = useAuthorization()
   const clearRegisterSelection = useRegisterSelectionStore((state) => state.clear)
-  // Keeps the remembered branch honest (closed or forbidden ones are dropped) even on pages without a switcher.
-  useActiveBranch()
-
   // The shop chooses the language; follow it as soon as the settings arrive or change.
   useEffect(() => {
     void applyLocale(locale)
@@ -56,7 +52,6 @@ function Shell({ user }: { user: User }) {
           {can('categories.write') && <Route path="categories" element={<CategoriesPage />} />}
           {can('modifiers.write') && <Route path="modifiers" element={<FeatureRoute feature="modifiers"><ModifiersPage /></FeatureRoute>} />}
           {can('tables.write') && <Route path="tables" element={<FeatureRoute feature="tables"><TablesPage /></FeatureRoute>} />}
-          {can('branches.manage') && <Route path="branches" element={<BranchesPage />} />}
           {can('users.manage') && <Route path="users" element={<UsersPage />} />}
           {can('settings.write') && <Route path="settings" element={<SettingsPage />} />}
           {can('roles.manage') && <Route path="roles" element={<RolesPage />} />}

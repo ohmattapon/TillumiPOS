@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { ok, resetDatabase, seedBranch, seedProduct, signIn, type Session } from '../../../test/harness'
+import { ok, resetDatabase, seedProduct, signIn, type Session } from '../../../test/harness'
 
 let owner: Session
 let cashier: Session
@@ -137,18 +137,6 @@ describe('ส่งครัวและจอครัว', () => {
 
     const board = ok(await cashier.api.kitchen.tickets.get({ query: { stationId: station.id } }))
     expect(board.items).toHaveLength(0)
-  })
-
-  test('ออเดอร์และใบของสาขาอื่นตอบว่าไม่พบ', async () => {
-    const { station, product } = await kitchenProduct()
-    const order = ok(await cashier.api.orders.post({ items: [{ productId: product.id, quantity: 1 }] }))
-    const sent = ok(await send(cashier, order.id)).items[0]!
-    const other = await seedBranch('CNX', 'สาขาเชียงใหม่')
-    const elsewhere = await signIn('cashier', 'cashier-cnx', { branchId: other.id })
-
-    expect((await send(elsewhere, order.id)).status).toBe(404)
-    expect((await elsewhere.api.kitchen.tickets({ id: sent.id }).done.post()).status).toBe(404)
-    expect(ok(await elsewhere.api.kitchen.tickets.get({ query: { stationId: station.id } })).items).toHaveLength(0)
   })
 
   test('หมายเหตุแก้ได้ก่อนส่ง และถูกปฏิเสธหลังส่ง', async () => {

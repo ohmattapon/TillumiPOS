@@ -155,7 +155,7 @@ async function main() {
 
       for (const [name, path] of [
         ['11-today', '/today'], ['12-products', '/products'], ['13-categories', '/categories'], ['14-modifiers', '/modifiers'],
-        ['15-tables', '/tables'], ['16-branches', '/branches'], ['17-users', '/users'], ['18-settings', '/settings'], ['19-shifts', '/shifts'],
+        ['15-tables', '/tables'], ['17-users', '/users'], ['18-settings', '/settings'], ['19-shifts', '/shifts'],
         ['22-reports', '/reports'],
         ['23-promotions', '/promotions'],
         ['24-roles', '/roles'], ['25-audit', '/audit'],
@@ -179,7 +179,7 @@ async function main() {
       assert((await page.request.patch(`${WEB}/api/v1/settings`, { data: { homeView: 'till' } })).ok())
 
       // Date-only values survive the shadcn calendar without UTC conversion or premature submission.
-      await page.goto(`${WEB}/reports?from=2024-02-01&to=2024-02-29&scope=branch`)
+      await page.goto(`${WEB}/reports?from=2024-02-01&to=2024-02-29`)
       const from = page.getByRole('button', { name: 'ตั้งแต่วันที่', exact: true })
       const apply = page.getByRole('button', { name: 'แสดงรายงาน', exact: true })
       await from.waitFor()
@@ -197,7 +197,7 @@ async function main() {
       await picker.waitFor({ state: 'hidden' })
       assert.equal(new URL(page.url()).searchParams.get('from'), '2024-02-01', 'choosing a day must not submit the form')
       await apply.click()
-      await page.waitForURL('**/reports?from=2024-02-29&to=2024-02-29&scope=branch')
+      await page.waitForURL('**/reports?from=2024-02-29&to=2024-02-29')
 
       const to = page.getByRole('button', { name: 'ถึงวันที่', exact: true })
       await to.click()
@@ -206,7 +206,7 @@ async function main() {
       await page.getByRole('dialog', { name: 'ถึงวันที่', exact: true }).waitFor({ state: 'hidden' })
       assert((await to.textContent())?.includes('1 มี.ค. 2567'))
       await apply.click()
-      await page.waitForURL('**/reports?from=2024-02-29&to=2024-03-01&scope=branch')
+      await page.waitForURL('**/reports?from=2024-02-29&to=2024-03-01')
 
       // Keyboard opening and Escape restore focus to the trigger.
       await from.focus()
@@ -230,7 +230,7 @@ async function main() {
 
       // Switch only this isolated fixture's locale; Gregorian request values stay unchanged.
       assert((await page.request.patch(`${WEB}/api/v1/settings`, { data: { locale: 'en' } })).ok())
-      await page.goto(`${WEB}/reports?from=2024-02-01&to=2024-02-29&scope=branch`)
+      await page.goto(`${WEB}/reports?from=2024-02-01&to=2024-02-29`)
       const englishFrom = page.getByRole('button', { name: 'From', exact: true })
       await englishFrom.waitFor()
       assert((await englishFrom.textContent())?.includes('Feb 1, 2024'))
@@ -240,7 +240,7 @@ async function main() {
       await shot('25-report-calendar-en')
       await englishPicker.getByRole('button', { name: 'Feb 29, 2024', exact: true }).click()
       await page.getByRole('button', { name: 'View report', exact: true }).click()
-      await page.waitForURL('**/reports?from=2024-02-29&to=2024-02-29&scope=branch')
+      await page.waitForURL('**/reports?from=2024-02-29&to=2024-02-29')
       assert((await page.request.patch(`${WEB}/api/v1/settings`, { data: { locale: 'th' } })).ok())
 
       for (const theme of ['dark', 'midnight', 'forest', 'rose']) {

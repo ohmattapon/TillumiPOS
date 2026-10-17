@@ -16,7 +16,6 @@ export function SetupPage() {
   const [form, setForm] = useState({
     setupCode: '',
     shopName: '',
-    branchName: '',
     username: '',
     displayName: '',
     password: '',
@@ -75,7 +74,6 @@ export function SetupPage() {
             {field('setupCode', t('setupCode'), { autoFocus: true })}
             {field('shopName', t('shopName'))}
             <ShopTypeChoice value={shopType} onChange={setShopType} />
-            {field('branchName', t('branchName'))}
             {field('username', t('username'))}
             {field('displayName', t('displayName'))}
             {field('password', t('password'), { type: 'password', hint: t('passwordHint') })}
