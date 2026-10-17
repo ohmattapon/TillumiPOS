@@ -356,6 +356,9 @@
                     "displayName": {
                       "type": "string"
                     },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
                     "id": {
                       "anyOf": [
                         {
@@ -401,7 +404,8 @@
                     "role",
                     "roleId",
                     "branchId",
-                    "isActive"
+                    "isActive",
+                    "hasPin"
                   ],
                   "type": "object"
                 }
@@ -469,6 +473,9 @@
                     "displayName": {
                       "type": "string"
                     },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
                     "id": {
                       "anyOf": [
                         {
@@ -524,6 +531,7 @@
                     "roleId",
                     "branchId",
                     "isActive",
+                    "hasPin",
                     "roleName",
                     "permissions"
                   ],
@@ -535,6 +543,408 @@
           }
         },
         "summary": "ข้อมูลผู้ใช้ที่เข้าสู่ระบบอยู่",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me/pin": {
+      "put": {
+        "operationId": "putApiV1AuthMePin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "currentPassword": {
+                    "type": "string"
+                  },
+                  "pin": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "currentPassword",
+                  "pin"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "currentPassword": {
+                    "type": "string"
+                  },
+                  "pin": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "currentPassword",
+                  "pin"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "currentPassword": {
+                    "type": "string"
+                  },
+                  "pin": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "currentPassword",
+                  "pin"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "role": {
+                      "enum": [
+                        "owner",
+                        "cashier"
+                      ],
+                      "type": "string"
+                    },
+                    "roleId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "username": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "username",
+                    "displayName",
+                    "role",
+                    "roleId",
+                    "branchId",
+                    "isActive",
+                    "hasPin"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ตั้งหรือลบ PIN ของตนเอง ต้องยืนยันด้วยรหัสผ่านปัจจุบัน",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/switch": {
+      "post": {
+        "operationId": "postApiV1AuthSwitch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "pin": {
+                    "maxLength": 20,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "userId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "userId",
+                  "pin"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "pin": {
+                    "maxLength": 20,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "userId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "userId",
+                  "pin"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "pin": {
+                    "maxLength": 20,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "userId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "userId",
+                  "pin"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "role": {
+                      "enum": [
+                        "owner",
+                        "cashier"
+                      ],
+                      "type": "string"
+                    },
+                    "roleId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "username": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "username",
+                    "displayName",
+                    "role",
+                    "roleId",
+                    "branchId",
+                    "isActive",
+                    "hasPin"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "สลับผู้ขายที่จุดขายด้วย PIN เริ่มเซสชันของผู้ใช้นั้น",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/switch-users": {
+      "get": {
+        "operationId": "getApiV1AuthSwitch-users",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "displayName": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "displayName"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ผู้ใช้ที่สลับเข้ามาขายด้วย PIN ได้",
         "tags": [
           "Auth"
         ]
@@ -27822,6 +28232,9 @@
                     "displayName": {
                       "type": "string"
                     },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
                     "id": {
                       "anyOf": [
                         {
@@ -27867,7 +28280,8 @@
                     "role",
                     "roleId",
                     "branchId",
-                    "isActive"
+                    "isActive",
+                    "hasPin"
                   ],
                   "type": "object"
                 }
@@ -27908,6 +28322,9 @@
                           },
                           "displayName": {
                             "type": "string"
+                          },
+                          "hasPin": {
+                            "type": "boolean"
                           },
                           "id": {
                             "anyOf": [
@@ -27954,7 +28371,8 @@
                           "role",
                           "roleId",
                           "branchId",
-                          "isActive"
+                          "isActive",
+                          "hasPin"
                         ],
                         "type": "object"
                       },
@@ -28206,6 +28624,9 @@
                     "displayName": {
                       "type": "string"
                     },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
                     "id": {
                       "anyOf": [
                         {
@@ -28251,7 +28672,8 @@
                     "role",
                     "roleId",
                     "branchId",
-                    "isActive"
+                    "isActive",
+                    "hasPin"
                   ],
                   "type": "object"
                 }
@@ -28481,6 +28903,9 @@
                     "displayName": {
                       "type": "string"
                     },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
                     "id": {
                       "anyOf": [
                         {
@@ -28526,7 +28951,8 @@
                     "role",
                     "roleId",
                     "branchId",
-                    "isActive"
+                    "isActive",
+                    "hasPin"
                   ],
                   "type": "object"
                 }
@@ -28536,6 +28962,168 @@
           }
         },
         "summary": "แก้ไขผู้ใช้ เปลี่ยนรหัสผ่าน หรือปิดการใช้งาน",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/users/{id}/pin": {
+      "put": {
+        "operationId": "putApiV1UsersByIdPin",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "pin": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "pin"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "pin": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "pin"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "pin": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "pin"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "role": {
+                      "enum": [
+                        "owner",
+                        "cashier"
+                      ],
+                      "type": "string"
+                    },
+                    "roleId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "username": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "username",
+                    "displayName",
+                    "role",
+                    "roleId",
+                    "branchId",
+                    "isActive",
+                    "hasPin"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ตั้งหรือลบ PIN สลับผู้ขายของผู้ใช้ (ส่ง pin เป็น null เพื่อลบ)",
         "tags": [
           "Users"
         ]
