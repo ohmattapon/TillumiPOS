@@ -87,6 +87,15 @@ describe('switching with a PIN', () => {
     expect(ok(await client(ownerCookie).auth.me.get()).id).toBe(owner.user.id)
   })
 
+  test('a wrong PIN is in the audit log as auth.switch_failed, without the PIN tried', async () => {
+    expect((await switchTo(ownerCookie, { userId: cashier.user.id, pin: '1111' })).status).toBe(400)
+
+    const entries = ok(await owner.api['audit-logs'].get({ query: { action: 'auth.switch_failed' } })).items
+    expect(entries).toHaveLength(1)
+    expect(entries[0]).toMatchObject({ actorId: owner.user.id, entityId: String(cashier.user.id) })
+    expect(JSON.stringify(entries)).not.toContain('1111')
+  })
+
   test('five wrong PINs lock that target with 409 PIN_LOCKED, even with the right PIN', async () => {
     for (let i = 0; i < 5; i++) expect((await switchTo(ownerCookie, { userId: cashier.user.id, pin: '1111' })).status).toBe(400)
 
