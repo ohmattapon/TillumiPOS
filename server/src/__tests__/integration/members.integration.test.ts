@@ -181,3 +181,37 @@ describe('order membership', () => {
     expect(merged).toMatchObject({ memberId: second.id, itemCount: 3 })
   })
 })
+
+describe('member purchase history', () => {
+  test('filters civil days in shop timezone, paginates independently of summary and excludes voided totals', async () => {
+    const created = await member()
+    const product = await seedProduct(owner, { stock: 10, priceSatang: 1000 })
+    ok(await owner.api.settings.patch({ timeZone: 'Asia/Bangkok' }))
+    const sell = async () => ok(await cashier.api.sales.post({
+      memberId: created.id, items: [{ productId: product.id, quantity: 1 }], payments: cash(1000),
+    }))
+    const before = await sell()
+    const first = await sell()
+    const voided = await sell()
+    const after = await sell()
+    await sql`update sales set created_at = '2026-10-13T16:59:59Z' where id = ${before.id}`
+    await sql`update sales set created_at = '2026-10-13T17:00:00Z' where id = ${first.id}`
+    await sql`update sales set created_at = '2026-10-14T16:59:59Z' where id = ${voided.id}`
+    await sql`update sales set created_at = '2026-10-14T17:00:00Z' where id = ${after.id}`
+    ok(await owner.api.sales({ id: voided.id }).void.post({ reason: 'คิดเงินผิด' }))
+    const query = { from: '2026-10-14', to: '2026-10-14', limit: 1, offset: 0 }
+    const page = ok(await cashier.api.members({ id: created.id }).sales.get({ query }))
+    expect(page).toMatchObject({ total: 2, summary: { saleCount: 1, totalSatang: 1000 } })
+    expect(page.items.map((sale) => sale.id)).toEqual([voided.id])
+    const next = ok(await cashier.api.members({ id: created.id }).sales.get({ query: { ...query, offset: 1 } }))
+    expect(next.items.map((sale) => sale.id)).toEqual([first.id])
+    expect(next.summary).toEqual(page.summary)
+    const completed = ok(await cashier.api.members({ id: created.id }).sales.get({ query: { ...query, status: 'completed' } }))
+    expect(completed).toMatchObject({ total: 1, summary: { saleCount: 1, totalSatang: 1000 } })
+    expect(completed.items[0]?.id).toBe(first.id)
+    const cancelled = ok(await cashier.api.members({ id: created.id }).sales.get({ query: { ...query, status: 'voided' } }))
+    expect(cancelled).toMatchObject({ total: 1, summary: { saleCount: 0, totalSatang: 0 } })
+    expect(cancelled.items[0]).toMatchObject({ id: voided.id, status: 'voided', totalSatang: 1000 })
+    expect((await cashier.api.members({ id: created.id }).sales.get({ query: { from: '2026-02-30' } })).status).toBe(422)
+  })
+})
