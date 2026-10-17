@@ -11,7 +11,7 @@ pre-commit:
       run: bun scripts/check-secret-files.ts {staged_files}
 
     - name: lint web
-      glob: "src/**/*.{ts,tsx}"
+      glob: ["src/*.{ts,tsx}", "src/**/*.{ts,tsx}", "e2e/*.ts", "vite.config.ts"]
       run: bunx oxlint {staged_files}
 
 commit-msg:
