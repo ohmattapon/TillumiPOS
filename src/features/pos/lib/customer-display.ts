@@ -12,6 +12,8 @@ export interface CustomerDisplayInput {
   qr: DisplayQr | null
   /** A sale was just recorded and is still inside the few seconds "paid" is shown. */
   paidSale: { totalSatang: number; changeSatang: number } | null
+  /** The words after a pack's name, e.g. "pack of 6". */
+  packLabel: (size: number) => string
 }
 
 /**
@@ -19,10 +21,10 @@ export interface CustomerDisplayInput {
  * walks up while the last "thank you" is still showing sees their own basket, not the previous one.
  * Only receipt-level facts are copied: no product ids, stock or cost.
  */
-export function toDisplayState({ cart, vatMode, isPaying, qr, paidSale }: CustomerDisplayInput): DisplayState {
+export function toDisplayState({ cart, vatMode, isPaying, qr, paidSale, packLabel }: CustomerDisplayInput): DisplayState {
   if (cart.lines.length > 0) {
     const lines = cart.lines.map((line) => ({
-      name: line.name,
+      name: line.packId === null ? line.name : `${line.name} (${packLabel(line.packSize)})`,
       options: line.options.map((option) => option.name),
       quantity: line.quantity,
       lineTotalSatang: line.lineTotalSatang,

@@ -18,7 +18,7 @@ import { isLowStock, isOutOfStock, ProductImage, productsQuery, productKeys } fr
 import { useFormat } from '@/features/settings'
 import { cn } from '@/lib/utils'
 import { hasKeyboard } from '../lib/focus'
-import { offeredGroups } from '../lib/options'
+import { chooseOptions, offeredGroups } from '../lib/options'
 import { useCartActions } from '../hooks/use-cart-actions'
 import { useCartStore } from '../store/cart.store'
 import { OptionsDialog } from './OptionsDialog'
@@ -77,6 +77,19 @@ export function ProductPicker({ searchRef }: Props) {
     if (hasKeyboard()) searchRef.current?.focus()
   }
 
+  // A pack scanned is one line of its own, never with options, so a product that must ask for options cannot be one.
+  const sellPack = (product: Product, pack: Product['packs'][number], orderId: number | null) => {
+    const groups = offeredGroups(modifiers.data ?? [], product.id)
+    if (orderId !== null) toast.error(t('picker.packNotInOrders'))
+    else if (groups.length > 0 && chooseOptions(groups, []) === null) toast.error(t('picker.packNeedsOptions', { name: product.name }))
+    else if (product.trackStock && product.stockQty < pack.size) toast.error(t('picker.outOfStock', { name: product.name }))
+    else {
+      client.setQueryData(productKeys.detail(product.id), product)
+      addToCart(product.id, [], pack.id)
+      if (hasKeyboard()) searchRef.current?.focus()
+    }
+  }
+
   // A USB barcode scanner types the code and presses Enter, which lands here.
   const submitSearch = async (event: FormEvent) => {
     event.preventDefault()
@@ -91,10 +104,17 @@ export function ProductPicker({ searchRef }: Props) {
       const exact = code.length <= 64 ? await client.fetchQuery(productsQuery({ code, limit: 2 })) : { items: [], total: 0 }
       const result = exact.total > 0 ? exact : await client.fetchQuery(productsQuery({ q: code, limit: 2 }))
       if (!mounted.current || useCartStore.getState().orderId !== orderId) return
+      const packHit = result.items.flatMap((product) => {
+        const pack = product.packs.find((candidate) => candidate.barcode === code && candidate.isActive)
+        return pack ? [{ product, pack }] : []
+      })[0]
       const match = result.items.find((product) => product.barcode === code)
+        ?? packHit?.product
         ?? (exact.total > 0 ? result.items.find((product) => product.sku.toLowerCase() === term) : undefined)
         ?? (result.total === 1 ? result.items[0] : undefined)
+      const pack = match !== undefined && match.barcode !== code ? packHit?.pack : undefined
       if (!match) toast.error(t('picker.notFound', { term: code }))
+      else if (pack) sellPack(match, pack, orderId)
       else if (isOutOfStock(match)) toast.error(t('picker.outOfStock', { name: match.name }))
       else pick(match)
     } catch (error) {

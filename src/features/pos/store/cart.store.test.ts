@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { clearCart, useCartStore } from './cart.store'
+import { cartLineKey, clearCart, useCartStore } from './cart.store'
 
 const cart = () => useCartStore.getState()
 
@@ -17,8 +17,8 @@ describe('cart store', () => {
     cart().add(9)
 
     expect(cart().lines).toEqual([
-      { key: '7:', productId: 7, optionIds: [], quantity: 2 },
-      { key: '9:', productId: 9, optionIds: [], quantity: 1 },
+      { key: '7:', productId: 7, optionIds: [], packId: null, quantity: 2 },
+      { key: '9:', productId: 9, optionIds: [], packId: null, quantity: 1 },
     ])
   })
 
@@ -37,8 +37,8 @@ describe('cart store', () => {
     cart().setQuantity('9:', 5)
 
     expect(cart().lines).toEqual([
-      { key: '7:', productId: 7, optionIds: [], quantity: 1 },
-      { key: '9:', productId: 9, optionIds: [], quantity: 5 },
+      { key: '7:', productId: 7, optionIds: [], packId: null, quantity: 1 },
+      { key: '9:', productId: 9, optionIds: [], packId: null, quantity: 5 },
     ])
   })
 
@@ -48,7 +48,7 @@ describe('cart store', () => {
 
     cart().setQuantity('7:', quantity)
 
-    expect(cart().lines).toEqual([{ key: '9:', productId: 9, optionIds: [], quantity: 1 }])
+    expect(cart().lines).toEqual([{ key: '9:', productId: 9, optionIds: [], packId: null, quantity: 1 }])
   })
 
   test('changing the quantity of a product that is not in the cart does nothing', () => {
@@ -56,7 +56,7 @@ describe('cart store', () => {
 
     cart().setQuantity('99:', 3)
 
-    expect(cart().lines).toEqual([{ key: '7:', productId: 7, optionIds: [], quantity: 1 }])
+    expect(cart().lines).toEqual([{ key: '7:', productId: 7, optionIds: [], packId: null, quantity: 1 }])
   })
 
   test('clear empties the lines and the discount', () => {
@@ -100,7 +100,7 @@ describe('cart store', () => {
     cart().add(7)
 
     expect(cart().lines).not.toBe(before)
-    expect(before).toEqual([{ key: '7:', productId: 7, optionIds: [], quantity: 1 }])
+    expect(before).toEqual([{ key: '7:', productId: 7, optionIds: [], packId: null, quantity: 1 }])
   })
 })
 
@@ -159,5 +159,21 @@ describe('cart store with options', () => {
     cart().setPromotionDeclined(true)
     cart().workOnOrder(5)
     expect(cart().promotionDeclined).toBe(false)
+  })
+
+  test('a pack is its own line, added once then raised', () => {
+    cart().add(5, [], 9)
+    cart().add(5, [], 9)
+    cart().add(5)
+
+    expect(cart().lines.map(({ productId, packId, quantity }) => ({ productId, packId, quantity }))).toEqual([
+      { productId: 5, packId: 9, quantity: 2 },
+      { productId: 5, packId: null, quantity: 1 },
+    ])
+  })
+
+  test('a line key without a pack is unchanged', () => {
+    expect(cartLineKey(5, [])).toBe('5:')
+    expect(cartLineKey(5, [], 9)).toBe('5::p9')
   })
 })

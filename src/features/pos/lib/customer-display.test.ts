@@ -17,6 +17,8 @@ const line = (overrides: Partial<PricedLine> = {}): PricedLine => ({
   unavailable: false,
   sentQuantity: 0,
   note: null,
+  packId: null,
+  packSize: 1,
   ...overrides,
 })
 
@@ -39,6 +41,7 @@ const input = (overrides: Partial<CustomerDisplayInput> = {}): CustomerDisplayIn
   isPaying: false,
   qr: null,
   paidSale: null,
+  packLabel: (size) => `pack of ${size}`,
   ...overrides,
 })
 
@@ -96,5 +99,10 @@ describe('toDisplayState', () => {
   test('passes the shop VAT mode so the screen can label the tax', () => {
     expect(toDisplayState(input({ vatMode: 'exclusive' }))).toMatchObject({ vatMode: 'exclusive' })
     expect(toDisplayState(input({ vatMode: 'none' }))).toMatchObject({ vatMode: 'none' })
+  })
+
+  test('a pack line carries its size in the name', () => {
+    const state = toDisplayState(input({ cart: cart([line({ name: 'Cola', packId: 9, packSize: 6, options: [] })]) }))
+    expect(state).toMatchObject({ lines: [{ name: 'Cola (pack of 6)' }] })
   })
 })

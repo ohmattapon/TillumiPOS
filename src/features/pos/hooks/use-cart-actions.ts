@@ -18,8 +18,10 @@ export function useCartActions() {
   const onError = (error: Error) => toast.error(error.message)
 
   return {
-    add(productId: number, optionIds: number[] = []) {
-      if (orderId === null) addToCart(productId, optionIds)
+    /** A pack is sold at the till only; the picker refuses it while an order is open. */
+    add(productId: number, optionIds: number[] = [], packId: number | null = null) {
+      if (orderId === null) addToCart(productId, optionIds, packId)
+      else if (packId !== null) return
       else addItem.mutate({ orderId, productId, quantity: 1, options: optionIds }, { onError })
     },
     /** A quantity below 1 takes the line off. */

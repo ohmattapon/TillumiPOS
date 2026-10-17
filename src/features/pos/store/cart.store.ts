@@ -10,11 +10,14 @@ export interface CartLine {
   key: string
   productId: number
   optionIds: number[]
+  /** The pack sold (a box or case with its own barcode), or null for single units. */
+  packId: number | null
   quantity: number
 }
 
-export const cartLineKey = (productId: number, optionIds: readonly number[]) =>
-  `${productId}:${[...optionIds].sort((a, b) => a - b).join('-')}`
+/** A pack adds a suffix, so keys saved before packs existed stay valid. */
+export const cartLineKey = (productId: number, optionIds: readonly number[], packId: number | null = null) =>
+  `${productId}:${[...optionIds].sort((a, b) => a - b).join('-')}${packId === null ? '' : `:p${packId}`}`
 
 interface CartState {
   lines: CartLine[]
@@ -27,7 +30,7 @@ interface CartState {
   memberId: number | null
   setMember: (memberId: number | null) => void
   orderId: number | null
-  add: (productId: number, optionIds?: readonly number[]) => void
+  add: (productId: number, optionIds?: readonly number[], packId?: number | null) => void
   /** A quantity of 0 or less removes the line. */
   setQuantity: (key: string, quantity: number) => void
   setDiscount: (discount: string) => void
@@ -48,13 +51,13 @@ export const useCartStore = create<CartState>()((set) => ({
   memberId: null,
   promotionDeclined: false,
   setMember: (memberId) => set({ memberId }),
-  add: (productId, optionIds = []) =>
+  add: (productId, optionIds = [], packId = null) =>
     set((state) => {
-      const key = cartLineKey(productId, optionIds)
+      const key = cartLineKey(productId, optionIds, packId)
       return {
         lines: state.lines.some((line) => line.key === key)
           ? state.lines.map((line) => (line.key === key ? { ...line, quantity: line.quantity + 1 } : line))
-          : [...state.lines, { key, productId, optionIds: [...optionIds].sort((a, b) => a - b), quantity: 1 }],
+          : [...state.lines, { key, productId, optionIds: [...optionIds].sort((a, b) => a - b), packId, quantity: 1 }],
       }
     }),
   setQuantity: (key, quantity) =>

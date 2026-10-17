@@ -1,4 +1,5 @@
 import type { Order, Product } from '@pos/api/types'
+import { packUnitPriceSatang } from '@pos/api/packs'
 import { calculateTotals, type VatMode } from '@pos/api/pricing'
 import type { CartLine } from '../store/cart.store'
 
@@ -16,6 +17,10 @@ export interface PricedLine {
   options: { name: string; priceSatang: number }[]
   /** The ids of the options chosen; what a sale or an order is sent. */
   optionIds: number[]
+  /** The pack sold, or null for single units. */
+  packId: number | null
+  /** Units in one of this line's quantity: 1 for single units. */
+  packSize: number
   /** More than the shop has: the sale would be refused. The stock is the product's, shared by its lines. */
   exceedsStock: boolean
   /** What is on the shelf, for the message shown when the line asks for more. */
@@ -63,10 +68,11 @@ export interface CartOption {
 const exceeds = (product: Product | undefined, quantity: number) =>
   product !== undefined && product.trackStock && quantity > product.stockQty
 
-/** How many of each product the lines ask for in all: stock is shared by a product's lines. */
-function demandByProduct(lines: readonly { productId: number; quantity: number }[]) {
+/** How many units of each product the lines ask for in all: stock is shared by a product's lines. */
+function demandByProduct(lines: readonly { productId: number; quantity: number; packSize?: number }[]) {
   const demand = new Map<number, number>()
-  for (const { productId, quantity } of lines) demand.set(productId, (demand.get(productId) ?? 0) + quantity)
+  for (const { productId, quantity, packSize = 1 } of lines)
+    demand.set(productId, (demand.get(productId) ?? 0) + quantity * packSize)
   return demand
 }
 
@@ -83,13 +89,19 @@ export function priceCart(
   options: PricingOptions,
   optionsById: ReadonlyMap<number, CartOption> = new Map(),
 ): PricedCart {
-  const demand = demandByProduct(lines)
+  const packOf = (productId: number, packId: number | null) =>
+    packId === null ? null : (products.get(productId)?.packs.find((pack) => pack.id === packId && pack.isActive) ?? null)
+  const demand = demandByProduct(lines.map((line) => ({ ...line, packSize: packOf(line.productId, line.packId)?.size ?? 1 })))
   const priced: PricedLine[] = []
-  for (const { key, productId, optionIds, quantity } of lines) {
+  for (const { key, productId, optionIds, packId, quantity } of lines) {
     const product = products.get(productId)
     if (!product) continue
     const chosen = optionIds.flatMap((id) => optionsById.get(id) ?? [])
-    const unitPriceSatang = product.priceSatang + chosen.reduce((total, option) => total + option.priceSatang, 0)
+    const pack = packOf(productId, packId)
+    const packSize = pack?.size ?? 1
+    const unitPriceSatang = pack
+      ? packUnitPriceSatang(product.priceSatang, pack)
+      : product.priceSatang + chosen.reduce((total, option) => total + option.priceSatang, 0)
     priced.push({
       lineKey: key,
       lineId: null,
@@ -100,9 +112,11 @@ export function priceCart(
       lineTotalSatang: unitPriceSatang * quantity,
       options: chosen.map(({ name, priceSatang }) => ({ name, priceSatang })),
       optionIds: [...optionIds],
-      exceedsStock: exceeds(product, demand.get(productId) ?? quantity),
+      packId,
+      packSize,
+      exceedsStock: exceeds(product, demand.get(productId) ?? quantity * packSize),
       stockQty: product.stockQty,
-      unavailable: chosen.length !== optionIds.length,
+      unavailable: chosen.length !== optionIds.length || (packId !== null && pack === null),
       sentQuantity: 0,
       note: null,
     })
@@ -133,6 +147,8 @@ export function priceOrder(
       lineTotalSatang: item.unitPriceSatang * item.quantity,
       options: item.options.map(({ name, priceSatang }) => ({ name, priceSatang })),
       optionIds: item.options.map((option) => option.optionId),
+      packId: null,
+      packSize: 1,
       exceedsStock: exceeds(product, demand.get(item.productId) ?? item.quantity),
       stockQty: product?.stockQty ?? 0,
       unavailable: false,

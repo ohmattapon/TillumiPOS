@@ -19,6 +19,8 @@ const th = {
     noMatches: 'ไม่พบสินค้าที่ตรงกับการค้นหา',
     soldOut: 'หมด',
     left: 'เหลือ {{count}}',
+    packNeedsOptions: '"{{name}}" ต้องเลือกตัวเลือกก่อน ขายแบบแพ็คไม่ได้',
+    packNotInOrders: 'ขายแบบแพ็คได้เฉพาะการขายหน้าร้าน ไม่ใช่ออเดอร์',
   },
   floor: {
     button: 'โต๊ะ',
@@ -59,6 +61,7 @@ const th = {
     promotion: 'โปรโมชัน: {{name}}',
     promotionRemove: 'ยกเลิกโปรโมชัน',
     promotionUse: 'ใช้โปรโมชัน "{{name}}"',
+    pack: 'แพ็ค {{size}}',
     optionUnavailable: 'ตัวเลือกบางอย่างปิดใช้งานแล้ว ลบรายการนี้แล้วเลือกใหม่',
     title: 'ตะกร้า',
     itemCount: '{{count}} ชิ้น',
@@ -175,6 +178,8 @@ const en = {
     noMatches: 'No products match your search',
     soldOut: 'Out',
     left: '{{count}} left',
+    packNeedsOptions: '"{{name}}" needs options and cannot be sold as a pack',
+    packNotInOrders: 'Packs can only be sold at the till, not on an order',
   },
   floor: {
     button: 'Tables',
@@ -212,6 +217,7 @@ const en = {
   },
   cart: {
     productUnavailable: 'Some products are no longer for sale. Clear the cart and choose again.',
+    pack: 'pack of {{size}}',
     promotion: 'Promotion: {{name}}',
     promotionRemove: 'Remove promotion',
     promotionUse: 'Use promotion "{{name}}"',
