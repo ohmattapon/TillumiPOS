@@ -72,6 +72,8 @@ export interface ModifierOptionProps {
   costSatang: number
   sortOrder: number
   isActive: boolean
+  /** Chosen for the cashier before they touch anything; the till sends it like any other choice. */
+  isDefault: boolean
 }
 
 export class ModifierOptionEntity {
@@ -82,6 +84,7 @@ export class ModifierOptionEntity {
   public readonly costSatang: number
   public readonly sortOrder: number
   public readonly isActive: boolean
+  public readonly isDefault: boolean
 
   constructor(props: ModifierOptionProps) {
     if (!isName(props.name)) throw invalid(`ชื่อตัวเลือกต้องยาว 1 ถึง ${MAX_NAME_LENGTH} ตัวอักษร`)
@@ -96,6 +99,8 @@ export class ModifierOptionEntity {
     this.costSatang = props.costSatang
     this.sortOrder = props.sortOrder
     this.isActive = props.isActive
+    // A snapshot read from a cache written before the flag existed has no value for it.
+    this.isDefault = props.isDefault ?? false
   }
 
   with(changes: Partial<Omit<ModifierOptionProps, 'id' | 'groupId'>>): ModifierOptionEntity {
@@ -111,6 +116,7 @@ export class ModifierOptionEntity {
       costSatang: this.costSatang,
       sortOrder: this.sortOrder,
       isActive: this.isActive,
+      isDefault: this.isDefault,
     }
   }
 }
@@ -127,7 +133,10 @@ export interface LineOption {
 
 /** The part of a group the rules read; entities and the web's plain objects both satisfy it. */
 export type GroupRules = Pick<ModifierGroupProps, 'id' | 'name' | 'required' | 'maxSelections' | 'isActive'>
-export type OptionData = Pick<ModifierOptionProps, 'id' | 'name' | 'priceSatang' | 'costSatang' | 'isActive'>
+export type OptionData = Pick<
+  ModifierOptionProps,
+  'id' | 'name' | 'priceSatang' | 'costSatang' | 'isActive' | 'isDefault'
+>
 export interface ModifierGroupWithOptions {
   group: GroupRules
   options: readonly OptionData[]
@@ -147,6 +156,22 @@ export function lineKey(options: readonly { optionId: number }[]): string {
     .map((option) => option.optionId)
     .sort((a, b) => a - b)
     .join('-')
+}
+
+/**
+ * What the till starts a line with: the flagged default of every active group, in group order. At
+ * most one per group, so a group can never add two answers by itself. A default is a choice the till
+ * makes on the cashier's behalf and sends like any other; `resolveLineOptions` stays the one place
+ * the rules are enforced.
+ */
+export function defaultOptionIds(groups: readonly ModifierGroupWithOptions[]): number[] {
+  const picked: number[] = []
+  for (const { group, options } of groups) {
+    if (!group.isActive) continue
+    const option = options.find((candidate) => candidate.isDefault && candidate.isActive)
+    if (option) picked.push(option.id)
+  }
+  return picked
 }
 
 /**

@@ -1,0 +1,1 @@
+ALTER TABLE "modifier_options" ADD COLUMN "is_default" boolean DEFAULT false NOT NULL;
