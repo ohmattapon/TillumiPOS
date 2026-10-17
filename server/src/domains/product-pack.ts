@@ -4,13 +4,13 @@ import { MAX_AMOUNT_SATANG } from './sale.domain'
 /** A fixed quantity of one product (a box or case) with its own barcode. */
 export interface ProductPack {
   /** 0 until the pack has been stored. */
-  id: number
-  barcode: string
+  readonly id: number
+  readonly barcode: string
   /** How many units of the product one pack holds. */
-  size: number
+  readonly size: number
   /** Selling price of the whole pack in satang; null means size x the product price. */
-  priceSatang: number | null
-  isActive: boolean
+  readonly priceSatang: number | null
+  readonly isActive: boolean
 }
 
 export const MAX_PACK_SIZE = 9999

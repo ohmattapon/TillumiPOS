@@ -163,6 +163,25 @@ describe('ProductEntity', () => {
       expect(error?.params).toEqual({ barcode: '8850000000099' })
     })
 
+    test('rejects two stored packs with the same id', () => {
+      const error = errorOf(() => product({ packs: [pack({ id: 3, barcode: 'a' }), pack({ id: 3, barcode: 'b' })] }))
+
+      expect(error).toBeInstanceOf(DomainError)
+      expect(error?.code).toBe('INVALID_PRODUCT')
+    })
+
+    test('accepts several new packs, which all have id 0', () => {
+      expect(product({ packs: [pack({ id: 0, barcode: 'a' }), pack({ id: 0, barcode: 'b' })] }).packs).toHaveLength(2)
+    })
+
+    test('a pack handed out by the entity cannot be changed', () => {
+      const found = product({ packs: [pack()] }).packForSale(7)
+      // @ts-expect-error a pack is read-only, so a caller cannot change the entity through it
+      found.size = 12
+
+      expect(found).toBeDefined()
+    })
+
     test('rejects a pack barcode equal to the product barcode', () => {
       const error = errorOf(() => product({ packs: [pack({ barcode: valid.barcode as string })] }))
 

@@ -58,8 +58,14 @@ export class ProductEntity {
     const packs = props.packs ?? []
     if (packs.length > MAX_PACKS_PER_PRODUCT) throw invalid(`สินค้าหนึ่งรายการมีแพ็กได้ไม่เกิน ${MAX_PACKS_PER_PRODUCT} แบบ`)
     const taken = new Set<string>(props.barcode === null ? [] : [props.barcode])
+    const storedIds = new Set<number>()
     for (const pack of packs) {
       assertValidPack(pack)
+      // 0 marks a pack not stored yet; a stored id twice would make the repository write one row twice.
+      if (pack.id !== 0) {
+        if (storedIds.has(pack.id)) throw invalid('มีแพ็คเดียวกันซ้ำในรายการ')
+        storedIds.add(pack.id)
+      }
       if (taken.has(pack.barcode))
         throw new DomainConflictError(`บาร์โค้ด ${pack.barcode} ถูกใช้แล้ว`, 'BARCODE_TAKEN', { barcode: pack.barcode })
       taken.add(pack.barcode)
