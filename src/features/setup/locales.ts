@@ -1,0 +1,51 @@
+const th = {
+  title: 'ตั้งค่าร้านครั้งแรก',
+  subtitle: 'สร้างบัญชีเจ้าของร้านและตั้งชื่อร้าน',
+  codeNote: 'รหัสตั้งค่าแสดงอยู่ใน log ของระบบ: รัน "docker compose logs app" แล้วมองหา SETUP CODE',
+  setupCode: 'รหัสตั้งค่า',
+  shopName: 'ชื่อร้าน',
+  username: 'ชื่อผู้ใช้ของเจ้าของ',
+  displayName: 'ชื่อที่แสดง',
+  password: 'รหัสผ่าน',
+  passwordHint: 'อย่างน้อย 10 ตัวอักษร',
+  confirm: 'ยืนยันรหัสผ่าน',
+  mismatch: 'รหัสผ่านสองช่องไม่ตรงกัน',
+  submit: 'ตั้งค่าและเข้าสู่ระบบ',
+  submitting: 'กำลังตั้งค่า…',
+  shopType: {
+    legend: 'ร้านของคุณเป็นแบบไหน',
+    required: 'เลือกประเภทร้านก่อนจึงจะตั้งค่าได้',
+    note: 'เลือกเพื่อซ่อนเมนูที่ร้านไม่ได้ใช้ เปิดใช้เพิ่มได้ทุกเมื่อในหน้าตั้งค่า',
+    cafe: { name: 'คาเฟ่', hint: 'ขายที่เคาน์เตอร์ มีตัวเลือก เช่น ร้อน เย็น หวาน' },
+    restaurant: { name: 'ร้านอาหาร', hint: 'มีโต๊ะ ส่งออร์เดอร์เข้าครัว และตัวเลือกเสริม' },
+    retail: { name: 'ร้านค้าปลีก / มินิมาร์ท', hint: 'ขายสินค้าที่เคาน์เตอร์ ไม่มีโต๊ะหรือครัว' },
+    other: { name: 'อื่นๆ', hint: 'เปิดใช้ทุกอย่าง' },
+  },
+}
+
+const en = {
+  title: 'First-time setup',
+  subtitle: 'Create the owner account and name the shop',
+  codeNote: 'The setup code is in the system log: run "docker compose logs app" and look for SETUP CODE',
+  setupCode: 'Setup code',
+  shopName: 'Shop name',
+  username: 'Owner username',
+  displayName: 'Display name',
+  password: 'Password',
+  passwordHint: 'At least 10 characters',
+  confirm: 'Confirm password',
+  mismatch: 'The two passwords do not match',
+  submit: 'Set up and sign in',
+  submitting: 'Setting up…',
+  shopType: {
+    legend: 'What kind of shop is this?',
+    required: 'Choose the kind of shop to finish setup',
+    note: 'This hides menus the shop does not use. You can turn anything on later in Settings.',
+    cafe: { name: 'Café', hint: 'Counter service, with options such as hot, iced or sweetness' },
+    restaurant: { name: 'Restaurant', hint: 'Tables, kitchen orders and options' },
+    retail: { name: 'Retail / minimart', hint: 'Counter sales, no tables or kitchen' },
+    other: { name: 'Other', hint: 'Everything turned on' },
+  },
+} satisfies typeof th
+
+export const locales = { th, en }

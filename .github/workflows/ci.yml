@@ -17,7 +17,7 @@ jobs:
           POSTGRES_USER: pos
           POSTGRES_PASSWORD: pos
           POSTGRES_DB: pos
-        # Same host port as docker-compose.yml, so apps/api/.env.test works unchanged.
+        # Same host port as docker-compose.yml, so server/.env.test works unchanged.
         ports:
           - 5433:5432
         options: >-
