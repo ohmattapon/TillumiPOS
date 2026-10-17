@@ -60,6 +60,15 @@ export const mockCategoryRepository = (): Mocked<ICategoryRepository> => ({
   update: mock<ICategoryRepository['update']>(),
 })
 
+export const mockSlideRepository = (): Mocked<ISlideRepository> => ({
+  findAll: mock<ISlideRepository['findAll']>(),
+  findActive: mock<ISlideRepository['findActive']>(),
+  findById: mock<ISlideRepository['findById']>(),
+  create: mock<ISlideRepository['create']>(),
+  update: mock<ISlideRepository['update']>(),
+  delete: mock<ISlideRepository['delete']>(),
+})
+
 export const mockUserRepository = (): Mocked<IUserRepository> => ({
   lockOwnerChangesForUpdate: mock(async () => {}),
   findAll: mock<IUserRepository['findAll']>(),
@@ -275,6 +284,7 @@ export const mockFirstRunGuard = (): Mocked<IFirstRunGuard> => ({
 })
 
 import type { IMemberRepository } from '../modules/members/applications/ports/member.repository'
+import type { ISlideRepository } from '../modules/display-slides/applications/ports/slide.repository'
 import type { IPromotionRepository } from '../modules/promotions/applications/ports/promotion.repository'
 import type { IPriceQuoteRepository } from '../modules/quotes/applications/ports/price-quote.repository'
 import type { IQuoteClaims } from '../modules/quotes/applications/ports/quote-claims.port'

@@ -65,4 +65,14 @@ describe('DrizzleSlideRepository', () => {
       DomainNotFoundError,
     )
   })
+
+  test('delete removes the slide, unknown id is not found', async () => {
+    const created = await repo().create(slide())
+
+    const removed = await repo().delete(created.id)
+
+    expect(removed).toEqual(created)
+    expect(await repo().findById(created.id)).toBeNull()
+    await expect(repo().delete(created.id)).rejects.toBeInstanceOf(DomainNotFoundError)
+  })
 })

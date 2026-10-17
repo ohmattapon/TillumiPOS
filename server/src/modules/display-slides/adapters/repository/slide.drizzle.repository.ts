@@ -69,4 +69,13 @@ export class DrizzleSlideRepository implements ISlideRepository {
     if (!row) throw new DomainNotFoundError('ไม่พบสไลด์')
     return new SlideEntity(row)
   }
+
+  async delete(id: number) {
+    const [row] = await currentExecutor()
+      .delete(displaySlides)
+      .where(eq(displaySlides.id, id))
+      .returning(columns)
+    if (!row) throw new DomainNotFoundError('ไม่พบสไลด์')
+    return new SlideEntity(row)
+  }
 }

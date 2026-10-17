@@ -10,6 +10,8 @@ export interface ISlideRepository {
   create(entity: SlideEntity): Promise<SlideEntity>
   /** Overwrites the stored slide that has the entity's id. */
   update(entity: SlideEntity): Promise<SlideEntity>
+  /** Removes the stored slide and returns it. Throws DomainNotFoundError when the id is unknown. */
+  delete(id: number): Promise<SlideEntity>
 }
 
 const slideRepositoryTokenSymbol: unique symbol = Symbol('ISlideRepository')
