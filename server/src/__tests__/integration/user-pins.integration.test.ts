@@ -131,6 +131,20 @@ describe('setting PINs over HTTP', () => {
     expect((await cashier.api.users({ id: owner.user.id }).pin.put({ pin: '4321' })).status).toBe(403)
   })
 
+  test('making a user an owner clears the PIN someone else chose for them, and audits it', async () => {
+    const owner = await signIn('owner')
+    const cashier = await signIn('cashier')
+    ok(await owner.api.users({ id: cashier.user.id }).pin.put({ pin: '4321' }))
+
+    const promoted = ok(await owner.api.users({ id: cashier.user.id }).patch({ role: 'owner' }))
+
+    expect(promoted.hasPin).toBe(false)
+    expect(ok(await owner.api.auth['switch-users'].get()).items.some((item) => item.id === cashier.user.id)).toBe(false)
+    const cleared = ok(await owner.api['audit-logs'].get({ query: { action: 'user.pin_cleared' } })).items
+    expect(cleared).toHaveLength(1)
+    expect(cleared[0]).toMatchObject({ actorId: owner.user.id, entityId: String(cashier.user.id) })
+  })
+
   test('an owner cannot set their own PIN through the users route, only through /auth/me/pin', async () => {
     const owner = await signIn('owner')
 
