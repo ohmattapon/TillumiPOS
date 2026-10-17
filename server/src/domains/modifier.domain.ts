@@ -149,6 +149,11 @@ export function lineKey(options: readonly { optionId: number }[]): string {
     .join('-')
 }
 
+/** Identifies a cart line: the same product with the same options, or the same pack, is one line. */
+export function lineMergeKey(productId: number, optionIds: readonly number[], packId: number | null | undefined): string {
+  return `${productId}:${lineKey(optionIds.map((optionId) => ({ optionId })))}:${packId ?? ''}`
+}
+
 /**
  * The one rule for what may be chosen on a product, shared by the server and the till. `groups` are
  * the groups offered on the product; `selectedOptionIds` what was chosen. Throws a DomainError that

@@ -3,7 +3,7 @@ import { DomainError } from './errors/domain-error'
 import type { LineOption } from './modifier.domain'
 import { calculateTotals, type VatMode } from './pricing'
 import type { ProductEntity } from './product.domain'
-import { packUnitCostSatang } from './product-pack'
+import { assertPackHasNoOptions, packUnitCostSatang } from './product-pack'
 
 export const PAYMENT_METHODS = ['cash', 'promptpay', 'card'] as const
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
@@ -249,8 +249,7 @@ export class SaleEntity {
       throw new DomainError('ส่วนลดไม่ตรงกับโปรโมชันที่ใช้', 'INVALID_DISCOUNT')
     if (payments.some((payment) => !isWholeAmount(payment.amountSatang) || payment.amountSatang < 1))
       throw new DomainError('ยอดชำระแต่ละรายการต้องเป็นจำนวนเต็มสตางค์ตั้งแต่ 1 ขึ้นไป', 'INVALID_PAYMENT')
-    if (lines.some((line) => line.pack && (line.options?.length ?? 0) > 0))
-      throw new DomainError('แพ็กสินค้าเลือกตัวเลือกเพิ่มไม่ได้', 'PACK_WITH_OPTIONS')
+    for (const line of lines) assertPackHasNoOptions(line.pack !== undefined, line.options?.length ?? 0)
 
     const items: SaleItem[] = lines.map(({ product, quantity, options = [], pack }) => {
       if (pack) {

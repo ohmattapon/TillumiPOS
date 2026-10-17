@@ -1,10 +1,10 @@
 import { inject, injectable } from 'tsyringe'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
-import { lineKey } from '../../../../domains/modifier.domain'
+import { lineMergeKey } from '../../../../domains/modifier.domain'
 import { PriceQuoteEntity, type QuoteLine } from '../../../../domains/price-quote.domain'
 import { pickBestPromotion } from '../../../../domains/promotion.domain'
-import { packUnitPriceSatang, type ProductPack } from '../../../../domains/product-pack'
+import { assertPackHasNoOptions, packUnitPriceSatang, type ProductPack } from '../../../../domains/product-pack'
 import type { ProductEntity } from '../../../../domains/product.domain'
 import type { SaleMember } from '../../../../domains/sale.domain'
 import { memberRepositoryToken, type IMemberRepository } from '../../../members/applications/ports/member.repository'
@@ -96,10 +96,9 @@ export class CreateQuoteUseCase {
   ) {
     const wanted = new Map<string, { productId: number; optionIds: number[]; packId: number | null; quantity: number }>()
     for (const { productId, quantity, options = [], packId } of requested) {
-      if (packId !== undefined && options.length > 0)
-        throw new DomainError('แพ็กสินค้าเลือกตัวเลือกเพิ่มไม่ได้', 'PACK_WITH_OPTIONS')
+      assertPackHasNoOptions(packId !== undefined, options.length)
       const optionIds = [...options].sort((a, b) => a - b)
-      const key = `${productId}:${lineKey(optionIds.map((optionId) => ({ optionId })))}:${packId ?? ''}`
+      const key = lineMergeKey(productId, optionIds, packId)
       const existing = wanted.get(key)
       if (existing) existing.quantity += quantity
       else wanted.set(key, { productId, optionIds, packId: packId ?? null, quantity })

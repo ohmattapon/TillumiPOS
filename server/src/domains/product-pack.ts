@@ -26,6 +26,11 @@ export function assertValidPack(pack: ProductPack): void {
     throw invalid('ราคาแพ็กต้องเป็นจำนวนเต็มสตางค์ที่ไม่ติดลบและไม่เกินกำหนด')
 }
 
+/** A pack is a fixed box of the product, so a line that sells one carries no options. */
+export function assertPackHasNoOptions(hasPack: boolean, optionCount: number): void {
+  if (hasPack && optionCount > 0) throw new DomainError('แพ็กสินค้าเลือกตัวเลือกเพิ่มไม่ได้', 'PACK_WITH_OPTIONS')
+}
+
 export function packUnitPriceSatang(productPriceSatang: number, pack: Pick<ProductPack, 'size' | 'priceSatang'>): number {
   return pack.priceSatang ?? pack.size * productPriceSatang
 }

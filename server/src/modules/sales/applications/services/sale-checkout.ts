@@ -3,9 +3,9 @@ import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found
 import { memberRepositoryToken, type IMemberRepository } from '../../../members/applications/ports/member.repository'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
-import { lineKey, type LineOption } from '../../../../domains/modifier.domain'
+import { lineMergeKey, type LineOption } from '../../../../domains/modifier.domain'
 import type { PriceQuoteEntity, QuoteRequestLine } from '../../../../domains/price-quote.domain'
-import { packUnitPriceSatang, type ProductPack } from '../../../../domains/product-pack'
+import { assertPackHasNoOptions, packUnitPriceSatang, type ProductPack } from '../../../../domains/product-pack'
 import { SaleEntity, type SaleMember } from '../../../../domains/sale.domain'
 import { stockLedgerToken } from '../../../inventory/applications/ports/stock-ledger.port'
 import { lineOptionsResolverToken } from '../../../modifiers/applications/ports/line-options-resolver.port'
@@ -107,7 +107,7 @@ export class SaleCheckout implements ISaleCheckout {
       pinnedPack: { id: number; size: number; unitPriceSatang: number } | undefined
     }
     const keyOf = (productId: number, options: readonly LineOption[], packId: number | undefined) =>
-      `${productId}:${lineKey(options)}:${packId ?? ''}`
+      lineMergeKey(productId, options.map((option) => option.optionId), packId)
     const wanted = new Map<string, WantedLine>()
     if (quote) {
       // The quote has the options and the price of every line; nothing is resolved or priced again.
@@ -129,8 +129,7 @@ export class SaleCheckout implements ISaleCheckout {
       }
     } else {
       for (const line of requested) {
-        if (line.packId !== undefined && ((line.optionIds?.length ?? 0) > 0 || (line.options?.length ?? 0) > 0))
-          throw new DomainError('แพ็กสินค้าเลือกตัวเลือกเพิ่มไม่ได้', 'PACK_WITH_OPTIONS')
+        assertPackHasNoOptions(line.packId !== undefined, (line.optionIds?.length ?? 0) + (line.options?.length ?? 0))
         // An order has already resolved its options and quoted a price; a one-step sale is resolved here.
         // A pack is resolved with no options, so a product that needs a choice cannot be sold as a pack.
         const options = line.options

@@ -1,6 +1,6 @@
 import { DomainConflictError } from './errors/domain-conflict.error'
 import { DomainError } from './errors/domain-error'
-import { lineKey, type LineOption } from './modifier.domain'
+import { lineMergeKey, type LineOption } from './modifier.domain'
 import { calculateTotals, type VatMode } from './pricing'
 import { MAX_AMOUNT_SATANG, type SaleMember, type SalePromotion } from './sale.domain'
 
@@ -85,14 +85,11 @@ const mismatch = () =>
   new DomainConflictError('รายการ สมาชิก หรือสาขาไม่ตรงกับราคาที่ตรึงไว้ กรุณาขอราคาใหม่', 'QUOTE_MISMATCH')
 const expired = () => new DomainConflictError('ราคาที่ตรึงไว้หมดอายุแล้ว กรุณาขอราคาใหม่', 'QUOTE_EXPIRED')
 
-const keyOf = (productId: number, optionIds: readonly number[], packId: number | null) =>
-  `${productId}:${lineKey(optionIds.map((optionId) => ({ optionId })))}:${packId ?? ''}`
-
 /** Quantity per line of a cart, with repeated lines added together. */
 function quantities(lines: readonly QuoteRequestLine[]) {
   const byKey = new Map<string, number>()
   for (const line of lines) {
-    const key = keyOf(line.productId, line.optionIds, line.packId)
+    const key = lineMergeKey(line.productId, line.optionIds, line.packId)
     byKey.set(key, (byKey.get(key) ?? 0) + line.quantity)
   }
   return byKey
