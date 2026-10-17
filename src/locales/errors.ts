@@ -45,6 +45,7 @@ export const errors = {
     QR_PENDING_ACKNOWLEDGEMENT_REQUIRED: 'Some QRs are still waiting to be paid. Acknowledge this before counting.',
     QR_DISMISSED: 'This payment was dismissed and can no longer pay for a sale.',
     PROMOTION_NOT_FOUND: 'Promotion not found.',
+    INVALID_SLIDE: 'These slide details are not valid.',
     PROMOTION_NAME_TAKEN: 'Another promotion already has this name.',
     INVALID_PROMOTION: 'These promotion settings are not valid.',
     QUOTE_NOT_FOUND: 'The pinned price was not found.',

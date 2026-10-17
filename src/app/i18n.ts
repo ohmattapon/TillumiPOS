@@ -6,6 +6,7 @@ import { auditLocales } from '@/features/audit'
 import { categoriesLocales } from '@/features/categories'
 import { kitchenLocales } from '@/features/kitchen'
 import { customerDisplayLocales } from '@/features/customer-display'
+import { displaySlidesLocales } from '@/features/display-slides'
 import { membersLocales } from '@/features/members'
 import { promotionsLocales } from '@/features/promotions'
 import { modifiersLocales } from '@/features/modifiers'
@@ -36,6 +37,7 @@ export const resources = {
     audit: auditLocales.th,
     categories: categoriesLocales.th,
     customerDisplay: customerDisplayLocales.th,
+    displaySlides: displaySlidesLocales.th,
     modifiers: modifiersLocales.th,
     kitchen: kitchenLocales.th,
     members: membersLocales.th,
@@ -58,6 +60,7 @@ export const resources = {
     audit: auditLocales.en,
     categories: categoriesLocales.en,
     customerDisplay: customerDisplayLocales.en,
+    displaySlides: displaySlidesLocales.en,
     modifiers: modifiersLocales.en,
     kitchen: kitchenLocales.en,
     members: membersLocales.en,
