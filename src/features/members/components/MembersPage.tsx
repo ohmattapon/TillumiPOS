@@ -77,21 +77,18 @@ export function MembersPage() {
           </Select>
         </div>
         <Panel title={t('directory')}>
+          {/* Drawn here, not in DataTable's toolbar: the table is hidden while a request fails, and a search that moved between the two places would be rebuilt and lose focus. */}
+          <div className={tableToolbar}>{memberSearch}</div>
           {members.error && (
-            <>
-              {/* The table is hidden while the request fails, so keep the search here: a bad term must stay changeable. */}
-              <div className={tableToolbar}>{memberSearch}</div>
-              <p role="alert" className="p-4 text-sm text-destructive">
-                {members.error.message}
-                <Button variant="link" onClick={() => void members.refetch()}>
-                  {t('retry')}
-                </Button>
-              </p>
-            </>
+            <p role="alert" className="p-4 text-sm text-destructive">
+              {members.error.message}
+              <Button variant="link" onClick={() => void members.refetch()}>
+                {t('retry')}
+              </Button>
+            </p>
           )}
           {!members.error && (
             <DataTable
-              toolbar={memberSearch}
               rows={members.data?.items ?? []}
               rowKey={(member) => member.id}
               isPending={members.isPending}
