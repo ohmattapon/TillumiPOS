@@ -300,12 +300,20 @@ describe('SetUserPinUseCase', () => {
     expect(audit.record).not.toHaveBeenCalled()
   })
 
-  test('an owner may set their own PIN', async () => {
+  test('an owner sets their own PIN only through the account menu, which asks for their password', async () => {
     repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 1, role: 'owner' }))
 
-    await useCase.execute(1, { pin: '4321' }, owner)
+    await expect(useCase.execute(1, { pin: '4321' }, owner)).rejects.toMatchObject({ code: 'OWN_PIN_USE_ACCOUNT' })
+    await expect(useCase.execute(1, { pin: null }, owner)).rejects.toBeInstanceOf(DomainForbiddenError)
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+    expect(audit.record).not.toHaveBeenCalled()
+  })
 
-    expect(repo.setPinHash).toHaveBeenCalledWith(1, 'hashed:4321')
+  test('a manager cannot set their own PIN through the users route either', async () => {
+    repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 9 }))
+
+    await expect(useCase.execute(9, { pin: '4321' }, manager)).rejects.toMatchObject({ code: 'OWN_PIN_USE_ACCOUNT' })
+    expect(repo.setPinHash).not.toHaveBeenCalled()
   })
 
   test.each(['12', '1234567', 'abcd', ''])('rejects the PIN %p without writing', async (pin) => {

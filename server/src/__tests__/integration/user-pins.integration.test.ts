@@ -131,6 +131,16 @@ describe('setting PINs over HTTP', () => {
     expect((await cashier.api.users({ id: owner.user.id }).pin.put({ pin: '4321' })).status).toBe(403)
   })
 
+  test('an owner cannot set their own PIN through the users route, only through /auth/me/pin', async () => {
+    const owner = await signIn('owner')
+
+    const result = await owner.api.users({ id: owner.user.id }).pin.put({ pin: '4321' })
+
+    expect(result.status).toBe(403)
+    expect(result.error?.value).toMatchObject({ code: 'OWN_PIN_USE_ACCOUNT' })
+    expect(ok(await owner.api.auth.me.get()).hasPin).toBe(false)
+  })
+
   test('a user changes their own PIN with the current password; /auth/me shows hasPin', async () => {
     const cashier = await signIn('cashier')
 
