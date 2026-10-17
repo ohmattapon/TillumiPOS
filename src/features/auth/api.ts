@@ -66,3 +66,13 @@ export function useSwitchUser(options: { onHandOver: (newUserId: number) => void
     },
   })
 }
+
+/** Sets or clears the signed-in user's own PIN; the current password proves it is them. */
+export function useSetOwnPin() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: { currentPassword: string; pin: string | null }) => unwrap(api.auth.me.pin.put(input)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: authKeys.me }),
+  })
+}
