@@ -41,7 +41,11 @@ export function LoginPage() {
     <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-muted p-4 sm:p-8">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_38%,color-mix(in_srgb,var(--color-primary)_22%,transparent),transparent_75%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(75%_60%_at_50%_0%,color-mix(in_srgb,var(--color-primary)_30%,transparent),transparent_70%)]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_45%_at_50%_108%,color-mix(in_srgb,var(--color-primary)_20%,transparent),transparent_70%)]"
       />
       <div className="relative grid w-full max-w-4xl overflow-hidden rounded-[10px] border bg-card lg:grid-cols-2">
         <CardImage />
