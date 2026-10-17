@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
-import { tableCell, tableHead } from '@/components/Panel'
+import { tableCell, tableHead, tableToolbar } from '@/components/Panel'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { splitColumns, toColumnDefs, type Column } from '@/lib/data-table'
@@ -14,6 +14,8 @@ interface Props<T> {
   rowKey: (row: T) => string | number
   /** Shown when there are no rows and nothing is loading. */
   empty: ReactNode
+  /** Above the table inside the card, usually a `TableSearch`. Drawn once, outside both the table and the phone list. */
+  toolbar?: ReactNode
   isPending?: boolean
   /** The row's own menu (usually a DropdownMenu); shown in the table and in the list. */
   actions?: (row: T) => ReactNode
@@ -34,7 +36,7 @@ const wideOnly = <T,>(column: Column<T>) => column.priority === 'wide-only' && '
 const PLACEHOLDER_ROWS = 5
 const PHONE_PLACEHOLDER_ROWS = 4
 
-export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions, onSelect, rowLabel, muted }: Props<T>) {
+export function DataTable<T>({ columns, rows, rowKey, empty, toolbar, isPending, actions, onSelect, rowLabel, muted }: Props<T>) {
   const { primary, secondary } = splitColumns(columns)
   const { t } = useTranslation()
   const isEmpty = !isPending && rows.length === 0
@@ -50,6 +52,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, isPending, actions,
   return (
     <>
       {isPending && <p role="status" aria-busy="true" className="sr-only">{t('loading')}</p>}
+      {toolbar && <div className={tableToolbar}>{toolbar}</div>}
       <div className="hidden sm:block">
         <Table>
           <TableHeader>
