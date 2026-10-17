@@ -51,7 +51,7 @@ describe('SaleCheckout with a pinned price', () => {
     sales.nextReceiptNo.mockResolvedValue('MAIN-20261015-00001')
     sales.create.mockImplementation(async (sale, receiptNo) => makeSale({ ...sale, id: 31, receiptNo }))
     checkout = new SaleCheckout(
-      sales, products, ledger, settings, qr, mockCheckoutPolicy(), mockShiftLedger(), branches,
+      sales, products, ledger, settings, qr, mockCheckoutPolicy(), mockShiftLedger(),
       mockLineOptionsResolver(), members, quotes,
     )
   })
@@ -163,7 +163,7 @@ describe('SaleCheckout without a quote', () => {
     sales.create.mockImplementation(async (sale, receiptNo) => makeSale({ ...sale, id: 2, receiptNo }))
     const checkout = new SaleCheckout(
       sales, products, mockStockLedger(), settings, mockQrPaymentClaims(), mockCheckoutPolicy(), mockShiftLedger(),
-      branches, mockLineOptionsResolver(), mockMemberRepository(), quotes,
+      mockLineOptionsResolver(), mockMemberRepository(), quotes,
     )
 
     const sale = await checkout.checkout({
