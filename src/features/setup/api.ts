@@ -29,10 +29,11 @@ export function useCompleteSetup() {
 
   return useMutation({
     mutationFn: (input: SetupInput) => unwrap(api.setup.post(input)),
-    // The owner is signed in by the same answer, so the shell opens straight away.
-    onSuccess: (user) => {
-      queryClient.setQueryData(authKeys.me, user)
+    // The POST answer is not the full /me shape (it has no permissions), so let
+    // the shell read the signed-in owner back from the server instead of caching it.
+    onSuccess: () => {
       queryClient.setQueryData(setupKeys.status, false)
+      void queryClient.invalidateQueries({ queryKey: authKeys.me })
     },
   })
 }
