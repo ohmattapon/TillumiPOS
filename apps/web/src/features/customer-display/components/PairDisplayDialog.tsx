@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { displayPairingQuery, usePairDisplay, useUnpairDisplay } from '../api'
@@ -16,10 +17,12 @@ interface Props {
 /** The cashier types the code a screen shows; from then on that screen follows this register. */
 export function PairDisplayDialog({ open, onOpenChange, registerId }: Props) {
   const { t } = useTranslation('customerDisplay')
+  const { t: tc } = useTranslation()
   const pairing = useQuery({ ...displayPairingQuery(registerId), enabled: open })
   const pair = usePairDisplay(registerId)
   const unpair = useUnpairDisplay(registerId)
   const [code, setCode] = useState('')
+  const [confirmingUnpair, setConfirmingUnpair] = useState(false)
   const displays = pairing.data?.displays ?? 0
   const complete = /^\d{6}$/.test(code)
 
@@ -30,7 +33,8 @@ export function PairDisplayDialog({ open, onOpenChange, registerId }: Props) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('pair.title')}</DialogTitle>
@@ -56,11 +60,28 @@ export function PairDisplayDialog({ open, onOpenChange, registerId }: Props) {
 
         <div className="flex items-center justify-between gap-3 border-t pt-3">
           <p className="text-sm text-muted-foreground">{t('pair.connected', { count: displays })}</p>
-          <Button variant="outline" className="h-11" disabled={displays === 0 || unpair.isPending} onClick={() => unpair.mutate()}>
+          <Button variant="outline" className="h-11" disabled={displays === 0 || unpair.isPending} onClick={() => setConfirmingUnpair(true)}>
             {t('pair.disconnect')}
           </Button>
         </div>
       </DialogContent>
     </Dialog>
+    {confirmingUnpair && (
+      <ConfirmDialog
+        open
+        onOpenChange={(open) => !open && setConfirmingUnpair(false)}
+        title={t('pair.disconnect')}
+        description={t('pair.unpairDescription')}
+        confirmLabel={t('pair.disconnect')}
+        cancelLabel={tc('cancel')}
+        destructive
+        pending={unpair.isPending}
+        onConfirm={() => {
+          unpair.mutate()
+          setConfirmingUnpair(false)
+        }}
+      />
+    )}
+    </>
   )
 }

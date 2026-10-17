@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/PageHeader'
 import { SkeletonRows } from '@/components/Skeletons'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { PaginationBar } from '@/components/PaginationBar'
 import { useListPagination } from '@/hooks/use-list-pagination'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,7 @@ import { checkoutModeQuery, currentShiftQuery, registersQuery, useCancelClosing,
 export function ShiftsPage() {
   const { can } = useAuthorization()
   const { t } = useTranslation('shifts')
+  const { t: tc } = useTranslation()
   const { money, date } = useFormat()
   const me = useQuery(meQuery).data
   const { branch } = useActiveBranch()
@@ -41,6 +43,7 @@ export function ShiftsPage() {
   const [newRegisterName, setNewRegisterName] = useState('')
   const [registerNames, setRegisterNames] = useState<Record<number, string>>({})
   const [needsQrAcknowledgement, setNeedsQrAcknowledgement] = useState(false)
+  const [confirming, setConfirming] = useState<'start' | 'close' | 'cancel' | null>(null)
   const openCommandKey = useRef<string | null>(null)
   const movementCommandKey = useRef<string | null>(null)
   const rememberedRegisterId = selectedRegisterId(selections, me?.id, branch?.id)
@@ -67,6 +70,51 @@ export function ShiftsPage() {
   const registerName = useMemo(() => registers.data?.items.find((item) => item.id === currentId)?.name ?? '', [registers.data, currentId])
   const error = [mode.error, registers.error, current.error, open.error, startClosing.error, cancelClosing.error, close.error, movement.error, createRegister.error, updateRegister.error].find(Boolean)
   const errorCode = error instanceof ApiError ? error.code : null
+
+  const countedCashSatang = money.parse(countedAmount)
+  const closeBlocked =
+    close.isPending ||
+    countedCashSatang === null ||
+    (countedCashSatang !== activeShift.data?.closingExpectedCashSatang && !differenceReason.trim())
+
+  const doStart = () => {
+    if (!current.data) return
+    startClosing.mutate(
+      { id: current.data.id },
+      {
+        onSuccess: () => setConfirming(null),
+        // QRs are still waiting to be paid: counting may start, but only knowingly.
+        onError: (failure) => {
+          setConfirming(null)
+          if (failure instanceof ApiError && failure.code === 'QR_PENDING_ACKNOWLEDGEMENT_REQUIRED') {
+            startClosing.reset()
+            setNeedsQrAcknowledgement(true)
+          }
+        },
+      },
+    )
+  }
+
+  const doClose = () => {
+    if (!current.data || !activeShift.data || countedCashSatang === null) return
+    close.mutate(
+      {
+        id: current.data.id,
+        closingRevision: activeShift.data.closingRevision,
+        countedCashSatang,
+        ...(differenceReason.trim() ? { reason: differenceReason.trim() } : {}),
+      },
+      { onSuccess: () => setConfirming(null) },
+    )
+  }
+
+  const doCancelCounting = () => {
+    if (!current.data || !activeShift.data) return
+    cancelClosing.mutate(
+      { id: current.data.id, closingRevision: activeShift.data.closingRevision },
+      { onSuccess: () => setConfirming(null) },
+    )
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -148,7 +196,7 @@ export function ShiftsPage() {
                   <p className="text-sm">{t('expected')}: <strong className="tabular-nums">{money.format(activeShift.data.closingExpectedCashSatang ?? 0)}</strong></p>
                   <label className="grid gap-2 text-sm font-medium">{t('countedCash')}<Input inputMode="decimal" value={countedAmount} onChange={(e) => setCountedAmount(e.target.value)} /></label>
                   {money.parse(countedAmount) !== null && money.parse(countedAmount) !== activeShift.data.closingExpectedCashSatang && <label className="grid gap-2 text-sm font-medium">{t('differenceReason')}<Input value={differenceReason} onChange={(e) => setDifferenceReason(e.target.value)} /></label>}
-                  <div className="flex gap-2"><Button variant="outline" className="h-11 flex-1" disabled={cancelClosing.isPending} onClick={() => cancelClosing.mutate({ id: current.data!.id, closingRevision: activeShift.data!.closingRevision })}>{t('cancelCounting')}</Button><Button className="h-11 flex-1" disabled={close.isPending || money.parse(countedAmount) === null || (money.parse(countedAmount) !== activeShift.data.closingExpectedCashSatang && !differenceReason.trim())} onClick={() => { const countedCashSatang = money.parse(countedAmount); if (countedCashSatang !== null) close.mutate({ id: current.data!.id, closingRevision: activeShift.data!.closingRevision, countedCashSatang, ...(differenceReason.trim() ? { reason: differenceReason.trim() } : {}) }) }}>{t('closeAction')}</Button></div>
+                  <div className="flex gap-2"><Button variant="outline" className="h-11 flex-1" disabled={cancelClosing.isPending} onClick={() => setConfirming('cancel')}>{t('cancelCounting')}</Button><Button className="h-11 flex-1" disabled={closeBlocked} onClick={() => setConfirming('close')}>{t('closeAction')}</Button></div>
                 </div>
               )}
               {current.data.status === 'open' && !needsQrAcknowledgement && (
@@ -158,18 +206,7 @@ export function ShiftsPage() {
                   disabled={startClosing.isPending}
                   onClick={() => {
                     setCountedAmount('')
-                    startClosing.mutate(
-                      { id: current.data!.id },
-                      {
-                        // QRs are still waiting to be paid: counting may start, but only knowingly.
-                        onError: (failure) => {
-                          if (failure instanceof ApiError && failure.code === 'QR_PENDING_ACKNOWLEDGEMENT_REQUIRED') {
-                            startClosing.reset()
-                            setNeedsQrAcknowledgement(true)
-                          }
-                        },
-                      },
-                    )
+                    setConfirming('start')
                   }}
                 >
                   {t('startCounting')}
@@ -196,6 +233,26 @@ export function ShiftsPage() {
                     </Button>
                   </div>
                 </div>
+              )}
+              {confirming && current.data && (
+                <ConfirmDialog
+                  open
+                  onOpenChange={(open) => !open && setConfirming(null)}
+                  title={t(confirming === 'start' ? 'startCounting' : confirming === 'close' ? 'closeAction' : 'cancelCounting')}
+                  description={
+                    confirming === 'close' && activeShift.data && countedCashSatang !== null
+                      ? `${t('countedCash')}: ${money.format(countedCashSatang)} · ${t('expected')}: ${money.format(activeShift.data.closingExpectedCashSatang ?? 0)}`
+                      : confirming === 'start'
+                        ? t('shiftClosing')
+                        : undefined
+                  }
+                  confirmLabel={t(confirming === 'start' ? 'startCounting' : confirming === 'close' ? 'closeAction' : 'cancelCounting')}
+                  cancelLabel={tc('cancel')}
+                  destructive={confirming !== 'start'}
+                  pending={confirming === 'start' ? startClosing.isPending : confirming === 'close' ? close.isPending : cancelClosing.isPending}
+                  confirmDisabled={confirming === 'close' && closeBlocked}
+                  onConfirm={confirming === 'start' ? doStart : confirming === 'close' ? doClose : doCancelCounting}
+                />
               )}
             </div>
           ) : (

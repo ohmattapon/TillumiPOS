@@ -1,13 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { PaginationBar } from '@/components/PaginationBar'
 import { useListPagination } from '@/hooks/use-list-pagination'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { SkeletonRows } from '@/components/Skeletons'
-import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { openOrdersQuery, useCancelOrder, type Order } from '@/features/orders'
 import { useFormat } from '@/features/settings'
 import { tablesQuery } from '@/features/tables'
@@ -31,9 +33,8 @@ export function OpenOrdersDialog({ onClose }: { onClose: () => void }) {
     onClose()
   }
 
-  const confirmCancel = (event: FormEvent) => {
-    event.preventDefault()
-    if (!cancelling) return
+  const confirmCancel = () => {
+    if (!cancelling || cancelling.reason.trim() === '') return
     cancelOrder.mutate(
       { orderId: cancelling.id, reason: cancelling.reason.trim() },
       {
@@ -47,6 +48,12 @@ export function OpenOrdersDialog({ onClose }: { onClose: () => void }) {
   }
 
   const items = orders.data?.items ?? []
+  const cancellingOrder = items.find((order) => order.id === cancelling?.id)
+  const cancellingLabel = cancellingOrder
+    ? (tables.data?.find((table) => table.id === cancellingOrder.tableId)?.name ??
+      cancellingOrder.label ??
+      t('orders.untitled', { id: cancellingOrder.id }))
+    : ''
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -83,48 +90,49 @@ export function OpenOrdersDialog({ onClose }: { onClose: () => void }) {
                 </div>
               </div>
 
-              {cancelling?.id === order.id ? (
-                <form onSubmit={confirmCancel} className="flex items-center gap-2">
-                  <Input
-                    className="h-10"
-                    value={cancelling.reason}
-                    onChange={(event) => setCancelling({ id: order.id, reason: event.target.value })}
-                    placeholder={t('orders.reasonPlaceholder')}
-                    aria-label={t('orders.reasonLabel')}
-                    maxLength={500}
-                    required
-                    autoFocus
-                  />
-                  <Button type="button" variant="outline" className="h-10" onClick={() => setCancelling(null)}>
-                    {t('orders.keep')}
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="destructive"
-                    className="h-10"
-                    disabled={cancelling.reason.trim() === '' || cancelOrder.isPending}
-                  >
-                    {t('orders.confirmCancel')}
-                  </Button>
-                </form>
-              ) : (
-                <div className="flex gap-2">
-                  <Button className="h-10 flex-1" disabled={current === order.id} onClick={() => resume(order)}>
-                    {current === order.id ? t('orders.working') : t('orders.resume')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="h-10"
-                    onClick={() => setCancelling({ id: order.id, reason: '' })}
-                  >
-                    {t('orders.cancel')}
-                  </Button>
-                </div>
-              )}
+              <div className="flex gap-2">
+                <Button className="h-10 flex-1" disabled={current === order.id} onClick={() => resume(order)}>
+                  {current === order.id ? t('orders.working') : t('orders.resume')}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-10"
+                  onClick={() => setCancelling({ id: order.id, reason: '' })}
+                >
+                  {t('orders.cancel')}
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
         <PaginationBar {...paging} total={orders.data?.total} isLoading={orders.isFetching || cancelOrder.isPending} onPageChange={(page) => { setCancelling(null); paging.setPage(page) }} />
+        {cancellingOrder && cancelling && (
+          <ConfirmDialog
+            open
+            onOpenChange={(open) => !open && setCancelling(null)}
+            title={t('orders.cancel')}
+            description={`${cancellingLabel} · ${money.format(cancellingOrder.subtotalSatang)}`}
+            confirmLabel={t('orders.confirmCancel')}
+            cancelLabel={t('orders.keep')}
+            destructive
+            pending={cancelOrder.isPending}
+            confirmDisabled={cancelling.reason.trim() === ''}
+            onConfirm={confirmCancel}
+          >
+            <div className="grid gap-2">
+              <Label htmlFor="cancel-order-reason">{t('orders.reasonLabel')}</Label>
+              <Textarea
+                id="cancel-order-reason"
+                value={cancelling.reason}
+                onChange={(event) => setCancelling({ id: cancelling.id, reason: event.target.value })}
+                placeholder={t('orders.reasonPlaceholder')}
+                maxLength={500}
+                required
+                autoFocus
+              />
+            </div>
+          </ConfirmDialog>
+        )}
       </DialogContent>
     </Dialog>
   )

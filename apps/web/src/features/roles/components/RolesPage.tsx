@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
 import { PaginationBar } from '@/components/PaginationBar'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { PERMISSIONS } from '@pos/api/permissions'
 import { rolesQuery, useDeleteRole, type Role } from '../api'
 import { RoleDialog } from './RoleDialog'
@@ -32,9 +32,8 @@ export function RolesPage() {
       <PaginationBar page={page} pageSize={50} total={roles.data?.total} isLoading={roles.isPending} onPageChange={setPage} />
     </Panel></div>
     {dialog && <RoleDialog role={dialog.role} onClose={() => setDialog(null)} />}
-    {removing && <Dialog open onOpenChange={(open) => !open && setRemoving(null)}><DialogContent><DialogHeader><DialogTitle>{t('deleteTitle')}</DialogTitle><DialogDescription>{t('deleteHint', { name: removing.name })}</DialogDescription></DialogHeader>
+    {removing && <ConfirmDialog open onOpenChange={(open) => !open && setRemoving(null)} title={t('deleteTitle')} description={t('deleteHint', { name: removing.name })} confirmLabel={t('remove')} cancelLabel={tc('cancel')} destructive pending={remove.isPending} onConfirm={() => remove.mutate(removing.id, { onSuccess: () => { toast.success(t('removed')); setRemoving(null) } })}>
       {remove.error && <p role="alert" className="text-sm text-destructive">{remove.error.message}</p>}
-      <DialogFooter sticky><Button variant="outline" className="h-11" onClick={() => setRemoving(null)}>{tc('cancel')}</Button><Button variant="destructive" className="h-11" disabled={remove.isPending} onClick={() => remove.mutate(removing.id, { onSuccess: () => { toast.success(t('removed')); setRemoving(null) } })}>{t('remove')}</Button></DialogFooter>
-    </DialogContent></Dialog>}
+    </ConfirmDialog>}
   </>
 }

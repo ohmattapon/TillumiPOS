@@ -29,6 +29,7 @@ const th = {
     connected_one: 'เชื่อมอยู่ {{count}} จอ',
     connected_other: 'เชื่อมอยู่ {{count}} จอ',
     disconnect: 'ถอดจอ',
+    unpairDescription: 'จอจะไม่ตามยอดขายของเครื่องนี้จนกว่าจะเชื่อมใหม่',
   },
   paid: {
     title: 'ชำระแล้ว',
@@ -68,6 +69,7 @@ const en = {
     connected_one: '{{count}} screen connected',
     connected_other: '{{count}} screens connected',
     disconnect: 'Disconnect',
+    unpairDescription: 'Screens will stop following this register until paired again.',
   },
   paid: {
     title: 'Paid',
