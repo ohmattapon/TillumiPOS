@@ -12,8 +12,9 @@ dist-ssr
 .dev.vars
 .wrangler
 worker-configuration.d.ts
-apps/api/test/openapi-current.json
+server/test/openapi-*-current.json
 backups/
-apps/api/data/
+data/
+server/data/
 screenshots/
 heema/
