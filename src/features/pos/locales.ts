@@ -81,7 +81,7 @@ const th = {
   orders: {
     button: 'ออเดอร์ค้าง',
     title: 'ออเดอร์ค้าง',
-    description: 'ออเดอร์ที่เปิดไว้ในสาขานี้และยังไม่ได้ชำระ',
+    description: 'ออเดอร์ที่เปิดไว้และยังไม่ได้ชำระ',
     empty: 'ไม่มีออเดอร์ค้าง',
     untitled: 'ออเดอร์ #{{id}}',
     openedBy: 'เปิดโดย {{name}} · {{time}}',
@@ -237,7 +237,7 @@ const en = {
   orders: {
     button: 'Open orders',
     title: 'Open orders',
-    description: 'Orders opened in this branch that are not paid yet',
+    description: 'Orders that are open and not paid yet',
     empty: 'No open orders',
     untitled: 'Order #{{id}}',
     openedBy: 'Opened by {{name}} · {{time}}',
