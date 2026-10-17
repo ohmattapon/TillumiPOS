@@ -112,6 +112,7 @@ export function ProductPicker({ searchRef }: Props) {
         ?? packHit?.product
         ?? (exact.total > 0 ? result.items.find((product) => product.sku.toLowerCase() === term) : undefined)
         ?? (result.total === 1 ? result.items[0] : undefined)
+      // A product's own barcode wins over a pack that happens to share the scan, so only a pack-only match sells a pack.
       const pack = match !== undefined && match.barcode !== code ? packHit?.pack : undefined
       if (!match) toast.error(t('picker.notFound', { term: code }))
       else if (pack) sellPack(match, pack, orderId)

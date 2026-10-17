@@ -98,6 +98,7 @@ const th = {
     cancelled: 'ยกเลิกออเดอร์แล้ว',
   },
   saveOrder: {
+    hasPacks: 'ตะกร้ามีสินค้าแบบแพ็ค เก็บเป็นออเดอร์ไม่ได้ ชำระหน้าร้านหรือเอาแพ็คออกก่อน',
     title: 'เก็บเป็นออเดอร์ค้าง',
     description: 'เก็บรายการในตะกร้าไว้ แล้วกลับมาชำระทีหลัง',
     label: 'ป้ายชื่อ',
@@ -257,6 +258,7 @@ const en = {
     cancelled: 'Order cancelled',
   },
   saveOrder: {
+    hasPacks: 'The cart has packs, which cannot be saved as an order. Pay at the till or remove the packs first.',
     title: 'Save as open order',
     description: 'Keep these items aside and pay later',
     label: 'Label',

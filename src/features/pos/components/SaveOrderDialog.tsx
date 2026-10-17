@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useOpenOrder } from '@/features/orders'
+import { hasPackLines } from '../lib/order-lines'
 import { useCartStore } from '../store/cart.store'
 
 /** Turns the local cart into an open order to pay later, optionally with a label such as a table. */
@@ -17,9 +18,11 @@ export function SaveOrderDialog({ onClose }: { onClose: () => void }) {
   const lines = useCartStore((state) => state.lines)
   const clear = useCartStore((state) => state.clear)
   const openOrder = useOpenOrder()
+  const hasPacks = hasPackLines(lines)
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
+    if (hasPacks) return
     openOrder.mutate(
       {
         memberId,
@@ -58,6 +61,12 @@ export function SaveOrderDialog({ onClose }: { onClose: () => void }) {
             />
           </div>
 
+          {hasPacks && (
+            <p role="alert" className="text-sm text-destructive">
+              {t('saveOrder.hasPacks')}
+            </p>
+          )}
+
           {openOrder.error && (
             <p role="alert" className="text-sm text-destructive">
               {openOrder.error.message}
@@ -68,7 +77,7 @@ export function SaveOrderDialog({ onClose }: { onClose: () => void }) {
             <Button type="button" variant="outline" className="h-10" onClick={onClose}>
               {tc('cancel')}
             </Button>
-            <Button type="submit" className="h-10" disabled={openOrder.isPending}>
+            <Button type="submit" className="h-10" disabled={openOrder.isPending || hasPacks}>
               {openOrder.isPending ? t('saveOrder.saving') : t('saveOrder.save')}
             </Button>
           </DialogFooter>
