@@ -4,7 +4,7 @@ import { priceQuotes } from '../../infrastructure/database/schema/price-quotes'
 import { qrPayments } from '../../infrastructure/database/schema/qr-payments'
 import { db } from '../../libs/db'
 import { fakeScb, SCB_ENV_KEYS } from '../../../test/scb-server'
-import { ok, resetDatabase, seedBranch, seedProduct, signIn, type Session } from '../../../test/harness'
+import { ok, resetDatabase, seedProduct, signIn, type Session } from '../../../test/harness'
 
 let owner: Session
 let cashier: Session
@@ -125,18 +125,6 @@ describe('a sale at a pinned price', () => {
     // The quote was not lost: the right cart still sells.
     expect(await statusOf(quote.id)).toBe('open')
     ok(await cashier.api.sales.post({ items: lines(tea.id), payments: cash(5000), quoteId: quote.id }))
-  })
-
-  test("another branch's quote is not found", async () => {
-    const { tea } = await shop()
-    const quote = await quoteFor(tea.id)
-    const other = await seedBranch('BKK', 'สาขากรุงเทพ')
-    const away = await signIn('cashier', 'bkk-cashier', { branchId: other.id })
-
-    const refused = await away.api.sales.post({ items: lines(tea.id), payments: cash(5000), quoteId: quote.id })
-
-    expect(refused.status).toBe(404)
-    expect(refused.error?.value).toMatchObject({ code: 'QUOTE_NOT_FOUND' })
   })
 
   test('a sale without a quote is the sale it always was', async () => {

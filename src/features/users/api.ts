@@ -19,7 +19,8 @@ export interface NewUserInput {
   password: string
   displayName: string
   roleId: number
-  branchId: number
+  /** Left out, the user belongs to the shop's one branch. */
+  branchId?: number
 }
 
 export interface UserChanges {

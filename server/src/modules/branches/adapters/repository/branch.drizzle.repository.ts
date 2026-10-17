@@ -31,6 +31,11 @@ export class DrizzleBranchRepository implements IBranchRepository {
     return row ? new BranchEntity(row) : null
   }
 
+  async findMain() {
+    const [row] = await currentExecutor().select(columns).from(branches).where(eq(branches.code, 'MAIN'))
+    return row ? new BranchEntity(row) : null
+  }
+
   async findByIdForUpdate(id: number) {
     const [row] = await currentExecutor().select(columns).from(branches).where(eq(branches.id, id)).for('update')
     return row ? new BranchEntity(row) : null

@@ -17,7 +17,6 @@ import { modifierGroupsQuery } from '@/features/modifiers'
 import { isLowStock, isOutOfStock, ProductImage, productsQuery, productKeys } from '@/features/products'
 import { useFormat } from '@/features/settings'
 import { cn } from '@/lib/utils'
-import { useActiveBranchStore } from '@/lib/active-branch'
 import { hasKeyboard } from '../lib/focus'
 import { offeredGroups } from '../lib/options'
 import { useCartActions } from '../hooks/use-cart-actions'
@@ -84,7 +83,6 @@ export function ProductPicker({ searchRef }: Props) {
     const code = search.trim()
     if (code === '') return
     const term = code.toLowerCase()
-    const branchId = useActiveBranchStore.getState().branchId
     const orderId = useCartStore.getState().orderId
     // Free the input immediately so a second scan is not erased when the first request finishes.
     setSearch('')
@@ -92,7 +90,7 @@ export function ProductPicker({ searchRef }: Props) {
       // A scan must also find products beyond the displayed page or category.
       const exact = code.length <= 64 ? await client.fetchQuery(productsQuery({ code, limit: 2 })) : { items: [], total: 0 }
       const result = exact.total > 0 ? exact : await client.fetchQuery(productsQuery({ q: code, limit: 2 }))
-      if (!mounted.current || useActiveBranchStore.getState().branchId !== branchId || useCartStore.getState().orderId !== orderId) return
+      if (!mounted.current || useCartStore.getState().orderId !== orderId) return
       const match = result.items.find((product) => product.barcode === code)
         ?? (exact.total > 0 ? result.items.find((product) => product.sku.toLowerCase() === term) : undefined)
         ?? (result.total === 1 ? result.items[0] : undefined)

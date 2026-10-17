@@ -89,7 +89,7 @@ describe('completing a sale', () => {
     expect(stored.totalSatang).toBe(2500)
   })
 
-  test('a receipt keeps the shop and branch details from the moment of sale', async () => {
+  test('a receipt keeps the shop details from the moment of sale, with no branch line', async () => {
     ok(await owner.api.settings.patch({ shopName: 'ร้านสมชาย', taxId: '0105500000000', address: 'สำนักงานใหญ่', phone: '020000000' }))
     const tea = await seedProduct(owner, { name: 'Tea', priceSatang: 2500, stock: 10 })
     const sale = ok(
@@ -98,15 +98,14 @@ describe('completing a sale', () => {
     const heading = {
       shopName: 'ร้านสมชาย',
       shopTaxId: '0105500000000',
-      branchName: expect.any(String),
-      // The branch has no address or phone of its own, so the shop's are printed.
+      // New receipts carry no branch line; the shop's details are printed.
+      branchName: null,
       shopAddress: 'สำนักงานใหญ่',
       shopPhone: '020000000',
     }
     expect(sale).toMatchObject(heading)
 
     ok(await owner.api.settings.patch({ shopName: 'ร้านใหม่', taxId: null, address: 'ที่อยู่ใหม่', phone: null }))
-    ok(await owner.api.branches({ id: sale.branchId }).patch({ name: 'สาขาที่เปลี่ยนชื่อ', address: 'ที่อยู่สาขา' }))
 
     const stored = ok(await owner.api.sales({ id: sale.id }).get())
     expect(stored).toMatchObject({ ...heading, branchName: sale.branchName })
@@ -116,8 +115,8 @@ describe('completing a sale', () => {
     expect(next).toMatchObject({
       shopName: 'ร้านใหม่',
       shopTaxId: null,
-      branchName: 'สาขาที่เปลี่ยนชื่อ',
-      shopAddress: 'ที่อยู่สาขา',
+      branchName: null,
+      shopAddress: 'ที่อยู่ใหม่',
       shopPhone: null,
     })
   })

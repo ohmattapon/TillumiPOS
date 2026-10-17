@@ -1,6 +1,2 @@
 export type { Branch } from '@pos/api/types'
 export { branchesQuery, branchKeys } from './api'
-export { BranchesPage } from './components/BranchesPage'
-export { BranchSwitcher } from './components/BranchSwitcher'
-export { useActiveBranch } from './hooks/use-active-branch'
-export { locales as branchesLocales } from './locales'

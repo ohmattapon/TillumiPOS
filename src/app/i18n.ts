@@ -3,7 +3,6 @@ import { initReactI18next } from 'react-i18next'
 import { authLocales } from '@/features/auth'
 import { rolesLocales } from '@/features/roles'
 import { auditLocales } from '@/features/audit'
-import { branchesLocales } from '@/features/branches'
 import { categoriesLocales } from '@/features/categories'
 import { kitchenLocales } from '@/features/kitchen'
 import { customerDisplayLocales } from '@/features/customer-display'
@@ -35,7 +34,6 @@ export const resources = {
     auth: authLocales.th,
     roles: rolesLocales.th,
     audit: auditLocales.th,
-    branches: branchesLocales.th,
     categories: categoriesLocales.th,
     customerDisplay: customerDisplayLocales.th,
     modifiers: modifiersLocales.th,
@@ -58,7 +56,6 @@ export const resources = {
     auth: authLocales.en,
     roles: rolesLocales.en,
     audit: auditLocales.en,
-    branches: branchesLocales.en,
     categories: categoriesLocales.en,
     customerDisplay: customerDisplayLocales.en,
     modifiers: modifiersLocales.en,

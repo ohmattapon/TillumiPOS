@@ -1,26 +1,48 @@
 import { SQL } from 'bun'
 
-/** Refuse every URL except the exact local test target. */
+/**
+ * The guard is strict by default: only the local test database may be used. The owner may name one
+ * remote throwaway database instead, as `TEST_DATABASE_ALLOW=<host>/<database>`, set in the command
+ * that runs the tests. It is never read from a file, so a committed file cannot point the suite at a
+ * remote server.
+ */
+const ALLOW_ENV = 'TEST_DATABASE_ALLOW'
+
+function targetOf(url: string) {
+  const target = new URL(url)
+  return { target, name: decodeURIComponent(target.pathname.slice(1)) }
+}
+
+function isLocalTestTarget(target: URL, name: string) {
+  return target.hostname === 'localhost' && target.port === '5433' && name === 'pos_test' && !target.search && !target.hash
+}
+
+function isAllowedRemote(target: URL, name: string) {
+  return Bun.env[ALLOW_ENV] === `${target.hostname}/${name}`
+}
+
+/** Returns the database name if the configured target may be used by the suite, and throws otherwise. */
 export function assertTestDatabase(): string {
-  const target = new URL(Bun.env.DATABASE_URL ?? 'postgres://unset/')
-  const name = decodeURIComponent(target.pathname.slice(1))
-  if (!['postgres:', 'postgresql:'].includes(target.protocol) || target.hostname !== 'localhost' ||
-      target.port !== '5433' || name !== 'pos_test' || target.search || target.hash)
-    throw new Error(`Refusing to run tests against database "${name}": expected pos_test on localhost:5433`)
-  return name
+  const { target, name } = targetOf(Bun.env.DATABASE_URL ?? 'postgres://unset/')
+  const protocolOk = ['postgres:', 'postgresql:'].includes(target.protocol)
+  if (protocolOk && (isLocalTestTarget(target, name) || isAllowedRemote(target, name))) return name
+  throw new Error(`Refusing to run tests against database "${name}": expected pos_test on localhost:5433`)
 }
 
 /** Inspect the cached connection itself; mutable env cannot mask its actual database. */
 export async function assertConnectedTestDatabase(connection: SQL): Promise<void> {
-  assertTestDatabase()
+  const expected = assertTestDatabase()
   const [actual] = await connection`select current_database() as name`
-  if (actual?.name !== 'pos_test')
+  if (actual?.name !== expected)
     throw new Error(`Refusing to reset connected database "${actual?.name}"`)
 }
 
-/** Creates the test database on first use. */
+/** Creates the local test database on first use. A named remote database already exists and is not touched. */
 export async function ensureTestDatabase(adminFactory = (url: string) => new SQL(url)): Promise<void> {
   const name = assertTestDatabase()
+  const { target } = targetOf(Bun.env.DATABASE_URL!)
+  if (!isLocalTestTarget(target, name)) return
+
   const adminUrl = new URL(Bun.env.DATABASE_URL!)
   adminUrl.pathname = '/postgres'
 

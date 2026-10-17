@@ -40,7 +40,7 @@ describe('SaleCheckout membership', () => {
     members.findByIdForUpdate.mockResolvedValue(identity())
     sales.nextReceiptNo.mockResolvedValue('MAIN-20261015-00001')
     sales.create.mockImplementation(async (sale, receiptNo) => makeSale({ ...sale, id: 1, receiptNo }))
-    checkout = new SaleCheckout(sales, products, ledger, settings, qr, mockCheckoutPolicy(), mockShiftLedger(), branches, mockLineOptionsResolver(), members, mockQuoteClaims())
+    checkout = new SaleCheckout(sales, products, ledger, settings, qr, mockCheckoutPolicy(), mockShiftLedger(), mockLineOptionsResolver(), members, mockQuoteClaims())
   })
 
   test('locks member before stock and persists only receipt identity', async () => {

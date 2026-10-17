@@ -26,9 +26,9 @@ export interface HistoryFilters {
   limit?: number
   offset?: number
 }
-export const memberHistoryQuery = (id: number, filters: HistoryFilters = {}, branchId = 0) =>
+export const memberHistoryQuery = (id: number, filters: HistoryFilters = {}) =>
   queryOptions({
-    queryKey: [...memberKeys.all, 'history', id, branchId, filters],
+    queryKey: [...memberKeys.all, 'history', id, filters],
     queryFn: () => unwrap(api.members({ id }).sales.get({ query: { limit: 20, offset: 0, ...filters } })),
   })
 export type Member = Awaited<ReturnType<typeof fetchMember>>

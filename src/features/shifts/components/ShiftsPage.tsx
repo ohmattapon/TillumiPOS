@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { meQuery, useAuthorization } from '@/features/auth'
-import { useActiveBranch } from '@/features/branches'
 import { useFormat } from '@/features/settings'
 import { ApiError } from '@/lib/api'
 import { selectedRegisterId, useRegisterSelectionStore } from '../store/register-selection'
@@ -25,7 +24,6 @@ export function ShiftsPage() {
   const { t } = useTranslation('shifts')
   const { money, date } = useFormat()
   const me = useQuery(meQuery).data
-  const { branch } = useActiveBranch()
   const mode = useQuery(checkoutModeQuery)
   const registers = useQuery(registersQuery)
   const registerPaging = useListPagination('registers')
@@ -43,7 +41,7 @@ export function ShiftsPage() {
   const [needsQrAcknowledgement, setNeedsQrAcknowledgement] = useState(false)
   const openCommandKey = useRef<string | null>(null)
   const movementCommandKey = useRef<string | null>(null)
-  const rememberedRegisterId = selectedRegisterId(selections, me?.id, branch?.id)
+  const rememberedRegisterId = selectedRegisterId(selections, me?.id)
   const currentId = (rememberedRegisterId && registers.data?.items.some((register) => register.id === rememberedRegisterId && register.isActive)
     ? rememberedRegisterId : registers.data?.items.find((register) => register.isActive)?.id) ?? null
   const current = useQuery({ ...currentShiftQuery(currentId ?? 0), enabled: currentId !== null })
@@ -78,8 +76,8 @@ export function ShiftsPage() {
             <Label htmlFor="shift-register">{t('register')}</Label>
             <Select
               value={currentId === null ? '' : String(currentId)}
-              disabled={registers.isPending || currentId === null || !me || !branch}
-              onValueChange={(value) => { if (value && me && branch) selectRegister(me.id, branch.id, Number(value)) }}
+              disabled={registers.isPending || currentId === null || !me}
+              onValueChange={(value) => { if (value && me) selectRegister(me.id, Number(value)) }}
             >
               <SelectTrigger id="shift-register" className="h-11! w-full min-w-0">
                 <SelectValue placeholder={t('chooseRegister')} />

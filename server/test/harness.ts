@@ -16,7 +16,6 @@ import { repositoryReadCacheToken, type IRepositoryReadCache } from '../src/modu
 import { TOKENS } from '../src/modules/tokens'
 import { ReceiveStockUseCase } from '../src/modules/inventory/applications/usecases/receive-stock.usecase'
 import type { UserResponse as User } from '../src/modules/users/adapters/controllers/schemas/user.schema'
-import { CreateBranchUseCase } from '../src/modules/branches/applications/usecases/create-branch.usecase'
 import { CreateUserUseCase } from '../src/modules/users/applications/usecases/create-user.usecase'
 import { assertConnectedTestDatabase, ensureTestDatabase } from './database'
 import { fakeMedia } from './media-server'
@@ -111,11 +110,6 @@ export async function signInWithRole(
   const cookie = await loginCookie(username, PASSWORD)
   return { api: client(cookie, workingBranchId), apiV2: clientV2(cookie, workingBranchId),
     user: { ...created.toSnapshot(), roleId: created.roleId! } }
-}
-
-/** Creates another branch, e.g. to check that stock and receipts stay apart. */
-export async function seedBranch(code = 'BKK', name = 'สาขากรุงเทพ') {
-  return (await container.resolve(CreateBranchUseCase).execute({ code, name })).toSnapshot()
 }
 
 let productCounter = 0

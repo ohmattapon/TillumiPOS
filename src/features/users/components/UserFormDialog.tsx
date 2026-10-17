@@ -1,4 +1,4 @@
-import type { Branch, User } from '@pos/api/types'
+import type { User } from '@pos/api/types'
 import { useState, type FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { roleOptionsQuery } from '@/features/roles'
@@ -16,14 +16,10 @@ const MIN_PASSWORD = 8
 interface Props {
   /** Omit to add a new user. */
   user?: User
-  /** Open branches a user can be assigned to. */
-  branches: Branch[]
-  /** Preselected for a new user: the branch the owner is working in. */
-  defaultBranchId: number | undefined
   onClose: () => void
 }
 
-export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Props) {
+export function UserFormDialog({ user, onClose }: Props) {
   const { t } = useTranslation('users')
   const { t: tc } = useTranslation()
   const roles = useQuery(roleOptionsQuery)
@@ -31,7 +27,6 @@ export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Pro
     username: user?.username ?? '',
     displayName: user?.displayName ?? '',
     roleId: user?.roleId ? String(user.roleId) : '',
-    branchId: String(user?.branchId ?? defaultBranchId ?? branches[0]?.id ?? ''),
     password: '',
   })
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm({ ...form, [key]: value })
@@ -43,17 +38,16 @@ export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Pro
   // A new user needs a password; an existing one keeps theirs unless a new one is typed.
   const passwordOk = user ? form.password === '' || form.password.length >= MIN_PASSWORD : form.password.length >= MIN_PASSWORD
   const selectedRoleId = form.roleId || String(roles.data?.find((role) => role.systemKey === 'cashier')?.id ?? '')
-  const canSave = form.displayName.trim() !== '' && form.branchId !== '' && selectedRoleId !== '' && passwordOk && !mutation.isPending && !roles.isPending && !roles.error
+  const canSave = form.displayName.trim() !== '' && selectedRoleId !== '' && passwordOk && !mutation.isPending && !roles.isPending && !roles.error
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (!canSave) return
-    const branchId = Number(form.branchId)
     const displayName = form.displayName.trim()
 
     if (user)
       update.mutate(
-        { id: user.id, changes: { displayName, roleId: Number(selectedRoleId), branchId, ...(form.password && { password: form.password }) } },
+        { id: user.id, changes: { displayName, roleId: Number(selectedRoleId), ...(form.password && { password: form.password }) } },
         {
           onSuccess: (saved) => {
             toast.success(t('toast.updated', { name: saved.displayName }))
@@ -63,7 +57,7 @@ export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Pro
       )
     else
       create.mutate(
-        { username: form.username.trim(), password: form.password, displayName, roleId: Number(selectedRoleId), branchId },
+        { username: form.username.trim(), password: form.password, displayName, roleId: Number(selectedRoleId) },
         {
           onSuccess: (saved) => {
             toast.success(t('toast.created', { name: saved.displayName }))
@@ -124,21 +118,6 @@ export function UserFormDialog({ user, branches, defaultBranchId, onClose }: Pro
                     {(roles.data ?? []).map((role) => (
                       <SelectItem key={role.id} value={String(role.id)}>
                         {role.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="user-branch">{t('form.branch')}</Label>
-                <Select value={form.branchId} onValueChange={(value) => set('branchId', value)}>
-                  <SelectTrigger id="user-branch" className="h-11! w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((branch) => (
-                      <SelectItem key={branch.id} value={String(branch.id)}>
-                        {branch.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

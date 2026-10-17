@@ -38,7 +38,7 @@ beforeEach(() => {
   branches = mockBranchRepository()
   settings = mockShopSettingsRepository()
   users.create.mockImplementation(async (user) => makeUser({ ...user.toSnapshot(), id: 1 }))
-  branches.findAll.mockResolvedValue([makeBranch({ id: 1, name: 'สาขาหลัก' })])
+  branches.findMain.mockResolvedValue(makeBranch({ id: 1, code: 'MAIN', name: 'สาขาหลัก' }))
   branches.update.mockImplementation(async (branch) => branch)
   settings.getForUpdate.mockResolvedValue(new ShopSettingsEntity(DEFAULT_SHOP_SETTINGS))
   settings.save.mockImplementation(async (value) => value)
@@ -66,6 +66,14 @@ describe('CompleteSetupUseCase', () => {
     expect(settings.save.mock.calls[0]![0].shopName).toBe('ร้านกาแฟบ้านสวน')
     expect(branches.update.mock.calls[0]![0].name).toBe('สาขาหลัก')
     expect(code.retire).toHaveBeenCalledTimes(1)
+  })
+
+  test('without a branch name, the one branch is named after the shop', async () => {
+    const { branchName: _omitted, ...withoutBranch } = input
+
+    await useCase.execute(withoutBranch)
+
+    expect(branches.update.mock.calls[0]![0].name).toBe('ร้านกาแฟบ้านสวน')
   })
 
   test('a retail shop starts with tables, kitchen and modifiers off', async () => {

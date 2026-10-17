@@ -1,5 +1,5 @@
 import { beforeEach, expect, test } from 'bun:test'
-import { resetDatabase, signIn, seedProduct, seedBranch, ok, type Session } from '../../../test/harness'
+import { resetDatabase, signIn, seedProduct, ok, type Session } from '../../../test/harness'
 import { client as sql } from '../../libs/db'
 import { assertConnectedTestDatabase } from '../../../test/database'
 let owner: Session
@@ -47,19 +47,7 @@ test('inclusive local dates respect midnight boundaries and fill zero-sales days
   const days = ok(await owner.api.sales.reports.get({ query: { from: '2026-01-02', to: '2026-01-04' } }))
   expect(days.days.items.map((r) => [new Date(r.day).toISOString().slice(0, 10), r.saleCount])).toEqual([['2026-01-02', 2], ['2026-01-03', 1], ['2026-01-04', 0]])
 })
-test('all-branch comparison includes closed branches; cashiers cannot access any report', async () => {
-  const branch = await seedBranch()
-  const second = await signIn('owner', 'other-owner', { branchId: branch.id })
-  const p = await seedProduct(owner, { stock: 10 })
-  const q = await seedProduct(second, { branchId: branch.id, stock: 10 })
-  await dateSale((await sell(owner, p.id)).id, '2026-01-02T03:00:00Z')
-  await dateSale((await sell(second, q.id)).id, '2026-01-02T03:00:00Z')
-  await sql`update branches set is_active = false where id = ${branch.id}`
-  expect(ok(await owner.api.sales.reports.get({ query: range })).summary.saleCount).toBe(1)
-  expect(ok(await owner.api.sales.reports.get({ query: { ...range, scope: 'all' } })).summary.saleCount).toBe(2)
-  const comparison = ok(await owner.api.sales.reports.branches.get({ query: { ...range, scope: 'all', limit: 1, offset: 1 } }))
-  expect(comparison.total).toBe(2)
-  expect(comparison.items[0]?.branchName).toBe(branch.name)
+test('cashiers cannot access any report, whichever scope they ask for', async () => {
   const cashier = await signIn('cashier')
   for (const result of [
     await cashier.api.sales.reports.get({ query: { ...range, scope: 'all' } }),

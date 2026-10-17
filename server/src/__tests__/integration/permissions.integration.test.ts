@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from 'bun:test'
 import { PERMISSIONS } from '../../domains/permission.vo'
-import { ok, resetDatabase, seedBranch, seedProduct, signIn, signInWithRole } from '../../../test/harness'
+import { ok, resetDatabase, seedProduct, signIn, signInWithRole } from '../../../test/harness'
 
 beforeEach(() => resetDatabase())
 const range = { from: '2026-01-01T00:00:00Z', to: '2026-01-02T00:00:00Z' }
@@ -75,14 +75,4 @@ test('users.manage can list roles for assigning users but cannot mutate roles', 
   expect((await admin.api.roles.get({ query: {} })).status).toBe(200)
   expect((await admin.api.users.get()).status).toBe(200)
   expect((await admin.api.roles.post({ name: 'No', permissions: [] })).status).toBe(403)
-})
-
-test('branches.switch grants branch visibility and branch selection independently of branch management', async () => {
-  const owner = await signIn('owner')
-  const branch = await seedBranch()
-  const role = ok(await owner.api.roles.post({ name: 'Roaming staff', permissions: ['branches.switch'] }))
-  const roaming = await signInWithRole('roaming', role.id, { workingBranchId: branch.id })
-  expect(ok(await roaming.api.branches.get()).items.map((item) => item.id)).toEqual([branch.id, 1])
-  expect((await roaming.api.catalog.products.get({ query: {} })).status).toBe(200)
-  expect((await roaming.api.branches.post({ code: 'NO', name: 'No' })).status).toBe(403)
 })

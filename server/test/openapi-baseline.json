@@ -27685,7 +27685,6 @@
                 "required": [
                   "setupCode",
                   "shopName",
-                  "branchName",
                   "username",
                   "displayName",
                   "password"
@@ -27739,7 +27738,6 @@
                 "required": [
                   "setupCode",
                   "shopName",
-                  "branchName",
                   "username",
                   "displayName",
                   "password"
@@ -27793,7 +27791,6 @@
                 "required": [
                   "setupCode",
                   "shopName",
-                  "branchName",
                   "username",
                   "displayName",
                   "password"
