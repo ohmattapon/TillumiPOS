@@ -1007,6 +1007,230 @@
         ]
       }
     },
+    "/api/v1/cafe-menu": {
+      "post": {
+        "operationId": "postApiV1Cafe-menu",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "itemKeys": {
+                    "items": {
+                      "maxLength": 64,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "maxItems": 20,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "itemKeys"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "itemKeys": {
+                    "items": {
+                      "maxLength": 64,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "maxItems": 20,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "itemKeys"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "itemKeys": {
+                    "items": {
+                      "maxLength": 64,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "maxItems": 20,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "itemKeys"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "added": {
+                      "properties": {
+                        "categories": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "groups": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "options": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "products": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "categories",
+                        "products",
+                        "groups",
+                        "options"
+                      ],
+                      "type": "object"
+                    },
+                    "reused": {
+                      "properties": {
+                        "categories": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "groups": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "categories",
+                        "groups"
+                      ],
+                      "type": "object"
+                    },
+                    "skipped": {
+                      "properties": {
+                        "items": {
+                          "items": {
+                            "properties": {
+                              "key": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "products": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "products",
+                        "items"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "added",
+                    "reused",
+                    "skipped"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "เพิ่มเมนูคาเฟ่จากชุดที่เลือกไว้ (ของที่มีอยู่แล้วถูกข้าม)",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/api/v1/catalog/categories/": {
       "get": {
         "operationId": "getApiV1CatalogCategories",
@@ -2145,6 +2369,9 @@
                                 "isActive": {
                                   "type": "boolean"
                                 },
+                                "isDefault": {
+                                  "type": "boolean"
+                                },
                                 "name": {
                                   "type": "string"
                                 },
@@ -2180,7 +2407,8 @@
                                 "priceSatang",
                                 "costSatang",
                                 "sortOrder",
-                                "isActive"
+                                "isActive",
+                                "isDefault"
                               ],
                               "type": "object"
                             },
@@ -2483,6 +2711,9 @@
                           "isActive": {
                             "type": "boolean"
                           },
+                          "isDefault": {
+                            "type": "boolean"
+                          },
                           "name": {
                             "type": "string"
                           },
@@ -2518,7 +2749,8 @@
                           "priceSatang",
                           "costSatang",
                           "sortOrder",
-                          "isActive"
+                          "isActive",
+                          "isDefault"
                         ],
                         "type": "object"
                       },
@@ -2823,6 +3055,9 @@
                           "isActive": {
                             "type": "boolean"
                           },
+                          "isDefault": {
+                            "type": "boolean"
+                          },
                           "name": {
                             "type": "string"
                           },
@@ -2858,7 +3093,8 @@
                           "priceSatang",
                           "costSatang",
                           "sortOrder",
-                          "isActive"
+                          "isActive",
+                          "isDefault"
                         ],
                         "type": "object"
                       },
@@ -2961,6 +3197,9 @@
                     ],
                     "minimum": 0
                   },
+                  "isDefault": {
+                    "type": "boolean"
+                  },
                   "name": {
                     "maxLength": 100,
                     "minLength": 1,
@@ -3016,6 +3255,9 @@
                     ],
                     "minimum": 0
                   },
+                  "isDefault": {
+                    "type": "boolean"
+                  },
                   "name": {
                     "maxLength": 100,
                     "minLength": 1,
@@ -3070,6 +3312,9 @@
                       }
                     ],
                     "minimum": 0
+                  },
+                  "isDefault": {
+                    "type": "boolean"
                   },
                   "name": {
                     "maxLength": 100,
@@ -3157,6 +3402,9 @@
                     "isActive": {
                       "type": "boolean"
                     },
+                    "isDefault": {
+                      "type": "boolean"
+                    },
                     "name": {
                       "type": "string"
                     },
@@ -3192,7 +3440,8 @@
                     "priceSatang",
                     "costSatang",
                     "sortOrder",
-                    "isActive"
+                    "isActive",
+                    "isDefault"
                   ],
                   "type": "object"
                 }
@@ -3253,6 +3502,9 @@
                   "isActive": {
                     "type": "boolean"
                   },
+                  "isDefault": {
+                    "type": "boolean"
+                  },
                   "name": {
                     "maxLength": 100,
                     "minLength": 1,
@@ -3308,6 +3560,9 @@
                   "isActive": {
                     "type": "boolean"
                   },
+                  "isDefault": {
+                    "type": "boolean"
+                  },
                   "name": {
                     "maxLength": 100,
                     "minLength": 1,
@@ -3361,6 +3616,9 @@
                     "minimum": 0
                   },
                   "isActive": {
+                    "type": "boolean"
+                  },
+                  "isDefault": {
                     "type": "boolean"
                   },
                   "name": {
@@ -3446,6 +3704,9 @@
                     "isActive": {
                       "type": "boolean"
                     },
+                    "isDefault": {
+                      "type": "boolean"
+                    },
                     "name": {
                       "type": "string"
                     },
@@ -3481,7 +3742,8 @@
                     "priceSatang",
                     "costSatang",
                     "sortOrder",
-                    "isActive"
+                    "isActive",
+                    "isDefault"
                   ],
                   "type": "object"
                 }
