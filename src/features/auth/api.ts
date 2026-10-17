@@ -2,9 +2,11 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/r
 import { canDo, isPermission, type Permission } from '@pos/api/permissions'
 import { api, unwrap } from '@/lib/api'
 import { forgetSession } from './lib/forget-session'
+import { handOverSession } from './lib/hand-over-session'
 
 export const authKeys = {
   me: ['auth', 'me'] as const,
+  switchUsers: ['auth', 'switch-users'] as const,
 }
 
 /** The signed-in user. Fails with 401 when there is no session, which the app shell treats as "show the login page". */
@@ -40,5 +42,28 @@ export function useLogout() {
     mutationFn: () => unwrap(api.auth.logout.post()),
     // Back to the login page, with nothing of this user's left in the cache.
     onSuccess: () => forgetSession(queryClient, authKeys.me),
+  })
+}
+
+/** The people who can take over this till with a PIN. Asked fresh each time the lock screen opens. */
+export const switchUsersQuery = queryOptions({
+  queryKey: authKeys.switchUsers,
+  queryFn: () => unwrap(api.auth['switch-users'].get()),
+  staleTime: 0,
+})
+
+/**
+ * Another person takes over the till with a PIN. The server answers a wrong PIN with 400, never 401, so the
+ * till is never treated as signed out. On success the cache is handed over (the user stays non-null).
+ */
+export function useSwitchUser(options: { onHandOver: (newUserId: number) => void }) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: { userId: number; pin: string }) => unwrap(api.auth.switch.post(input)),
+    onSuccess: async (user) => {
+      await handOverSession(queryClient, authKeys.me)
+      options.onHandOver(user.id)
+    },
   })
 }
