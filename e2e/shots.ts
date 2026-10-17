@@ -291,7 +291,7 @@ async function shootSetup(browser: Browser, size: typeof sizes[number]) {
   const page = await context.newPage()
   await page.goto(WEB)
   await page.getByText('ตั้งค่าร้านครั้งแรก', { exact: true }).waitFor()
-  await page.getByRole('radio', { name: /คาเฟ่/ }).check()
+  await page.getByText('คาเฟ่', { exact: true }).click()
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${size.name}/setup: horizontal overflow`)
   await page.screenshot({ path: join(OUT, `${size.name}-00-setup.png`), animations: 'disabled', fullPage: true })
   await context.close()
@@ -363,11 +363,28 @@ async function memberScreens(page: Page, size: typeof sizes[number], shot: (name
     await page.getByRole('button', { name: new RegExp(`${name} edited`) }).click()
   }
   const openBasket = async () => {
-    if (size.width < 1024) await page.getByRole('button', { name: /items/ }).and(page.locator(':visible')).click()
+    if (size.width < 1024) await page.getByRole('button', { name: /pcs|ชิ้น/ }).and(page.locator(':visible')).click()
   }
   await page.goto(WEB)
   // A full navigation deliberately creates a fresh cart; add one item through the real picker.
-  await tryClick(page, page.getByRole('button', { name: /[$]| \d+\.\d\d/ }).first())
+  // The grid refetches after navigation; the sell flow absorbs slow loads
+  // with four sequential tryClick windows, so wait explicitly here (script-only).
+  // Settle-then-click: several queries (products, categories, promotions, shift)
+  // land at different times and each swaps the grid DOM. Clicking .first()
+  // mid-churn resolves a detached node (whiff, swallowed, empty basket), so
+  // poll until the product count is stable across two consecutive reads.
+  let settled = 0
+  let lastCount = -1
+  for (let i = 0; i < 30 && settled < 2; i++) {
+    const n = await page.getByRole('button', { name: /฿|\d+\.\d\d/ }).count()
+    if (n > 0 && n === lastCount) settled++
+    else {
+      settled = 0
+      lastCount = n
+    }
+    if (settled < 2) await page.waitForTimeout(500)
+  }
+  await tryClick(page, page.getByRole('button', { name: /฿|\d+\.\d\d/ }).first())
   await openBasket()
   await selectMember()
   await page.getByRole('button', { name: `${name} edited`, exact: true }).and(page.locator(':visible')).waitFor()
@@ -414,7 +431,13 @@ async function memberScreens(page: Page, size: typeof sizes[number], shot: (name
     await page.goto(WEB)
     await page.getByLabel('Username', { exact: true }).fill(username)
     await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
+    // Let the sign-in round-trip finish first: navigating immediately aborts
+    // the login POST, leaving the login page stuck under /members/{id}.
+    const loggedIn = page.waitForResponse(
+      (response) => response.url().endsWith('/api/v1/auth/login') && response.request().method() === 'POST',
+    )
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    await loggedIn
     await page.goto(`${WEB}/members/${memberId}`)
     await page.getByRole('heading', { name: 'Purchase history' }).waitFor()
     assert.equal(await page.getByRole('button', { name: 'Edit member', exact: true }).count(), 0)
