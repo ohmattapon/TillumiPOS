@@ -1,7 +1,6 @@
 import type { Product } from '@pos/api/types'
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { modifierKeys } from '@/features/modifiers'
-import { categoryKeys } from '@/features/categories'
 import { api, apiV2, unwrap } from '@/lib/api'
 import { prepareImage } from './lib/image'
 
@@ -94,28 +93,6 @@ export function useSetProductActive() {
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
       unwrap(api.catalog.products({ id }).patch({ isActive })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: productKeys.all }),
-  })
-}
-
-export interface CafeMenuApplyResult {
-  added: { categories: number; products: number; groups: number; options: number }
-  reused: { categories: number; groups: number }
-  skipped: { products: number; items: { key: string; name: string }[] }
-}
-
-/** Adds the cafe menu items the owner ticked. The items the shop already has are skipped, never overwritten. */
-export function useApplyCafeMenu() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (itemKeys: string[]): Promise<CafeMenuApplyResult> => unwrap(api['cafe-menu'].post({ itemKeys })),
-    // The set creates categories, products and modifier groups at once, so all three lists go stale.
-    onSuccess: () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: productKeys.all }),
-        queryClient.invalidateQueries({ queryKey: categoryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: modifierKeys.all }),
-      ]),
   })
 }
 
