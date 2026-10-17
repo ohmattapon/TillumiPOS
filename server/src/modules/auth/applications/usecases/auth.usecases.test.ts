@@ -199,13 +199,44 @@ describe('SetOwnPinUseCase', () => {
     expect(audit.record.mock.calls[0]![2].action).toBe('user.pin_cleared')
   })
 
-  test('a wrong current password is a 400-class DomainError, not unauthorized, and writes nothing', async () => {
+  test('a wrong current password is a 400-class DomainError, not unauthorized, and changes no PIN', async () => {
     const attempt = useCase.execute({ currentPassword: 'nope', pin: '4321' }, actor)
 
     await expect(attempt).rejects.toMatchObject({ code: 'INVALID_PASSWORD' })
     await expect(attempt).rejects.not.toBeInstanceOf(DomainUnauthorizedError)
     expect(repo.setPinHash).not.toHaveBeenCalled()
-    expect(audit.record).not.toHaveBeenCalled()
+    expect(audit.record.mock.calls.map(([, , entry]) => entry.action)).not.toContain('user.pin_set')
+  })
+
+  test('a wrong current password is audited outside any unit of work, without the password or the PIN', async () => {
+    let insideUnitOfWork = false
+    const unitOfWork = auditUnitOfWork()
+    unitOfWork.run.mockImplementation(async (work) => {
+      insideUnitOfWork = true
+      try { return await work() } finally { insideUnitOfWork = false }
+    })
+    const recordedInside: boolean[] = []
+    audit.record.mockImplementation(async () => { recordedInside.push(insideUnitOfWork) })
+
+    await expect(new SetOwnPinUseCase(repo, hasher, unitOfWork, audit).execute({ currentPassword: 'nope', pin: '4321' }, actor))
+      .rejects.toMatchObject({ code: 'INVALID_PASSWORD' })
+
+    expect(audit.record).toHaveBeenCalledTimes(1)
+    expect(recordedInside).toEqual([false])
+    const [who, , entry] = audit.record.mock.calls[0]!
+    expect(who).toEqual({ id: 3, name: 'สมชาย' })
+    expect(entry).toMatchObject({ action: 'auth.pin_password_failed', entityType: 'user', entityId: '3' })
+    expect(JSON.stringify(entry)).not.toContain('nope')
+    expect(JSON.stringify(entry)).not.toContain('4321')
+  })
+
+  test('a failing audit write never changes the answer to a wrong password', async () => {
+    audit.record.mockRejectedValue(new Error('audit down'))
+    const original = console.error
+    console.error = () => {}
+    try {
+      await expect(useCase.execute({ currentPassword: 'nope', pin: '4321' }, actor)).rejects.toMatchObject({ code: 'INVALID_PASSWORD' })
+    } finally { console.error = original }
   })
 
   test('an invalid PIN is rejected without writing', async () => {
