@@ -4,14 +4,14 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
-import { Panel } from '@/components/Panel'
+import { Panel, tableToolbar } from '@/components/Panel'
 import { DataTable } from '@/components/DataTable'
+import { TableSearch } from '@/components/TableSearch'
 import { PaginationBar } from '@/components/PaginationBar'
 import { DatePicker } from '@/components/DatePicker'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Input } from '@/components/ui/input'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import {
   Select,
@@ -51,6 +51,8 @@ export function MembersPage() {
     next.delete('page')
     setParams(next, { replace: true })
   }
+  const memberSearch = <TableSearch value={search} onChange={(value) => filter('search', value)} label={t('search')} placeholder={t('search')} />
+
   return (
     <>
       <PageHeader title={t('title')} description={t('description')}>
@@ -61,13 +63,6 @@ export function MembersPage() {
       </PageHeader>
       <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
         <div className="flex flex-wrap gap-3">
-          <Input
-            className="h-11 min-w-0 flex-1 basis-60"
-            aria-label={t('search')}
-            placeholder={t('search')}
-            value={search}
-            onChange={(e) => filter('search', e.target.value)}
-          />
           <Select value={active} onValueChange={(value) => filter('active', value)}>
             <SelectTrigger className="h-11 w-40" aria-label={t('status')}>
               <SelectValue />
@@ -82,6 +77,8 @@ export function MembersPage() {
           </Select>
         </div>
         <Panel title={t('directory')}>
+          {/* Drawn here, not in DataTable's toolbar: the table is hidden while a request fails, and a search that moved between the two places would be rebuilt and lose focus. */}
+          <div className={tableToolbar}>{memberSearch}</div>
           {members.error && (
             <p role="alert" className="p-4 text-sm text-destructive">
               {members.error.message}
