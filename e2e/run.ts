@@ -152,7 +152,6 @@ async function runSetupFlow(browser: Browser) {
     const fields: [string, string][] = [
       ['รหัสตั้งค่า', code],
       ['ชื่อร้าน', 'ร้านทดสอบ'],
-      ['ชื่อสาขาแรก', 'สาขาหลัก'],
       ['ชื่อผู้ใช้ของเจ้าของ', 'shopowner'],
       ['ชื่อที่แสดง', 'เจ้าของร้าน'],
       ['รหัสผ่าน', 'e2e-first-owner-password'],

@@ -18,7 +18,6 @@ export const setupStatusQuery = queryOptions({
 export interface SetupInput {
   setupCode: string
   shopName: string
-  branchName: string
   username: string
   displayName: string
   password: string

@@ -51,9 +51,9 @@ export class CompleteSetupUseCase {
       if (check !== 'accepted')
         throw new DomainForbiddenError('รหัสตั้งค่าไม่ถูกต้อง ดูรหัสได้จาก log ของระบบ', 'SETUP_CODE_INVALID')
 
-      const [branch] = await this.branches.findAll()
+      const branch = await this.branches.findMain()
       if (!branch) throw new DomainNotFoundError('ไม่พบสาขา', 'BRANCH_NOT_FOUND')
-      await this.branches.update(branch.with({ name: dto.branchName }))
+      await this.branches.update(branch.with({ name: dto.branchName ?? dto.shopName }))
       await this.settings.save((await this.settings.getForUpdate()).with({ shopName: dto.shopName, ...shopFeaturesFor(dto.shopType) }))
 
       const ownerRole = await this.roles.findBySystemKey('owner')
