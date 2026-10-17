@@ -56,7 +56,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-svh bg-canvas lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+    <div className="grid min-h-svh bg-canvas lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <BrandPanel />
       <main className="flex min-h-svh flex-col p-4 sm:p-8">
         <div className="flex flex-1 items-center justify-center py-8">
