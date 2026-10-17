@@ -44,6 +44,7 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "elysia": "^1.4.30",
+    "happy-dom": "^21.0.3",
     "oxlint": "^1.81.0",
     "playwright-core": "^1.64.0",
     "tailwindcss": "^4.3.3",
