@@ -19,6 +19,7 @@ export default defineConfig({
     alias: [
       { find: '@pos/api/types', replacement: server('types.ts') },
       { find: '@pos/api/pricing', replacement: server('domains/pricing.ts') },
+      { find: '@pos/api/packs', replacement: server('domains/product-pack.ts') },
       { find: '@pos/api/shop-settings', replacement: server('domains/shop-settings.domain.ts') },
       { find: '@pos/api/modifiers', replacement: server('domains/modifier.domain.ts') },
       { find: '@pos/api/promotions', replacement: server('domains/promotion.domain.ts') },

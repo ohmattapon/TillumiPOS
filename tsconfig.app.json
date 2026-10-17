@@ -14,6 +14,7 @@
       "@pos/api": ["./server/src/app.ts"],
       "@pos/api/types": ["./server/src/types.ts"],
       "@pos/api/pricing": ["./server/src/domains/pricing.ts"],
+      "@pos/api/packs": ["./server/src/domains/product-pack.ts"],
       "@pos/api/shop-settings": ["./server/src/domains/shop-settings.domain.ts"],
       "@pos/api/modifiers": ["./server/src/domains/modifier.domain.ts"],
       "@pos/api/promotions": ["./server/src/domains/promotion.domain.ts"],

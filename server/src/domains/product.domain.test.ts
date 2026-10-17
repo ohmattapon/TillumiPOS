@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { DomainConflictError } from './errors/domain-conflict.error'
 import { DomainError } from './errors/domain-error'
 import { ProductEntity, type ProductEntityProps } from './product.domain'
+import type { ProductPack } from './product-pack'
 
 const valid: ProductEntityProps = {
   id: 1,
@@ -15,6 +16,7 @@ const valid: ProductEntityProps = {
   stockQty: 5,
   isActive: true,
   imageKey: 'products/1/a.webp',
+  packs: [],
 }
 const product = (overrides: Partial<ProductEntityProps> = {}) => new ProductEntity({ ...valid, ...overrides })
 
@@ -119,6 +121,87 @@ describe('ProductEntity', () => {
 
     test('a product that does not track stock sells in any quantity', () => {
       expect(() => product({ trackStock: false, stockQty: 0 }).assertSellable(999)).not.toThrow()
+    })
+  })
+
+  describe('packs', () => {
+    const pack = (overrides: Partial<ProductPack> = {}): ProductPack => ({
+      id: 7,
+      barcode: '8850000000099',
+      size: 6,
+      priceSatang: null,
+      isActive: true,
+      ...overrides,
+    })
+    const errorOf = (run: () => void) => {
+      try {
+        run()
+      } catch (error) {
+        return error as DomainError
+      }
+    }
+
+    test('a product built without packs has none', () => {
+      const { packs: _packs, ...withoutPacks } = valid
+
+      expect(new ProductEntity(withoutPacks).packs).toEqual([])
+    })
+
+    test('rejects more than 10 packs', () => {
+      const packs = Array.from({ length: 11 }, (_, i) => pack({ id: i + 1, barcode: `b${i}` }))
+      const error = errorOf(() => product({ packs }))
+
+      expect(error).toBeInstanceOf(DomainError)
+      expect(error?.code).toBe('INVALID_PRODUCT')
+    })
+
+    test('rejects two packs with the same barcode', () => {
+      const error = errorOf(() => product({ packs: [pack({ id: 1 }), pack({ id: 2 })] }))
+
+      expect(error).toBeInstanceOf(DomainConflictError)
+      expect(error?.code).toBe('BARCODE_TAKEN')
+      expect(error?.params).toEqual({ barcode: '8850000000099' })
+    })
+
+    test('rejects a pack barcode equal to the product barcode', () => {
+      const error = errorOf(() => product({ packs: [pack({ barcode: valid.barcode as string })] }))
+
+      expect(error).toBeInstanceOf(DomainConflictError)
+      expect(error?.code).toBe('BARCODE_TAKEN')
+    })
+
+    test('with returns a new entity with the packs and leaves the original unchanged', () => {
+      const original = product()
+      const changed = original.with({ packs: [pack()] })
+
+      expect(changed.packs).toEqual([pack()])
+      expect(original.packs).toEqual([])
+      expect(changed.toSnapshot().packs).toEqual([pack()])
+    })
+
+    test('packForSale returns an active pack', () => {
+      expect(product({ packs: [pack()] }).packForSale(7)).toEqual(pack())
+    })
+
+    test('packForSale refuses an unknown pack, saying which', () => {
+      const error = errorOf(() => product().packForSale(99))
+
+      expect(error?.code).toBe('PACK_NOT_FOUND')
+      expect(error?.params).toEqual({ packId: 99 })
+    })
+
+    test('packForSale refuses an inactive pack', () => {
+      const error = errorOf(() => product({ packs: [pack({ isActive: false })] }).packForSale(7))
+
+      expect(error).toBeInstanceOf(DomainConflictError)
+      expect(error?.code).toBe('PACK_INACTIVE')
+      expect(error?.params).toEqual({ barcode: '8850000000099' })
+    })
+
+    test('packForSale refuses an inactive product', () => {
+      const error = errorOf(() => product({ isActive: false, packs: [pack()] }).packForSale(7))
+
+      expect(error?.code).toBe('PRODUCT_INACTIVE')
     })
   })
 })
