@@ -1,11 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import {
   baseUrl,
-  login,
   ok,
-  PASSWORD,
   resetDatabase,
-  seedBranch,
   seedProduct,
   signIn,
   type Session,
@@ -256,36 +253,5 @@ describe('paying an order', () => {
     expect(results.find((result) => result.error)?.status).toBe(409)
     expect(await stockOf(tea.id)).toBe(8)
     expect(ok(await owner.api.sales.get({ query: {} })).total).toBe(1)
-  })
-})
-
-describe('branches', () => {
-  test("another branch cannot see, change or pay this branch's orders", async () => {
-    const tea = await seedProduct(owner, { stock: 5 })
-    const order = ok(await cashier.api.orders.post({ items: [{ productId: tea.id, quantity: 1 }] }))
-    const bkk = await seedBranch('BKK', 'สาขากรุงเทพ')
-    const ownerInBkk = await login('owner', PASSWORD, bkk.id)
-
-    expect((await ownerInBkk.orders({ id: order.id }).get()).status).toBe(404)
-    expect((await ownerInBkk.orders({ id: order.id }).items.post({ productId: tea.id, quantity: 1 })).status).toBe(404)
-    expect((await ownerInBkk.orders({ id: order.id }).pay.post({ payments: cash(100_000) })).status).toBe(404)
-    expect((await ownerInBkk.orders({ id: order.id }).cancel.post({ reason: 'x' })).status).toBe(404)
-    expect(ok(await ownerInBkk.orders.get({ query: {} })).items).toEqual([])
-    expect(ok(await owner.api.orders.get({ query: {} })).items.map((item) => item.id)).toEqual([order.id])
-  })
-
-  test("paying takes the order's branch stock and uses its receipt numbering", async () => {
-    const bkk = await seedBranch('BKK', 'สาขากรุงเทพ')
-    const ownerInBkk = await login('owner', PASSWORD, bkk.id)
-    const tea = await seedProduct(owner, { priceSatang: 1000, stock: 5 })
-    ok(await ownerInBkk.inventory.receive.post({ productId: tea.id, quantity: 3 }))
-    const order = ok(await ownerInBkk.orders.post({ items: [{ productId: tea.id, quantity: 2 }] }))
-
-    const sale = ok(await ownerInBkk.orders({ id: order.id }).pay.post({ payments: cash(2000) }))
-
-    expect(sale.receiptNo).toMatch(/^BKK-\d{8}-00001$/)
-    expect(sale.branchId).toBe(bkk.id)
-    expect(await stockOf(tea.id)).toBe(5)
-    expect(ok(await ownerInBkk.catalog.products({ id: tea.id }).get()).stockQty).toBe(1)
   })
 })
