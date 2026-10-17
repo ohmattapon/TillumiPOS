@@ -3718,6 +3718,75 @@
                             "minLength": 1,
                             "type": "string"
                           },
+                          "packs": {
+                            "items": {
+                              "properties": {
+                                "barcode": {
+                                  "maxLength": 64,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "priceSatang": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "default": 0,
+                                          "format": "integer",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        }
+                                      ],
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "nullable": true
+                                },
+                                "size": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "barcode",
+                                "size",
+                                "priceSatang",
+                                "isActive"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
                           "priceSatang": {
                             "anyOf": [
                               {
@@ -3764,7 +3833,8 @@
                           "trackStock",
                           "isActive",
                           "stockQty",
-                          "imageUrl"
+                          "imageUrl",
+                          "packs"
                         ],
                         "type": "object"
                       },
@@ -3854,6 +3924,73 @@
                     "minLength": 1,
                     "type": "string"
                   },
+                  "packs": {
+                    "items": {
+                      "properties": {
+                        "barcode": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "id": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "priceSatang": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "default": 0,
+                                  "format": "integer",
+                                  "type": "string"
+                                },
+                                {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              ],
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "nullable": true
+                        },
+                        "size": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "barcode",
+                        "size",
+                        "priceSatang"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
                   "priceSatang": {
                     "anyOf": [
                       {
@@ -3936,6 +4073,73 @@
                     "minLength": 1,
                     "type": "string"
                   },
+                  "packs": {
+                    "items": {
+                      "properties": {
+                        "barcode": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "id": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "priceSatang": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "default": 0,
+                                  "format": "integer",
+                                  "type": "string"
+                                },
+                                {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              ],
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "nullable": true
+                        },
+                        "size": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "barcode",
+                        "size",
+                        "priceSatang"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
                   "priceSatang": {
                     "anyOf": [
                       {
@@ -4017,6 +4221,73 @@
                     "maxLength": 200,
                     "minLength": 1,
                     "type": "string"
+                  },
+                  "packs": {
+                    "items": {
+                      "properties": {
+                        "barcode": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "id": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "priceSatang": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "default": 0,
+                                  "format": "integer",
+                                  "type": "string"
+                                },
+                                {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              ],
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "nullable": true
+                        },
+                        "size": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "barcode",
+                        "size",
+                        "priceSatang"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
                   },
                   "priceSatang": {
                     "anyOf": [
@@ -4128,6 +4399,75 @@
                       "minLength": 1,
                       "type": "string"
                     },
+                    "packs": {
+                      "items": {
+                        "properties": {
+                          "barcode": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "priceSatang": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                ],
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "size": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "barcode",
+                          "size",
+                          "priceSatang",
+                          "isActive"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "priceSatang": {
                       "anyOf": [
                         {
@@ -4174,7 +4514,8 @@
                     "trackStock",
                     "isActive",
                     "stockQty",
-                    "imageUrl"
+                    "imageUrl",
+                    "packs"
                   ],
                   "type": "object"
                 }
@@ -4289,6 +4630,75 @@
                       "minLength": 1,
                       "type": "string"
                     },
+                    "packs": {
+                      "items": {
+                        "properties": {
+                          "barcode": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "priceSatang": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                ],
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "size": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "barcode",
+                          "size",
+                          "priceSatang",
+                          "isActive"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "priceSatang": {
                       "anyOf": [
                         {
@@ -4335,7 +4745,8 @@
                     "trackStock",
                     "isActive",
                     "stockQty",
-                    "imageUrl"
+                    "imageUrl",
+                    "packs"
                   ],
                   "type": "object"
                 }
@@ -4428,6 +4839,73 @@
                     "minLength": 1,
                     "type": "string"
                   },
+                  "packs": {
+                    "items": {
+                      "properties": {
+                        "barcode": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "id": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "priceSatang": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "default": 0,
+                                  "format": "integer",
+                                  "type": "string"
+                                },
+                                {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              ],
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "nullable": true
+                        },
+                        "size": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "barcode",
+                        "size",
+                        "priceSatang"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
                   "priceSatang": {
                     "anyOf": [
                       {
@@ -4508,6 +4986,73 @@
                     "minLength": 1,
                     "type": "string"
                   },
+                  "packs": {
+                    "items": {
+                      "properties": {
+                        "barcode": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "id": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "priceSatang": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "default": 0,
+                                  "format": "integer",
+                                  "type": "string"
+                                },
+                                {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              ],
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "nullable": true
+                        },
+                        "size": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "barcode",
+                        "size",
+                        "priceSatang"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
                   "priceSatang": {
                     "anyOf": [
                       {
@@ -4587,6 +5132,73 @@
                     "maxLength": 200,
                     "minLength": 1,
                     "type": "string"
+                  },
+                  "packs": {
+                    "items": {
+                      "properties": {
+                        "barcode": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "id": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "priceSatang": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "default": 0,
+                                  "format": "integer",
+                                  "type": "string"
+                                },
+                                {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              ],
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "nullable": true
+                        },
+                        "size": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "barcode",
+                        "size",
+                        "priceSatang"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
                   },
                   "priceSatang": {
                     "anyOf": [
@@ -4693,6 +5305,75 @@
                       "minLength": 1,
                       "type": "string"
                     },
+                    "packs": {
+                      "items": {
+                        "properties": {
+                          "barcode": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "priceSatang": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                ],
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "size": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "barcode",
+                          "size",
+                          "priceSatang",
+                          "isActive"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "priceSatang": {
                       "anyOf": [
                         {
@@ -4739,7 +5420,8 @@
                     "trackStock",
                     "isActive",
                     "stockQty",
-                    "imageUrl"
+                    "imageUrl",
+                    "packs"
                   ],
                   "type": "object"
                 }
@@ -4854,6 +5536,75 @@
                       "minLength": 1,
                       "type": "string"
                     },
+                    "packs": {
+                      "items": {
+                        "properties": {
+                          "barcode": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "priceSatang": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                ],
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "size": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "barcode",
+                          "size",
+                          "priceSatang",
+                          "isActive"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "priceSatang": {
                       "anyOf": [
                         {
@@ -4900,7 +5651,8 @@
                     "trackStock",
                     "isActive",
                     "stockQty",
-                    "imageUrl"
+                    "imageUrl",
+                    "packs"
                   ],
                   "type": "object"
                 }
@@ -5081,6 +5833,75 @@
                       "minLength": 1,
                       "type": "string"
                     },
+                    "packs": {
+                      "items": {
+                        "properties": {
+                          "barcode": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "priceSatang": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                ],
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "size": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "barcode",
+                          "size",
+                          "priceSatang",
+                          "isActive"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "priceSatang": {
                       "anyOf": [
                         {
@@ -5127,7 +5948,8 @@
                     "trackStock",
                     "isActive",
                     "stockQty",
-                    "imageUrl"
+                    "imageUrl",
+                    "packs"
                   ],
                   "type": "object"
                 }
@@ -17255,6 +18077,38 @@
                             },
                             "type": "array"
                           },
+                          "packId": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "packSize": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "productId": {
                             "anyOf": [
                               {
@@ -17305,7 +18159,9 @@
                           "unitPriceSatang",
                           "quantity",
                           "lineTotalSatang",
-                          "options"
+                          "options",
+                          "packId",
+                          "packSize"
                         ],
                         "type": "object"
                       },
@@ -21096,6 +21952,20 @@
                           "maxItems": 40,
                           "type": "array"
                         },
+                        "packId": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
                         "productId": {
                           "anyOf": [
                             {
@@ -21199,6 +22069,20 @@
                           "maxItems": 40,
                           "type": "array"
                         },
+                        "packId": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
                         "productId": {
                           "anyOf": [
                             {
@@ -21301,6 +22185,20 @@
                           },
                           "maxItems": 40,
                           "type": "array"
+                        },
+                        "packId": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
                         },
                         "productId": {
                           "anyOf": [
@@ -21516,6 +22414,38 @@
                             },
                             "type": "array"
                           },
+                          "packId": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "packSize": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "productId": {
                             "anyOf": [
                               {
@@ -21565,7 +22495,9 @@
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "options"
+                          "options",
+                          "packId",
+                          "packSize"
                         ],
                         "type": "object"
                       },
@@ -21979,6 +22911,38 @@
                             },
                             "type": "array"
                           },
+                          "packId": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "packSize": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "productId": {
                             "anyOf": [
                               {
@@ -22028,7 +22992,9 @@
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "options"
+                          "options",
+                          "packId",
+                          "packSize"
                         ],
                         "type": "object"
                       },
@@ -22442,6 +23408,38 @@
                             },
                             "type": "array"
                           },
+                          "packId": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "packSize": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "productId": {
                             "anyOf": [
                               {
@@ -22491,7 +23489,9 @@
                           "sku",
                           "unitPriceSatang",
                           "quantity",
-                          "options"
+                          "options",
+                          "packId",
+                          "packSize"
                         ],
                         "type": "object"
                       },
@@ -23811,6 +24811,20 @@
                           "maxItems": 40,
                           "type": "array"
                         },
+                        "packId": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
                         "productId": {
                           "anyOf": [
                             {
@@ -23986,6 +25000,20 @@
                           "maxItems": 40,
                           "type": "array"
                         },
+                        "packId": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
                         "productId": {
                           "anyOf": [
                             {
@@ -24160,6 +25188,20 @@
                           },
                           "maxItems": 40,
                           "type": "array"
+                        },
+                        "packId": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
                         },
                         "productId": {
                           "anyOf": [
@@ -24464,6 +25506,38 @@
                             },
                             "type": "array"
                           },
+                          "packId": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "packSize": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "productId": {
                             "anyOf": [
                               {
@@ -24514,7 +25588,9 @@
                           "unitPriceSatang",
                           "quantity",
                           "lineTotalSatang",
-                          "options"
+                          "options",
+                          "packId",
+                          "packSize"
                         ],
                         "type": "object"
                       },
@@ -25034,6 +26110,38 @@
                             },
                             "type": "array"
                           },
+                          "packId": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "packSize": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "productId": {
                             "anyOf": [
                               {
@@ -25084,7 +26192,9 @@
                           "unitPriceSatang",
                           "quantity",
                           "lineTotalSatang",
-                          "options"
+                          "options",
+                          "packId",
+                          "packSize"
                         ],
                         "type": "object"
                       },
@@ -25654,6 +26764,38 @@
                             },
                             "type": "array"
                           },
+                          "packId": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "packSize": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "productId": {
                             "anyOf": [
                               {
@@ -25704,7 +26846,9 @@
                           "unitPriceSatang",
                           "quantity",
                           "lineTotalSatang",
-                          "options"
+                          "options",
+                          "packId",
+                          "packSize"
                         ],
                         "type": "object"
                       },
