@@ -93,39 +93,44 @@ describe('managing branches', () => {
     expect(refused.status).toBe(409)
     expect(refused.error?.value).toMatchObject({ code: 'BRANCH_IN_USE' })
   })
-
-  test('a closed branch cannot be worked in', async () => {
-    ok(await owner.api.branches({ id: bkk.id }).patch({ isActive: false }))
-
-    const blocked = await ownerInBkk.catalog.products.get({ query: {} })
-
-    expect(blocked.status).toBe(409)
-    expect(blocked.error?.value).toMatchObject({ code: 'BRANCH_INACTIVE' })
-  })
 })
 
 describe('working in a branch', () => {
-  test('a request without a branch uses the branch the user belongs to', async () => {
+  test('a request without a branch works in MAIN', async () => {
+    const tea = await seedProduct(owner, { stock: 4 })
+
+    expect(await stockIn(cashier.api, tea.id)).toBe(4)
+  })
+
+  test('a cashier assigned to another branch still works in MAIN', async () => {
     const staff = await signIn('cashier', 'bkk-cashier', { branchId: bkk.id })
-    const tea = await seedProduct(owner, { stock: 4, branchId: bkk.id })
+    const tea = await seedProduct(owner, { stock: 4 })
 
     expect(await stockIn(staff.api, tea.id)).toBe(4)
-    expect(await stockIn(owner.api, tea.id)).toBe(0)
   })
 
-  test('a cashier cannot work in another branch, even by naming it', async () => {
-    const intruder = await login('cashier', PASSWORD, bkk.id)
+  test('a header naming another branch is ignored, and the request works in MAIN', async () => {
+    const tea = await seedProduct(owner, { stock: 4 })
 
-    const refused = await intruder.catalog.products.get({ query: {} })
-
-    expect(refused.status).toBe(403)
-    expect(refused.error?.value).toMatchObject({ code: 'BRANCH_FORBIDDEN' })
+    expect(await stockIn(ownerInBkk, tea.id)).toBe(4)
+    expect((await cashier.api.catalog.products.get({ query: {} })).status).toBe(200)
   })
 
-  test('an unknown or malformed branch is refused', async () => {
+  test('a closed branch named in the header does not stop requests, which work in MAIN', async () => {
+    ok(await owner.api.branches({ id: bkk.id }).patch({ isActive: false }))
+
+    const tea = await seedProduct(owner, { stock: 4 })
+
+    expect(await stockIn(ownerInBkk, tea.id)).toBe(4)
+  })
+
+  test('an unknown branch in the header is ignored', async () => {
     const unknown = await login('owner', PASSWORD, 9999)
-    expect((await unknown.catalog.products.get({ query: {} })).status).toBe(404)
 
+    expect((await unknown.catalog.products.get({ query: {} })).status).toBe(200)
+  })
+
+  test('a header that is not a number is still refused', async () => {
     const session = await fetch(`${baseUrl}/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -146,22 +151,12 @@ describe('working in a branch', () => {
     expect(ok(await stale.branches.get()).items.length).toBe(2)
   })
 
-  test('a user is created in the branch the owner is working in unless another is named', async () => {
-    const here = ok(
+  test('a user created without a branch belongs to MAIN', async () => {
+    const created = ok(
       await ownerInBkk.users.post({ username: 'a-user', password: PASSWORD, displayName: 'A', role: 'cashier' }),
     )
-    const named = ok(
-      await ownerInBkk.users.post({
-        username: 'b-user',
-        password: PASSWORD,
-        displayName: 'B',
-        role: 'cashier',
-        branchId: MAIN_BRANCH_ID,
-      }),
-    )
 
-    expect(here.branchId).toBe(bkk.id)
-    expect(named.branchId).toBe(MAIN_BRANCH_ID)
+    expect(created.branchId).toBe(MAIN_BRANCH_ID)
   })
 
   test('a user cannot be assigned to a branch that does not exist', async () => {
@@ -169,104 +164,5 @@ describe('working in a branch', () => {
 
     expect(refused.status).toBe(404)
     expect(refused.error?.value).toMatchObject({ code: 'BRANCH_NOT_FOUND' })
-  })
-})
-
-describe('stock and sales stay apart', () => {
-  test('each branch keeps its own stock of the same product', async () => {
-    const tea = await seedProduct(owner, { stock: 10 })
-    ok(await ownerInBkk.inventory.receive.post({ productId: tea.id, quantity: 3 }))
-
-    expect(await stockIn(owner.api, tea.id)).toBe(10)
-    expect(await stockIn(ownerInBkk, tea.id)).toBe(3)
-    const listed = ok(await ownerInBkk.catalog.products.get({ query: {} })).items.find((item) => item.id === tea.id)
-    expect(listed?.stockQty).toBe(3)
-  })
-
-  test("a sale takes stock from its own branch only and is refused when that branch's shelf is empty", async () => {
-    const tea = await seedProduct(owner, { stock: 10 })
-
-    const refused = await sell(ownerInBkk, tea.id)
-    expect(refused.status).toBe(409)
-    expect(refused.error?.value).toMatchObject({ code: 'INSUFFICIENT_STOCK' })
-
-    ok(await sell(owner.api, tea.id, 4))
-    expect(await stockIn(owner.api, tea.id)).toBe(6)
-    expect(await stockIn(ownerInBkk, tea.id)).toBe(0)
-  })
-
-  test('receipt numbers carry the branch code and count separately per branch', async () => {
-    const tea = await seedProduct(owner, { stock: 5 })
-    ok(await ownerInBkk.inventory.receive.post({ productId: tea.id, quantity: 5 }))
-
-    const main1 = ok(await sell(owner.api, tea.id))
-    const bkk1 = ok(await sell(ownerInBkk, tea.id))
-    const main2 = ok(await sell(owner.api, tea.id))
-
-    expect(main1.receiptNo).toMatch(/^MAIN-\d{8}-00001$/)
-    expect(bkk1.receiptNo).toMatch(/^BKK-\d{8}-00001$/)
-    expect(main2.receiptNo).toMatch(/^MAIN-\d{8}-00002$/)
-    expect([main1.branchId, bkk1.branchId]).toEqual([MAIN_BRANCH_ID, bkk.id])
-  })
-
-  test('the list, summary and detail of sales are those of the branch worked in', async () => {
-    const tea = await seedProduct(owner, { stock: 5, priceSatang: 1000 })
-    ok(await ownerInBkk.inventory.receive.post({ productId: tea.id, quantity: 5 }))
-    ok(await sell(owner.api, tea.id, 2))
-    const other = ok(await sell(ownerInBkk, tea.id, 1))
-
-    const mainList = ok(await owner.api.sales.get({ query: {} }))
-    const bkkList = ok(await ownerInBkk.sales.get({ query: {} }))
-    expect([mainList.total, bkkList.total]).toEqual([1, 1])
-
-    const period = { from: new Date(Date.now() - 3_600_000), to: new Date(Date.now() + 3_600_000) }
-    const mainSummary = ok(await owner.api.sales.summary.get({ query: period }))
-    const bkkSummary = ok(await ownerInBkk.sales.summary.get({ query: period }))
-    expect([mainSummary.totalSatang, bkkSummary.totalSatang]).toEqual([2000, 1000])
-
-    // The other branch's bill is not visible from here, not even by id.
-    expect((await owner.api.sales({ id: other.id }).get()).status).toBe(404)
-    expect(ok(await ownerInBkk.sales({ id: other.id }).get()).receiptNo).toBe(other.receiptNo)
-  })
-
-  test("the stock ledger lists only the branch's own movements", async () => {
-    const tea = await seedProduct(owner, { stock: 10 })
-    ok(await ownerInBkk.inventory.receive.post({ productId: tea.id, quantity: 3 }))
-
-    const main = ok(await owner.api.inventory.movements.get({ query: { productId: tea.id } }))
-    const other = ok(await ownerInBkk.inventory.movements.get({ query: { productId: tea.id } }))
-
-    expect(main.items.map((movement) => movement.branchId)).toEqual([MAIN_BRANCH_ID])
-    expect(other.items.map((movement) => movement.branchId)).toEqual([bkk.id])
-  })
-
-  test("a void puts the stock back into the sale's branch and cannot be done from another", async () => {
-    const tea = await seedProduct(owner, { stock: 5 })
-    ok(await ownerInBkk.inventory.receive.post({ productId: tea.id, quantity: 5 }))
-    const sale = ok(await sell(ownerInBkk, tea.id, 2))
-    expect(await stockIn(ownerInBkk, tea.id)).toBe(3)
-
-    const wrongBranch = await owner.api.sales({ id: sale.id }).void.post({ reason: 'ผิดสาขา' })
-    expect(wrongBranch.status).toBe(404)
-
-    ok(await ownerInBkk.sales({ id: sale.id }).void.post({ reason: 'คิดเงินผิด' }))
-    expect(await stockIn(ownerInBkk, tea.id)).toBe(5)
-    expect(await stockIn(owner.api, tea.id)).toBe(5)
-  })
-
-  test('two branches can sell the same product at the same time without affecting each other', async () => {
-    const tea = await seedProduct(owner, { stock: 5 })
-    ok(await ownerInBkk.inventory.receive.post({ productId: tea.id, quantity: 5 }))
-
-    const results = await Promise.all([
-      ...Array.from({ length: 8 }, () => sell(owner.api, tea.id)),
-      ...Array.from({ length: 8 }, () => sell(ownerInBkk, tea.id)),
-    ])
-
-    const succeeded = (from: number, to: number) => results.slice(from, to).filter((result) => !result.error).length
-    // Five on each shelf: exactly five of each branch's eight attempts get through.
-    expect([succeeded(0, 8), succeeded(8, 16)]).toEqual([5, 5])
-    expect(await stockIn(owner.api, tea.id)).toBe(0)
-    expect(await stockIn(ownerInBkk, tea.id)).toBe(0)
   })
 })

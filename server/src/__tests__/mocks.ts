@@ -125,6 +125,7 @@ export const mockSaleRepository = (): Mocked<ISaleRepository> => ({
 export const mockBranchRepository = (): Mocked<IBranchRepository> => ({
   findAll: mock<IBranchRepository['findAll']>(),
   findById: mock<IBranchRepository['findById']>(),
+  findMain: mock<IBranchRepository['findMain']>(),
   findByIdForUpdate: mock<IBranchRepository['findByIdForUpdate']>(),
   create: mock<IBranchRepository['create']>(),
   update: mock<IBranchRepository['update']>(),

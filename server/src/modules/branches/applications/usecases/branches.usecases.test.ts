@@ -137,37 +137,33 @@ describe('UpdateBranchUseCase', () => {
 
 describe('ResolveBranchUseCase', () => {
   let useCase: ResolveBranchUseCase
-  const owner = makeUser({ role: 'owner', branchId: 1 })
+  const owner = makeUser({ role: 'owner', branchId: 2 })
   const cashier = makeUser({ role: 'cashier', branchId: 2 })
 
   beforeEach(() => {
-    repo.findById.mockImplementation(async (id) => makeBranch({ id, code: id === 1 ? 'MAIN' : 'BKK' }))
+    repo.findMain.mockResolvedValue(makeBranch({ id: 1, code: 'MAIN' }))
     useCase = new ResolveBranchUseCase(repo)
   })
 
-  test("defaults to the user's own branch", async () => {
-    expect((await useCase.execute(cashier)).id).toBe(2)
+  test('every request works in MAIN, without a header', async () => {
+    expect((await useCase.execute(cashier)).id).toBe(1)
     expect((await useCase.execute(owner, null)).id).toBe(1)
   })
 
-  test('an owner may work in any branch', async () => {
-    expect((await useCase.execute(owner, 2)).id).toBe(2)
+  test('a header naming another branch is ignored, for an owner and for a cashier', async () => {
+    expect((await useCase.execute(owner, 3)).id).toBe(1)
+    expect((await useCase.execute(cashier, 3)).id).toBe(1)
   })
 
-  test('a cashier may name their own branch but no other', async () => {
-    expect((await useCase.execute(cashier, 2)).id).toBe(2)
-    await expect(useCase.execute(cashier, 1)).rejects.toMatchObject({ code: 'BRANCH_FORBIDDEN' })
+  test('a user assigned to another branch still works in MAIN', async () => {
+    const elsewhere = makeUser({ role: 'cashier', branchId: 9 })
+
+    expect((await useCase.execute(elsewhere)).id).toBe(1)
   })
 
-  test('an unknown branch is not found', async () => {
-    repo.findById.mockResolvedValue(null)
+  test('without MAIN the request is not found, which only a broken install can reach', async () => {
+    repo.findMain.mockResolvedValue(null)
 
-    await expect(useCase.execute(owner, 99)).rejects.toMatchObject({ code: 'BRANCH_NOT_FOUND' })
-  })
-
-  test('a closed branch cannot be worked in', async () => {
-    repo.findById.mockResolvedValue(makeBranch({ id: 2, isActive: false }))
-
-    await expect(useCase.execute(owner, 2)).rejects.toMatchObject({ code: 'BRANCH_INACTIVE' })
+    await expect(useCase.execute(owner)).rejects.toMatchObject({ code: 'BRANCH_NOT_FOUND' })
   })
 })

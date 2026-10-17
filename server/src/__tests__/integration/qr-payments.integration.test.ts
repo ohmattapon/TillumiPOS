@@ -5,11 +5,9 @@ import { db } from '../../libs/db'
 import { fakeScb, SCB_ENV_KEYS } from '../../../test/scb-server'
 import {
   baseUrl,
-  login,
   ok,
   PASSWORD,
   resetDatabase,
-  seedBranch,
   seedProduct,
   signIn,
   type Session,
@@ -206,14 +204,6 @@ describe('waiting for payment', () => {
     expect(ok(await cashier.api.payments.qr({ id: qr.id }).get()).status).toBe('pending')
   })
 
-  test("another branch's payment is not found", async () => {
-    const qr = await createQr(5000)
-    const bkk = await seedBranch('BKK', 'สาขากรุงเทพ')
-    const elsewhere = await login('owner', PASSWORD, bkk.id)
-
-    expect((await elsewhere.payments.qr({ id: qr.id }).get()).status).toBe(404)
-    expect((await elsewhere.payments.qr({ id: qr.id }).cancel.post()).status).toBe(404)
-  })
 })
 
 describe("SCB's confirmation callback", () => {
@@ -382,21 +372,6 @@ describe('paying a sale with a QR', () => {
 
     expect(refused.status).toBe(400)
     expect(refused.error?.value).toMatchObject({ code: 'QR_AMOUNT_MISMATCH' })
-  })
-
-  test("another branch's QR cannot be used", async () => {
-    const tea = await seedProduct(owner, { priceSatang: 1000, stock: 5 })
-    const bkk = await seedBranch('BKK', 'สาขากรุงเทพ')
-    const ownerInBkk = await login('owner', PASSWORD, bkk.id)
-    const qr = await createQr(1000, ownerInBkk)
-    await customerPays(qr, ownerInBkk)
-
-    const refused = await cashier.api.sales.post({
-      items: [{ productId: tea.id, quantity: 1 }],
-      payments: promptpay(1000, qr.id),
-    })
-
-    expect(refused.status).toBe(404)
   })
 
   test('a sale that fails after the customer paid leaves the QR paid and usable for the corrected sale', async () => {
