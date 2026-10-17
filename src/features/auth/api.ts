@@ -1,5 +1,6 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { canDo, isPermission, type Permission } from '@pos/api/permissions'
+import { settingsKeys } from '@/features/settings'
 import { api, unwrap } from '@/lib/api'
 import { forgetSession } from './lib/forget-session'
 import { completeHandOver } from './lib/hand-over-session'
@@ -62,7 +63,8 @@ export function useSwitchUser(options: { onHandOver: (newUserId: number) => void
   return useMutation({
     mutationFn: (input: { userId: number; pin: string }) => unwrap(api.auth.switch.post(input)),
     onSuccess: async (user) => {
-      await completeHandOver(queryClient, authKeys.me, user.id, options.onHandOver)
+      // The shop settings belong to the shop, not the person, so they stay on screen while they refetch.
+      await completeHandOver(queryClient, authKeys.me, [settingsKeys.all], user.id, options.onHandOver)
     },
   })
 }
