@@ -1,7 +1,7 @@
 ---
 version: alpha
 name: TillumiPOS
-description: A point-of-sale system in mint-teal on white. Deep teal accent, dense but readable data, usable with mouse, keyboard and touch screen.
+description: A point-of-sale system in mint-teal on white. Deep teal accent, roomy, readable data, usable with mouse, keyboard and touch screen.
 colors:
   background: "#ffffff"
   canvas: "#f7fbfa"
@@ -214,7 +214,7 @@ Size of tappable elements:
 | Context | Height |
 |---|---|
 | Buttons on management pages and in the page header | 36px |
-| A table row on a management page (`DataTable`) | About 52px, with hover |
+| A table row on a management page (`DataTable`) | About 52px for a row of text, about 60px when it holds an action button, with hover |
 | Buttons in a dialog | 40px |
 | Everything on the sales page and in the payment dialog | At least 44px |
 | The pay button | 56px |
