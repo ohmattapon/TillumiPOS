@@ -17,7 +17,7 @@ const API_PORT = 3290
 const WEB_PORT = 5390
 const WEB = `http://localhost:${WEB_PORT}`
 const PASSWORD = 'shots-owner-password'
-const root = new URL('../../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
+const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 const OUT = process.argv[2] ?? join(root, 'screenshots')
 
 const env = {
@@ -40,7 +40,7 @@ const env = {
 const children: ReturnType<typeof Bun.spawn>[] = []
 
 async function run(args: string[]) {
-  const child = Bun.spawn(['bun', ...args], { cwd: `${root}/apps/api`, env, stdout: 'pipe', stderr: 'pipe' })
+  const child = Bun.spawn(['bun', ...args], { cwd: `${root}/server`, env, stdout: 'pipe', stderr: 'pipe' })
   if ((await child.exited) !== 0) throw new Error(`${args.join(' ')}: ${await new Response(child.stderr).text()}`)
 }
 async function waitFor(url: string) {
@@ -68,9 +68,9 @@ async function main() {
   await admin.unsafe(`create database "${DB_NAME}"`)
   await admin.close()
   await run(['src/infrastructure/database/migrate.ts'])
-  children.push(Bun.spawn(['bun', 'src/index.ts'], { cwd: `${root}/apps/api`, env, stdout: 'ignore', stderr: 'inherit' }))
+  children.push(Bun.spawn(['bun', 'src/index.ts'], { cwd: `${root}/server`, env, stdout: 'ignore', stderr: 'inherit' }))
   children.push(Bun.spawn(['bun', 'x', 'vite', '--port', String(WEB_PORT), '--strictPort'], {
-    cwd: `${root}/apps/web`, env: { ...process.env, API_TARGET: `http://localhost:${API_PORT}` }, stdout: 'ignore', stderr: 'inherit',
+    cwd: root, env: { ...process.env, API_TARGET: `http://localhost:${API_PORT}` }, stdout: 'ignore', stderr: 'inherit',
   }))
   await waitFor(`http://localhost:${API_PORT}/api/v1/health`)
   await waitFor(WEB)

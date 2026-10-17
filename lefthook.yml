@@ -11,8 +11,7 @@ pre-commit:
       run: bun scripts/check-secret-files.ts {staged_files}
 
     - name: lint web
-      root: "apps/web/"
-      glob: "*.{ts,tsx}"
+      glob: "src/**/*.{ts,tsx}"
       run: bunx oxlint {staged_files}
 
 commit-msg:
@@ -32,9 +31,8 @@ pre-push:
     - name: api unit tests
       run: bun run test:unit
 
-    # Run from the repo root on purpose: a job with `root` is skipped when the push touches no file under it.
     - name: web unit tests
-      run: bun run --filter @pos/web test
+      run: bun run test:web
 
     - name: openapi contract
-      run: bun run --filter @pos/api openapi:check
+      run: bun run openapi:check

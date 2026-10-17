@@ -23,7 +23,7 @@ const WEB = `http://localhost:${WEB_PORT}`
 const SETUP_WEB = `http://localhost:${SETUP_WEB_PORT}`
 const OWNER_PASSWORD = 'e2e-owner-password'
 const CASHIER_PASSWORD = 'e2e-cashier-password'
-const root = new URL('../../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
+const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 
 const apiEnv = {
   ...process.env,
@@ -65,7 +65,7 @@ async function freshDatabase(name: string) {
 }
 
 async function runOnce(args: string[], env: Record<string, string | undefined> = apiEnv) {
-  const child = Bun.spawn(['bun', ...args], { cwd: `${root}/apps/api`, env, stdout: 'pipe', stderr: 'pipe' })
+  const child = Bun.spawn(['bun', ...args], { cwd: `${root}/server`, env, stdout: 'pipe', stderr: 'pipe' })
   if ((await child.exited) !== 0) throw new Error(`${args.join(' ')} failed: ${await new Response(child.stderr).text()}`)
 }
 
@@ -117,7 +117,7 @@ async function sellOneForCash(page: Page) {
 
 /** Starts an API and a web server on their own ports; returns what the API has printed so far. */
 function startServers(env: Record<string, string | undefined>, apiPort: number, webPort: number): () => string {
-  const api = Bun.spawn(['bun', 'src/index.ts'], { cwd: `${root}/apps/api`, env, stdout: 'pipe', stderr: 'inherit' })
+  const api = Bun.spawn(['bun', 'src/index.ts'], { cwd: `${root}/server`, env, stdout: 'pipe', stderr: 'inherit' })
   let printed = ''
   void (async () => {
     const decoder = new TextDecoder()
@@ -126,7 +126,7 @@ function startServers(env: Record<string, string | undefined>, apiPort: number, 
   children.push(api)
   children.push(
     Bun.spawn(['bun', 'x', 'vite', '--port', String(webPort), '--strictPort'], {
-      cwd: `${root}/apps/web`,
+      cwd: root,
       env: { ...process.env, API_TARGET: `http://localhost:${apiPort}` },
       stdout: 'ignore',
       stderr: 'inherit',

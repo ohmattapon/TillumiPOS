@@ -2,8 +2,8 @@
 // as a shell line because lefthook does not run hook commands through a shell on Windows.
 // Usage: bun scripts/check-secret-files.ts <staged file>...
 
-// .env.example holds placeholders and apps/api/.env.test is test-only config; both are meant to be tracked.
-const ALLOWED = new Set(['.env.example', 'apps/api/.env.test'])
+// .env.example holds placeholders and server/.env.test is test-only config; both are meant to be tracked.
+const ALLOWED = new Set(['.env.example', 'server/.env.test'])
 
 export function findSecretFiles(paths: readonly string[]): string[] {
   return paths
