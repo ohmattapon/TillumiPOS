@@ -7,5 +7,6 @@ export const authSchemas = {
     username: t.String({ minLength: 1 }),
     password: t.String({ minLength: 1 }),
   }),
+  setOwnPin: t.Object({ currentPassword: t.String(), pin: t.Union([t.String(), t.Null()]) }),
   loggedOut: t.Object({ ok: t.Boolean() }),
 }

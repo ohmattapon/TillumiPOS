@@ -7,6 +7,7 @@ import { DomainForbiddenError } from '../../../../domains/errors/domain-forbidde
 import { DomainUnauthorizedError } from '../../../../domains/errors/domain-unauthorized.error'
 import { AuthorizeSessionUseCase } from './authorize-session.usecase'
 import { LoginUseCase } from './login.usecase'
+import { SetOwnPinUseCase } from './set-own-pin.usecase'
 
 let repo: ReturnType<typeof mockUserRepository>
 
@@ -157,5 +158,63 @@ describe('granular session permissions', () => {
       },
     }).execute(1, { can: 'audit.read' })
     expect(result.permissions).toHaveLength(20)
+  })
+})
+
+describe('SetOwnPinUseCase', () => {
+  let useCase: SetOwnPinUseCase
+  let audit: ReturnType<typeof auditMock>
+  let hasher: ReturnType<typeof mockPasswordHasher>
+  const actor = { id: 3, displayName: 'สมชาย' }
+
+  beforeEach(() => {
+    audit = auditMock()
+    hasher = mockPasswordHasher()
+    repo.findPasswordHashById.mockResolvedValue('hashed:my-password')
+    repo.setPinHash.mockResolvedValue(undefined)
+    repo.findById.mockResolvedValue(makeUser({ id: 3, hasPin: true }))
+    useCase = new SetOwnPinUseCase(repo, hasher, auditUnitOfWork(), audit)
+  })
+
+  test('the right password sets the PIN and audits it without secrets', async () => {
+    const user = await useCase.execute({ currentPassword: 'my-password', pin: '4321' }, actor)
+
+    expect(repo.setPinHash).toHaveBeenCalledWith(3, 'hashed:4321')
+    expect(user.hasPin).toBe(true)
+    const entry = audit.record.mock.calls[0]![2]
+    expect(entry.action).toBe('user.pin_set')
+    expect(JSON.stringify(entry)).not.toContain('4321')
+    expect(JSON.stringify(entry)).not.toContain('my-password')
+  })
+
+  test('null clears the PIN', async () => {
+    await useCase.execute({ currentPassword: 'my-password', pin: null }, actor)
+
+    expect(repo.setPinHash).toHaveBeenCalledWith(3, null)
+    expect(audit.record.mock.calls[0]![2].action).toBe('user.pin_cleared')
+  })
+
+  test('a wrong current password is a 400-class DomainError, not unauthorized, and writes nothing', async () => {
+    const attempt = useCase.execute({ currentPassword: 'nope', pin: '4321' }, actor)
+
+    await expect(attempt).rejects.toMatchObject({ code: 'INVALID_PASSWORD' })
+    await expect(attempt).rejects.not.toBeInstanceOf(DomainUnauthorizedError)
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+    expect(audit.record).not.toHaveBeenCalled()
+  })
+
+  test('an invalid PIN is rejected without writing', async () => {
+    await expect(useCase.execute({ currentPassword: 'my-password', pin: '12' }, actor)).rejects.toMatchObject({ code: 'INVALID_PIN' })
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+  })
+
+  test('a missing password hash is treated as a wrong password', async () => {
+    repo.findPasswordHashById.mockResolvedValue(null)
+
+    await expect(useCase.execute({ currentPassword: 'my-password', pin: '4321' }, actor)).rejects.toMatchObject({ code: 'INVALID_PASSWORD' })
+  })
+
+  test('requires a current password', async () => {
+    await expect(useCase.execute({ pin: '4321' }, actor)).rejects.toBeInstanceOf(ZodError)
   })
 })

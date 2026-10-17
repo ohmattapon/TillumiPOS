@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { container } from 'tsyringe'
-import { resetDatabase } from '../../../test/harness'
+import { ok, PASSWORD, resetDatabase, signIn } from '../../../test/harness'
 import { DomainNotFoundError } from '../../domains/errors/domain-not-found.error'
 import '../../modules/di-registrations'
 import type { IUnitOfWork } from '../../modules/shared/ports/unit-of-work.port'
@@ -90,5 +90,63 @@ describe('user PIN storage', () => {
 
     expect(await run(() => users.findPasswordHashById(user.id))).toBe('password-hash')
     expect(await run(() => users.findPasswordHashById(9999))).toBeNull()
+  })
+})
+
+describe('setting PINs over HTTP', () => {
+  test('an owner sets a cashier PIN; hasPin shows in the response and in the list, never the PIN', async () => {
+    const owner = await signIn('owner')
+    const cashier = await signIn('cashier')
+
+    const response = ok(await owner.api.users({ id: cashier.user.id }).pin.put({ pin: '4321' }))
+
+    expect(response.hasPin).toBe(true)
+    expect(JSON.stringify(response)).not.toContain('4321')
+    const listed = ok(await owner.api.users.get()).items.find((item) => item.id === cashier.user.id)!
+    expect(listed.hasPin).toBe(true)
+  })
+
+  test('an owner clears a PIN with null', async () => {
+    const owner = await signIn('owner')
+    const cashier = await signIn('cashier')
+    ok(await owner.api.users({ id: cashier.user.id }).pin.put({ pin: '4321' }))
+
+    expect(ok(await owner.api.users({ id: cashier.user.id }).pin.put({ pin: null })).hasPin).toBe(false)
+  })
+
+  test('an invalid PIN answers 400 INVALID_PIN', async () => {
+    const owner = await signIn('owner')
+    const cashier = await signIn('cashier')
+
+    const result = await owner.api.users({ id: cashier.user.id }).pin.put({ pin: '12' })
+
+    expect(result.status).toBe(400)
+    expect(result.error?.value).toMatchObject({ code: 'INVALID_PIN' })
+  })
+
+  test('a cashier cannot set another user PIN', async () => {
+    const owner = await signIn('owner')
+    const cashier = await signIn('cashier')
+
+    expect((await cashier.api.users({ id: owner.user.id }).pin.put({ pin: '4321' })).status).toBe(403)
+  })
+
+  test('a user changes their own PIN with the current password; /auth/me shows hasPin', async () => {
+    const cashier = await signIn('cashier')
+
+    const response = ok(await cashier.api.auth.me.pin.put({ currentPassword: PASSWORD, pin: '654321' }))
+
+    expect(response.hasPin).toBe(true)
+    expect(ok(await cashier.api.auth.me.get()).hasPin).toBe(true)
+  })
+
+  test('a wrong current password answers 400 INVALID_PASSWORD and the session still works', async () => {
+    const cashier = await signIn('cashier')
+
+    const result = await cashier.api.auth.me.pin.put({ currentPassword: 'wrong-password', pin: '4321' })
+
+    expect(result.status).toBe(400)
+    expect(result.error?.value).toMatchObject({ code: 'INVALID_PASSWORD' })
+    expect(ok(await cashier.api.auth.me.get()).hasPin).toBe(false)
   })
 })

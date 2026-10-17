@@ -74,7 +74,7 @@ export class UserEntity {
     return after.role !== 'owner' || !after.isActive
   }
 
-  toSnapshot(): UserEntityProps {
+  toSnapshot(): UserEntityProps & { hasPin: boolean } {
     return {
       id: this.id,
       username: this.username,

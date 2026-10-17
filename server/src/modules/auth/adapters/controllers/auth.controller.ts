@@ -3,12 +3,16 @@ import { inject, injectable } from 'tsyringe'
 import { env } from '../../../../libs/env'
 import { auth, SESSION_COOKIE, SESSION_MAX_AGE } from '../../../auth.plugin'
 import { userSchemas } from '../../../users/adapters/controllers/schemas/user.schema'
+import { SetOwnPinUseCase } from '../../applications/usecases/set-own-pin.usecase'
 import { LoginUseCase } from '../../applications/usecases/login.usecase'
 import { authSchemas } from './schemas/auth.schema'
 
 @injectable()
 export class AuthElysiaController {
-  constructor(@inject(LoginUseCase) private readonly login: LoginUseCase) {}
+  constructor(
+    @inject(LoginUseCase) private readonly login: LoginUseCase,
+    @inject(SetOwnPinUseCase) private readonly setOwnPin: SetOwnPinUseCase,
+  ) {}
 
   getRoutes() {
     return new Elysia({ name: 'auth-module', prefix: '/auth', detail: { tags: ['Auth'] } })
@@ -44,5 +48,18 @@ export class AuthElysiaController {
         response: authSchemas.me,
         detail: { summary: 'ข้อมูลผู้ใช้ที่เข้าสู่ระบบอยู่' },
       })
+      .put(
+        '/me/pin',
+        async ({ body, user }) => {
+          const updated = await this.setOwnPin.execute(body, user)
+          return { ...updated.toSnapshot(), roleId: updated.roleId! }
+        },
+        {
+          auth: true,
+          body: authSchemas.setOwnPin,
+          response: userSchemas.user,
+          detail: { summary: 'ตั้งหรือลบ PIN ของตนเอง ต้องยืนยันด้วยรหัสผ่านปัจจุบัน' },
+        },
+      )
   }
 }
