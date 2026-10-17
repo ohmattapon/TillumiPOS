@@ -157,7 +157,7 @@ function OptionFormDialog({
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (!canSave || priceSatang === null || costSatang === null || order === null) return
-    const input = { name: name.trim(), priceSatang, costSatang, sortOrder: order }
+    const input = { name: name.trim(), priceSatang, costSatang, sortOrder: order, isDefault: option?.isDefault ?? false }
     const done = (saved: { name: string }) => {
       toast.success(t(option ? 'toast.optionUpdated' : 'toast.optionCreated', { name: saved.name }))
       onClose()
@@ -311,8 +311,8 @@ export function ModifiersPage() {
               {(options) => (
                 <ul className="divide-y">
                   {group.options.length === 0 && (
-                    <li className="px-4 py-6 text-center text-sm text-muted-foreground">{t('noOptions')}</li>
-                  )}
+                      <li className="px-4 py-6 text-center text-sm text-muted-foreground">{t('noOptions')}</li>
+                    )}
                   {options.map((option) => (
                     <li
                       key={option.id}
@@ -320,6 +320,21 @@ export function ModifiersPage() {
                     >
                       <span className="min-w-0 flex-1 truncate font-medium">{option.name}</span>
                       {!option.isActive && <StatusBadge tone="neutral">{t('option.inactive')}</StatusBadge>}
+                      <label className="flex min-h-11 items-center gap-2 text-xs">
+                        <input
+                          type="checkbox"
+                          className="size-5 accent-primary"
+                          checked={option.isDefault}
+                          aria-label={t('option.setDefault', { name: option.name })}
+                          onChange={() =>
+                            updateOption.mutate(
+                              { id: option.id, changes: { isDefault: !option.isDefault } },
+                              { onError },
+                            )
+                          }
+                        />
+                        <span className="hidden sm:inline">{t('option.default')}</span>
+                      </label>
                       <span className="text-sm tabular-nums">
                         {option.priceSatang > 0 ? `+${money.plain(option.priceSatang)}` : t('option.free')}
                       </span>
@@ -344,6 +359,9 @@ export function ModifiersPage() {
                       </DropdownMenu>
                     </li>
                   ))}
+                  {group.options.length > 0 && (
+                    <li className="px-4 py-2 text-xs text-muted-foreground">{t('group.defaultHint')}</li>
+                  )}
                 </ul>
               )}
             </PaginatedItems>
