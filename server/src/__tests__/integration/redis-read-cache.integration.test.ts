@@ -100,6 +100,24 @@ describe('RedisReadCache against a real Redis', () => {
     expect(await cache.lookup('products', 'list')).toBeNull()
   })
 
+  test('a command that outlasts the timeout is given up, and the read falls back to the database', async () => {
+    const warn = spyOn(console, 'warn').mockImplementation(() => {})
+    // The timer is fired at once instead of waiting 500 ms, so the timeout wins the race with Redis.
+    const timer = spyOn(globalThis, 'setTimeout').mockImplementation(((run: () => void, ms?: number) => {
+      if (ms === TIMEOUT_MS) run()
+      return 0
+    }) as unknown as typeof setTimeout)
+    let warnings = 0
+    try {
+      expect(await cacheFor().lookup('products', 'list')).toBeNull()
+      warnings = warn.mock.calls.length
+    } finally {
+      timer.mockRestore()
+      warn.mockRestore()
+    }
+    expect(warnings).toBe(1)
+  })
+
   test('without a URL there is no cache', async () => {
     const cache = cacheFor(null)
 
