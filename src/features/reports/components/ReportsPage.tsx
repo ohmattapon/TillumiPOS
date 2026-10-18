@@ -10,11 +10,12 @@ import { Panel } from '@/components/Panel'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { reportQuery, productsReportQuery, readReport, readProducts } from '../api'
-import { validRange, todayInTimeZone, type ReportFilters as Filters } from '../lib/date-range'
+import { validRange, type ReportFilters as Filters } from '../lib/date-range'
 import { collectPages } from '../lib/collect-pages'
 import { ReportFilters } from './ReportFilters'
 import { ReportDataTable } from './ReportDataTable'
 import { PaginationBar } from '@/components/PaginationBar'
+import { todayIn } from '@/lib/calendar-date'
 import { DailySalesChart } from './DailySalesChart'
 
 export function ReportsPage() {
@@ -22,10 +23,10 @@ export function ReportsPage() {
   const { t: tc } = useTranslation()
   const shop = useSettings()
   const settings = useQuery(settingsQuery)
-  const { money, currency, locale } = useFormat()
+  const { money, currency, locale, date } = useFormat()
   const [params, setParams] = useSearchParams()
   const [exporting, setExporting] = useState(false)
-  const today = todayInTimeZone(shop.timeZone)
+  const today = todayIn(shop.timeZone)
   const filters: Filters = {
     from: params.get('from') ?? today.slice(0, 7) + '-01',
     to: params.get('to') ?? today,
@@ -68,7 +69,6 @@ export function ReportsPage() {
   const failure = (error: Error | null, retry: () => void) => error ? <div role="alert" className="flex items-center gap-3 p-4 text-sm text-destructive">
     <span>{error.message}</span><Button variant="outline" size="sm" onClick={retry}>{t('retry')}</Button>
   </div> : null
-  const day = new Intl.DateTimeFormat(locale === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'UTC' })
   return (
     <>
       <PageHeader title={t('title')} description={t('description')}>
@@ -110,7 +110,7 @@ export function ReportsPage() {
               {report.data ? <>
                 <DailySalesChart days={report.data.days.items} />
                 <ReportDataTable headers={[t('day'), t('bills'), t('revenue'), t('profit')]}
-                  rows={report.data.days.items.map((row) => [day.format(new Date(row.day)), row.saleCount, money.plain(row.totalSatang), money.plain(row.profitSatang)])} />
+                  rows={report.data.days.items.map((row) => [date.calendarDateShortYear(row.day), row.saleCount, money.plain(row.totalSatang), money.plain(row.profitSatang)])} />
               </> : <Skeleton className="m-4 h-48" />}
             </Panel>
             <Panel title={t('methods')} description={t('methodNote')}>

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { createMoney } from '@/lib/money'
 import {
-  bpToPercent, emptyPromotionForm, fromPromotion, minuteOf, percentToBp, timeOf, toBody, todayIn, weekdayName,
+  bpToPercent, emptyPromotionForm, fromPromotion, minuteOf, percentToBp, timeOf, toBody, weekdayName,
   type PromotionForm,
 } from './promotion-form'
 
@@ -37,12 +37,7 @@ describe('time of day', () => {
   test.each(['24:00', '9:00', '12:60', '', 'noon'])('%p is not a time', (input) => expect(minuteOf(input)).toBeNull())
 })
 
-describe('today and weekday names', () => {
-  test('today is the date in the shop time zone', () => {
-    expect(todayIn('Asia/Bangkok', new Date('2026-10-15T17:30:00Z'))).toBe('2026-10-16')
-    expect(todayIn('UTC', new Date('2026-10-15T17:30:00Z'))).toBe('2026-10-15')
-  })
-
+describe('weekday names', () => {
   test('0 is Sunday in either language', () => {
     expect(weekdayName('en', 0)).toBe('Sun')
     expect(weekdayName('en', 6)).toBe('Sat')

@@ -13,10 +13,11 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useFormat, useSettings } from '@/features/settings'
+import { todayIn } from '@/lib/calendar-date'
 import { cn } from '@/lib/utils'
 import { useCreatePromotion, useUpdatePromotion, type Promotion } from '../api'
 import {
-  emptyPromotionForm, fromPromotion, toBody, todayIn, weekdayName,
+  emptyPromotionForm, fromPromotion, toBody, weekdayName,
   type PromotionForm,
 } from '../lib/promotion-form'
 import { emptyScope, scopeOf, scopeToBody, type ScopeSelection } from '../lib/promotion-scope'
