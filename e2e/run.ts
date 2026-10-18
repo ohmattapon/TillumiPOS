@@ -201,8 +201,17 @@ async function runSetupFlow(browser: Browser) {
       }
       if (code === undefined) throw new Error('The API did not print a setup code')
       await page.getByLabel('รหัสตั้งค่า', { exact: true }).fill(code)
-      await page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' }).click()
+      const promptpay = page.getByLabel('พร้อมเพย์สำหรับรับเงิน (ไม่บังคับ)', { exact: true })
+      const submit = page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' })
+      await promptpay.fill('123')
+      if (await submit.isEnabled()) throw new Error('Setup can be sent with a PromptPay number that is not valid')
+      await promptpay.fill('0812345678')
+      await submit.click()
       await page.getByRole('heading', { name: /ขายสินค้า/ }).waitFor()
+      // The number is saved right after setup, by the owner who has just been signed in: the shop takes a static QR.
+      const settings = await (await page.request.get(`${SETUP_WEB}/api/v1/settings`)).json()
+      if (settings.promptpayMode !== 'static' || settings.promptpayTarget !== '0812345678')
+        throw new Error(`The PromptPay number was not saved: ${JSON.stringify([settings.promptpayMode, settings.promptpayTarget])}`)
     })
 
     await check('after a reload the owner is still signed in and the setup page is gone', async () => {

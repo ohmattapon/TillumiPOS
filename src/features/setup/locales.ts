@@ -10,6 +10,12 @@ const th = {
   passwordHint: 'อย่างน้อย 10 ตัวอักษร',
   confirm: 'ยืนยันรหัสผ่าน',
   mismatch: 'รหัสผ่านสองช่องไม่ตรงกัน',
+  promptpay: {
+    label: 'พร้อมเพย์สำหรับรับเงิน (ไม่บังคับ)',
+    hint: 'เบอร์มือถือ 10 หลัก หรือเลขบัตร 13 หลัก ใช้ทำ QR ให้ลูกค้าสแกนจ่ายเข้าบัญชีนี้ ใส่ทีหลังได้ในตั้งค่าร้าน',
+    invalid: 'ต้องเป็นเบอร์มือถือ 10 หลักขึ้นต้นด้วย 0 หรือเลขบัตร 13 หลัก เฉพาะตัวเลข',
+  },
+  promptpayFailed: 'ตั้งค่าร้านเสร็จแล้ว แต่ยังบันทึกเลขพร้อมเพย์ไม่ได้ กรุณากรอกในตั้งค่าร้าน',
   submit: 'ตั้งค่าและเข้าสู่ระบบ',
   submitting: 'กำลังตั้งค่า…',
   shopType: {
@@ -35,6 +41,12 @@ const en = {
   passwordHint: 'At least 10 characters',
   confirm: 'Confirm password',
   mismatch: 'The two passwords do not match',
+  promptpay: {
+    label: 'PromptPay to receive money (optional)',
+    hint: 'A 10-digit mobile number or a 13-digit ID. It is used to make the QR customers scan to pay this account. You can add it later in shop settings.',
+    invalid: 'Must be a 10-digit mobile number starting with 0, or a 13-digit ID. Digits only.',
+  },
+  promptpayFailed: 'The shop is set up, but the PromptPay number could not be saved. Please enter it in the shop settings.',
   submit: 'Set up and sign in',
   submitting: 'Setting up…',
   shopType: {
