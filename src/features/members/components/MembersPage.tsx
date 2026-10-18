@@ -23,9 +23,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCan } from '@/features/auth'
-import { Receipt } from '@/features/sales'
+import { Receipt, saleQuery } from '@/features/sales'
 import { useFormat, useSettings } from '@/features/settings'
-import { api, unwrap } from '@/lib/api'
 import { memberHistoryQuery, memberQuery, membersQuery, useUpdateMember } from '../api'
 import { MemberFormDialog } from './MemberFormDialog'
 
@@ -145,11 +144,7 @@ export function MemberDetailsPage() {
   const [status, setStatus] = useState('all')
   const [page, setPage] = useState(0)
   const [receiptId, setReceiptId] = useState<number | null>(null)
-  const receipt = useQuery({
-    queryKey: ['sales', 'detail', receiptId],
-    queryFn: () => unwrap(api.sales({ id: receiptId! }).get()),
-    enabled: receiptId !== null,
-  })
+  const receipt = useQuery({ ...saleQuery(receiptId ?? 0), enabled: receiptId !== null })
   const history = useQuery({
     ...memberHistoryQuery(
       id,
