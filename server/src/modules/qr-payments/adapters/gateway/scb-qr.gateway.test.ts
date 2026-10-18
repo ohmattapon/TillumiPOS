@@ -68,6 +68,13 @@ describe('ScbQrGateway.findPayment', () => {
     await expect(find(reference)).rejects.toMatchObject({ code: 'QR_GATEWAY_ERROR' })
   })
 
+  test('an outage answered with a web page instead of JSON is a failure too', async () => {
+    const reference = await qr()
+    fakeScb.setFailing(502, { html: true })
+
+    await expect(find(reference)).rejects.toMatchObject({ code: 'QR_GATEWAY_ERROR' })
+  })
+
   test('a bank that stops accepting the token gets a fresh one and the call still works', async () => {
     // One gateway throughout: it is the instance that holds the token between calls.
     const bank = gateway()
