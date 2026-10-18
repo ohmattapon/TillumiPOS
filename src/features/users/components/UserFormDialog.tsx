@@ -6,12 +6,12 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useCreateUser, useUpdateUser } from '../api'
-
-const MIN_PASSWORD = 8
+import { validateUserForm, type UserFormError, type UserFormField } from '../lib/validate-user-form'
 
 interface Props {
   /** Omit to add a new user. */
@@ -29,20 +29,35 @@ export function UserFormDialog({ user, onClose }: Props) {
     roleId: user?.roleId ? String(user.roleId) : '',
     password: '',
   })
-  const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm({ ...form, [key]: value })
+  const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
+    setForm({ ...form, [key]: value })
+    if (key === 'username' || key === 'displayName' || key === 'password')
+      setErrors((previous) => ({ ...previous, [key]: undefined }))
+  }
 
   const create = useCreateUser()
   const update = useUpdateUser()
   const mutation = user ? update : create
 
-  // A new user needs a password; an existing one keeps theirs unless a new one is typed.
-  const passwordOk = user ? form.password === '' || form.password.length >= MIN_PASSWORD : form.password.length >= MIN_PASSWORD
+  const isNew = user === undefined
+  const [errors, setErrors] = useState<Partial<Record<UserFormField, UserFormError>>>({})
+
+  const fieldMessage = (field: UserFormField): string | undefined => {
+    const error = errors[field]
+    if (!error) return undefined
+    if (field === 'username') return error === 'required' ? t('form.usernameRequired') : t('form.usernameInvalid')
+    if (field === 'displayName') return t('form.displayNameRequired')
+    return error === 'required' ? t('form.passwordRequired') : t('form.passwordTooShort')
+  }
+
   const selectedRoleId = form.roleId || String(roles.data?.find((role) => role.systemKey === 'cashier')?.id ?? '')
-  const canSave = form.displayName.trim() !== '' && selectedRoleId !== '' && passwordOk && !mutation.isPending && !roles.isPending && !roles.error
+  const canSave = selectedRoleId !== '' && !mutation.isPending && !roles.isPending && !roles.error
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    if (!canSave) return
+    const found = validateUserForm({ ...form, isNew })
+    setErrors(found)
+    if (Object.keys(found).length > 0 || !canSave) return
     const displayName = form.displayName.trim()
 
     if (user)
@@ -75,7 +90,7 @@ export function UserFormDialog({ user, onClose }: Props) {
           <DialogDescription>{user ? t('form.descriptionEdit') : t('form.descriptionNew')}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col gap-4">
+        <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col gap-4">
           {/* Only the fields scroll, so the confirm row stays at the bottom of the dialog. */}
           <div className="-mx-4 min-h-0 flex-1 overflow-y-auto px-4 space-y-4">
             <div className="space-y-2">
@@ -87,13 +102,13 @@ export function UserFormDialog({ user, onClose }: Props) {
                 onChange={(event) => set('username', event.target.value)}
                 disabled={user !== undefined}
                 autoComplete="off"
-                minLength={3}
                 maxLength={32}
-                pattern="[a-zA-Z0-9_.\-]+"
-                required
                 autoFocus={user === undefined}
+                aria-invalid={errors.username !== undefined}
+                aria-describedby={errors.username ? 'user-username-error' : undefined}
               />
               {!user && <p className="text-xs text-muted-foreground">{t('form.usernameHint')}</p>}
+              {fieldMessage('username') && <FieldError id="user-username-error">{fieldMessage('username')}</FieldError>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="user-display-name">{t('form.displayName')}</Label>
@@ -103,9 +118,11 @@ export function UserFormDialog({ user, onClose }: Props) {
                 value={form.displayName}
                 onChange={(event) => set('displayName', event.target.value)}
                 maxLength={100}
-                required
                 autoFocus={user !== undefined}
+                aria-invalid={errors.displayName !== undefined}
+                aria-describedby={errors.displayName ? 'user-display-name-error' : undefined}
               />
+              {fieldMessage('displayName') && <FieldError id="user-display-name-error">{fieldMessage('displayName')}</FieldError>}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -133,11 +150,12 @@ export function UserFormDialog({ user, onClose }: Props) {
                 value={form.password}
                 onChange={(event) => set('password', event.target.value)}
                 autoComplete="new-password"
-                aria-invalid={!passwordOk && form.password !== ''}
+                aria-invalid={errors.password !== undefined}
+                aria-describedby={errors.password ? 'user-password-error' : undefined}
                 maxLength={72}
-                required={user === undefined}
               />
               <p className="text-xs text-muted-foreground">{t('form.passwordHint')}</p>
+              {fieldMessage('password') && <FieldError id="user-password-error">{fieldMessage('password')}</FieldError>}
             </div>
 
             {roles.error && <p role="alert" className="text-sm text-destructive">{roles.error.message}</p>}
