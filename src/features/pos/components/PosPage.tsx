@@ -1,6 +1,6 @@
 import type { Sale } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, LayoutGrid, Monitor, MonitorSmartphone, MoreHorizontal } from 'lucide-react'
+import { ClipboardList, LayoutGrid, Monitor, MonitorSmartphone, MoreHorizontal, UserRoundCog } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/PageHeader'
@@ -21,7 +21,7 @@ import {
   useCustomerDisplayPublisher,
 } from '@/features/customer-display'
 import { checkoutModeQuery, currentShiftQuery, registersQuery, useRegisterSelectionStore } from '@/features/shifts'
-import { meQuery } from '@/features/auth'
+import { meQuery, SwitchStaffDialog, useLogout } from '@/features/auth'
 import { useNavigate } from 'react-router'
 import type { PaymentInput, PaymentMethod } from '@/lib/money'
 import { useCreateQuote } from '@/features/promotions'
@@ -59,6 +59,10 @@ export function PosPage() {
   const currentShift = useQuery({ ...currentShiftQuery(selectedRegisterId ?? 0), enabled: selectedRegisterId !== undefined })
   const needsShift = checkoutMode.data?.checkoutMode === 'shifts'
   const shiftReady = checkoutMode.data?.checkoutMode === 'legacy' || (needsShift && currentShift.data?.status === 'open')
+  const [isSwitching, setIsSwitching] = useState(false)
+  const handOver = useRegisterSelectionStore((state) => state.handOver)
+  const clearRegisterSelection = useRegisterSelectionStore((state) => state.clear)
+  const logout = useLogout()
   const [isListingOrders, setIsListingOrders] = useState(false)
   const [isChoosingTable, setIsChoosingTable] = useState(false)
   const [isSavingOrder, setIsSavingOrder] = useState(false)
@@ -193,6 +197,13 @@ export function PosPage() {
     <>
       <PageHeader title={t('title')} highlight={date.longDate(today)} description={t('description')}>
         {/* Wide screens keep the buttons in the header; smaller screens put the same actions in one menu. */}
+        {me && <span className="hidden max-w-48 truncate text-sm text-muted-foreground sm:inline">{t('header.sellingAs', { name: me.displayName })}</span>}
+        {/* On phones the "selling as" line does not fit, so the seller's name sits in the switch button itself. */}
+        <Button variant="outline" className="h-11 px-3" onClick={() => setIsSwitching(true)}>
+          <UserRoundCog />
+          {me && <span className="max-w-28 truncate sm:hidden">{me.displayName}</span>}
+          <span className="max-sm:sr-only">{t('header.switchStaff')}</span>
+        </Button>
         <div className="hidden items-center gap-2 sm:flex">
           {needsShift && (
             <Button variant="outline" className="h-11 px-3" onClick={() => navigate('/shifts')}>
@@ -296,6 +307,12 @@ export function PosPage() {
         />
       )}
 
+      <SwitchStaffDialog
+        open={isSwitching}
+        onOpenChange={setIsSwitching}
+        onSwitched={(newUserId) => handOver(newUserId, selectedRegisterId)}
+        onUsePassword={() => logout.mutate(undefined, { onSuccess: () => { clearCart(); clearRegisterSelection() } })}
+      />
       {receipt && <ReceiptDialog sale={receipt} onClose={closeReceipt} />}
       {isListingOrders && <OpenOrdersDialog onClose={() => setIsListingOrders(false)} />}
       <PairDisplayDialog open={isPairingDisplay} onOpenChange={setIsPairingDisplay} registerId={selectedRegisterId} />

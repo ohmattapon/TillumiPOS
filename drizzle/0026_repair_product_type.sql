@@ -1,6 +1,6 @@
--- A different checkout on the same server advanced the migration ledger past 0022, so the migrator
--- skipped drizzle/0022_product_type.sql there and products.product_type is missing. Repair it here, in
--- one block that is safe to run repeatedly and on a database where 0022 already applied: the column is
+-- A different checkout on the same server advanced the migration ledger past 0025, so the migrator
+-- skipped drizzle/0025_product_type.sql there and products.product_type is missing. Repair it here, in
+-- one block that is safe to run repeatedly and on a database where 0025 already applied: the column is
 -- added only when missing, the allowed-values check only when absent, and the audited starter backfill
 -- runs only for a column this repair just created, so a classification changed afterwards survives.
 DO $$

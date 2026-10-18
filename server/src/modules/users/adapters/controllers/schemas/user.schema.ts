@@ -12,7 +12,9 @@ export const userSchemas = {
     roleId: t.Integer(),
     branchId: t.Integer(),
     isActive: t.Boolean(),
+    hasPin: t.Boolean(),
   }),
+  setPin: t.Object({ pin: t.Union([t.String(), t.Null()]) }),
   create: t.Object({
     username: t.String({ minLength: 3, maxLength: 32, pattern: '^[a-zA-Z0-9_.-]+$' }),
     password,

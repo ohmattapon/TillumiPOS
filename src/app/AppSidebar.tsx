@@ -7,6 +7,7 @@ import {
   ChefHat,
   ChevronsUpDown,
   LayoutGrid,
+  KeyRound,
   LogOut,
   Package,
   Palette,
@@ -19,6 +20,7 @@ import {
   ShoppingCart,
   SlidersHorizontal,
   WalletCards,
+  MonitorPlay,
   BadgePercent,
   Tags,
   UserRound,
@@ -28,6 +30,7 @@ import {
   Utensils,
   type LucideIcon,
 } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, useLocation } from 'react-router'
 import {
@@ -57,7 +60,7 @@ import {
 } from '@/components/ui/sidebar'
 import { LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
 import { useFeatures, useSettings } from '@/features/settings'
-import { useAuthorization } from '@/features/auth'
+import { OwnPinDialog, useAuthorization } from '@/features/auth'
 import { themes, useTheme, type Theme } from './theme'
 
 interface NavItem {
@@ -74,11 +77,13 @@ const activeItem =
 
 export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => void }) {
   const { t } = useTranslation('app')
+  const { t: ta } = useTranslation('auth')
   const { pathname } = useLocation()
   const { shopName, homeView } = useSettings()
   const { theme, setTheme } = useTheme()
   const { can, user: currentUser } = useAuthorization()
   const features = useFeatures()
+  const [pinOpen, setPinOpen] = useState(false)
   const products = useQuery(productsQuery({ stockAtMost: LOW_STOCK_THRESHOLD, limit: 1 }))
   const lowStockCount = products.data?.total ?? 0
 
@@ -98,6 +103,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
         ...(can('reports.read') ? [{ to: '/reports', label: t('nav.reports'), icon: ChartNoAxesCombined }] : []),
         { to: '/members', label: t('nav.members'), icon: UserRound },
         { to: '/promotions', label: t('nav.promotions'), icon: BadgePercent },
+        ...(can('promotions.write') ? [{ to: '/display-slides', label: t('nav.displaySlides'), icon: MonitorPlay }] : []),
         { to: '/shifts', label: t('nav.shifts'), icon: WalletCards },
       ],
     },
@@ -208,6 +214,10 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => setPinOpen(true)}>
+                  <KeyRound />
+                  {ta('pin.setOwn')}
+                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={onLogout}>
                   <LogOut />
                   {t('logout')}
@@ -217,6 +227,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+      {pinOpen && <OwnPinDialog hasPin={currentUser?.hasPin ?? false} onClose={() => setPinOpen(false)} />}
     </Sidebar>
   )
 }

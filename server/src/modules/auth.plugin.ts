@@ -10,7 +10,7 @@ import { env } from '../libs/env'
 import { AuthorizeSessionUseCase } from './auth/applications/usecases/authorize-session.usecase'
 import { ResolveBranchUseCase } from './branches/applications/usecases/resolve-branch.usecase'
 
-export type AuthUser = UserEntityProps & { roleId: number; roleName: string; permissions: Permission[] }
+export type AuthUser = UserEntityProps & { hasPin: boolean; roleId: number; roleName: string; permissions: Permission[] }
 
 export const SESSION_COOKIE = 'session'
 export const SESSION_MAX_AGE = 60 * 60 * 12
