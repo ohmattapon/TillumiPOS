@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { makeBranch, makeModifierGroup, makeModifierOption, makeSlide, makeTable } from '../factories'
+import { makeBranch, makeModifierGroup, makeModifierOption, makeSlide, makeTable, makeUser } from '../factories'
 import { DomainConflictError } from '../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../domains/errors/domain-not-found.error'
 import { MemberEntity } from '../../domains/member.domain'
@@ -11,8 +11,15 @@ import { DrizzleModifierRepository } from '../../modules/modifiers/adapters/repo
 import { DrizzlePromotionRepository } from '../../modules/promotions/adapters/repository/promotion.drizzle.repository'
 import { DrizzleSlideRepository } from '../../modules/display-slides/adapters/repository/slide.drizzle.repository'
 import { DrizzleTableRepository } from '../../modules/tables/adapters/repository/table.drizzle.repository'
+import { DrizzleQrAttemptRepository } from '../../modules/qr-payments/adapters/repository/qr-attempt.drizzle.repository'
+import { DrizzleProductRepository } from '../../modules/products/adapters/repository/product.drizzle.repository'
+import { DrizzleRegisterRepository } from '../../modules/shifts/adapters/repository/register.drizzle.repository'
+import { DrizzleRoleRepository } from '../../modules/roles/adapters/repository/role.drizzle.repository'
+import { DrizzleStockReceiptRepository } from '../../modules/stock-receipts/adapters/repository/stock-receipt.drizzle.repository'
+import { DrizzleUserRepository } from '../../modules/users/adapters/repository/user.drizzle.repository'
 import { runInTransaction } from '../../libs/transaction-context'
-import { resetDatabase } from '../../../test/harness'
+import { makeProduct } from '../factories'
+import { ok, resetDatabase, seedProduct, signIn } from '../../../test/harness'
 
 /**
  * Database errors that the use cases' own checks normally prevent (a duplicate name that was free a moment
@@ -167,5 +174,115 @@ describe('promotions', () => {
 
     expect(withImage.imageKey).toBe(`promotions/${created.id}/a.png`)
     await expect(promotions.setImageKey(9999, null)).rejects.toMatchObject({ code: 'PROMOTION_NOT_FOUND' })
+  })
+})
+
+describe('branches that no route reaches any more', () => {
+  const branches = new DrizzleBranchRepository()
+
+  test('a branch is updated in place and counted while active, and its code stays', async () => {
+    const main = (await branches.findMain())!
+
+    const updated = await branches.update(makeBranch({ id: main.id, code: 'CHANGED', name: 'สาขาใหม่', isActive: false }))
+
+    expect(updated).toMatchObject({ id: main.id, code: 'MAIN', name: 'สาขาใหม่', isActive: false })
+    expect(await branches.countActive()).toBe(0)
+  })
+})
+
+describe('registers', () => {
+  const registers = new DrizzleRegisterRepository()
+
+  test('the MAIN register of a branch is created once, however often it is asked for', async () => {
+    await registers.createMainForBranch(1)
+    await registers.createMainForBranch(1)
+
+    expect((await registers.findAll(1)).filter((register) => register.code === 'MAIN')).toHaveLength(1)
+  })
+
+  test('a register is busy while a shift of it is open', async () => {
+    const previousMode = Bun.env.CHECKOUT_MODE
+    Bun.env.CHECKOUT_MODE = 'shifts'
+    try {
+      const owner = await signIn('owner')
+      const register = ok(await owner.apiV2.registers.get()).items[0]!
+      expect(await registers.hasOpenShift(register.id)).toBe(false)
+
+      ok(await owner.apiV2.shifts.post({ registerId: register.id, openingCashSatang: 0 }, { headers: { 'idempotency-key': crypto.randomUUID() } }))
+
+      expect(await registers.hasOpenShift(register.id)).toBe(true)
+    } finally {
+      if (previousMode === undefined) delete Bun.env.CHECKOUT_MODE
+      else Bun.env.CHECKOUT_MODE = previousMode
+    }
+  })
+})
+
+describe('users and roles', () => {
+  const users = new DrizzleUserRepository()
+  const roles = new DrizzleRoleRepository()
+
+  test('a user cannot be created or moved to a role that no longer exists', async () => {
+    const created = await users.create(makeUser({ id: 0, username: 'somchai', roleId: (await signIn('cashier')).user.roleId! }), 'hash')
+
+    await expect(users.create(makeUser({ id: 0, username: 'other', roleId: 99999 }), 'hash')).rejects.toBeInstanceOf(DomainConflictError)
+    await expect(users.update(makeUser({ id: created.id, username: 'somchai', roleId: 99999 }))).rejects.toBeInstanceOf(DomainConflictError)
+  })
+
+  test('active users are counted per branch', async () => {
+    await signIn('owner')
+    await signIn('cashier')
+
+    expect(await users.countActiveInBranch(1)).toBe(2)
+    expect(await users.countActiveInBranch(9999)).toBe(0)
+  })
+
+  test('a role that users still hold cannot be deleted', async () => {
+    const { user } = await signIn('cashier')
+
+    await expect(roles.delete(user.roleId!)).rejects.toMatchObject({ code: 'ROLE_IN_USE' })
+  })
+})
+
+describe('products and stock receipts', () => {
+  test('updating a product that is gone is not found', async () => {
+    await expect(new DrizzleProductRepository().update(makeProduct({ id: 99999 }), 1)).rejects.toBeInstanceOf(DomainNotFoundError)
+  })
+
+  test('a receipt cannot list a product that does not exist, or the same product twice', async () => {
+    const owner = await signIn('owner')
+    const receipts = new DrizzleStockReceiptRepository()
+    const tea = await seedProduct(owner, { stock: 1 })
+    const receipt = await receipts.create({ branchId: 1, receivedById: owner.user.id, receivedByName: 'owner', note: null })
+    const item = { productId: tea.id, quantity: 1, sku: tea.sku, name: tea.name, balanceAfter: 2 }
+
+    await expect(receipts.appendItems(receipt.id, [{ ...item, productId: 99999 }])).rejects.toMatchObject({ code: 'IN_USE' })
+    await expect(receipts.appendItems(receipt.id, [item, item])).rejects.toMatchObject({ code: 'DUPLICATE' })
+    await expect(receipts.create({ branchId: 99999, receivedById: owner.user.id, receivedByName: 'owner', note: null })).rejects.toMatchObject({ code: 'IN_USE' })
+  })
+})
+
+describe('shifts', () => {
+  const previousMode = Bun.env.CHECKOUT_MODE
+  const idempotency = () => ({ headers: { 'idempotency-key': crypto.randomUUID() } })
+
+  test('an idempotency key that is already used by another QR attempt is refused', async () => {
+    Bun.env.CHECKOUT_MODE = 'shifts'
+    try {
+      const owner = await signIn('owner')
+      const registerId = ok(await owner.apiV2.registers.get()).items[0]!.id
+      const shift = ok(await owner.apiV2.shifts.post({ registerId, openingCashSatang: 0 }, idempotency()))
+      const idempotencyKey = crypto.randomUUID()
+      const attempt = (reference: string) => ({
+        originShiftId: shift.id, branchId: 1, reference, amountSatang: 1000, actorId: owner.user.id, actorName: 'owner', idempotencyKey,
+      })
+      const attempts = new DrizzleQrAttemptRepository()
+      await attempts.create(attempt('QR0000000000001A'))
+
+      await expect(attempts.create(attempt('QR0000000000002B'))).rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED' })
+    } finally {
+      if (previousMode === undefined) delete Bun.env.CHECKOUT_MODE
+      else Bun.env.CHECKOUT_MODE = previousMode
+    }
   })
 })
