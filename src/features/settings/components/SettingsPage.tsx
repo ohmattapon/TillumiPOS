@@ -1,4 +1,5 @@
 import type { ShopSettings } from '@pos/api/types'
+import { PROMPTPAY_MODES } from '@pos/api/shop-settings'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -14,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { createMoney, type Locale } from '@/lib/money'
 import { settingsQuery, useUpdateSettings } from '../api'
 import { withTablesSwitch } from '../lib/feature-switches'
+import { canSavePromptPay, normalizePromptPayTarget } from '../lib/promptpay'
 
 // Currencies a Thai shop is likely to meet; the list is a convenience, the API accepts any ISO 4217 code.
 const CURRENCIES = ['THB', 'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'SGD', 'MYR', 'VND', 'IDR', 'PHP', 'KRW', 'LAK', 'KHR', 'MMK']
@@ -81,6 +83,8 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     tablesEnabled: settings.tablesEnabled,
     kitchenEnabled: settings.kitchenEnabled,
     modifiersEnabled: settings.modifiersEnabled,
+    promptpayMode: settings.promptpayMode,
+    promptpayTarget: settings.promptpayTarget ?? '',
   })
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm({ ...form, [key]: value })
 
@@ -94,6 +98,7 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
 
   const rate = Number(form.vatRate)
   const isRateValid = form.vatRate.trim() !== '' && Number.isFinite(rate) && rate >= 0 && rate <= 100
+  const isPromptPayValid = canSavePromptPay(form.promptpayMode, form.promptpayTarget)
   const changes: ShopSettings = {
     shopName: form.shopName.trim(),
     taxId: form.taxId.trim() || null,
@@ -110,9 +115,11 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     tablesEnabled: form.tablesEnabled,
     kitchenEnabled: form.kitchenEnabled,
     modifiersEnabled: form.modifiersEnabled,
+    promptpayMode: form.promptpayMode,
+    promptpayTarget: normalizePromptPayTarget(form.promptpayTarget),
   }
   const isDirty = JSON.stringify(changes) !== JSON.stringify(settings)
-  const canSave = isDirty && isRateValid && changes.shopName !== '' && !save.isPending
+  const canSave = isDirty && isRateValid && isPromptPayValid && changes.shopName !== '' && !save.isPending
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -237,6 +244,43 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
             disabled={form.vatMode === 'none'}
             aria-invalid={form.vatMode !== 'none' && !isRateValid}
             onChange={(event) => set('vatRate', event.target.value)}
+          />
+        </Field>
+      </Section>
+
+      <Section title={t('promptpay.title')}>
+        <Field label={t('promptpay.mode')} hint={t('promptpay.modeHint')}>
+          <Select value={form.promptpayMode} onValueChange={(value) => set('promptpayMode', value as ShopSettings['promptpayMode'])}>
+            <SelectTrigger className="h-10! w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PROMPTPAY_MODES.map((mode) => (
+                <SelectItem key={mode} value={mode}>
+                  {t(`promptpay.modes.${mode}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field
+          label={t('promptpay.target')}
+          hint={
+            !isPromptPayValid
+              ? t('promptpay.invalidTarget')
+              : form.promptpayMode === 'static' && normalizePromptPayTarget(form.promptpayTarget) === null
+                ? t('promptpay.staticWithoutTarget')
+                : t('promptpay.targetHint')
+          }
+        >
+          <Input
+            className="h-10 tabular-nums"
+            inputMode="numeric"
+            value={form.promptpayTarget}
+            maxLength={13}
+            placeholder={t('shop.optional')}
+            aria-invalid={!isPromptPayValid}
+            onChange={(event) => set('promptpayTarget', event.target.value)}
           />
         </Field>
       </Section>

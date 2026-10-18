@@ -27,6 +27,10 @@ export const shopSettings = pgTable(
     tablesEnabled: boolean().notNull().default(true),
     kitchenEnabled: boolean().notNull().default(true),
     modifiersEnabled: boolean().notNull().default(true),
+    // How a PromptPay payment is taken; the bank flow stays the default for existing shops.
+    promptpayMode: text().notNull().default('bank'),
+    // The shop's own PromptPay identifier for static QR; null means it is not set up.
+    promptpayTarget: text(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [check('shop_settings_single_row', sql`${table.id} = 1`)],

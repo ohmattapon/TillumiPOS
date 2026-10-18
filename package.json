@@ -53,6 +53,7 @@
     "i18next": "^26.4.4",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.56.0",
+    "qrcode.react": "^4.2.0",
     "radix-ui": "^1.8.1",
     "react": "^19.2.8",
     "react-day-picker": "^10.0.2",

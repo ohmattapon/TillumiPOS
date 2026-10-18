@@ -30,6 +30,8 @@ describe('shop settings', () => {
       tablesEnabled: true,
       kitchenEnabled: true,
       modifiersEnabled: true,
+      promptpayMode: 'bank',
+      promptpayTarget: null,
     })
   })
 
@@ -116,6 +118,31 @@ describe('shop settings', () => {
     expect(result.status).toBe(400)
     expect(result.error?.value).toMatchObject({ code: 'INVALID_SHOP_SETTINGS' })
     expect(ok(await owner.api.settings.get()).timeZone).toBe('Asia/Bangkok')
+  })
+
+  test('the owner switches to static PromptPay with a target, and it round-trips', async () => {
+    const updated = ok(await owner.api.settings.patch({ promptpayMode: 'static', promptpayTarget: '0812345678' }))
+
+    expect(updated).toMatchObject({ promptpayMode: 'static', promptpayTarget: '0812345678' })
+    expect(ok(await owner.api.settings.get())).toMatchObject({ promptpayMode: 'static', promptpayTarget: '0812345678' })
+  })
+
+  test.each([[{ promptpayMode: 'qr' }], [{ promptpayTarget: '081-234-5678' }]])(
+    'rejects %p as a validation error and changes nothing',
+    async (body) => {
+      const result = await owner.api.settings.patch(body as never)
+
+      expect(result.status).toBe(422)
+      expect(ok(await owner.api.settings.get())).toMatchObject({ promptpayMode: 'bank', promptpayTarget: null })
+    },
+  )
+
+  test('a digit-only PromptPay target of the wrong length is refused by the rules, with its own code', async () => {
+    const result = await owner.api.settings.patch({ promptpayTarget: '081234567' })
+
+    expect(result.status).toBe(400)
+    expect(result.error?.value).toMatchObject({ code: 'INVALID_SHOP_SETTINGS' })
+    expect(ok(await owner.api.settings.get()).promptpayTarget).toBeNull()
   })
 })
 

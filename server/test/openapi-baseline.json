@@ -28937,6 +28937,21 @@
                         "null"
                       ]
                     },
+                    "promptpayMode": {
+                      "enum": [
+                        "bank",
+                        "static"
+                      ],
+                      "type": "string"
+                    },
+                    "promptpayTarget": {
+                      "maxLength": 13,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "receiptFooter": {
                       "maxLength": 200,
                       "nullable": true,
@@ -29013,7 +29028,9 @@
                     "homeView",
                     "tablesEnabled",
                     "kitchenEnabled",
-                    "modifiersEnabled"
+                    "modifiersEnabled",
+                    "promptpayMode",
+                    "promptpayTarget"
                   ],
                   "type": "object"
                 }
@@ -29069,6 +29086,21 @@
                   },
                   "phone": {
                     "maxLength": 30,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "promptpayMode": {
+                    "enum": [
+                      "bank",
+                      "static"
+                    ],
+                    "type": "string"
+                  },
+                  "promptpayTarget": {
+                    "maxLength": 13,
                     "nullable": true,
                     "type": [
                       "string",
@@ -29183,6 +29215,21 @@
                       "null"
                     ]
                   },
+                  "promptpayMode": {
+                    "enum": [
+                      "bank",
+                      "static"
+                    ],
+                    "type": "string"
+                  },
+                  "promptpayTarget": {
+                    "maxLength": 13,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "receiptFooter": {
                     "maxLength": 200,
                     "nullable": true,
@@ -29285,6 +29332,21 @@
                   },
                   "phone": {
                     "maxLength": 30,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "promptpayMode": {
+                    "enum": [
+                      "bank",
+                      "static"
+                    ],
+                    "type": "string"
+                  },
+                  "promptpayTarget": {
+                    "maxLength": 13,
                     "nullable": true,
                     "type": [
                       "string",
@@ -29405,6 +29467,21 @@
                         "null"
                       ]
                     },
+                    "promptpayMode": {
+                      "enum": [
+                        "bank",
+                        "static"
+                      ],
+                      "type": "string"
+                    },
+                    "promptpayTarget": {
+                      "maxLength": 13,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "receiptFooter": {
                       "maxLength": 200,
                       "nullable": true,
@@ -29481,7 +29558,9 @@
                     "homeView",
                     "tablesEnabled",
                     "kitchenEnabled",
-                    "modifiersEnabled"
+                    "modifiersEnabled",
+                    "promptpayMode",
+                    "promptpayTarget"
                   ],
                   "type": "object"
                 }

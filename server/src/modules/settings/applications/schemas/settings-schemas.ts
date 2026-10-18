@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { VAT_MODES } from '../../../../domains/pricing'
-import { HOME_VIEWS, LOCALES, RECEIPT_PAPER_WIDTHS } from '../../../../domains/shop-settings.domain'
+import { HOME_VIEWS, LOCALES, PROMPTPAY_MODES, RECEIPT_PAPER_WIDTHS } from '../../../../domains/shop-settings.domain'
 
 // An empty field means "not set", so an owner clears an optional detail by blanking it.
 const optionalText = (max: number) =>
@@ -10,6 +10,15 @@ const optionalText = (max: number) =>
     .max(max)
     .nullable()
     .transform((value) => (value === '' ? null : value))
+
+// A PromptPay identifier is digits only; the entity decides which lengths are valid.
+const optionalPromptPayTarget = z
+  .string()
+  .trim()
+  .max(13)
+  .nullable()
+  .transform((value) => (value === '' ? null : value))
+  .refine((value) => value === null || /^\d+$/.test(value), { message: 'promptpayTarget must contain digits only' })
 
 export const updateShopSettingsSchema = z
   .object({
@@ -28,5 +37,7 @@ export const updateShopSettingsSchema = z
     tablesEnabled: z.boolean(),
     kitchenEnabled: z.boolean(),
     modifiersEnabled: z.boolean(),
+    promptpayMode: z.enum(PROMPTPAY_MODES),
+    promptpayTarget: optionalPromptPayTarget,
   })
   .partial()
