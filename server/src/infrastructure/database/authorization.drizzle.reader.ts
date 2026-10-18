@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 import { UserEntity } from '../../domains/user.domain'
 import { isPermission } from '../../domains/permission.vo'
@@ -14,6 +14,7 @@ export class DrizzleSessionAuthorizationReader implements ISessionAuthorizationR
     const rows = await currentExecutor().select({
       id: users.id, username: users.username, displayName: users.displayName,
       role: users.role, roleId: users.roleId, branchId: users.branchId, isActive: users.isActive,
+      hasPin: sql<boolean>`${users.pinHash} is not null`,
       roleName: roles.name, permission: rolePermissions.permission,
     }).from(users).innerJoin(roles, eq(users.roleId, roles.id))
       .leftJoin(rolePermissions, eq(roles.id, rolePermissions.roleId))

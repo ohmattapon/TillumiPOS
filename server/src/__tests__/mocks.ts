@@ -67,6 +67,10 @@ export const mockUserRepository = (): Mocked<IUserRepository> => ({
   findByIdForUpdate: mock<IUserRepository['findByIdForUpdate']>(),
   findActiveById: mock<IUserRepository['findActiveById']>(),
   findCredentialsByUsername: mock<IUserRepository['findCredentialsByUsername']>(),
+  findPinHash: mock<IUserRepository['findPinHash']>(),
+  setPinHash: mock<IUserRepository['setPinHash']>(),
+  findSwitchable: mock<IUserRepository['findSwitchable']>(),
+  findPasswordHashById: mock<IUserRepository['findPasswordHashById']>(),
   create: mock<IUserRepository['create']>(),
   update: mock<IUserRepository['update']>(),
   countActiveOwners: mock<IUserRepository['countActiveOwners']>(),
@@ -334,3 +338,19 @@ export const mockRoleDirectory = (): Mocked<IRoleDirectory> => {
 }
 
 export const mockAuditLog = (): Mocked<IAuditLog> => ({ record: mock(async () => {}), list: mock<IAuditLog['list']>() })
+
+import type { IPinGuard } from '../modules/auth/applications/ports/pin-guard.port'
+
+/** Counts attempts per user like the real guard (the 5th locks), without a clock: a lock lasts for the whole test. */
+export const mockPinGuard = (): Mocked<IPinGuard> => {
+  const attempts = new Map<number, number>()
+  return {
+    begin: mock((userId: number) => {
+      const count = attempts.get(userId) ?? 0
+      if (count >= 5) return 'locked' as const
+      attempts.set(userId, count + 1)
+      return 'ok' as const
+    }),
+    recordSuccess: mock((userId: number) => { attempts.delete(userId) }),
+  }
+}
