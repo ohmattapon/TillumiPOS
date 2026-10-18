@@ -2,9 +2,11 @@ import { CircleAlert, Eye, EyeOff } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
+import { FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useLogin } from '../api'
+import { validateLoginInput, type LoginField } from '../lib/validate-login'
 
 /** The TillumiPOS logo, centred at the top of the sign-in card. */
 function BrandLogo() {
@@ -29,11 +31,15 @@ export function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [missing, setMissing] = useState<LoginField[]>([])
 
   const login = useLogin()
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
+    const empty = validateLoginInput({ username, password })
+    setMissing(empty)
+    if (empty.length > 0) return
     login.mutate({ username, password })
   }
 
@@ -54,18 +60,23 @@ export function LoginPage() {
             <BrandLogo />
             <h1 className="text-center text-xl font-semibold">{t('title')}</h1>
             <p className="mt-1 text-center text-sm text-muted-foreground">{t('subtitle')}</p>
-            <form onSubmit={submit} className="mt-6 space-y-4">
+            <form onSubmit={submit} noValidate className="mt-6 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="username">{t('username')}</Label>
                 <Input
                   id="username"
                   className="h-11 text-base"
                   value={username}
-                  onChange={(event) => setUsername(event.target.value)}
+                  onChange={(event) => {
+                    setUsername(event.target.value)
+                    setMissing((fields) => fields.filter((field) => field !== 'username'))
+                  }}
                   autoComplete="username"
                   autoFocus
-                  required
+                  aria-invalid={missing.includes('username')}
+                  aria-describedby={missing.includes('username') ? 'username-error' : undefined}
                 />
+                {missing.includes('username') && <FieldError id="username-error">{t('usernameRequired')}</FieldError>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">{t('password')}</Label>
@@ -75,9 +86,13 @@ export function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     className="h-11 pr-11 text-base"
                     value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    onChange={(event) => {
+                      setPassword(event.target.value)
+                      setMissing((fields) => fields.filter((field) => field !== 'password'))
+                    }}
                     autoComplete="current-password"
-                    required
+                    aria-invalid={missing.includes('password')}
+                    aria-describedby={missing.includes('password') ? 'password-error' : undefined}
                   />
                   <Button
                     type="button"
@@ -91,6 +106,7 @@ export function LoginPage() {
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </Button>
                 </div>
+                {missing.includes('password') && <FieldError id="password-error">{t('passwordRequired')}</FieldError>}
               </div>
               {login.error && (
                 <p
