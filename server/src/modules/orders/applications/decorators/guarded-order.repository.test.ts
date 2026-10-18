@@ -2,7 +2,7 @@ import 'reflect-metadata'
 import { beforeEach, describe, expect, mock, test } from 'bun:test'
 import { makeOrder } from '../../../../__tests__/factories'
 import { mockOrderRepository } from '../../../../__tests__/mocks'
-import type { DrizzleOrderRepository } from './order.drizzle.repository'
+import type { IOrderRepository } from '../ports/order.repository'
 import { GuardedOrderRepository } from './guarded-order.repository'
 
 let inner: ReturnType<typeof mockOrderRepository>
@@ -12,7 +12,7 @@ let guarded: GuardedOrderRepository
 beforeEach(() => {
   inner = mockOrderRepository()
   lock = { assertEditable: mock(async () => {}) }
-  guarded = new GuardedOrderRepository(inner as unknown as DrizzleOrderRepository, lock)
+  guarded = new GuardedOrderRepository(inner as unknown as IOrderRepository, lock)
 })
 
 describe('GuardedOrderRepository', () => {
