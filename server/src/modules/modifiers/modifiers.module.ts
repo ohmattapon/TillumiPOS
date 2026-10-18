@@ -1,4 +1,5 @@
 import { container } from 'tsyringe'
+import { quoteLineOptionsToken } from '../quotes/applications/ports/quote-line-options.port'
 import { ModifierElysiaController } from './adapters/controllers/modifier.controller'
 import { CachedModifierRepository } from './adapters/repository/modifier.cached.repository'
 import { lineOptionsResolverToken } from './applications/ports/line-options-resolver.port'
@@ -14,6 +15,7 @@ import { UpdateModifierOptionUseCase } from './applications/usecases/update-modi
 
 container.register(modifierRepositoryToken, { useClass: CachedModifierRepository })
 container.register(lineOptionsResolverToken, { useClass: LineOptionsResolver })
+container.register(quoteLineOptionsToken, { useToken: lineOptionsResolverToken })
 container.registerSingleton(GroupDefaults)
 container.registerSingleton(ListModifierGroupsUseCase)
 container.registerSingleton(CreateModifierGroupUseCase)

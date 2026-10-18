@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 import { makeProduct, makePriceQuote } from '../../../../__tests__/factories'
 import {
   mockClock, mockLineOptionsResolver, mockMemberRepository, mockOrderQuoteSource, mockPriceQuoteRepository,
-  mockProductRepository, mockPromotionCatalog, mockShopSettingsRepository, mockUnitOfWork,
+  mockPromotionCatalog, mockQuoteProducts, mockShopSettingsRepository, mockUnitOfWork,
 } from '../../../../__tests__/mocks'
 import { MemberEntity } from '../../../../domains/member.domain'
 import { PriceQuoteEntity } from '../../../../domains/price-quote.domain'
@@ -21,12 +21,12 @@ const promotion = (overrides: Partial<ConstructorParameters<typeof PromotionEnti
   new PromotionEntity({
     id: 1, name: 'ลด 10%', kind: 'percent', value: 1000, maxDiscountSatang: null, minSubtotalSatang: 0,
     startsOn: null, endsOn: null, weekdays: null, windowStartMinute: null, windowEndMinute: null,
-    audience: 'everyone', isActive: true, imageKey: null, createdAt: now, updatedAt: now, ...overrides,
+    audience: 'everyone', isActive: true, scope: null, imageKey: null, createdAt: now, updatedAt: now, ...overrides,
   })
 const member = (isActive = true) =>
   new MemberEntity({ id: 8, name: 'ลูกค้าประจำ', phone: '0812345678', isActive, createdAt: now, updatedAt: now })
 
-let products: ReturnType<typeof mockProductRepository>
+let products: ReturnType<typeof mockQuoteProducts>
 let lineOptions: ReturnType<typeof mockLineOptionsResolver>
 let settings: ReturnType<typeof mockShopSettingsRepository>
 let members: ReturnType<typeof mockMemberRepository>
@@ -36,7 +36,7 @@ let quotes: ReturnType<typeof mockPriceQuoteRepository>
 let create: CreateQuoteUseCase
 
 beforeEach(() => {
-  products = mockProductRepository()
+  products = mockQuoteProducts()
   lineOptions = mockLineOptionsResolver()
   settings = mockShopSettingsRepository()
   members = mockMemberRepository()
@@ -76,6 +76,29 @@ describe('CreateQuoteUseCase', () => {
     const quote = await create.execute({ lines: [{ productId: 1, quantity: 2 }] }, actor, branch)
     expect(quote.promotion).toEqual({ id: 1, name: 'ลด 10%', kind: 'percent', value: 1000, maxDiscountSatang: null, discountSatang: 500 })
     expect(quote).toMatchObject({ discountSatang: 500, totalSatang: 4500 })
+  })
+
+  test('a promotion limited to a category is priced on the lines of that category only', async () => {
+    products.categoriesOf.mockImplementation(async (ids) => new Map(ids.map((id) => [id, id === 1 ? 4 : null])))
+    catalog.activePromotions.mockResolvedValue([
+      promotion({ id: 1, value: 2000, scope: { productIds: [], categoryIds: [4] } }),
+      promotion({ id: 2, name: 'ลด 300', kind: 'fixed', value: 300 }),
+    ])
+    const quote = await create.execute({ lines: [{ productId: 1, quantity: 2 }, { productId: 2, quantity: 1 }] }, actor, branch)
+    expect(products.categoriesOf).toHaveBeenCalledWith([1, 2])
+    expect(quote).toMatchObject({ subtotalSatang: 7500, discountSatang: 1000, promotion: { id: 1, discountSatang: 1000 } })
+  })
+
+  test('an order is asked for its categories the same way as a cart', async () => {
+    orders.read.mockResolvedValue({
+      id: 9,
+      memberId: null,
+      items: [{ productId: 3, productName: 'เค้ก', sku: 'S3', unitPriceSatang: 4000, quantity: 1, options: [] }],
+    })
+    catalog.activePromotions.mockResolvedValue([promotion({ value: 5000, scope: { productIds: [3], categoryIds: [] } })])
+    const quote = await create.execute({ orderId: 9 }, actor, branch)
+    expect(products.categoriesOf).toHaveBeenCalledWith([3])
+    expect(quote).toMatchObject({ discountSatang: 2000, promotion: { id: 1 } })
   })
 
   test('a promotion outside its hours is not chosen', async () => {

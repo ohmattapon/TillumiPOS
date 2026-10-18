@@ -7,6 +7,9 @@ const name = t.String({ minLength: 1, maxLength: 80 })
 const day = t.String({ format: 'date' })
 const minute = t.Integer({ minimum: 0, maximum: 1439 })
 const weekdays = t.Array(t.Integer({ minimum: 0, maximum: 6 }), { maxItems: 7 })
+const ids = t.Array(t.Integer({ minimum: 1 }), { maxItems: 500 })
+/** The products and categories a promotion is limited to; null is the whole bill. */
+const scope = t.Nullable(t.Object({ productIds: ids, categoryIds: ids }))
 const optionalRules = {
   maxDiscountSatang: t.Optional(t.Nullable(t.Integer({ minimum: 1 }))),
   minSubtotalSatang: t.Optional(satang()),
@@ -17,6 +20,7 @@ const optionalRules = {
   windowEndMinute: t.Optional(t.Nullable(minute)),
   audience: t.Optional(audience),
   isActive: t.Optional(t.Boolean()),
+  scope: t.Optional(scope),
 }
 
 export const promotionSchemas = {
@@ -34,6 +38,7 @@ export const promotionSchemas = {
     windowEndMinute: t.Nullable(t.Integer()),
     audience,
     isActive: t.Boolean(),
+    scope,
     imageUrl: t.Nullable(t.String()),
     createdAt: t.Date(),
     updatedAt: t.Date(),

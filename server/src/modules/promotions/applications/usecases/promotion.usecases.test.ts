@@ -11,7 +11,7 @@ const now = new Date('2026-10-15T12:00:00Z')
 const existing = new PromotionEntity({
   id: 1, name: 'ลด 10%', kind: 'percent', value: 1000, maxDiscountSatang: 100, minSubtotalSatang: 0,
   startsOn: null, endsOn: null, weekdays: null, windowStartMinute: null, windowEndMinute: null,
-  audience: 'everyone', isActive: true, imageKey: null, createdAt: now, updatedAt: now,
+  audience: 'everyone', isActive: true, scope: null, imageKey: null, createdAt: now, updatedAt: now,
 })
 
 function setup() {
@@ -46,6 +46,27 @@ describe('CreatePromotionUseCase', () => {
     })
   })
 
+  test('a promotion limited to products and categories keeps them sorted, and an empty scope is the whole bill', async () => {
+    const { repo, clock } = setup()
+    const useCase = new CreatePromotionUseCase(repo, clock)
+    const scoped = await useCase.execute(
+      { name: 'กาแฟลด 10%', kind: 'percent', value: 1000, scope: { productIds: [9, 3, 9], categoryIds: [2] } },
+      { role: 'owner' },
+    )
+    expect(scoped.scope).toEqual({ productIds: [3, 9], categoryIds: [2] })
+    const whole = await useCase.execute({ name: 'ทั้งบิล', kind: 'fixed', value: 100, scope: { productIds: [], categoryIds: [] } }, { role: 'owner' })
+    expect(whole.scope).toBeNull()
+    expect((await useCase.execute({ name: 'ไม่ระบุ', kind: 'fixed', value: 100 }, { role: 'owner' })).scope).toBeNull()
+  })
+
+  test('refuses a scope with ids that are not positive whole numbers', async () => {
+    const { repo, clock } = setup()
+    const useCase = new CreatePromotionUseCase(repo, clock)
+    await expect(useCase.execute({ name: 'x', kind: 'fixed', value: 100, scope: { productIds: [0], categoryIds: [] } }, { role: 'owner' })).rejects.toThrow()
+    await expect(useCase.execute({ name: 'x', kind: 'fixed', value: 100, scope: { productIds: [], categoryIds: [1.5] } }, { role: 'owner' })).rejects.toThrow()
+    expect(repo.create).not.toHaveBeenCalled()
+  })
+
   test('refuses a cashier before anything is written', async () => {
     const { repo, clock } = setup()
     await expect(
@@ -74,6 +95,16 @@ describe('UpdatePromotionUseCase', () => {
     )
     expect(calls).toEqual(['uow', 'lock', 'write'])
     expect(updated.toSnapshot()).toMatchObject({ id: 1, name: 'ลด 10%', isActive: false, maxDiscountSatang: null, updatedAt: now })
+  })
+
+  test('sets, keeps and clears the scope: missing keeps it, null makes it the whole bill', async () => {
+    const { repo, clock, uow } = setup()
+    const useCase = new UpdatePromotionUseCase(repo, uow, clock)
+    const scoped = await useCase.execute(1, { scope: { productIds: [5], categoryIds: [] } }, { role: 'owner' })
+    expect(scoped.scope).toEqual({ productIds: [5], categoryIds: [] })
+    repo.findByIdForUpdate.mockImplementation(async () => scoped)
+    expect((await useCase.execute(1, { name: 'ลด 10% กาแฟ' }, { role: 'owner' })).scope).toEqual({ productIds: [5], categoryIds: [] })
+    expect((await useCase.execute(1, { scope: null }, { role: 'owner' })).scope).toBeNull()
   })
 
   test('a cashier cannot edit, and an unknown promotion is not found', async () => {

@@ -7,6 +7,12 @@ export type PromotionKind = (typeof PROMOTION_KINDS)[number]
 export const PROMOTION_AUDIENCES = ['everyone', 'members'] as const
 export type PromotionAudience = (typeof PROMOTION_AUDIENCES)[number]
 
+/** The products and categories a promotion is limited to; a line matches by either. */
+export interface PromotionScope {
+  productIds: readonly number[]
+  categoryIds: readonly number[]
+}
+
 /** The part of a promotion the rules read; the entity and the web's plain objects both satisfy it. */
 export interface PromotionRules {
   id: number
@@ -27,6 +33,15 @@ export interface PromotionRules {
   windowEndMinute: number | null
   audience: PromotionAudience
   isActive: boolean
+  /** Null means the whole bill. */
+  scope: PromotionScope | null
+}
+
+/** One cart line as a scoped promotion sees it: what it is and what it costs before any discount. */
+export interface PromotionLine {
+  productId: number
+  categoryId: number | null
+  lineTotalSatang: number
 }
 
 export interface PromotionContext {
@@ -34,6 +49,7 @@ export interface PromotionContext {
   hasMember: boolean
   at: Date
   timeZone: string
+  lines: readonly PromotionLine[]
 }
 
 export type PromotionEvaluation = { eligible: false } | { eligible: true; discountSatang: number }
@@ -74,6 +90,14 @@ function previousDay(date: string): Day {
   return { date: day.toISOString().slice(0, 10), weekday: day.getUTCDay() }
 }
 
+/** What a promotion's discount is taken from: the whole bill, or only the lines in its scope. */
+function discountBase(scope: PromotionScope | null, context: PromotionContext): number {
+  if (scope === null) return context.subtotalSatang
+  return context.lines
+    .filter((line) => scope.productIds.includes(line.productId) || (line.categoryId !== null && scope.categoryIds.includes(line.categoryId)))
+    .reduce((total, line) => total + line.lineTotalSatang, 0)
+}
+
 /**
  * The one rule for whether a promotion applies and what it gives, shared by the server and the till so
  * the cart shows what the server will choose. All amounts are integer satang.
@@ -100,11 +124,12 @@ export function evaluatePromotion(rules: PromotionRules, context: PromotionConte
   if (rules.startsOn !== null && day.date < rules.startsOn) return NOT_ELIGIBLE
   if (rules.endsOn !== null && day.date > rules.endsOn) return NOT_ELIGIBLE
 
-  const given =
-    rules.kind === 'fixed' ? rules.value : Math.round((context.subtotalSatang * rules.value) / BASIS_POINTS)
+  const base = discountBase(rules.scope, context)
+  if (base < 1) return NOT_ELIGIBLE
+  const given = rules.kind === 'fixed' ? rules.value : Math.round((base * rules.value) / BASIS_POINTS)
   const capped =
     rules.kind === 'percent' && rules.maxDiscountSatang !== null ? Math.min(given, rules.maxDiscountSatang) : given
-  const discountSatang = Math.min(capped, context.subtotalSatang)
+  const discountSatang = Math.min(capped, base, context.subtotalSatang)
   return discountSatang >= 1 ? { eligible: true, discountSatang } : NOT_ELIGIBLE
 }
 
@@ -140,6 +165,21 @@ const invalid = (message: string) => new DomainError(message, 'INVALID_PROMOTION
 const isWholeNumber = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value)
 const MAX_NAME_LENGTH = 80
 const MINUTES_PER_DAY = 1440
+/** Bounds what one promotion can list, so a form or a script cannot store an unbounded array. */
+export const MAX_SCOPE_IDS = 500
+
+/** Sorted, without repeats; both lists empty means the whole bill (null). */
+function normalizeScope(scope: PromotionScope | null): PromotionScope | null {
+  if (scope === null) return null
+  const ids = (values: readonly number[], label: string) => {
+    if (values.length > MAX_SCOPE_IDS) throw invalid(`เลือก${label}ได้ไม่เกิน ${MAX_SCOPE_IDS} รายการ`)
+    if (!values.every((id) => isWholeNumber(id) && id >= 1)) throw invalid(`รหัส${label}ไม่ถูกต้อง`)
+    return [...new Set(values)].sort((a, b) => a - b)
+  }
+  const productIds = ids(scope.productIds, 'สินค้า')
+  const categoryIds = ids(scope.categoryIds, 'หมวดหมู่')
+  return productIds.length === 0 && categoryIds.length === 0 ? null : { productIds, categoryIds }
+}
 
 function assertDate(value: string | null, label: string) {
   if (value === null) return
@@ -163,6 +203,7 @@ export class PromotionEntity implements PromotionRules {
   public readonly windowEndMinute: number | null
   public readonly audience: PromotionAudience
   public readonly isActive: boolean
+  public readonly scope: PromotionScope | null
   public readonly imageKey: string | null
   public readonly createdAt: Date
   public readonly updatedAt: Date
@@ -204,6 +245,7 @@ export class PromotionEntity implements PromotionRules {
       if (start === end) throw invalid('เวลาเริ่มและเวลาสิ้นสุดต้องไม่เท่ากัน')
     }
     if (!PROMOTION_AUDIENCES.includes(props.audience)) throw invalid('กลุ่มลูกค้าไม่ถูกต้อง')
+    const scope = normalizeScope(props.scope)
 
     this.id = props.id
     this.name = name
@@ -218,6 +260,7 @@ export class PromotionEntity implements PromotionRules {
     this.windowEndMinute = end
     this.audience = props.audience
     this.isActive = props.isActive
+    this.scope = scope
     this.imageKey = props.imageKey
     this.createdAt = props.createdAt
     this.updatedAt = props.updatedAt
@@ -256,6 +299,7 @@ export class PromotionEntity implements PromotionRules {
       windowEndMinute: this.windowEndMinute,
       audience: this.audience,
       isActive: this.isActive,
+      scope: this.scope ? { productIds: [...this.scope.productIds], categoryIds: [...this.scope.categoryIds] } : null,
       imageKey: this.imageKey,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
