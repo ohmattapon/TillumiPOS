@@ -70,15 +70,19 @@ server/src/
 
 ### Layer rules
 
-| Layer | May import | Must not import |
-|---|---|---|
-| `domains/` | Files in `domains/` only | Elysia, Drizzle, tsyringe, zod, `libs/`, `modules/`, `infrastructure/` |
-| `applications/` | `domains/`, ports of its own module and of other modules, `modules/tokens.ts`, tsyringe, zod | Elysia, Drizzle, `infrastructure/`, files in `adapters/` |
-| `adapters/` | All layers above, Elysia, Drizzle, `libs/`, `infrastructure/` | Use cases or adapters of another module directly |
+Each layer imports only what its row allows. Anything not listed is forbidden, with no exceptions.
+
+| Layer | May import (the whole list) |
+|---|---|
+| `domains/` | Files in `domains/` (and `bun:test` in test files) |
+| `applications/` of module X | `domains/`; X's own `applications/`; `modules/shared/ports/`, `modules/shared/applications/` and `modules/tokens.ts`; tsyringe (DI decorators only); zod (input parsing only) |
+| `adapters/` of module X | `domains/`; X's own `applications/` and `adapters/`; a port of another module only to implement it (the provider side of a consumer-owned port); `modules/shared/`; `libs/`; `infrastructure/`; Elysia, Drizzle and other I/O libraries |
 
 - Business rules live in an entity or a use case only, never in a controller or a repository
-- Modules call each other through ports injected with a token. Never touch another module's tables or adapters.
-- Everything external (the database, file storage, time, payment services) must sit behind a port
+- Modules call each other only through a port the consumer owns: it is declared in the consumer's `applications/ports/`, implemented by an adapter in the providing module, and bound in the providing module's `<module>.module.ts` (`ITableOccupancy`: declared by `tables`, implemented and bound by `orders`). Declare the narrow port you need even when another module's repository port already has the method.
+- A port that several modules need (unit of work, clock, id generator, logger, audit log) lives in `modules/shared/ports/`, with its token in `modules/tokens.ts`
+- HTTP schemas and presenters that controllers of several modules need live in `libs/`, never in one module's `adapters/`
+- Everything external (the database, file storage, time, randomness, logging, payment services) must sit behind a port
 - File and class names: `complete-sale.usecase.ts` with `CompleteSaleUseCase`, `sale.repository.ts` with `ISaleRepository` and `saleRepositoryToken`, `sale.drizzle.repository.ts` with `DrizzleSaleRepository`, `sale.controller.ts` with `SaleElysiaController`
 
 ### Use cases and CQRS
@@ -291,7 +295,7 @@ These are the patterns this codebase already uses and the practices every change
 ### Principles
 
 - **Make the smallest change that solves the problem.** Build for the requirement in front of you (YAGNI). Do not add options, layers or generality "for later".
-- **Do not abstract on the first or second use.** Duplicate once, extract on the third, and only when the copies really change for the same reason. A wrong abstraction costs more than a little duplication.
+- **Do not abstract on the first or second use.** Duplicate once, extract on the third, and only when the copies really change for the same reason. A wrong abstraction costs more than a little duplication. Generated values are the exception: see "One generator per value".
 - **Put each rule in exactly one place.** Totals in `calculateTotals`, option rules in `resolveLineOptions`, promotion rules in `evaluatePromotion`, permissions in `domains/authorization.ts`. If you find a second copy of a rule, remove the copy.
 - **Make invalid states unrepresentable.** Validate when an object is created (entities and value objects throw from their constructor), so the rest of the code can trust what it holds.
 - **The core validates its own input.** A use case can be driven by more than one adapter (HTTP, a seed script, a test), so `execute()` parses its input with zod and never trusts the caller. The Elysia schema on a route only describes the HTTP contract (OpenAPI, coercion). Business rules are checked once, in the entity or use case, never in the route schema.
@@ -299,6 +303,23 @@ These are the patterns this codebase already uses and the practices every change
 - **Comments explain why, not what.** A comment records a reason, a constraint or a trap that the code cannot show (for example why a lock is taken before a read). Delete comments that restate the code and never leave commented-out code.
 - **Name things after the business.** `VoidSaleUseCase`, `ReceiveStockUseCase`, `quote`, `shift`. Avoid `Manager`, `Helper`, `Util` and `Data` in new names.
 - **Keep files and functions small and focused.** If a file needs a "section" comment to be navigable, or a function needs a comment per paragraph, split it.
+
+### One generator per value
+
+Every kind of generated value has exactly one function that makes it, and every place that needs the value calls that function. A generated value is anything built by code rather than typed by a user: ids, idempotency keys, reference codes, receipt numbers, SKUs, file and storage keys, QR payloads, query keys, export file names. The moment a second place needs the same kind of value, move the code into one generator and call it from both places; the copied expression never gets written.
+
+1. Search for an existing generator before writing one (`grep -rn "randomUUID\|function build\|function generate\|function new" server/src src`), and call it if it exists.
+2. Put the generator where its layer allows:
+
+   | The value is | Put the generator in | Example |
+   |---|---|---|
+   | Computed from its inputs only | A pure function in `server/src/domains/`, exported to the web through `@pos/api/...` when the web needs it; or `src/lib/` / `features/<name>/lib/` for web-only values | `buildPromptPayPayload` |
+   | Random or time-based, needed by the core | The shared port in `modules/shared/ports/` (id generator, `IClock`), with one adapter. Any format around the raw value (prefix, length, case) is a pure function in `domains/`. | The QR reference |
+   | Random, needed by server adapters only | One function in `server/src/libs/` | |
+   | Random, needed by the web | One function in `src/lib/`, passed into stateful classes as a constructor option so tests can fake it | `newIdempotencyKey()` |
+
+3. Name the generator after what it makes (`newIdempotencyKey`, `buildPromptPayPayload`), not `utils` or `helper`, and test it next to its file.
+4. If you find two copies of a generator, merge them into one in a separate commit on the same branch.
 
 ### Domain modeling
 
@@ -328,33 +349,45 @@ These are the patterns this codebase already uses and the practices every change
 The application core is `domains/` plus each module's `applications/`. Everything else is an adapter. These rules are what make the core testable and the adapters replaceable; the layer table above is how they are enforced on imports.
 
 - **Dependencies point inward only.** Adapters depend on the core; the core never depends on an adapter, a framework for I/O (Elysia, Drizzle), `libs/` or `infrastructure/`. If the core needs something from the outside, it declares a port and an adapter implements it.
-- **Driving side (primary).** Something outside calls the core: an HTTP controller, `auth.plugin.ts`, a seed or CLI script, a test. The driving port is the use case's `execute()`. A driving adapter translates its own input (an HTTP request, a script argument) into the use case input, calls exactly one use case, and translates the result back (an HTTP response). It holds no business decision. If a controller contains a condition about the business, move it into the use case or the entity.
-- **Driven side (secondary).** The core calls something outside through a port: repositories, `IUnitOfWork`, `IClock`, `IMediaStorage`, `IQrPaymentGateway`, `IAuditLog`. The core owns the port, so it is declared in `applications/ports/` of the module that uses it, with its DI token next to it.
+- **Driving side (primary).** Something outside calls the core: an HTTP controller, `auth.plugin.ts`, a seed or CLI script, a test. The driving port is the use case's `execute()`: the use case class is the port and controllers depend on it, so add an interface only when a second implementation is needed. A driving adapter translates its own input (an HTTP request, a script argument) into the use case input, calls exactly one use case, and translates the result back (an HTTP response). It holds no business decision. If a controller contains a condition about the business, move it into the use case or the entity.
+- **Driven side (secondary).** The core calls something outside through a port: repositories, `IUnitOfWork`, `IClock`, `IMediaStorage`, `IQrPaymentGateway`, `IAuditLog`. The core owns the port, so it is declared in `applications/ports/` of the module that uses it, with its DI token next to it, or in `modules/shared/ports/` when several modules use it.
 - **Name ports by what the core needs, not by the technology.** `IMediaStorage`, not `IR2Client`; `IQrPaymentGateway`, not `IScbApi`; `findByIdForUpdate`, not `selectWithRowLock`.
 - **Port signatures speak domain types only.** Entities, value objects, plain read models and domain errors. Never a Drizzle row, a SQL fragment, an Elysia context, an HTTP status, a `Response` or a library type. A port that exposes the technology has leaked the adapter into the core.
 - **Adapters contain no business rules.** An adapter translates and moves data: map rows to entities, call the outside system, convert its errors into domain errors. Caching, retries, connection handling and serialization belong in adapters; "may this order be edited" does not.
 - **Decorators are allowed on both sides, for their own side's concerns.** A technical decorator stays in `adapters/` (`CachedCategoryRepository` adds caching behind `ICategoryRepository`). A decorator that enforces a business rule must live in the core, in `applications/`, wrapping the port, not in `adapters/`.
-- **Everything nondeterministic is a port.** Time (`IClock`), random codes and ids, the database transaction (`IUnitOfWork`), outside services. The core never calls `Date.now()`, `crypto`, `fetch`, `setTimeout` or reads `process.env` directly.
+- **Everything nondeterministic is a port.** Time (`IClock`), random codes and ids (one shared id-generator port), waiting and scheduling, logging, the database transaction (`IUnitOfWork`), outside services. The core never calls `Date.now()`, `new Date()`, `crypto`, `Math.random`, `fetch`, `setTimeout`, `console` or reads `process.env` / `Bun.env` directly.
 - **Configuration is read at the edge.** Environment variables are read by adapters and the composition root (`libs/env`, `libs/scb-config.ts`, `createMediaStorage()`), and the core receives behavior through ports (`IMediaStorage.isEnabled()`), never a config value to branch on.
 - **One composition root chooses the adapters.** `<module>.module.ts` binds each port token to its adapter and `di-registrations.ts` imports every module. Nothing else decides which implementation is used. Use cases are singletons and hold no per-request state.
 - **Gateways are anti-corruption layers.** Translate the outside system's vocabulary and errors into ours inside the adapter, and never trust data the outside system did not make verifiable (a callback body is only a signal to go and check).
-- **Modules talk through ports, not through each other's insides.** A module that needs an answer from another declares a port in its own `applications/ports/` (the consumer owns it) and the owning module implements it as an adapter (`ITableOccupancy` answered by `orders`, `IRoleDirectory` answered by `roles`). Never import another module's use case, repository or table.
+- **Modules talk through ports, not through each other's insides.** A module that needs an answer from another declares a port in its own `applications/ports/` (the consumer owns it) and the owning module implements it as an adapter (`ITableOccupancy` answered by `orders`, `IRoleDirectory` answered by `roles`). Never import another module's use case, service, schema, repository port, repository, presenter or table.
 - **Authorization is a business rule.** The use case enforces the permission (`requirePermission`) so the rule holds whichever adapter drives it. The route guard (`auth: { can }`) is the HTTP adapter's early rejection and does not replace the check in the core when the use case's rule depends on the data (whose shift, which branch).
 - **Errors cross the boundary as domain errors.** The core throws domain errors with a stable `code`. Only the driving adapter (`libs/http-error.factory.ts`) decides how they look on the wire.
+- **Check the imports before every server commit.** These commands (test files excluded) must print nothing beyond the fix list below:
+
+  ```bash
+  cd server/src && for m in $(ls -d modules/*/ | xargs -n1 basename | grep -v '^shared$'); do
+    grep -rnE "from '(\.\./)+[a-z-]+/(applications|adapters)/" modules/$m/applications --include='*.ts' --exclude='*.test.ts' | grep -vE "'(\.\./)+($m|shared)/"
+    grep -rnE "from '(\.\./)+[a-z-]+/(adapters|applications/(usecases|services|schemas))/" modules/$m/adapters --include='*.ts' --exclude='*.test.ts' | grep -vE "'(\.\./)+($m|shared)/"
+  done
+  grep -rnE "new Date\(\)|Date\.now\(|Math\.random|crypto\.|process\.env|Bun\.env|console\.|setTimeout|setInterval|fetch\(" modules/*/applications domains --include='*.ts' | grep -v '\.test\.'
+  ```
+
 - **The core is tested without adapters.** Use cases are tested with fake ports (`src/__tests__/mocks.ts`); adapters are tested against the real thing (PostgreSQL, the fake SCB server). If a use case test needs a database, a port is missing.
 
-### Accepted compromises and known deviations
+### Code that still breaks these rules
 
-Pragmatic choices that are allowed, and places where the code does not yet follow the rules above. Do not copy a deviation into new code; fix it when you work in that area.
+The rules above have no exceptions. The code below predates them: it is a fix list, never a precedent, so new code never copies it. When your change touches a file in this list, fix that violation in its own commit on the same branch first. If the fix is too large for the task, stop and ask the project owner. Remove a row once its fix is merged.
 
-| Kind | What | The rule-following way |
+| Violation | Where | The fix |
 |---|---|---|
-| Accepted | `applications/` uses tsyringe decorators and zod | Kept for brevity; they do no I/O. Do not add other frameworks to the core. |
-| Accepted | Domain errors carry a Thai message | The `code` and `params` are the contract; the web translates from them. |
-| Accepted | The use case class is the driving port, with no separate interface | Controllers depend on the class; add an interface only if a second implementation is needed. |
-| Deviation | `auth/applications/usecases/login.usecase.ts` and `qr-payments/applications/services/qr-payment-refresher.ts` call `console` from the core | Add a logger port (or let the adapter log) and inject it. |
-| Deviation | `products/.../set-product-image.usecase.ts`, `qr-payments/.../create-qr-payment.usecase.ts` and `create-qr-payment-v2.usecase.ts` call `crypto.randomUUID()` in the use case | Generate keys and references through an id-generator port, as `customer-display` does with its identifiers port. |
-| Deviation | `customer-display/.../open-display-stream.usecase.ts` waits with `setTimeout` in the use case | Take the wait (or the ping schedule) through a port so tests can drive it. |
+| The core imports another module's ports (125 import lines when this list was written) | `applications/` of most modules; the check command above lists them. The most used are `audit/.../audit-log.port`, `products/.../product.repository`, `settings/.../shop-settings.repository` and `users/.../user.repository`. | Move `IAuditLog` to `modules/shared/ports/`. For the rest, declare a narrow port in the consumer and implement it in the provider's adapters. |
+| The core imports another module's non-port code | `orders/.../pay-order-v2.usecase.ts` uses `sales/applications/sale-snapshot`; `setup/.../setup-schemas.ts` uses `users/applications/schemas/user-schemas` | Move pure shared rules to `domains/`; otherwise give the consumer its own copy of the input contract. |
+| Adapters import another module's adapters | `auth` and `setup` controllers use `users/.../user.schema`; `orders` controllers use `sales/.../sale.presenter`, `sale-v2.presenter` and `sale.schema` | Move the shared HTTP schemas and presenters to `libs/`. |
+| The core logs with `console` | `auth/.../login.usecase.ts`, `switch-user.usecase.ts`, `set-own-pin.usecase.ts`, `qr-payments/.../qr-payment-refresher.ts` | Add a logger port in `modules/shared/ports/` and inject it. |
+| The core generates random values | `products/.../set-product-image.usecase.ts`, `qr-payments/.../create-qr-payment.usecase.ts` and `create-qr-payment-v2.usecase.ts` call `crypto.randomUUID()`, and the two QR use cases build the reference with the same copied expression | Add one id-generator port in `modules/shared/ports/`; build the QR reference with one pure function in `domains/`. |
+| A module has its own id generator | `display-slides` declares `ISlideIdGenerator` | Replace it with the shared id-generator port. |
+| The core waits with `setTimeout` | `customer-display/.../open-display-stream.usecase.ts` | Take the wait (or the ping schedule) through a port so tests can drive it. |
+| The web builds idempotency keys inline | `crypto.randomUUID()` in `features/sales/api.ts`, `orders/api.ts`, `pos/api.ts`, `pos/components/PosPage.tsx`, `pos/hooks/use-qr-payment.ts`, `shifts/api.ts`, `shifts/components/ShiftsPage.tsx` and `stock-receipts/components/StockReceiptDraftPage.tsx` | Add one `newIdempotencyKey()` in `src/lib/` and call it everywhere. |
 
 ### Evolving the contract
 
