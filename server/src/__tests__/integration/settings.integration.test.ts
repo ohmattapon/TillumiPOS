@@ -28,7 +28,6 @@ describe('shop settings', () => {
       receiptFooter: null,
       homeView: 'till',
       tablesEnabled: true,
-      kitchenEnabled: true,
       modifiersEnabled: true,
       promptpayMode: 'bank',
       promptpayTarget: null,
@@ -40,7 +39,6 @@ describe('shop settings', () => {
 
     expect(ok(await owner.api.settings.get())).toMatchObject({
       tablesEnabled: false,
-      kitchenEnabled: true,
       modifiersEnabled: false,
     })
   })

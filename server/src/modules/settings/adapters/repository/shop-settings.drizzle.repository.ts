@@ -25,7 +25,6 @@ const columns = {
   receiptFooter: shopSettings.receiptFooter,
   homeView: shopSettings.homeView,
   tablesEnabled: shopSettings.tablesEnabled,
-  kitchenEnabled: shopSettings.kitchenEnabled,
   modifiersEnabled: shopSettings.modifiersEnabled,
   promptpayMode: shopSettings.promptpayMode,
   promptpayTarget: shopSettings.promptpayTarget,

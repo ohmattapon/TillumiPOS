@@ -25,7 +25,6 @@ export const shopSettings = pgTable(
     homeView: shopHomeView().notNull().default('till'),
     // Which screens the web shows. True by default so a shop set up before these existed keeps them all.
     tablesEnabled: boolean().notNull().default(true),
-    kitchenEnabled: boolean().notNull().default(true),
     modifiersEnabled: boolean().notNull().default(true),
     // How a PromptPay payment is taken; the bank flow stays the default for existing shops.
     promptpayMode: text().notNull().default('bank'),

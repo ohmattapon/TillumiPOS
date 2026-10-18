@@ -27,16 +27,15 @@ export type ShopType = (typeof SHOP_TYPES)[number]
 
 export interface ShopFeatures {
   tablesEnabled: boolean
-  kitchenEnabled: boolean
   modifiersEnabled: boolean
   homeView: HomeView
 }
 
 const FEATURES_BY_SHOP_TYPE: Record<ShopType, ShopFeatures> = {
-  cafe: { tablesEnabled: false, kitchenEnabled: false, modifiersEnabled: true, homeView: 'till' },
-  restaurant: { tablesEnabled: true, kitchenEnabled: true, modifiersEnabled: true, homeView: 'tables' },
-  retail: { tablesEnabled: false, kitchenEnabled: false, modifiersEnabled: false, homeView: 'till' },
-  other: { tablesEnabled: true, kitchenEnabled: true, modifiersEnabled: true, homeView: 'till' },
+  cafe: { tablesEnabled: false, modifiersEnabled: true, homeView: 'till' },
+  restaurant: { tablesEnabled: true, modifiersEnabled: true, homeView: 'tables' },
+  retail: { tablesEnabled: false, modifiersEnabled: false, homeView: 'till' },
+  other: { tablesEnabled: true, modifiersEnabled: true, homeView: 'till' },
 }
 
 /** What a new shop of this type starts with. The owner can switch each feature later. */
@@ -63,11 +62,10 @@ export interface ShopSettingsProps {
   receiptFooter: string | null
   homeView: HomeView
   /**
-   * Whether the web shows tables, the kitchen and modifier management. They only hide screens:
+   * Whether the web shows tables and modifier management. They only hide screens:
    * the API keeps accepting everything, and switching one off deletes nothing.
    */
   tablesEnabled: boolean
-  kitchenEnabled: boolean
   modifiersEnabled: boolean
   /** How a PromptPay payment is taken; 'bank' keeps the current behaviour. */
   promptpayMode: PromptPayMode
@@ -90,7 +88,6 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettingsProps = {
   receiptFooter: null,
   homeView: 'till',
   tablesEnabled: true,
-  kitchenEnabled: true,
   modifiersEnabled: true,
   promptpayMode: 'bank',
   promptpayTarget: null,
@@ -124,7 +121,6 @@ export class ShopSettingsEntity {
   public readonly receiptFooter: string | null
   public readonly homeView: HomeView
   public readonly tablesEnabled: boolean
-  public readonly kitchenEnabled: boolean
   public readonly modifiersEnabled: boolean
   public readonly promptpayMode: PromptPayMode
   public readonly promptpayTarget: string | null
@@ -143,7 +139,7 @@ export class ShopSettingsEntity {
     if (!RECEIPT_PAPER_WIDTHS.includes(props.receiptPaperMm)) throw invalid('ขนาดกระดาษใบเสร็จต้องเป็น 58 หรือ 80 มม.')
     if (!within(props.receiptFooter, 200)) throw invalid('ข้อความท้ายใบเสร็จต้องไม่เกิน 200 ตัวอักษร')
     if (!HOME_VIEWS.includes(props.homeView)) throw invalid('หน้าแรกต้องเป็นหน้าขายหรือผังโต๊ะ')
-    if ([props.tablesEnabled, props.kitchenEnabled, props.modifiersEnabled].some((value) => typeof value !== 'boolean'))
+    if ([props.tablesEnabled, props.modifiersEnabled].some((value) => typeof value !== 'boolean'))
       throw invalid('การเปิดปิดฟีเจอร์ต้องเป็นค่าจริงหรือเท็จ')
     if (!props.tablesEnabled && props.homeView === 'tables')
       throw invalid('ปิดการใช้โต๊ะอยู่ จึงตั้งผังโต๊ะเป็นหน้าแรกไม่ได้')
@@ -164,7 +160,6 @@ export class ShopSettingsEntity {
     this.receiptFooter = props.receiptFooter
     this.homeView = props.homeView
     this.tablesEnabled = props.tablesEnabled
-    this.kitchenEnabled = props.kitchenEnabled
     this.modifiersEnabled = props.modifiersEnabled
     this.promptpayMode = props.promptpayMode
     this.promptpayTarget = props.promptpayTarget
@@ -199,7 +194,6 @@ export class ShopSettingsEntity {
       receiptFooter: this.receiptFooter,
       homeView: this.homeView,
       tablesEnabled: this.tablesEnabled,
-      kitchenEnabled: this.kitchenEnabled,
       modifiersEnabled: this.modifiersEnabled,
       promptpayMode: this.promptpayMode,
       promptpayTarget: this.promptpayTarget,

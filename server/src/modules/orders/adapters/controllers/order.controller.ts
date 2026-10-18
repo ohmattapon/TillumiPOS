@@ -1,13 +1,11 @@
 import { SetOrderMemberUseCase } from '../../applications/usecases/set-order-member.usecase'
 import { Elysia } from 'elysia'
 import { inject, injectable } from 'tsyringe'
-import { lineIdentity, type OrderEntity } from '../../../../domains/order.domain'
+import { type OrderEntity } from '../../../../domains/order.domain'
 import { idParams, page } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import { toSaleResponse } from '../../../sales/adapters/controllers/sale.presenter'
 import { saleSchemas } from '../../../sales/adapters/controllers/schemas/sale.schema'
-import { kitchenTicketsToken } from '../../applications/ports/kitchen-tickets.port'
-import type { IKitchenTickets } from '../../applications/ports/kitchen-tickets.port'
 import { AddOrderItemUseCase } from '../../applications/usecases/add-order-item.usecase'
 import { CancelOrderUseCase } from '../../applications/usecases/cancel-order.usecase'
 import { GetOrderUseCase } from '../../applications/usecases/get-order.usecase'
@@ -25,7 +23,7 @@ import { SetOrderLineQuantityUseCase } from '../../applications/usecases/set-ord
 import { SplitOrderUseCase } from '../../applications/usecases/split-order.usecase'
 import { orderSchemas, type OrderResponse } from './schemas/order.schema'
 
-function toResponse(order: OrderEntity, sent: ReadonlyMap<string, number>): OrderResponse {
+function toResponse(order: OrderEntity): OrderResponse {
   const { items, ...header } = order.toSnapshot()
   return {
     ...header,
@@ -35,7 +33,6 @@ function toResponse(order: OrderEntity, sent: ReadonlyMap<string, number>): Orde
       // The cost of an option is internal, like the cost of a sale line.
       options: item.options.map(({ costSatang: _cost, ...option }) => option),
       lineTotalSatang: item.unitPriceSatang * item.quantity,
-      sentQuantity: sent.get(lineIdentity(item.productId, item.options)) ?? 0,
     })),
     itemCount: order.itemCount,
     subtotalSatang: order.subtotalSatang,
@@ -61,18 +58,16 @@ export class OrderElysiaController {
     @inject(MergeOrdersUseCase) private readonly mergeOrders: MergeOrdersUseCase,
     @inject(SetOrderMemberUseCase) private readonly setMember: SetOrderMemberUseCase,
     @inject(SplitOrderUseCase) private readonly splitOrder: SplitOrderUseCase,
-    @inject(kitchenTicketsToken) private readonly kitchen: IKitchenTickets,
   ) {}
 
-  /** Answers with one order, including what the kitchen has of each line. */
+  /** Answers with one order. */
   private async one(order: OrderEntity): Promise<OrderResponse> {
-    return (await this.many([order]))[0]!
+    return toResponse(order)
   }
 
-  /** Answers with several orders, asking the kitchen once for all of them. */
+  /** Answers with several orders. */
   private async many(orders: OrderEntity[]): Promise<OrderResponse[]> {
-    const sent = await this.kitchen.sentByLine(orders.map((order) => order.id))
-    return orders.map((order) => toResponse(order, sent.get(order.id) ?? new Map()))
+    return orders.map((order) => toResponse(order))
   }
 
   getRoutes() {
@@ -172,7 +167,7 @@ export class OrderElysiaController {
           params: orderSchemas.lineParams,
           body: orderSchemas.lineNote,
           response: orderSchemas.order,
-          detail: { summary: 'หมายเหตุของบรรทัด (แก้ได้ก่อนส่งครัว)' },
+          detail: { summary: 'หมายเหตุของบรรทัด (แก้ไขได้เสมอ)' },
         },
       )
       .post(

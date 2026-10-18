@@ -17,7 +17,7 @@ export interface OrderItem {
   unitPriceSatang: number
   quantity: number
   options: readonly LineOption[]
-  /** A note for the kitchen, such as "no ice". Blank means none. */
+  /** An optional note on the line, such as "less sweet". Blank means none. */
   note: string | null
 }
 
@@ -75,7 +75,7 @@ function assertQuantity(quantity: number) {
 /** The identity of a line from its product and the stored key of its options. */
 export const identityOf = (productId: number, optionsKey: string) => `${productId}:${optionsKey}`
 
-/** The same product with the same options is the same line. The kitchen uses this same identity. */
+/** The same product with the same options is the same line. */
 export const lineIdentity = (productId: number, options: readonly LineOption[]) =>
   identityOf(productId, lineKey(options))
 

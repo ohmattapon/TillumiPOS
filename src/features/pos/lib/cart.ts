@@ -22,9 +22,7 @@ export interface PricedLine {
   stockQty: number
   /** An option on the line cannot be chosen any more, so the line cannot be sold as it is. */
   unavailable: boolean
-  /** Units the kitchen already has. Always 0 for a line that is not on an order yet. */
-  sentQuantity: number
-  /** What the cashier wrote for the kitchen; null for a line that is not on an order yet. */
+  /** What the cashier wrote on the line; null when there is none. */
   note: string | null
 }
 
@@ -103,7 +101,6 @@ export function priceCart(
       exceedsStock: exceeds(product, demand.get(productId) ?? quantity),
       stockQty: product.stockQty,
       unavailable: chosen.length !== optionIds.length,
-      sentQuantity: 0,
       note: null,
     })
   }
@@ -136,7 +133,6 @@ export function priceOrder(
       exceedsStock: exceeds(product, demand.get(item.productId) ?? item.quantity),
       stockQty: product?.stockQty ?? 0,
       unavailable: false,
-      sentQuantity: item.sentQuantity,
       note: item.note,
     }
   })
