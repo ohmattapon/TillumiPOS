@@ -100,6 +100,8 @@ export const mockUnitOfWork = () => {
 }
 
 export const mockProductRepository = (): Mocked<IProductRepository> => ({
+  nextSkuNumber: mock<IProductRepository['nextSkuNumber']>(),
+  skuExists: mock<IProductRepository['skuExists']>(),
   findAll: mock<IProductRepository['findAll']>(),
   findById: mock<IProductRepository['findById']>(),
   findManyForUpdate: mock<IProductRepository['findManyForUpdate']>(),

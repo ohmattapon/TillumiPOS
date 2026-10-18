@@ -1,7 +1,9 @@
-import { boolean, check, index, integer, pgTable, text } from 'drizzle-orm/pg-core'
+import { boolean, check, index, integer, pgSequence, pgTable, text } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 import { id, timestamps } from '../columns'
 import { categories } from './categories'
+
+export const productSkuNumber = pgSequence('product_sku_number_seq', { maxValue: 2147483647 })
 
 export const products = pgTable(
   'products',

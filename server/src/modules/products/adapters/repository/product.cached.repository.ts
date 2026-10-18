@@ -24,6 +24,8 @@ export class CachedProductRepository implements IProductRepository {
       })
   }
   findById(id: number, branchId: number) { return this.source.findById(id, branchId) }
+  nextSkuNumber() { return this.source.nextSkuNumber() }
+  skuExists(sku: string) { return this.source.skuExists(sku) }
   findManyForUpdate(ids: number[], branchId: number) { return this.source.findManyForUpdate(ids, branchId) }
   async create(entity: ProductEntity, branchId: number) {
     const saved = await this.source.create(entity, branchId)
