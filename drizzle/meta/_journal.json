@@ -162,6 +162,13 @@
       "when": 1792328800000,
       "tag": "0022_promotion_image",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792328900000,
+      "tag": "0023_auto_product_sku",
+      "breakpoints": true
     }
   ]
 }

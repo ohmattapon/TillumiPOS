@@ -84,7 +84,7 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
         // Only sent once the list has loaded, so a slow request never clears what a product offers.
         modifierGroupIds: canEditModifiers && groups.length > 0 ? chosenGroupIds : undefined,
         input: {
-          sku: form.sku.trim(),
+          sku: product ? form.sku.trim() : form.sku.trim() || undefined,
           name: form.name.trim(),
           barcode: form.barcode.trim() || null,
           categoryId: form.categoryId === NO_CATEGORY ? null : Number(form.categoryId),
@@ -151,7 +151,8 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-sku">{t('form.sku')}</Label>
-              <Input id="product-sku" className="h-10" value={form.sku} onChange={(event) => set('sku', event.target.value)} required />
+              <Input id="product-sku" className="h-11" value={form.sku} onChange={(event) => set('sku', event.target.value)} required={!!product} maxLength={64} placeholder={product ? undefined : t('form.skuAuto')} aria-describedby={product ? undefined : 'product-sku-hint'} />
+              {!product && <p id="product-sku-hint" className="text-xs text-muted-foreground">{t('form.skuAutoHint')}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-barcode">{t('form.barcode')}</Label>

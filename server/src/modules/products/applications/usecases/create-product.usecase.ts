@@ -4,6 +4,7 @@ import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import { TOKENS } from '../../../tokens'
 import { inject, injectable } from 'tsyringe'
 import { ProductEntity } from '../../../../domains/product.domain'
+import { formatProductSku } from '../../../../domains/product-sku'
 import { createProductSchema } from '../schemas/product-schemas'
 import { productRepositoryToken } from '../ports/product.repository'
 import type { IProductRepository } from '../ports/product.repository'
@@ -19,10 +20,16 @@ export class CreateProductUseCase {
     const dto = createProductSchema.parse(input)
 
     return this.uow.run(async () => {
+      let sku = dto.sku
+      if (sku === undefined) {
+        do {
+          sku = formatProductSku(await this.products.nextSkuNumber())
+        } while (await this.products.skuExists(sku))
+      }
       const result = await this.products.create(
         new ProductEntity({
           id: 0,
-          sku: dto.sku,
+          sku,
           barcode: dto.barcode ?? null,
           name: dto.name,
           categoryId: dto.categoryId ?? null,
