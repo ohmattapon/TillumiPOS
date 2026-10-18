@@ -295,9 +295,9 @@ async function main() {
         })
         await bare.goto(`${WEB}/customer`)
         await bare.getByText('ยินดีต้อนรับ').waitFor()
-        const unexpected = apiCalls.filter(
-          (url) => !new URL(url).pathname.startsWith('/api/v1/customer-display/sessions'),
-        )
+        // The screen may ask for its own session, and for the slides, which are public pictures with no prices.
+        const allowed = ['/api/v1/customer-display/sessions', '/api/v1/display-slides']
+        const unexpected = apiCalls.filter((url) => !allowed.some((path) => new URL(url).pathname.startsWith(path)))
         if (unexpected.length > 0) throw new Error(`The customer screen called the API: ${unexpected[0]}`)
       } finally {
         await stranger.close()
