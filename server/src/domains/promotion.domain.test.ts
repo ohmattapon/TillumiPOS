@@ -121,7 +121,7 @@ describe('choosing the best', () => {
 
 describe('PromotionEntity', () => {
   const props = {
-    ...rules(), name: '  ลดวันพฤหัส  ', createdAt: new Date('2026-10-15T00:00:00Z'), updatedAt: new Date('2026-10-15T00:00:00Z'),
+    ...rules(), name: '  ลดวันพฤหัส  ', imageKey: null, createdAt: new Date('2026-10-15T00:00:00Z'), updatedAt: new Date('2026-10-15T00:00:00Z'),
   }
   const invalid = (changes: Partial<typeof props>) =>
     expect(codeOf(() => new PromotionEntity({ ...props, ...changes }))).toBe('INVALID_PROMOTION')
@@ -134,6 +134,16 @@ describe('PromotionEntity', () => {
 
   test('sorts weekdays and drops repeats', () => {
     expect(new PromotionEntity({ ...props, weekdays: [5, 1, 5, 0] }).weekdays).toEqual([0, 1, 5])
+  })
+
+  test('carries the image key through snapshots, and with() never changes it', () => {
+    const entity = new PromotionEntity({ ...props, imageKey: 'promotions/7/a.png' })
+    expect(entity.imageKey).toBe('promotions/7/a.png')
+    expect(entity.toSnapshot().imageKey).toBe('promotions/7/a.png')
+    const renamed = entity.with({ name: 'ชื่อใหม่' }, new Date('2026-10-16T00:00:00Z'))
+    expect(renamed.imageKey).toBe('promotions/7/a.png')
+    const smuggled = entity.with({ name: 'ชื่อใหม่', imageKey: 'promotions/7/evil.png' }, new Date('2026-10-16T00:00:00Z'))
+    expect(smuggled.imageKey).toBe('promotions/7/a.png')
   })
 
   test('rejects values outside what each kind allows', () => {

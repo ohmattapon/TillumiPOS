@@ -128,6 +128,8 @@ export function pickBestPromotion<T extends PromotionRules>(
 
 export interface PromotionProps extends PromotionRules {
   name: string
+  /** Storage key of the display image (`promotions/<id>/<uuid>.<ext>`); null means no image. Never priced, never patched. */
+  imageKey: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -161,6 +163,7 @@ export class PromotionEntity implements PromotionRules {
   public readonly windowEndMinute: number | null
   public readonly audience: PromotionAudience
   public readonly isActive: boolean
+  public readonly imageKey: string | null
   public readonly createdAt: Date
   public readonly updatedAt: Date
 
@@ -215,14 +218,15 @@ export class PromotionEntity implements PromotionRules {
     this.windowEndMinute = end
     this.audience = props.audience
     this.isActive = props.isActive
+    this.imageKey = props.imageKey
     this.createdAt = props.createdAt
     this.updatedAt = props.updatedAt
   }
 
-  /** Only the fields given change; `null` is a value (it clears a bound), `undefined` means leave it. */
+  /** Only the fields given change; `null` is a value (it clears a bound), `undefined` means leave it. The image key never changes here: only the image endpoints set it. */
   with(changes: PromotionChanges, now: Date): PromotionEntity {
     const given = Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined))
-    return new PromotionEntity({ ...this.toSnapshot(), ...given, updatedAt: now })
+    return new PromotionEntity({ ...this.toSnapshot(), ...given, imageKey: this.imageKey, updatedAt: now })
   }
 
   /** What a sale keeps of this promotion when it gave `discountSatang`. */
@@ -252,6 +256,7 @@ export class PromotionEntity implements PromotionRules {
       windowEndMinute: this.windowEndMinute,
       audience: this.audience,
       isActive: this.isActive,
+      imageKey: this.imageKey,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     }

@@ -4,6 +4,10 @@ const th = {
     paid: 'ลูกค้าชำระ {{amount}} แล้ว ชำระออเดอร์นี้ด้วยเงินก้อนนี้จากปุ่มชำระเงิน',
     cancel: 'ยกเลิก QR นี้',
   },
+  header: {
+    switchStaff: 'สลับพนักงาน',
+    sellingAs: 'กำลังขาย: {{name}}',
+  },
   title: 'ขายสินค้า',
   description: 'สแกนบาร์โค้ด หรือแตะสินค้าเพื่อเพิ่มลงตะกร้า',
   shiftReady: 'กะเปิดอยู่',
@@ -159,6 +163,10 @@ const en = {
     pending: 'This order is locked by a QR waiting for {{amount}}. Cancel the QR to edit the order.',
     paid: 'The customer has paid {{amount}}. Pay this order with that money from the payment button.',
     cancel: 'Cancel this QR',
+  },
+  header: {
+    switchStaff: 'Switch staff',
+    sellingAs: 'Selling as {{name}}',
   },
   title: 'Sell',
   shiftReady: 'Shift open',

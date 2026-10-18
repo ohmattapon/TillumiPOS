@@ -20,7 +20,9 @@ import {
 import { meQuery } from '@/features/auth'
 import { roleOptionsQuery } from '@/features/roles'
 import { usersQuery, useUpdateUser } from '../api'
+import { canSetPinFor } from '../lib/can-set-pin-for'
 import { UserFormDialog } from './UserFormDialog'
+import { UserPinDialog } from './UserPinDialog'
 
 type OpenDialog = { user?: User } | null
 
@@ -33,6 +35,7 @@ export function UsersPage() {
   const me = useQuery(meQuery).data
   const update = useUpdateUser()
   const [dialog, setDialog] = useState<OpenDialog>(null)
+  const [pinUser, setPinUser] = useState<User | null>(null)
 
   const paging = useListPagination('users')
   const all = users.data ?? []
@@ -81,6 +84,12 @@ export function UsersPage() {
               { id: 'username', header: t('columns.username'), priority: 'secondary', cell: (user) => user.username },
               { id: 'role', header: t('columns.role'), priority: 'secondary', cell: (user) => roles.data?.find((role) => role.id === user.roleId)?.name ?? t(`roles.${user.role}`) },
               {
+                id: 'pin',
+                header: t('columns.pin'),
+                priority: 'secondary',
+                cell: (user) => <StatusBadge tone={user.hasPin ? 'success' : 'neutral'}>{user.hasPin ? t('pin.set') : t('pin.none')}</StatusBadge>,
+              },
+              {
                 id: 'status',
                 header: t('columns.status'),
                 priority: 'secondary',
@@ -100,6 +109,7 @@ export function UsersPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onSelect={() => setDialog({ user })}>{t('actions.edit')}</DropdownMenuItem>
+                  {me && canSetPinFor(user, me) && <DropdownMenuItem onSelect={() => setPinUser(user)}>{t('actions.setPin')}</DropdownMenuItem>}
                   <DropdownMenuItem onSelect={() => setActive(user, !user.isActive)}>
                     {user.isActive ? t('actions.deactivate') : t('actions.activate')}
                   </DropdownMenuItem>
@@ -117,6 +127,7 @@ export function UsersPage() {
           onClose={() => setDialog(null)}
         />
       )}
+      {pinUser && <UserPinDialog user={pinUser} onClose={() => setPinUser(null)} />}
     </>
   )
 }

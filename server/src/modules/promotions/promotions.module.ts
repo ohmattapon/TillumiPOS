@@ -5,6 +5,8 @@ import { promotionRepositoryToken } from './applications/ports/promotion.reposit
 import { CreatePromotionUseCase } from './applications/usecases/create-promotion.usecase'
 import { GetPromotionUseCase } from './applications/usecases/get-promotion.usecase'
 import { ListPromotionsUseCase } from './applications/usecases/list-promotions.usecase'
+import { RemovePromotionImageUseCase } from './applications/usecases/remove-promotion-image.usecase'
+import { SetPromotionImageUseCase } from './applications/usecases/set-promotion-image.usecase'
 import { UpdatePromotionUseCase } from './applications/usecases/update-promotion.usecase'
 import { promotionCatalogToken } from '../quotes/applications/ports/promotion-catalog.port'
 import { PromotionCatalog } from './applications/services/promotion-catalog'
@@ -14,5 +16,7 @@ container.registerSingleton(CreatePromotionUseCase)
 container.registerSingleton(UpdatePromotionUseCase)
 container.registerSingleton(GetPromotionUseCase)
 container.registerSingleton(ListPromotionsUseCase)
+container.registerSingleton(SetPromotionImageUseCase)
+container.registerSingleton(RemovePromotionImageUseCase)
 container.registerSingleton(PromotionElysiaController)
 container.register(promotionCatalogToken, { useClass: PromotionCatalog })
