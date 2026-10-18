@@ -455,8 +455,12 @@ async function main() {
       const form = owner.getByRole('dialog')
       try {
         if (await form.getByLabel('ประเภทสินค้า').innerText() !== 'เมนูคาเฟ่') throw new Error('Cafe default missing')
+        const skuInput = form.getByLabel('รหัสสินค้า (SKU)')
+        // The code arrives with the shop's existing codes, so the field may fill a moment after opening.
+        for (let attempt = 0; attempt < 40 && !/^CAFE-\d{3}$/.test(await skuInput.inputValue()); attempt++) await owner.waitForTimeout(250)
+        const filledSku = await skuInput.inputValue()
+        if (!/^CAFE-\d{3}$/.test(filledSku)) throw new Error(`Cafe form did not prefill a CAFE-### code: ${filledSku}`)
         await form.getByLabel('ชื่อสินค้า', { exact: true }).fill('E2E manual cafe')
-        await form.getByLabel('รหัสสินค้า (SKU)').fill('E2E-CAFE')
         await form.getByLabel(/ราคาขาย/).fill('45')
         await form.getByRole('button', { name: 'บันทึก', exact: true }).click()
         await form.waitFor({ state: 'detached' })
@@ -464,6 +468,8 @@ async function main() {
           throw new Error('Save did not select cafe tab')
         const row = owner.getByRole('row', { name: /E2E manual cafe/ })
         await row.waitFor()
+        // The server accepted the code the form filled rather than making the owner retype it.
+        if (!(await row.innerText()).includes(filledSku)) throw new Error(`Saved cafe lost the prefilled SKU: ${filledSku}`)
         await row.getByRole('button', { name: /การทำงานอื่น/ }).click()
         await owner.getByRole('menuitem', { name: 'แก้ไขสินค้า' }).click()
         if (await form.getByLabel('ประเภทสินค้า').innerText() !== 'เมนูคาเฟ่') throw new Error('Edit lost saved type')
@@ -477,6 +483,7 @@ async function main() {
         await owner.getByRole('tab', { name: 'เมนูคาเฟ่', exact: true }).click()
         await normalButton.click()
         if (await form.getByLabel('ประเภทสินค้า').innerText() !== 'สินค้าทั่วไป') throw new Error('Normal button used active tab')
+        if (await form.getByLabel('รหัสสินค้า (SKU)').inputValue() !== '') throw new Error('Normal creation prefilled an SKU')
         await form.getByLabel('ชื่อสินค้า', { exact: true }).fill('E2E manual normal')
         await form.getByLabel('รหัสสินค้า (SKU)').fill('E2E-NORMAL')
         await form.getByLabel(/ราคาขาย/).fill('20')

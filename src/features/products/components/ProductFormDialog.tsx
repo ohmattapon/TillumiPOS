@@ -15,7 +15,8 @@ import { ProductImage } from './ProductImage'
 import { modifierGroupsQuery } from '@/features/modifiers'
 import { useCan } from '@/features/auth'
 import { useFeatures, useFormat, useSettings } from '@/features/settings'
-import { imageStorageQuery, useSaveProduct } from '../api'
+import { imageStorageQuery, productsQuery, useSaveProduct } from '../api'
+import { CAFE_SKU_PREFIX, CAFE_SKU_SCAN_LIMIT, nextCafeSku } from '../lib/cafe-sku'
 
 // Radix Select cannot use an empty string as an item value.
 const NO_CATEGORY = 'none'
@@ -47,6 +48,20 @@ export function ProductFormDialog({ product, initialType = 'normal', categories,
     trackStock: product?.trackStock ?? true,
   })
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm({ ...form, [key]: value })
+
+  // A café product added from the café button starts on the next free CAFE-### code,
+  // which the owner may still overwrite; the server's unique SKU stays the authority.
+  const creatingCafe = product === undefined && initialType === 'cafe'
+  const cafeSkuFilters = { q: CAFE_SKU_PREFIX, includeInactive: true, limit: CAFE_SKU_SCAN_LIMIT }
+  const cafeProducts = useQuery({ ...productsQuery(cafeSkuFilters), enabled: creatingCafe })
+  const nextSku = cafeProducts.data ? nextCafeSku(cafeProducts.data.items.map((item) => item.sku)) : null
+  const skuPrefilled = useRef(false)
+  useEffect(() => {
+    if (!creatingCafe || !nextSku || skuPrefilled.current) return
+    skuPrefilled.current = true
+    // Fill only the untouched, empty field so nothing the owner typed is overwritten.
+    setForm((current) => (current.sku === '' ? { ...current, sku: nextSku } : current))
+  }, [creatingCafe, nextSku])
 
   const groups = useQuery(modifierGroupsQuery).data ?? []
   // The groups already offered on this product; until the owner touches them, what is stored.
@@ -174,6 +189,7 @@ export function ProductFormDialog({ product, initialType = 'normal', categories,
             <div className="space-y-2">
               <Label htmlFor="product-sku">{t('form.sku')}</Label>
               <Input id="product-sku" className="h-10" value={form.sku} onChange={(event) => set('sku', event.target.value)} required />
+              {creatingCafe && <p className="text-xs text-muted-foreground">{t('form.skuAuto')}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-barcode">{t('form.barcode')}</Label>
