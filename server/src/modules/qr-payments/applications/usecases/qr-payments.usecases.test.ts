@@ -7,8 +7,10 @@ import {
   mockQrPaymentGateway,
   mockQrPaymentRepository,
   mockQuoteClaims,
+  mockShopSettingsRepository,
   mockUnitOfWork,
 } from '../../../../__tests__/mocks'
+import { DEFAULT_SHOP_SETTINGS, ShopSettingsEntity } from '../../../../domains/shop-settings.domain'
 import { DomainExternalServiceError } from '../../../../domains/errors/domain-external-service.error'
 import { QrPaymentClaims } from '../services/qr-payment-claims'
 import { MIN_CHECK_INTERVAL_MS, QrPaymentRefresher } from '../services/qr-payment-refresher'
@@ -266,14 +268,29 @@ describe('ConfirmScbCallbackUseCase', () => {
 })
 
 describe('QrPaymentClaims', () => {
-  const claims = () => new QrPaymentClaims(gateway, repo)
+  const claims = (mode: 'bank' | 'static' = 'bank') => {
+    const settings = mockShopSettingsRepository()
+    settings.get.mockResolvedValue(new ShopSettingsEntity({ ...DEFAULT_SHOP_SETTINGS, promptpayMode: mode }))
+    return new QrPaymentClaims(gateway, repo, settings)
+  }
 
-  test('is required exactly when the bank gateway is set up', () => {
+  test('is required exactly when the bank gateway is set up', async () => {
     gateway.isEnabled.mockReturnValue(true)
-    expect(claims().isRequired()).toBe(true)
+    await expect(claims().isRequired()).resolves.toBe(true)
 
     gateway.isEnabled.mockReturnValue(false)
-    expect(claims().isRequired()).toBe(false)
+    await expect(claims().isRequired()).resolves.toBe(false)
+  })
+
+  test.each([
+    ['static mode skips the bank claim even when the gateway is set up', 'static' as const, true, false],
+    ['bank mode still requires a confirmed QR when the gateway is set up', 'bank' as const, true, true],
+    ['bank mode without the gateway stays trust-based', 'bank' as const, false, false],
+    ['static mode without the gateway stays trust-based', 'static' as const, false, false],
+  ])('%s', async (_label, mode, gatewayEnabled, required) => {
+    gateway.isEnabled.mockReturnValue(gatewayEnabled)
+
+    await expect(claims(mode).isRequired()).resolves.toBe(required)
   })
 
   test('accepts a paid, unused payment of this branch and amount', async () => {

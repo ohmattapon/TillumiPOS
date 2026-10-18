@@ -88,6 +88,33 @@ describe('UpdateShopSettingsUseCase', () => {
     expect(repo.save).toHaveBeenCalledWith(saved)
   })
 
+  test('stores a static PromptPay mode with its target', async () => {
+    const saved = await update({ promptpayMode: 'static', promptpayTarget: '0812345678' })
+
+    expect(saved.toSnapshot()).toEqual({ ...current.toSnapshot(), promptpayMode: 'static', promptpayTarget: '0812345678' })
+    expect(repo.save).toHaveBeenCalledWith(saved)
+  })
+
+  test('a blank PromptPay target is cleared, not stored as an empty string', async () => {
+    const saved = await update({ promptpayTarget: '   ' })
+
+    expect(saved.promptpayTarget).toBeNull()
+  })
+
+  test.each([
+    ['an unknown PromptPay mode', { promptpayMode: 'qr' }],
+    ['a non-digit PromptPay target', { promptpayTarget: '081-234-5678' }],
+  ])('rejects %s before reading or storing anything', async (_label, input) => {
+    await expect(update(input)).rejects.toBeInstanceOf(ZodError)
+    expect(repo.getForUpdate).not.toHaveBeenCalled()
+    expect(repo.save).not.toHaveBeenCalled()
+  })
+
+  test('a digit-only target of the wrong length is a domain error, and nothing is stored', async () => {
+    await expect(update({ promptpayTarget: '081234567' })).rejects.toMatchObject({ code: 'INVALID_SHOP_SETTINGS' })
+    expect(repo.save).not.toHaveBeenCalled()
+  })
+
   test('checks active shifts before changing currency', async () => {
     await update({ currency: 'USD' })
 
