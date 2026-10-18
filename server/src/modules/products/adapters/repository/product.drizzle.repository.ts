@@ -26,6 +26,9 @@ const columns = {
 
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, '\\$&')
 
+// Shared by allocation and all editable SKU writes. Held until the caller's UoW ends.
+const lockSkuWrites = () => currentExecutor().execute(sql`select pg_advisory_xact_lock(734127, 1)`)
+
 // Same codes and messages the API has always answered for these database conflicts.
 const translate = (error: unknown): unknown => {
   if (isUniqueViolation(error)) return new DomainConflictError('ข้อมูลซ้ำกับที่มีอยู่แล้ว', 'DUPLICATE')
@@ -40,6 +43,18 @@ const inBranch = (branchId: number) =>
 
 @injectable()
 export class DrizzleProductRepository implements IProductRepository {
+  async nextSkuNumber() {
+    await lockSkuWrites()
+    const rows = await currentExecutor().execute(sql`select nextval('product_sku_number_seq')::integer as number`)
+    return Number(rows[0]!.number)
+  }
+
+  async skuExists(sku: string) {
+    const rows = await currentExecutor().select({ id: products.id }).from(products)
+      .where(sql`lower(${products.sku}) = ${sku.toLowerCase()}`).limit(1)
+    return rows.length > 0
+  }
+
   async findAll(query: IFindProductsQuery) {
     const term = query.q?.trim()
     const pattern = term && `%${escapeLike(term)}%`
@@ -107,6 +122,7 @@ export class DrizzleProductRepository implements IProductRepository {
   async create(entity: ProductEntity, branchId: number) {
     const { id: _unassigned, stockQty: _none, ...values } = entity.toSnapshot()
     try {
+      await lockSkuWrites()
       const [row] = await currentExecutor().insert(products).values(values).returning({ id: products.id })
       return (await this.findById(row!.id, branchId))!
     } catch (error) {
@@ -118,6 +134,7 @@ export class DrizzleProductRepository implements IProductRepository {
     // Stock and image have their own write paths and must not be overwritten from a stale read.
     const { id, stockQty: _stock, imageKey: _image, ...values } = entity.toSnapshot()
     try {
+      await lockSkuWrites()
       const [row] = await currentExecutor().update(products).set(values).where(eq(products.id, id)).returning({ id: products.id })
       if (!row) throw new DomainNotFoundError('ไม่พบสินค้า')
       return (await this.findById(id, branchId))!

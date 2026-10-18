@@ -78,6 +78,20 @@ describe('CreateProductUseCase', () => {
     useCase = new CreateProductUseCase(repo, auditUnitOfWork(), auditMock())
   })
 
+  test('generates a SKU when omitted and skips existing codes', async () => {
+    repo.nextSkuNumber.mockResolvedValueOnce(1).mockResolvedValueOnce(2)
+    repo.skuExists.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
+    const created = await useCase.execute({ name: 'Auto', priceSatang: 100 }, 1, { id: 1, displayName: 'Tester' })
+    expect(created.sku).toBe('SKU-000002')
+    expect(repo.skuExists.mock.calls).toEqual([['SKU-000001'], ['SKU-000002']])
+  })
+
+  test('manual SKU does not allocate a number', async () => {
+    const created = await useCase.execute({ sku: 'CUSTOM', name: 'Manual', priceSatang: 100 }, 1, { id: 1, displayName: 'Tester' })
+    expect(created.sku).toBe('CUSTOM')
+    expect(repo.nextSkuNumber).not.toHaveBeenCalled()
+  })
+
   test('fills the defaults: no barcode or category, zero cost, tracked, empty, active, no image', async () => {
     const created = await useCase.execute({ sku: 'NEW-1', name: 'ใหม่', priceSatang: 100 }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
 

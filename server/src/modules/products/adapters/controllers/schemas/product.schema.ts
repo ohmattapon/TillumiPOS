@@ -15,7 +15,7 @@ const fields = {
 export const productSchemas = {
   product: t.Object({ id: t.Integer(), ...fields, stockQty: t.Integer(), imageUrl: t.Nullable(t.String()) }),
   create: t.Object({
-    sku: fields.sku,
+    sku: t.Optional(fields.sku),
     name: fields.name,
     priceSatang: fields.priceSatang,
     barcode: t.Optional(fields.barcode),

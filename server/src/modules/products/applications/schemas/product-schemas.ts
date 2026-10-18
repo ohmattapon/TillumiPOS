@@ -13,7 +13,7 @@ const fields = {
 
 // z.object() drops unknown keys, so stock, image and id can never be set through these.
 export const createProductSchema = z.object({
-  sku: fields.sku,
+  sku: fields.sku.optional(),
   name: fields.name,
   priceSatang: fields.priceSatang,
   barcode: fields.barcode.optional(),

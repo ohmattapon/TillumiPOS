@@ -143,6 +143,31 @@ async function main() {
         await page.keyboard.press('Escape')
       }
 
+      // Creation without typing a SKU works at every supported viewport.
+      await page.goto(`${WEB}/products`)
+      await page.getByRole('button', { name: 'เพิ่มสินค้า', exact: true }).click()
+      const productForm = page.getByRole('dialog')
+      const skuInput = productForm.getByLabel('รหัสสินค้า (SKU)', { exact: true })
+      assert.equal(await skuInput.inputValue(), '')
+      assert.equal(await skuInput.getAttribute('required'), null)
+      await productForm.getByText('เว้นว่างเพื่อสร้างรหัสเมื่อบันทึก หรือกรอกรหัสเอง').waitFor()
+      await shot('05a-product-auto-sku')
+      const productName = `Auto SKU ${size.name}`
+      await productForm.getByLabel('ชื่อสินค้า', { exact: true }).fill(productName)
+      await productForm.locator('#product-price').fill('10')
+      const createdResponse = page.waitForResponse((response) =>
+        response.request().method() === 'POST' && /\/api\/v1\/catalog\/products\/?$/.test(response.url()))
+      await productForm.getByRole('button', { name: 'บันทึก', exact: true }).click()
+      const created = await createdResponse
+      assert(created.ok(), 'creating a product without SKU must succeed')
+      const savedProduct = await created.json() as { id: number; sku: string; name: string }
+      assert.match(savedProduct.sku, /^SKU-\d{6,}$/)
+      assert.equal(savedProduct.name, productName)
+      await productForm.waitFor({ state: 'hidden' })
+      // Keep this fixture out of the next viewport's sale catalogue.
+      const retired = await page.request.patch(`${WEB}/api/v1/catalog/products/${savedProduct.id}`, { data: { isActive: false } })
+      assert(retired.ok(), 'retire the automatic SKU screenshot fixture')
+
       if (size.name === 'phone-short') {
         await page.goto(`${WEB}/products`)
         await page.waitForTimeout(800)

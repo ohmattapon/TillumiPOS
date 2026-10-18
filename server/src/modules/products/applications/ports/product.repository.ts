@@ -19,6 +19,10 @@ export interface IFindProductsQuery {
 }
 
 export interface IProductRepository {
+  /** Command-only: reserves a sequence number under the SKU write lock, inside a unit of work. Gaps are allowed. */
+  nextSkuNumber(): Promise<number>
+  /** Uncached, case-insensitive check, including inactive products. */
+  skuExists(sku: string): Promise<boolean>
   /** One page ordered by name, with the total that match. Inactive products are left out unless asked for. */
   findAll(query: IFindProductsQuery): Promise<Page<ProductEntity>>
   findById(id: number, branchId: number): Promise<ProductEntity | null>
