@@ -59,7 +59,8 @@ export class DrizzlePromotionRepository implements IPromotionRepository {
   }
 
   async update(entity: PromotionEntity) {
-    const { id, createdAt: _createdAt, ...values } = snapshotOf(entity)
+    // The image key is never patched: only setImageKey writes it, so a normal edit cannot clobber it.
+    const { id, createdAt: _createdAt, imageKey: _image, ...values } = snapshotOf(entity)
     try {
       const [row] = await currentExecutor().update(promotions).set(values).where(eq(promotions.id, id)).returning()
       if (!row) throw new DomainNotFoundError('ไม่พบโปรโมชัน', 'PROMOTION_NOT_FOUND')
@@ -68,5 +69,15 @@ export class DrizzlePromotionRepository implements IPromotionRepository {
       if (isUniqueViolation(error)) throw nameTaken()
       throw error
     }
+  }
+
+  async setImageKey(id: number, imageKey: string | null) {
+    const [row] = await currentExecutor()
+      .update(promotions)
+      .set({ imageKey })
+      .where(eq(promotions.id, id))
+      .returning({ id: promotions.id })
+    if (!row) throw new DomainNotFoundError('ไม่พบโปรโมชัน', 'PROMOTION_NOT_FOUND')
+    return (await this.findById(id))!
   }
 }

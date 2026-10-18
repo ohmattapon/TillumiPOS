@@ -34,9 +34,11 @@ export const promotionSchemas = {
     windowEndMinute: t.Nullable(t.Integer()),
     audience,
     isActive: t.Boolean(),
+    imageUrl: t.Nullable(t.String()),
     createdAt: t.Date(),
     updatedAt: t.Date(),
   }),
+  image: t.Object({ file: t.File({ type: ['image/jpeg', 'image/png', 'image/webp'], maxSize: '2m' }) }),
   create: t.Object({ name, kind, value: t.Integer({ minimum: 1 }), ...optionalRules }),
   update: t.Partial(t.Object({ name, kind, value: t.Integer({ minimum: 1 }), ...optionalRules })),
   listQuery: t.Object({

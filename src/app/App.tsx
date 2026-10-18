@@ -9,6 +9,7 @@ import { AuditPage } from '@/features/audit'
 import { CategoriesPage } from '@/features/categories'
 import { KitchenBoardPage, KitchenStationsPage } from '@/features/kitchen'
 import { CustomerDisplayPage, isCustomerScreenPath } from '@/features/customer-display'
+import { DisplaySlidesPage } from '@/features/display-slides'
 import { MembersPage, MemberDetailsPage } from '@/features/members'
 import { PromotionsPage } from '@/features/promotions'
 import { ModifiersPage } from '@/features/modifiers'
@@ -59,6 +60,7 @@ function Shell({ user }: { user: User }) {
           <Route path="members" element={<MembersPage />} />
           <Route path="members/:id" element={<MemberDetailsPage />} />
           <Route path="promotions" element={<PromotionsPage />} />
+          {can('promotions.write') && <Route path="display-slides" element={<DisplaySlidesPage />} />}
           <Route path="shifts" element={<ShiftsPage />} />
           <Route path="kitchen" element={<FeatureRoute feature="kitchen"><KitchenBoardPage /></FeatureRoute>} />
           {can('kitchen.write') && <Route path="kitchen-stations" element={<FeatureRoute feature="kitchen"><KitchenStationsPage /></FeatureRoute>} />}

@@ -10,6 +10,8 @@ export const users = pgTable('users', {
   id: id(),
   username: text().notNull().unique(),
   passwordHash: text().notNull(),
+  // Null until the person sets a PIN for quick staff switching.
+  pinHash: text(),
   displayName: text().notNull(),
   role: userRole().notNull().default('cashier'),
   roleId: integer().references(() => roles.id),

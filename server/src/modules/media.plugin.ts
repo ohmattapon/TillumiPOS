@@ -1,6 +1,6 @@
 import { resolve, sep } from 'node:path'
 import { Elysia, NotFoundError } from 'elysia'
-import { contentTypeOf } from './shared/adapters/local-disk-media-storage'
+import { contentTypeOf, slideContentTypeOf } from './shared/adapters/local-disk-media-storage'
 
 const PREFIX = '/media/'
 
@@ -15,8 +15,8 @@ export function mediaPlugin(directory: string | null) {
 
   return plugin.get(`${PREFIX}*`, async ({ path, request }) => {
     const key = path.slice(PREFIX.length)
-    // Only the shape the upload produces is ever read; an encoded or relative path fails here.
-    const type = contentTypeOf(key)
+    // Only the shapes the uploads produce are ever read; an encoded or relative path fails here.
+    const type = contentTypeOf(key) ?? slideContentTypeOf(key)
     if (type === null) throw new NotFoundError()
     const target = resolve(base, key)
     if (!target.startsWith(base + sep)) throw new NotFoundError()

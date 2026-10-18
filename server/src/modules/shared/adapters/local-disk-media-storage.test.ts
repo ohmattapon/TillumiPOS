@@ -42,8 +42,8 @@ describe('LocalDiskMediaStorage', () => {
     expect(await filesUnder()).toEqual([])
   })
 
-  test('a key outside the product image pattern is refused, so nothing can leave the folder', async () => {
-    for (const key of ['../x.png', 'products/1/../../x.png', '/etc/passwd', 'products/1/a.png/../b.png', 'products/x/a.png', 'products/1/a.svg', 'products/1/%2e%2e.png'])
+  test('a key outside the product or promotion image pattern is refused, so nothing can leave the folder', async () => {
+    for (const key of ['../x.png', 'products/1/../../x.png', 'promotions/1/../../x.png', '/etc/passwd', 'products/1/a.png/../b.png', 'products/x/a.png', 'promotions/x/a.png', 'products/1/a.svg', 'promotions/1/a.svg', 'products/1/%2e%2e.png'])
       await expect(storage.put(key, png())).rejects.toMatchObject({ code: 'MEDIA_UNAVAILABLE' })
     expect(await filesUnder()).toEqual([])
   })
@@ -74,5 +74,15 @@ describe('media keys', () => {
     expect(contentTypeOf('products/12/a.webp')).toBe('image/webp')
     expect(isMediaKey('products/12/a.png/')).toBe(false)
     expect(contentTypeOf('x.png')).toBeNull()
+  })
+
+  test('the promotion image pattern is a key, with its content type', () => {
+    expect(isMediaKey('promotions/12/3f2c-aa.jpg')).toBe(true)
+    expect(contentTypeOf('promotions/12/3f2c-aa.jpg')).toBe('image/jpeg')
+    expect(contentTypeOf('promotions/12/a.webp')).toBe('image/webp')
+    expect(contentTypeOf('promotions/12/a.png')).toBe('image/png')
+    expect(isMediaKey('promotions/12/a.png/')).toBe(false)
+    expect(isMediaKey('promotions/12/a.svg')).toBe(false)
+    expect(isMediaKey('promotions/x/a.png')).toBe(false)
   })
 })

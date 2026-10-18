@@ -141,6 +141,27 @@
       "when": 1792242200000,
       "tag": "0019_reopen_main_branch",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792328600000,
+      "tag": "0020_user_pin",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792328700000,
+      "tag": "0021_display_slides",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792328800000,
+      "tag": "0022_promotion_image",
+      "breakpoints": true
     }
   ]
 }

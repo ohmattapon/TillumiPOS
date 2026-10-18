@@ -5,6 +5,7 @@ import { idParams, page } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import { CreateUserUseCase } from '../../applications/usecases/create-user.usecase'
 import { ListUsersUseCase } from '../../applications/usecases/list-users.usecase'
+import { SetUserPinUseCase } from '../../applications/usecases/set-user-pin.usecase'
 import { UpdateUserUseCase } from '../../applications/usecases/update-user.usecase'
 import { userSchemas, type UserResponse } from './schemas/user.schema'
 
@@ -16,6 +17,7 @@ export class UserElysiaController {
     @inject(ListUsersUseCase) private readonly listUsers: ListUsersUseCase,
     @inject(CreateUserUseCase) private readonly createUser: CreateUserUseCase,
     @inject(UpdateUserUseCase) private readonly updateUser: UpdateUserUseCase,
+    @inject(SetUserPinUseCase) private readonly setUserPin: SetUserPinUseCase,
   ) {}
 
   getRoutes() {
@@ -40,6 +42,12 @@ export class UserElysiaController {
         body: userSchemas.update,
         response: userSchemas.user,
         detail: { summary: 'แก้ไขผู้ใช้ เปลี่ยนรหัสผ่าน หรือปิดการใช้งาน' },
+      })
+      .put('/:id/pin', async ({ params, body, user }) => toResponse(await this.setUserPin.execute(params.id, body, user)), {
+        params: idParams,
+        body: userSchemas.setPin,
+        response: userSchemas.user,
+        detail: { summary: 'ตั้งหรือลบ PIN สลับผู้ขายของผู้ใช้ (ส่ง pin เป็น null เพื่อลบ)' },
       })
   }
 }

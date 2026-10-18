@@ -356,6 +356,9 @@
                     "displayName": {
                       "type": "string"
                     },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
                     "id": {
                       "anyOf": [
                         {
@@ -401,7 +404,8 @@
                     "role",
                     "roleId",
                     "branchId",
-                    "isActive"
+                    "isActive",
+                    "hasPin"
                   ],
                   "type": "object"
                 }
@@ -469,6 +473,9 @@
                     "displayName": {
                       "type": "string"
                     },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
                     "id": {
                       "anyOf": [
                         {
@@ -524,6 +531,7 @@
                     "roleId",
                     "branchId",
                     "isActive",
+                    "hasPin",
                     "roleName",
                     "permissions"
                   ],
@@ -535,6 +543,408 @@
           }
         },
         "summary": "ข้อมูลผู้ใช้ที่เข้าสู่ระบบอยู่",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me/pin": {
+      "put": {
+        "operationId": "putApiV1AuthMePin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "currentPassword": {
+                    "type": "string"
+                  },
+                  "pin": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "currentPassword",
+                  "pin"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "currentPassword": {
+                    "type": "string"
+                  },
+                  "pin": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "currentPassword",
+                  "pin"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "currentPassword": {
+                    "type": "string"
+                  },
+                  "pin": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "currentPassword",
+                  "pin"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "role": {
+                      "enum": [
+                        "owner",
+                        "cashier"
+                      ],
+                      "type": "string"
+                    },
+                    "roleId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "username": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "username",
+                    "displayName",
+                    "role",
+                    "roleId",
+                    "branchId",
+                    "isActive",
+                    "hasPin"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ตั้งหรือลบ PIN ของตนเอง ต้องยืนยันด้วยรหัสผ่านปัจจุบัน",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/switch": {
+      "post": {
+        "operationId": "postApiV1AuthSwitch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "pin": {
+                    "maxLength": 20,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "userId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "userId",
+                  "pin"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "pin": {
+                    "maxLength": 20,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "userId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "userId",
+                  "pin"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "pin": {
+                    "maxLength": 20,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "userId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "userId",
+                  "pin"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "role": {
+                      "enum": [
+                        "owner",
+                        "cashier"
+                      ],
+                      "type": "string"
+                    },
+                    "roleId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "username": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "username",
+                    "displayName",
+                    "role",
+                    "roleId",
+                    "branchId",
+                    "isActive",
+                    "hasPin"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "สลับผู้ขายที่จุดขายด้วย PIN เริ่มเซสชันของผู้ใช้นั้น",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/switch-users": {
+      "get": {
+        "operationId": "getApiV1AuthSwitch-users",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "displayName": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "displayName"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ผู้ใช้ที่สลับเข้ามาขายด้วย PIN ได้",
         "tags": [
           "Auth"
         ]
@@ -7027,6 +7437,526 @@
         "summary": "สตรีม SSE ของจอลูกค้า: เหตุการณ์ waiting, paired, state, unpaired, expired และ ping (ถือ token ของ session)",
         "tags": [
           "Customer display"
+        ]
+      }
+    },
+    "/api/v1/display-slides/": {
+      "get": {
+        "operationId": "getApiV1Display-slides",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "imageUrl": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "sortOrder": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "imageUrl",
+                          "sortOrder",
+                          "isActive"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "รูปสไลด์ที่แสดงบนจอลูกค้า",
+        "tags": [
+          "Display slides"
+        ]
+      },
+      "post": {
+        "operationId": "postApiV1Display-slides",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "default": "File",
+                    "extension": [
+                      "image/jpeg",
+                      "image/png",
+                      "image/webp"
+                    ],
+                    "format": "binary",
+                    "maxSize": "5m",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "default": "File",
+                    "extension": [
+                      "image/jpeg",
+                      "image/png",
+                      "image/webp"
+                    ],
+                    "format": "binary",
+                    "maxSize": "5m",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "default": "File",
+                    "extension": [
+                      "image/jpeg",
+                      "image/png",
+                      "image/webp"
+                    ],
+                    "format": "binary",
+                    "maxSize": "5m",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "imageUrl": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "sortOrder": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "imageUrl",
+                    "sortOrder",
+                    "isActive"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "อัปโหลดรูปสไลด์ (JPEG, PNG, WebP ไม่เกิน 5 MB)",
+        "tags": [
+          "Display slides"
+        ]
+      }
+    },
+    "/api/v1/display-slides/{id}": {
+      "delete": {
+        "operationId": "deleteApiV1Display-slidesById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ลบรูปสไลด์",
+        "tags": [
+          "Display slides"
+        ]
+      },
+      "patch": {
+        "operationId": "patchApiV1Display-slidesById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "imageUrl": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "sortOrder": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "imageUrl",
+                    "sortOrder",
+                    "isActive"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "เรียงลำดับหรือเปิด/ปิดรูปสไลด์",
+        "tags": [
+          "Display slides"
+        ]
+      }
+    },
+    "/api/v1/display-slides/all": {
+      "get": {
+        "operationId": "getApiV1Display-slidesAll",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "imageUrl": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "sortOrder": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "imageUrl",
+                          "sortOrder",
+                          "isActive"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "รูปสไลด์ทั้งหมด (เจ้าของร้าน)",
+        "tags": [
+          "Display slides"
         ]
       }
     },
@@ -19147,6 +20077,13 @@
                               }
                             ]
                           },
+                          "imageUrl": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "isActive": {
                             "type": "boolean"
                           },
@@ -19302,6 +20239,7 @@
                           "windowEndMinute",
                           "audience",
                           "isActive",
+                          "imageUrl",
                           "createdAt",
                           "updatedAt"
                         ],
@@ -19908,6 +20846,13 @@
                         }
                       ]
                     },
+                    "imageUrl": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "isActive": {
                       "type": "boolean"
                     },
@@ -20063,6 +21008,7 @@
                     "windowEndMinute",
                     "audience",
                     "isActive",
+                    "imageUrl",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -20150,6 +21096,13 @@
                         }
                       ]
                     },
+                    "imageUrl": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "isActive": {
                       "type": "boolean"
                     },
@@ -20305,6 +21258,7 @@
                     "windowEndMinute",
                     "audience",
                     "isActive",
+                    "imageUrl",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -20896,6 +21850,13 @@
                         }
                       ]
                     },
+                    "imageUrl": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "isActive": {
                       "type": "boolean"
                     },
@@ -21051,6 +22012,7 @@
                     "windowEndMinute",
                     "audience",
                     "isActive",
+                    "imageUrl",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -21062,6 +22024,572 @@
           }
         },
         "summary": "แก้ไขโปรโมชันและเปิด/ปิดใช้",
+        "tags": [
+          "Promotions"
+        ]
+      }
+    },
+    "/api/v1/promotions/{id}/image": {
+      "delete": {
+        "operationId": "deleteApiV1PromotionsByIdImage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "audience": {
+                      "enum": [
+                        "everyone",
+                        "members"
+                      ],
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "endsOn": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "imageUrl": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "kind": {
+                      "enum": [
+                        "fixed",
+                        "percent"
+                      ],
+                      "type": "string"
+                    },
+                    "maxDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "minSubtotalSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "name": {
+                      "maxLength": 80,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "startsOn": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "updatedAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "value": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "weekdays": {
+                      "items": {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "type": "integer"
+                          }
+                        ]
+                      },
+                      "nullable": true,
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "windowEndMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "windowStartMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "kind",
+                    "value",
+                    "maxDiscountSatang",
+                    "minSubtotalSatang",
+                    "startsOn",
+                    "endsOn",
+                    "weekdays",
+                    "windowStartMinute",
+                    "windowEndMinute",
+                    "audience",
+                    "isActive",
+                    "imageUrl",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ลบรูปโปรโมชัน",
+        "tags": [
+          "Promotions"
+        ]
+      },
+      "put": {
+        "operationId": "putApiV1PromotionsByIdImage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "default": "File",
+                    "extension": [
+                      "image/jpeg",
+                      "image/png",
+                      "image/webp"
+                    ],
+                    "format": "binary",
+                    "maxSize": "2m",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "default": "File",
+                    "extension": [
+                      "image/jpeg",
+                      "image/png",
+                      "image/webp"
+                    ],
+                    "format": "binary",
+                    "maxSize": "2m",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "default": "File",
+                    "extension": [
+                      "image/jpeg",
+                      "image/png",
+                      "image/webp"
+                    ],
+                    "format": "binary",
+                    "maxSize": "2m",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "audience": {
+                      "enum": [
+                        "everyone",
+                        "members"
+                      ],
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "endsOn": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "imageUrl": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "kind": {
+                      "enum": [
+                        "fixed",
+                        "percent"
+                      ],
+                      "type": "string"
+                    },
+                    "maxDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "minSubtotalSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "name": {
+                      "maxLength": 80,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "startsOn": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "updatedAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "value": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "weekdays": {
+                      "items": {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "type": "integer"
+                          }
+                        ]
+                      },
+                      "nullable": true,
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "windowEndMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "windowStartMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "kind",
+                    "value",
+                    "maxDiscountSatang",
+                    "minSubtotalSatang",
+                    "startsOn",
+                    "endsOn",
+                    "weekdays",
+                    "windowStartMinute",
+                    "windowEndMinute",
+                    "audience",
+                    "isActive",
+                    "imageUrl",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "อัปโหลดรูปโปรโมชัน (JPEG, PNG, WebP ไม่เกิน 2 MB) แทนรูปเดิม",
         "tags": [
           "Promotions"
         ]
@@ -27822,6 +29350,9 @@
                     "displayName": {
                       "type": "string"
                     },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
                     "id": {
                       "anyOf": [
                         {
@@ -27867,7 +29398,8 @@
                     "role",
                     "roleId",
                     "branchId",
-                    "isActive"
+                    "isActive",
+                    "hasPin"
                   ],
                   "type": "object"
                 }
@@ -27908,6 +29440,9 @@
                           },
                           "displayName": {
                             "type": "string"
+                          },
+                          "hasPin": {
+                            "type": "boolean"
                           },
                           "id": {
                             "anyOf": [
@@ -27954,7 +29489,8 @@
                           "role",
                           "roleId",
                           "branchId",
-                          "isActive"
+                          "isActive",
+                          "hasPin"
                         ],
                         "type": "object"
                       },
@@ -28206,6 +29742,9 @@
                     "displayName": {
                       "type": "string"
                     },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
                     "id": {
                       "anyOf": [
                         {
@@ -28251,7 +29790,8 @@
                     "role",
                     "roleId",
                     "branchId",
-                    "isActive"
+                    "isActive",
+                    "hasPin"
                   ],
                   "type": "object"
                 }
@@ -28481,6 +30021,9 @@
                     "displayName": {
                       "type": "string"
                     },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
                     "id": {
                       "anyOf": [
                         {
@@ -28526,7 +30069,8 @@
                     "role",
                     "roleId",
                     "branchId",
-                    "isActive"
+                    "isActive",
+                    "hasPin"
                   ],
                   "type": "object"
                 }
@@ -28536,6 +30080,168 @@
           }
         },
         "summary": "แก้ไขผู้ใช้ เปลี่ยนรหัสผ่าน หรือปิดการใช้งาน",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/users/{id}/pin": {
+      "put": {
+        "operationId": "putApiV1UsersByIdPin",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "pin": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "pin"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "pin": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "pin"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "pin": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "pin"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "branchId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "role": {
+                      "enum": [
+                        "owner",
+                        "cashier"
+                      ],
+                      "type": "string"
+                    },
+                    "roleId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "username": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "username",
+                    "displayName",
+                    "role",
+                    "roleId",
+                    "branchId",
+                    "isActive",
+                    "hasPin"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ตั้งหรือลบ PIN สลับผู้ขายของผู้ใช้ (ส่ง pin เป็น null เพื่อลบ)",
         "tags": [
           "Users"
         ]
