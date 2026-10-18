@@ -244,3 +244,42 @@ test('repairs the product type column lost to an advanced ledger and keeps a lat
     expect(recorded[0]?.count).toBe(1)
   })
 }, MIGRATION_TEST_TIMEOUT_MS)
+
+test('reruns the merged journal cleanly over a pre-merge ledger whose columns and classification already exist', async () => {
+  await withDisposableDatabase(async (connection) => {
+    // The owner's database was stamped by a pre-merge checkout: its ledger stops at 0023's timestamp even
+    // though that checkout's own numbering had already created modifier_options.is_default and
+    // products.product_type and classified the menu. Rerunning the merged journal must finish rather than
+    // fail on the renumbered column, and must not reclassify a menu the owner already classified.
+    await migrateFrom(connection)
+    for (const item of CAFE_MENU_ITEMS) {
+      await connection`insert into products (sku, name, price_satang) values (${item.key}, ${item.name}, 100)`
+    }
+    const auditAfter = JSON.stringify({ addedProducts: CAFE_MENU_ITEMS.map((item) => item.key) })
+    await connection`insert into audit_logs (actor_name, action, entity_type, entity_id, summary, "after") values ('owner', 'cafe_menu.applied', 'cafe_menu', 'starter', 'applied', ${auditAfter}::text::jsonb)`
+    await connection`update products set product_type = 'cafe' where sku = 'CAFE-ESP-HOT'`
+    await connection`delete from drizzle.__drizzle_migrations where created_at > 1792328800001`
+    const rewound = await connection`select id from drizzle.__drizzle_migrations where created_at > 1792328800001`
+    expect(rewound).toHaveLength(0)
+
+    await migrateFrom(connection)
+
+    const columns = await connection`select data_type, is_nullable, column_default from information_schema.columns where table_schema = 'public' and table_name = 'products' and column_name = 'product_type'`
+    expect(columns[0]?.data_type).toBe('text')
+    expect(columns[0]?.is_nullable).toBe('NO')
+    expect(columns[0]?.column_default).toContain('normal')
+    const constraints = await connection`select pg_get_constraintdef(oid) as definition from pg_constraint where conrelid = 'public.products'::regclass and conname = 'products_product_type_allowed'`
+    expect(constraints).toHaveLength(1)
+    expect(constraints[0]?.definition).toContain("'normal'")
+    expect(constraints[0]?.definition).toContain("'cafe'")
+    const optionColumn = await connection`select column_name from information_schema.columns where table_schema = 'public' and table_name = 'modifier_options' and column_name = 'is_default'`
+    expect(optionColumn).toHaveLength(1)
+
+    // The whole merged journal ran: 0024, 0025 and 0026 recorded themselves.
+    const finished = await connection`select count(*)::int as count from drizzle.__drizzle_migrations where created_at > 1792328800001`
+    expect(finished[0]?.count).toBe(3)
+
+    const classified: ProductSkuRow[] = await connection`select sku from products where product_type = 'cafe' order by sku`
+    expect(classified.map((row) => row.sku)).toEqual(['CAFE-ESP-HOT'])
+  })
+}, MIGRATION_TEST_TIMEOUT_MS)
