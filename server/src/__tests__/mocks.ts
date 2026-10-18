@@ -18,15 +18,10 @@ export const mockSalesReportRepository = (): Mocked<ISalesReportRepository> => (
 })
 import type { IBranchRepository } from '../modules/branches/applications/ports/branch.repository'
 import type { ICategoryRepository } from '../modules/categories/applications/ports/category.repository'
-import type { IKitchenOrderRefs } from '../modules/kitchen/applications/ports/kitchen-order-refs.port'
-import type { IKitchenRoutingRepository } from '../modules/kitchen/applications/ports/kitchen-routing.repository'
-import type { IKitchenStationRepository } from '../modules/kitchen/applications/ports/kitchen-station.repository'
-import type { IKitchenTicketRepository } from '../modules/kitchen/applications/ports/kitchen-ticket.repository'
 import type { IStockLedger } from '../modules/inventory/applications/ports/stock-ledger.port'
 import type { IStockMovementRepository } from '../modules/inventory/applications/ports/stock-movement.repository'
 import type { ILineOptionsResolver } from '../modules/modifiers/applications/ports/line-options-resolver.port'
 import type { IModifierRepository } from '../modules/modifiers/applications/ports/modifier.repository'
-import type { IKitchenTickets } from '../modules/orders/applications/ports/kitchen-tickets.port'
 import type { IOrderRepository } from '../modules/orders/applications/ports/order.repository'
 import type { IFirstRunGuard } from '../modules/setup/applications/ports/first-run-guard.port'
 import type { ISetupCode } from '../modules/setup/applications/ports/setup-code.port'
@@ -180,14 +175,6 @@ export const mockOrderRepository = (): Mocked<IOrderRepository> => ({
   save: mock<IOrderRepository['save']>(),
 })
 
-/** Answers "nothing sent, nothing pending" unless a test says otherwise. */
-export const mockKitchenTickets = (): Mocked<IKitchenTickets> => ({
-  sentByLine: mock<IKitchenTickets['sentByLine']>(async () => new Map()),
-  hasPending: mock<IKitchenTickets['hasPending']>(async () => false),
-  reconcile: mock<IKitchenTickets['reconcile']>(async () => undefined),
-  moveTickets: mock<IKitchenTickets['moveTickets']>(async () => undefined),
-})
-
 export const mockSaleCheckout = (): Mocked<ISaleCheckout> => ({
   checkout: mock<ISaleCheckout['checkout']>(),
 })
@@ -252,30 +239,6 @@ export const mockTableRepository = (): Mocked<ITableRepository> => ({
 export const mockTableOccupancy = (): Mocked<ITableOccupancy> => ({
   byTable: mock<ITableOccupancy['byTable']>(async () => new Map()),
   openOrderCount: mock<ITableOccupancy['openOrderCount']>(async () => 0),
-})
-
-export const mockKitchenStationRepository = (): Mocked<IKitchenStationRepository> => ({
-  findAll: mock<IKitchenStationRepository['findAll']>(),
-  findById: mock<IKitchenStationRepository['findById']>(),
-  create: mock<IKitchenStationRepository['create']>(),
-  update: mock<IKitchenStationRepository['update']>(),
-})
-
-export const mockKitchenRoutingRepository = (): Mocked<IKitchenRoutingRepository> => ({
-  stationsByCategory: mock<IKitchenRoutingRepository['stationsByCategory']>(async () => new Map()),
-  setStation: mock<IKitchenRoutingRepository['setStation']>(async () => undefined),
-})
-
-export const mockKitchenTicketRepository = (): Mocked<IKitchenTicketRepository> => ({
-  nextRoundNo: mock<IKitchenTicketRepository['nextRoundNo']>(async () => 1),
-  create: mock<IKitchenTicketRepository['create']>(),
-  findByIdForUpdate: mock<IKitchenTicketRepository['findByIdForUpdate']>(),
-  save: mock<IKitchenTicketRepository['save']>(),
-  findPending: mock<IKitchenTicketRepository['findPending']>(),
-})
-
-export const mockKitchenOrderRefs = (): Mocked<IKitchenOrderRefs> => ({
-  refsOf: mock<IKitchenOrderRefs['refsOf']>(async () => new Map()),
 })
 
 export const mockSetupCode = (): Mocked<ISetupCode> => ({

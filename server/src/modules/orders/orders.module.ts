@@ -2,10 +2,8 @@ import { container } from 'tsyringe'
 import { OrderElysiaController } from './adapters/controllers/order.controller'
 import { GuardedOrderRepository } from './applications/decorators/guarded-order.repository'
 import { DrizzleOrderRepository } from './adapters/repository/order.drizzle.repository'
-import { DrizzleKitchenOrderRefs } from './adapters/repository/kitchen-order-refs.drizzle.adapter'
 import { DrizzleTableOccupancy } from './adapters/repository/table-occupancy.drizzle.adapter'
 import { orderRepositoryInnerToken, orderRepositoryToken } from './applications/ports/order.repository'
-import { kitchenOrderRefsToken } from '../kitchen/applications/ports/kitchen-order-refs.port'
 import { tableOccupancyToken } from '../tables/applications/ports/table-occupancy.port'
 import { orderQuoteSourceToken } from '../quotes/applications/ports/order-quote-source.port'
 import { OrderQuoteSource } from './applications/services/order-quote-source'
@@ -31,7 +29,6 @@ container.register(orderRepositoryInnerToken, { useClass: DrizzleOrderRepository
 container.register(orderRepositoryToken, { useClass: GuardedOrderRepository })
 container.register(tableOccupancyToken, { useClass: DrizzleTableOccupancy })
 container.register(orderQuoteSourceToken, { useClass: OrderQuoteSource })
-container.register(kitchenOrderRefsToken, { useClass: DrizzleKitchenOrderRefs })
 container.registerSingleton(ListOrdersUseCase)
 container.registerSingleton(GetOrderUseCase)
 container.registerSingleton(OpenOrderUseCase)

@@ -15,7 +15,6 @@ import './inventory/inventory.module'
 import './audit/audit.module'
 import './sales/sales.module'
 import './orders/orders.module'
-import './kitchen/kitchen.module'
 import './qr-payments/qr-payments.module'
 import './settings/settings.module'
 

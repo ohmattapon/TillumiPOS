@@ -1,6 +1,6 @@
 export const PERMISSION_GROUPS = [
   { key: 'sales', permissions: ['sales.void', 'qr.dismiss', 'reports.read'] },
-  { key: 'catalog', permissions: ['products.write', 'categories.write', 'modifiers.write', 'promotions.write', 'members.write', 'tables.write', 'kitchen.write'] },
+  { key: 'catalog', permissions: ['products.write', 'categories.write', 'modifiers.write', 'promotions.write', 'members.write', 'tables.write'] },
   { key: 'inventory', permissions: ['inventory.receive', 'inventory.adjust'] },
   { key: 'operations', permissions: ['registers.manage', 'branches.manage', 'branches.switch', 'shifts.override', 'settings.write'] },
   { key: 'admin', permissions: ['users.manage', 'roles.manage', 'audit.read'] },

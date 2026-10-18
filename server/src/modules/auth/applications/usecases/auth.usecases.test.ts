@@ -162,7 +162,7 @@ describe('granular session permissions', () => {
         return user ? { user, permissions: await reader.permissionsOf(), roleName: 'Custom' } : null
       },
     }).execute(1, { can: 'audit.read' })
-    expect(result.permissions).toHaveLength(20)
+    expect(result.permissions).toHaveLength(19)
   })
 })
 

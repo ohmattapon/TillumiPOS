@@ -76,13 +76,12 @@ describe('CompleteSetupUseCase', () => {
     expect(branches.update.mock.calls[0]![0].name).toBe('ร้านกาแฟบ้านสวน')
   })
 
-  test('a retail shop starts with tables, kitchen and modifiers off', async () => {
+  test('a retail shop starts with tables and modifiers off', async () => {
     await useCase.execute({ ...input, shopType: 'retail' })
 
     expect(settings.save.mock.calls[0]![0].toSnapshot()).toMatchObject({
       shopName: 'ร้านกาแฟบ้านสวน',
       tablesEnabled: false,
-      kitchenEnabled: false,
       modifiersEnabled: false,
       homeView: 'till',
     })
@@ -99,7 +98,6 @@ describe('CompleteSetupUseCase', () => {
 
     expect(settings.save.mock.calls[0]![0].toSnapshot()).toMatchObject({
       tablesEnabled: true,
-      kitchenEnabled: true,
       modifiersEnabled: true,
       homeView: 'till',
     })

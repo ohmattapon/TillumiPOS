@@ -4,7 +4,6 @@ import { authLocales } from '@/features/auth'
 import { rolesLocales } from '@/features/roles'
 import { auditLocales } from '@/features/audit'
 import { categoriesLocales } from '@/features/categories'
-import { kitchenLocales } from '@/features/kitchen'
 import { customerDisplayLocales } from '@/features/customer-display'
 import { displaySlidesLocales } from '@/features/display-slides'
 import { membersLocales } from '@/features/members'
@@ -40,7 +39,6 @@ export const resources = {
     customerDisplay: customerDisplayLocales.th,
     displaySlides: displaySlidesLocales.th,
     modifiers: modifiersLocales.th,
-    kitchen: kitchenLocales.th,
     members: membersLocales.th,
     promotions: promotionsLocales.th,
     tables: tablesLocales.th,
@@ -64,7 +62,6 @@ export const resources = {
     customerDisplay: customerDisplayLocales.en,
     displaySlides: displaySlidesLocales.en,
     modifiers: modifiersLocales.en,
-    kitchen: kitchenLocales.en,
     members: membersLocales.en,
     promotions: promotionsLocales.en,
     tables: tablesLocales.en,
