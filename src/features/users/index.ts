@@ -1,3 +1,3 @@
 export { userKeys, usersQuery } from './api'
-export { UsersPage } from './components/UsersPage'
+export { TeamPage } from './components/TeamPage'
 export { locales as usersLocales } from './locales'

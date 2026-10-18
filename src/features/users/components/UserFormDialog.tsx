@@ -16,17 +16,19 @@ import { validateUserForm, type UserFormError, type UserFormField } from '../lib
 interface Props {
   /** Omit to add a new user. */
   user?: User
+  /** Prefills the role field when adding; ignored when editing. */
+  initialRoleId?: number
   onClose: () => void
 }
 
-export function UserFormDialog({ user, onClose }: Props) {
+export function UserFormDialog({ user, initialRoleId, onClose }: Props) {
   const { t } = useTranslation('users')
   const { t: tc } = useTranslation()
   const roles = useQuery(roleOptionsQuery)
   const [form, setForm] = useState({
     username: user?.username ?? '',
     displayName: user?.displayName ?? '',
-    roleId: user?.roleId ? String(user.roleId) : '',
+    roleId: user?.roleId ? String(user.roleId) : (initialRoleId ? String(initialRoleId) : ''),
     password: '',
   })
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {

@@ -4,7 +4,6 @@ import { useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { LoginPage, meQuery, useLogout, useAuthorization } from '@/features/auth'
-import { RolesPage } from '@/features/roles'
 import { AuditPage } from '@/features/audit'
 import { CategoriesPage } from '@/features/categories'
 import { CustomerDisplayPage, isCustomerScreenPath } from '@/features/customer-display'
@@ -20,7 +19,7 @@ import { StockReceiptsPage, StockReceiptDraftPage } from '@/features/stock-recei
 import { TodayPage } from '@/features/sales'
 import { ReportsPage } from '@/features/reports'
 import { FeatureRoute, SettingsPage, useSettings } from '@/features/settings'
-import { UsersPage } from '@/features/users'
+import { TeamPage } from '@/features/users'
 import { ShiftsPage, useRegisterSelectionStore } from '@/features/shifts'
 import { AppSidebar } from './AppSidebar'
 import { AppSkeleton } from './AppSkeleton'
@@ -55,9 +54,8 @@ function Shell({ user }: { user: User }) {
           {can('categories.write') && <Route path="categories" element={<CategoriesPage />} />}
           {can('modifiers.write') && <Route path="modifiers" element={<FeatureRoute feature="modifiers"><ModifiersPage /></FeatureRoute>} />}
           {can('tables.write') && <Route path="tables" element={<FeatureRoute feature="tables"><TablesPage /></FeatureRoute>} />}
-          {can('users.manage') && <Route path="users" element={<UsersPage />} />}
+          {(can('users.manage') || can('roles.manage')) && <Route path="users" element={<TeamPage />} />}
           {can('settings.write') && <Route path="settings" element={<SettingsPage />} />}
-          {can('roles.manage') && <Route path="roles" element={<RolesPage />} />}
           {can('audit.read') && <Route path="audit" element={<AuditPage />} />}
           <Route path="members" element={<MembersPage />} />
           <Route path="members/:id" element={<MemberDetailsPage />} />
