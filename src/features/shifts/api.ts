@@ -55,6 +55,14 @@ export const shiftHistoryQuery = (filters: ShiftHistoryFilters) => queryOptions(
 })
 
 /** The report of a shift: live while it is open, frozen from when counting started. */
+/** One shift with its closing state, kept fresh because another till may be counting it. */
+export const shiftQuery = (id: number) => queryOptions({
+  queryKey: shiftKeys.detail(id),
+  queryFn: () => unwrap(apiV2.shifts({ id }).get()),
+  refetchInterval: 5_000,
+  refetchOnWindowFocus: true,
+})
+
 export const shiftSummaryQuery = (id: number) => queryOptions({
   queryKey: shiftKeys.summary(id),
   queryFn: () => unwrap(apiV2.shifts({ id }).summary.get()),
