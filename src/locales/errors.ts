@@ -105,6 +105,8 @@ export const errors = {
     BRANCH_IN_USE: 'The last open branch, or one that still has active staff, cannot be closed.',
     SINGLE_BRANCH_ONLY: 'This system runs on one branch, so no branch can be added.',
     MAIN_BRANCH_REQUIRED: 'The main branch cannot be closed.',
+    STOCK_RECEIPT_NOT_FOUND: 'Stock receipt not found.',
+    STOCK_RECEIPT_INVALID_ITEMS: 'Check these products before receiving stock: {{productIds}}.',
     PIN_INVALID: 'Wrong PIN',
     PIN_LOCKED: 'Too many wrong PINs. Try again in 15 minutes',
     PIN_NOT_SET: 'This person has no PIN',

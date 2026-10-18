@@ -2,6 +2,7 @@ import type { Product } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
 import { MoreHorizontal, PackagePlus, Plus } from 'lucide-react'
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
@@ -38,6 +39,7 @@ type OpenDialog =
   | null
 
 export function ProductsPage() {
+  const navigate = useNavigate()
   const { can } = useAuthorization()
   const { t } = useTranslation('products')
   const { t: tc } = useTranslation()
@@ -194,7 +196,7 @@ export function ProductsPage() {
             actions={(product) => (
               <>
                 {product.trackStock && can('inventory.receive') && (
-                  <Button variant="outline" className="mr-2 h-11" onClick={() => setDialog({ kind: 'stock', product, mode: 'receive' })}>
+                  <Button variant="outline" className="mr-2 h-11" onClick={() => navigate(`/stock-receipts/new?productId=${product.id}`)}>
                     <PackagePlus />
                     {t('actions.receive')}
                   </Button>

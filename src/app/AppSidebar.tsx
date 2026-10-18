@@ -111,6 +111,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
             label: t('groups.manage'),
             items: [
               ...((can('products.write') || can('inventory.receive') || can('inventory.adjust')) ? [{ to: '/products', label: t('nav.products'), icon: Package, badge: lowStockCount }] : []),
+              ...(can('inventory.receive') ? [{ to: '/stock-receipts', label: t('nav.stockReceipts'), icon: Package }] : []),
               ...(can('categories.write') ? [{ to: '/categories', label: t('nav.categories'), icon: Tags }] : []),
               ...(features.modifiers && can('modifiers.write') ? [{ to: '/modifiers', label: t('nav.modifiers'), icon: SlidersHorizontal }] : []),
               ...(features.tables && can('tables.write') ? [{ to: '/tables', label: t('nav.tables'), icon: LayoutGrid }] : []),

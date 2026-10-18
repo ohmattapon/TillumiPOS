@@ -184,6 +184,7 @@ async function main() {
         ['22-reports', '/reports'],
         ['23-promotions', '/promotions'], ['16-display-slides', '/display-slides'],
         ['24-roles', '/roles'], ['25-audit', '/audit'],
+        ['31-stock-receipts', '/stock-receipts'], ['32-stock-receipt-draft', '/stock-receipts/new'],
       ] as const) {
         await page.goto(`${WEB}${path}`)
         await page.waitForTimeout(1000)

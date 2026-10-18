@@ -197,6 +197,13 @@
       "when": 1792328900001,
       "tag": "0027_auto_product_sku",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1792328900002,
+      "tag": "0028_stock_receipts",
+      "breakpoints": true
     }
   ]
 }
