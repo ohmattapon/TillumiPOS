@@ -1,8 +1,11 @@
 import { inject, injectable } from 'tsyringe'
 import type { NewOrder, OrderEntity } from '../../../../domains/order.domain'
-import { orderEditLockToken, type IOrderEditLock } from '../../applications/ports/order-edit-lock.port'
-import type { IFindOrdersQuery, IOrderRepository } from '../../applications/ports/order.repository'
-import { DrizzleOrderRepository } from './order.drizzle.repository'
+import { orderEditLockToken, type IOrderEditLock } from '../ports/order-edit-lock.port'
+import {
+  orderRepositoryInnerToken,
+  type IFindOrdersQuery,
+  type IOrderRepository,
+} from '../ports/order.repository'
 
 /**
  * The order repository with one more rule: an order whose price a QR is waiting on is not written.
@@ -13,7 +16,7 @@ import { DrizzleOrderRepository } from './order.drizzle.repository'
 @injectable()
 export class GuardedOrderRepository implements IOrderRepository {
   constructor(
-    @inject(DrizzleOrderRepository) private readonly orders: DrizzleOrderRepository,
+    @inject(orderRepositoryInnerToken) private readonly orders: IOrderRepository,
     @inject(orderEditLockToken) private readonly lock: IOrderEditLock,
   ) {}
 
