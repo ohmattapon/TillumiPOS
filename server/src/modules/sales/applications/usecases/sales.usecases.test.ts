@@ -291,7 +291,7 @@ describe('QR payments in a sale', () => {
   })
 
   test('a promptpay payment backed by a QR is checked for this branch and amount, then used by the sale', async () => {
-    qrPayments.isRequired.mockReturnValue(true)
+    qrPayments.isRequired.mockResolvedValue(true)
 
     const sale = await sellWith([{ method: 'promptpay', amountSatang: 10000, qrPaymentId: 9 }])
 
@@ -301,7 +301,7 @@ describe('QR payments in a sale', () => {
   })
 
   test('when QR payment is configured, promptpay without a confirmed QR is refused and nothing is stored', async () => {
-    qrPayments.isRequired.mockReturnValue(true)
+    qrPayments.isRequired.mockResolvedValue(true)
 
     await expect(sellWith([{ method: 'promptpay', amountSatang: 10000 }])).rejects.toMatchObject({
       code: 'QR_PAYMENT_REQUIRED',
@@ -311,12 +311,33 @@ describe('QR payments in a sale', () => {
   })
 
   test('without QR payment configured, promptpay is taken on trust as before', async () => {
-    qrPayments.isRequired.mockReturnValue(false)
+    qrPayments.isRequired.mockResolvedValue(false)
 
     await sellWith([{ method: 'promptpay', amountSatang: 10000 }])
 
     expect(qrPayments.assertClaimable).not.toHaveBeenCalled()
     expect(sales.create).toHaveBeenCalled()
+  })
+
+  test('static mode: promptpay without a QR passes and never touches the bank claim', async () => {
+    qrPayments.isRequired.mockResolvedValue(false)
+
+    const sale = await sellWith([{ method: 'promptpay', amountSatang: 10000 }])
+
+    expect(qrPayments.assertClaimable).not.toHaveBeenCalled()
+    expect(qrPayments.consume).not.toHaveBeenCalled()
+    expect(sales.create).toHaveBeenCalled()
+    expect(sale.payments).toEqual([{ method: 'promptpay', amountSatang: 10000 }])
+  })
+
+  test('static mode still accepts a bank-confirmed QR: the claim runs normally, no crash', async () => {
+    qrPayments.isRequired.mockResolvedValue(false)
+
+    const sale = await sellWith([{ method: 'promptpay', amountSatang: 10000, qrPaymentId: 9 }])
+
+    expect(qrPayments.assertClaimable).toHaveBeenCalledWith(9, { branchId: 1, amountSatang: 10000 })
+    expect(qrPayments.consume).toHaveBeenCalledWith(9, 15)
+    expect(sale.payments).toEqual([{ method: 'promptpay', amountSatang: 10000 }])
   })
 
   test('a QR that cannot be used stops the sale before anything is stored', async () => {

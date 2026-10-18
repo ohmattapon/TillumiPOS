@@ -25,6 +25,7 @@ export default defineConfig({
       { find: '@pos/api/promotions', replacement: server('domains/promotion.domain.ts') },
       { find: '@pos/api/dining-table', replacement: server('domains/dining-table.domain.ts') },
       { find: '@pos/api/pin', replacement: server('domains/pin.vo.ts') },
+      { find: '@pos/api/promptpay-qr', replacement: server('domains/promptpay-qr.domain.ts') },
       { find: '@pos/api/permissions', replacement: server('permissions.ts') },
       { find: /^@pos\/api$/, replacement: server('app.ts') },
       { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },

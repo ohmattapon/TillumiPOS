@@ -1,6 +1,8 @@
 import { inject, injectable } from 'tsyringe'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import type { QrPaymentEntity } from '../../../../domains/qr-payment.domain'
+import { shopSettingsRepositoryToken } from '../../../settings/applications/ports/shop-settings.repository'
+import type { IShopSettingsRepository } from '../../../settings/applications/ports/shop-settings.repository'
 import { qrPaymentGatewayToken } from '../ports/qr-payment-gateway.port'
 import type { IQrPaymentGateway } from '../ports/qr-payment-gateway.port'
 import type { IQrPaymentClaims } from '../ports/qr-payment-claims.port'
@@ -12,10 +14,11 @@ export class QrPaymentClaims implements IQrPaymentClaims {
   constructor(
     @inject(qrPaymentGatewayToken) private readonly gateway: IQrPaymentGateway,
     @inject(qrPaymentRepositoryToken) private readonly payments: IQrPaymentRepository,
+    @inject(shopSettingsRepositoryToken) private readonly settings: IShopSettingsRepository,
   ) {}
 
-  isRequired() {
-    return this.gateway.isEnabled()
+  async isRequired() {
+    return this.gateway.isEnabled() && (await this.settings.get()).promptpayMode !== 'static'
   }
 
   async assertClaimable(qrPaymentId: number, { branchId, amountSatang }: { branchId: number; amountSatang: number }) {

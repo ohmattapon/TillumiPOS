@@ -29,6 +29,8 @@ describe('ShopSettingsEntity', () => {
       tablesEnabled: true,
       kitchenEnabled: true,
       modifiersEnabled: true,
+      promptpayMode: 'bank',
+      promptpayTarget: null,
     })
   })
 
@@ -50,6 +52,13 @@ describe('ShopSettingsEntity', () => {
     ['a receipt footer over 200 characters', { receiptFooter: 'x'.repeat(201) }],
     ['an unknown home view', { homeView: 'floor' as never }],
     ['a feature switch that is not a boolean', { kitchenEnabled: 'yes' as never }],
+    ['an unknown PromptPay mode', { promptpayMode: 'qr' as never }],
+    ['a non-digit PromptPay target', { promptpayTarget: '081-234-5678' }],
+    ['a 9-digit PromptPay target', { promptpayTarget: '081234567' }],
+    ['an 11-digit PromptPay target', { promptpayTarget: '08123456789' }],
+    ['a 12-digit PromptPay target', { promptpayTarget: '123456789012' }],
+    ['a 14-digit PromptPay target', { promptpayTarget: '12345678901234' }],
+    ['a 10-digit PromptPay target not starting with 0', { promptpayTarget: '1812345678' }],
   ])('rejects %s', (_label, overrides) => {
     expect(() => settings(overrides)).toThrow(DomainError)
   })
@@ -64,6 +73,9 @@ describe('ShopSettingsEntity', () => {
     { receiptPaperMm: 58 as const },
     { receiptFooter: 'x'.repeat(200) },
     { homeView: 'tables' as const },
+    { promptpayMode: 'static' as const, promptpayTarget: '0812345678' },
+    { promptpayTarget: '1234567890123' },
+    { promptpayTarget: null },
   ])('accepts the edge value %p', (overrides) => {
     expect(() => settings(overrides)).not.toThrow()
   })
@@ -93,6 +105,28 @@ describe('ShopSettingsEntity', () => {
 
     test('a switch survives with() and toSnapshot()', () => {
       expect(settings().with({ kitchenEnabled: false }).toSnapshot().kitchenEnabled).toBe(false)
+    })
+  })
+
+  describe('promptpay', () => {
+    test('the default is bank mode with no target', () => {
+      expect(DEFAULT_SHOP_SETTINGS.promptpayMode).toBe('bank')
+      expect(DEFAULT_SHOP_SETTINGS.promptpayTarget).toBeNull()
+    })
+
+    test('an invalid mode or target is an INVALID_SHOP_SETTINGS domain error', () => {
+      expect(() => settings({ promptpayMode: 'qr' as never })).toThrow(
+        expect.objectContaining({ code: 'INVALID_SHOP_SETTINGS' }),
+      )
+      expect(() => settings({ promptpayTarget: 'abc' })).toThrow(
+        expect.objectContaining({ code: 'INVALID_SHOP_SETTINGS' }),
+      )
+    })
+
+    test('with() can switch the mode and set the target', () => {
+      const changed = settings().with({ promptpayMode: 'static', promptpayTarget: '0812345678' })
+
+      expect(changed.toSnapshot()).toEqual({ ...DEFAULT_SHOP_SETTINGS, promptpayMode: 'static', promptpayTarget: '0812345678' })
     })
   })
 

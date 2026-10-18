@@ -229,7 +229,7 @@ export class SaleCheckout implements ISaleCheckout {
 
     for (const payment of payments) {
       if (payment.qrPaymentId === undefined) {
-        if (payment.method === 'promptpay' && this.qrPayments.isRequired())
+        if (payment.method === 'promptpay' && (await this.qrPayments.isRequired()))
           throw new DomainError('การชำระด้วยพร้อมเพย์ต้องรอธนาคารยืนยันก่อน', 'QR_PAYMENT_REQUIRED')
         continue
       }

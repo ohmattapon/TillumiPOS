@@ -27,6 +27,8 @@ const columns = {
   tablesEnabled: shopSettings.tablesEnabled,
   kitchenEnabled: shopSettings.kitchenEnabled,
   modifiersEnabled: shopSettings.modifiersEnabled,
+  promptpayMode: shopSettings.promptpayMode,
+  promptpayTarget: shopSettings.promptpayTarget,
 }
 
 @injectable()
