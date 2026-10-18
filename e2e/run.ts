@@ -750,7 +750,7 @@ async function main() {
 
     await check('the owner adds a user on the users page, and that person can sign in', async () => {
       await owner.goto(`${WEB}/users`)
-      await owner.getByRole('button', { name: 'เพิ่มผู้ใช้' }).click()
+      await owner.getByRole('button', { name: 'เพิ่มผู้ใช้ในบทบาท แคชเชียร์' }).click()
       const form = owner.getByRole('dialog')
       await form.getByLabel('ชื่อผู้ใช้').fill('somsri')
       await form.getByLabel('ชื่อที่แสดงบนใบเสร็จ').fill('สมศรี')
