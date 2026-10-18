@@ -7,3 +7,9 @@ const RETIRED = new Set(['branches.manage', 'branches.switch'])
 export const groupPermissions = (all: readonly string[]) => PERMISSION_GROUPS
   .map((group) => ({ key: group.key, permissions: group.permissions.filter((permission) => all.includes(permission) && !RETIRED.has(permission)) }))
   .filter((group) => group.permissions.length > 0)
+
+/** How many of the offered permissions a role holds, for the collapsed "x of y" summary on its card. */
+export const countGranted = (granted: readonly string[]) => {
+  const offered = groupPermissions(PERMISSION_GROUPS.flatMap((group) => group.permissions)).flatMap((group) => group.permissions)
+  return { granted: offered.filter((permission) => granted.includes(permission)).length, total: offered.length }
+}
