@@ -1,4 +1,5 @@
 import { container } from 'tsyringe'
+import { quoteProductsToken } from '../quotes/applications/ports/quote-products.port'
 import { ProductElysiaController } from './adapters/controllers/product.controller'
 import { CachedProductRepository } from './adapters/repository/product.cached.repository'
 import { productRepositoryToken } from './applications/ports/product.repository'
@@ -10,6 +11,8 @@ import { SetProductImageUseCase } from './applications/usecases/set-product-imag
 import { UpdateProductUseCase } from './applications/usecases/update-product.usecase'
 
 container.register(productRepositoryToken, { useClass: CachedProductRepository })
+// Quotes price carts through their own port; the repository already answers it.
+container.register(quoteProductsToken, { useToken: productRepositoryToken })
 container.registerSingleton(ListProductsUseCase)
 container.registerSingleton(GetProductUseCase)
 container.registerSingleton(CreateProductUseCase)

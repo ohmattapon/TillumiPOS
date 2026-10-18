@@ -6,15 +6,15 @@ import { PriceQuoteEntity, type QuoteLine } from '../../../../domains/price-quot
 import { pickBestPromotion } from '../../../../domains/promotion.domain'
 import type { ProductEntity } from '../../../../domains/product.domain'
 import type { SaleMember } from '../../../../domains/sale.domain'
-import { memberRepositoryToken, type IMemberRepository } from '../../../members/applications/ports/member.repository'
-import { lineOptionsResolverToken, type ILineOptionsResolver } from '../../../modifiers/applications/ports/line-options-resolver.port'
-import { productRepositoryToken, type IProductRepository } from '../../../products/applications/ports/product.repository'
-import { shopSettingsRepositoryToken, type IShopSettingsRepository } from '../../../settings/applications/ports/shop-settings.repository'
 import type { IClock } from '../../../shared/ports/clock.port'
 import { TOKENS } from '../../../tokens'
 import { orderQuoteSourceToken, type IOrderQuoteSource } from '../ports/order-quote-source.port'
 import { priceQuoteRepositoryToken, type IPriceQuoteRepository } from '../ports/price-quote.repository'
 import { promotionCatalogToken, type IPromotionCatalog } from '../ports/promotion-catalog.port'
+import { quoteLineOptionsToken, type IQuoteLineOptions } from '../ports/quote-line-options.port'
+import { quoteMembersToken, type IQuoteMembers } from '../ports/quote-members.port'
+import { quoteProductsToken, type IQuoteProducts } from '../ports/quote-products.port'
+import { quoteShopRulesToken, type IQuoteShopRules } from '../ports/quote-shop-rules.port'
 import { createQuoteSchema } from '../schemas/quote-schemas'
 
 /**
@@ -25,10 +25,10 @@ import { createQuoteSchema } from '../schemas/quote-schemas'
 @injectable()
 export class CreateQuoteUseCase {
   constructor(
-    @inject(productRepositoryToken) private readonly products: IProductRepository,
-    @inject(lineOptionsResolverToken) private readonly lineOptions: ILineOptionsResolver,
-    @inject(shopSettingsRepositoryToken) private readonly settings: IShopSettingsRepository,
-    @inject(memberRepositoryToken) private readonly members: IMemberRepository,
+    @inject(quoteProductsToken) private readonly products: IQuoteProducts,
+    @inject(quoteLineOptionsToken) private readonly lineOptions: IQuoteLineOptions,
+    @inject(quoteShopRulesToken) private readonly settings: IQuoteShopRules,
+    @inject(quoteMembersToken) private readonly members: IQuoteMembers,
     @inject(promotionCatalogToken) private readonly catalog: IPromotionCatalog,
     @inject(orderQuoteSourceToken) private readonly orders: IOrderQuoteSource,
     @inject(priceQuoteRepositoryToken) private readonly quotes: IPriceQuoteRepository,
