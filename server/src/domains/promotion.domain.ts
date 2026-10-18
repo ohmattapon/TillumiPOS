@@ -90,11 +90,35 @@ function previousDay(date: string): Day {
   return { date: day.toISOString().slice(0, 10), weekday: day.getUTCDay() }
 }
 
+/** Whether the promotion's dates, weekdays and time window include `at`, in the shop's time zone. */
+function isRunningAt(rules: PromotionRules, at: Date, timeZone: string): boolean {
+  const now = localMoment(at, timeZone)
+  // The day a window belongs to is the day it started on, so "Friday 22:00-02:00" includes Saturday 01:00.
+  let day: Day = { date: now.date, weekday: now.weekday }
+  if (rules.windowStartMinute !== null && rules.windowEndMinute !== null) {
+    const start = rules.windowStartMinute
+    const end = rules.windowEndMinute
+    if (start < end) {
+      if (now.minute < start || now.minute >= end) return false
+    } else if (now.minute < start) {
+      if (now.minute >= end) return false
+      day = previousDay(now.date)
+    }
+  }
+  if (rules.weekdays && rules.weekdays.length > 0 && !rules.weekdays.includes(day.weekday)) return false
+  if (rules.startsOn !== null && day.date < rules.startsOn) return false
+  if (rules.endsOn !== null && day.date > rules.endsOn) return false
+  return true
+}
+
+const inScope = (scope: PromotionScope, item: { productId: number; categoryId: number | null }) =>
+  scope.productIds.includes(item.productId) || (item.categoryId !== null && scope.categoryIds.includes(item.categoryId))
+
 /** What a promotion's discount is taken from: the whole bill, or only the lines in its scope. */
 function discountBase(scope: PromotionScope | null, context: PromotionContext): number {
   if (scope === null) return context.subtotalSatang
   return context.lines
-    .filter((line) => scope.productIds.includes(line.productId) || (line.categoryId !== null && scope.categoryIds.includes(line.categoryId)))
+    .filter((line) => inScope(scope, line))
     .reduce((total, line) => total + line.lineTotalSatang, 0)
 }
 
@@ -106,23 +130,7 @@ export function evaluatePromotion(rules: PromotionRules, context: PromotionConte
   if (!rules.isActive) return NOT_ELIGIBLE
   if (rules.audience === 'members' && !context.hasMember) return NOT_ELIGIBLE
   if (context.subtotalSatang < 1 || context.subtotalSatang < rules.minSubtotalSatang) return NOT_ELIGIBLE
-
-  const now = localMoment(context.at, context.timeZone)
-  // The day a window belongs to is the day it started on, so "Friday 22:00-02:00" includes Saturday 01:00.
-  let day: Day = { date: now.date, weekday: now.weekday }
-  if (rules.windowStartMinute !== null && rules.windowEndMinute !== null) {
-    const start = rules.windowStartMinute
-    const end = rules.windowEndMinute
-    if (start < end) {
-      if (now.minute < start || now.minute >= end) return NOT_ELIGIBLE
-    } else if (now.minute < start) {
-      if (now.minute >= end) return NOT_ELIGIBLE
-      day = previousDay(now.date)
-    }
-  }
-  if (rules.weekdays && rules.weekdays.length > 0 && !rules.weekdays.includes(day.weekday)) return NOT_ELIGIBLE
-  if (rules.startsOn !== null && day.date < rules.startsOn) return NOT_ELIGIBLE
-  if (rules.endsOn !== null && day.date > rules.endsOn) return NOT_ELIGIBLE
+  if (!isRunningAt(rules, context.at, context.timeZone)) return NOT_ELIGIBLE
 
   const base = discountBase(rules.scope, context)
   if (base < 1) return NOT_ELIGIBLE
@@ -131,6 +139,22 @@ export function evaluatePromotion(rules: PromotionRules, context: PromotionConte
     rules.kind === 'percent' && rules.maxDiscountSatang !== null ? Math.min(given, rules.maxDiscountSatang) : given
   const discountSatang = Math.min(capped, base, context.subtotalSatang)
   return discountSatang >= 1 ? { eligible: true, discountSatang } : NOT_ELIGIBLE
+}
+
+/**
+ * The running promotions limited to this product or its category, in id order, so the till can tell the
+ * cashier about a deal on what was just added. The cart's size and member are not checked: a promotion the
+ * cart does not qualify for yet is still worth mentioning. Whole-bill promotions are left out.
+ */
+export function promotionsFor<T extends PromotionRules>(
+  promotions: readonly T[],
+  item: { productId: number; categoryId: number | null },
+  at: Date,
+  timeZone: string,
+): T[] {
+  return promotions
+    .filter((promotion) => promotion.isActive && promotion.scope !== null && inScope(promotion.scope, item) && isRunningAt(promotion, at, timeZone))
+    .sort((a, b) => a.id - b.id)
 }
 
 /** The promotion that gives the most; a tie goes to the lowest id so the answer is always the same. */
