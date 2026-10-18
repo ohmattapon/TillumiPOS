@@ -23,7 +23,7 @@ export function ReportsPage() {
   const { t: tc } = useTranslation()
   const shop = useSettings()
   const settings = useQuery(settingsQuery)
-  const { money, currency, locale } = useFormat()
+  const { money, currency, locale, date } = useFormat()
   const [params, setParams] = useSearchParams()
   const [exporting, setExporting] = useState(false)
   const today = todayIn(shop.timeZone)
@@ -69,7 +69,6 @@ export function ReportsPage() {
   const failure = (error: Error | null, retry: () => void) => error ? <div role="alert" className="flex items-center gap-3 p-4 text-sm text-destructive">
     <span>{error.message}</span><Button variant="outline" size="sm" onClick={retry}>{t('retry')}</Button>
   </div> : null
-  const day = new Intl.DateTimeFormat(locale === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'UTC' })
   return (
     <>
       <PageHeader title={t('title')} description={t('description')}>
@@ -111,7 +110,7 @@ export function ReportsPage() {
               {report.data ? <>
                 <DailySalesChart days={report.data.days.items} />
                 <ReportDataTable headers={[t('day'), t('bills'), t('revenue'), t('profit')]}
-                  rows={report.data.days.items.map((row) => [day.format(new Date(row.day)), row.saleCount, money.plain(row.totalSatang), money.plain(row.profitSatang)])} />
+                  rows={report.data.days.items.map((row) => [date.calendarDateShortYear(row.day), row.saleCount, money.plain(row.totalSatang), money.plain(row.profitSatang)])} />
               </> : <Skeleton className="m-4 h-48" />}
             </Panel>
             <Panel title={t('methods')} description={t('methodNote')}>
