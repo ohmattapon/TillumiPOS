@@ -60,6 +60,15 @@ export const mockCategoryRepository = (): Mocked<ICategoryRepository> => ({
   update: mock<ICategoryRepository['update']>(),
 })
 
+export const mockSlideRepository = (): Mocked<ISlideRepository> => ({
+  findAll: mock<ISlideRepository['findAll']>(),
+  findActive: mock<ISlideRepository['findActive']>(),
+  findById: mock<ISlideRepository['findById']>(),
+  create: mock<ISlideRepository['create']>(),
+  update: mock<ISlideRepository['update']>(),
+  delete: mock<ISlideRepository['delete']>(),
+})
+
 export const mockUserRepository = (): Mocked<IUserRepository> => ({
   lockOwnerChangesForUpdate: mock(async () => {}),
   findAll: mock<IUserRepository['findAll']>(),
@@ -67,6 +76,10 @@ export const mockUserRepository = (): Mocked<IUserRepository> => ({
   findByIdForUpdate: mock<IUserRepository['findByIdForUpdate']>(),
   findActiveById: mock<IUserRepository['findActiveById']>(),
   findCredentialsByUsername: mock<IUserRepository['findCredentialsByUsername']>(),
+  findPinHash: mock<IUserRepository['findPinHash']>(),
+  setPinHash: mock<IUserRepository['setPinHash']>(),
+  findSwitchable: mock<IUserRepository['findSwitchable']>(),
+  findPasswordHashById: mock<IUserRepository['findPasswordHashById']>(),
   create: mock<IUserRepository['create']>(),
   update: mock<IUserRepository['update']>(),
   countActiveOwners: mock<IUserRepository['countActiveOwners']>(),
@@ -275,6 +288,7 @@ export const mockFirstRunGuard = (): Mocked<IFirstRunGuard> => ({
 })
 
 import type { IMemberRepository } from '../modules/members/applications/ports/member.repository'
+import type { ISlideRepository } from '../modules/display-slides/applications/ports/slide.repository'
 import type { IPromotionRepository } from '../modules/promotions/applications/ports/promotion.repository'
 import type { IPriceQuoteRepository } from '../modules/quotes/applications/ports/price-quote.repository'
 import type { IQuoteClaims } from '../modules/quotes/applications/ports/quote-claims.port'
@@ -286,6 +300,7 @@ export const mockPromotionRepository = (): Mocked<IPromotionRepository> => ({
   findByIdForUpdate: mock<IPromotionRepository['findByIdForUpdate']>(),
   create: mock<IPromotionRepository['create']>(),
   update: mock<IPromotionRepository['update']>(),
+  setImageKey: mock<IPromotionRepository['setImageKey']>(),
 })
 
 export const mockMemberRepository = (): Mocked<IMemberRepository> => ({
@@ -334,3 +349,19 @@ export const mockRoleDirectory = (): Mocked<IRoleDirectory> => {
 }
 
 export const mockAuditLog = (): Mocked<IAuditLog> => ({ record: mock(async () => {}), list: mock<IAuditLog['list']>() })
+
+import type { IPinGuard } from '../modules/auth/applications/ports/pin-guard.port'
+
+/** Counts attempts per user like the real guard (the 5th locks), without a clock: a lock lasts for the whole test. */
+export const mockPinGuard = (): Mocked<IPinGuard> => {
+  const attempts = new Map<number, number>()
+  return {
+    begin: mock((userId: number) => {
+      const count = attempts.get(userId) ?? 0
+      if (count >= 5) return 'locked' as const
+      attempts.set(userId, count + 1)
+      return 'ok' as const
+    }),
+    recordSuccess: mock((userId: number) => { attempts.delete(userId) }),
+  }
+}

@@ -6,6 +6,7 @@ import { BranchElysiaController } from './branches/adapters/controllers/branch.c
 import { CategoryElysiaController } from './categories/adapters/controllers/category.controller'
 import { CafeMenuElysiaController } from './cafe-menu/adapters/controllers/cafe-menu.controller'
 import { CustomerDisplayElysiaController } from './customer-display/adapters/controllers/customer-display.controller'
+import { DisplaySlideElysiaController } from './display-slides/adapters/controllers/display-slides.controller'
 import './di-registrations'
 import { InventoryElysiaController } from './inventory/adapters/controllers/inventory.controller'
 import { KitchenCatalogElysiaController } from './kitchen/adapters/controllers/kitchen-catalog.controller'
@@ -64,6 +65,7 @@ export const appModule = new Elysia({ name: 'api', prefix: '/api/v1' })
   .use(container.resolve(PromotionElysiaController).getRoutes())
   .use(container.resolve(QuoteElysiaController).getRoutes())
   .use(container.resolve(CustomerDisplayElysiaController).getRoutes())
+  .use(container.resolve(DisplaySlideElysiaController).getRoutes())
   .use(inventoryController.getRoutes())
   .use(saleController.getRoutes())
   .use(container.resolve(SalesReportElysiaController).getRoutes())

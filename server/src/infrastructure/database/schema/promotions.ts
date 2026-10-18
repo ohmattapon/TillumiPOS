@@ -25,6 +25,8 @@ export const promotions = pgTable(
     windowEndMinute: integer(),
     audience: promotionAudience().notNull().default('everyone'),
     isActive: boolean().notNull().default(true),
+    // Storage key of the display image; null means no image. Only the image endpoints write it.
+    imageKey: text(),
     ...timestamps,
   },
   (table) => [

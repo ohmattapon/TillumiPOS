@@ -18,6 +18,9 @@ export const publishDisplayState = (registerId: number | undefined, envelope: Di
 
 const query = (registerId: number | undefined) => (registerId === undefined ? {} : { registerId })
 
+/** The pictures for the customer screen: public, active-only and already ordered — the server decides. */
+export const fetchDisplaySlides = () => unwrap(api['display-slides'].get())
+
 /** How many screens follow this register now. */
 export const displayPairingQuery = (registerId: number | undefined) =>
   queryOptions({

@@ -47,7 +47,7 @@ async function withDisposableDatabase(run: (connection: SQL, oldMigrations: stri
     folder = await mkdtemp(join(tmpdir(), 'opencode', 'product-type-migration-'))
     await mkdir(join(folder, 'meta'))
     const journal = JSON.parse(await readFile(join(MIGRATIONS_FOLDER, 'meta/_journal.json'), 'utf8'))
-    const oldEntries = (journal.entries as MigrationEntry[]).filter((entry) => entry.idx <= 21)
+    const oldEntries = (journal.entries as MigrationEntry[]).filter((entry) => entry.idx <= 24)
     for (const entry of oldEntries) {
       await copyFile(join(MIGRATIONS_FOLDER, `${entry.tag}.sql`), join(folder, `${entry.tag}.sql`))
     }
@@ -202,8 +202,8 @@ test('repairs the product type column lost to an advanced ledger and keeps a lat
     await connection`insert into branch_stock (branch_id, product_id, qty) select b.id, p.id, 37 from branches b cross join products p where b.code = 'MAIN'`
     const productsBefore = await connection`select * from products order by id`
     const stockBefore = await connection`select * from branch_stock order by product_id`
-    // Another checkout on the shared server advanced the ledger past 0022, so the migrator skips 0022.
-    await connection`insert into drizzle.__drizzle_migrations (hash, created_at) values ('other-checkout', 1792328800000)`
+    // Another checkout on the shared server advanced the ledger past 0025, so the migrator skips 0025.
+    await connection`insert into drizzle.__drizzle_migrations (hash, created_at) values ('other-checkout', 1792328800003)`
 
     await migrateFrom(connection)
 
@@ -228,7 +228,7 @@ test('repairs the product type column lost to an advanced ledger and keeps a lat
     await connection`update products set product_type = 'cafe' where sku = 'ordinary'`
     const rerunProducts = await connection`select * from products order by id`
     const rerunStock = await connection`select * from branch_stock order by product_id`
-    await connection`delete from drizzle.__drizzle_migrations where created_at > 1792328800000`
+    await connection`delete from drizzle.__drizzle_migrations where created_at > 1792328800003`
     await migrateFrom(connection)
 
     expect([...(await connection`select * from products order by id`)]).toEqual([...rerunProducts])
@@ -240,7 +240,7 @@ test('repairs the product type column lost to an advanced ledger and keeps a lat
     const constraintCount = await connection`select count(*)::int as count from pg_constraint where conrelid = 'public.products'::regclass and conname = 'products_product_type_allowed'`
     expect(constraintCount[0]?.count).toBe(1)
     // The repair recorded itself once, so the second run re-executed the SQL instead of being skipped.
-    const recorded = await connection`select count(*)::int as count from drizzle.__drizzle_migrations where created_at > 1792328800000`
+    const recorded = await connection`select count(*)::int as count from drizzle.__drizzle_migrations where created_at > 1792328800003`
     expect(recorded[0]?.count).toBe(1)
   })
 }, MIGRATION_TEST_TIMEOUT_MS)

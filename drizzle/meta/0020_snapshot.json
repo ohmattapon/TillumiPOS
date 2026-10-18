@@ -1,5 +1,5 @@
 {
-  "id": "18db1d91-fd73-484b-89b3-32030177cb90",
+  "id": "15928653-45a6-47e3-9547-945e9d6aed93",
   "prevId": "99b02e11-6db5-451f-9186-ee7aabffe022",
   "version": "7",
   "dialect": "postgresql",
@@ -1018,13 +1018,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
-        },
-        "is_default": {
-          "name": "is_default",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -3906,6 +3899,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "pin_hash": {
+          "name": "pin_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "display_name": {
           "name": "display_name",
