@@ -155,6 +155,13 @@
       "when": 1792328700000,
       "tag": "0021_display_slides",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792328800000,
+      "tag": "0022_promotion_image",
+      "breakpoints": true
     }
   ]
 }
