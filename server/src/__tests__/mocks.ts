@@ -300,6 +300,7 @@ export const mockPromotionRepository = (): Mocked<IPromotionRepository> => ({
   findByIdForUpdate: mock<IPromotionRepository['findByIdForUpdate']>(),
   create: mock<IPromotionRepository['create']>(),
   update: mock<IPromotionRepository['update']>(),
+  setImageKey: mock<IPromotionRepository['setImageKey']>(),
 })
 
 export const mockMemberRepository = (): Mocked<IMemberRepository> => ({

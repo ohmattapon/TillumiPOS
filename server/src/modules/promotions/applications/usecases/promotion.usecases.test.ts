@@ -11,7 +11,7 @@ const now = new Date('2026-10-15T12:00:00Z')
 const existing = new PromotionEntity({
   id: 1, name: 'ลด 10%', kind: 'percent', value: 1000, maxDiscountSatang: 100, minSubtotalSatang: 0,
   startsOn: null, endsOn: null, weekdays: null, windowStartMinute: null, windowEndMinute: null,
-  audience: 'everyone', isActive: true, createdAt: now, updatedAt: now,
+  audience: 'everyone', isActive: true, imageKey: null, createdAt: now, updatedAt: now,
 })
 
 function setup() {
@@ -42,7 +42,7 @@ describe('CreatePromotionUseCase', () => {
     expect(created.toSnapshot()).toMatchObject({
       id: 2, name: 'ลดเงินสด', kind: 'fixed', value: 2000, maxDiscountSatang: null, minSubtotalSatang: 0,
       startsOn: null, endsOn: null, weekdays: null, windowStartMinute: null, windowEndMinute: null,
-      audience: 'everyone', isActive: true, createdAt: now, updatedAt: now,
+      audience: 'everyone', isActive: true, imageKey: null, createdAt: now, updatedAt: now,
     })
   })
 
