@@ -202,7 +202,14 @@
       "idx": 28,
       "version": "7",
       "when": 1792328900002,
-      "tag": "0028_kind_moonstone",
+      "tag": "0028_stock_receipts",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792328900003,
+      "tag": "0029_kind_moonstone",
       "breakpoints": true
     }
   ]

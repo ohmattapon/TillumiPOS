@@ -367,3 +367,11 @@ export const mockPinGuard = (): Mocked<IPinGuard> => {
     recordSuccess: mock((userId: number) => { attempts.delete(userId) }),
   }
 }
+
+import type { IStockReceiptRepository } from '../modules/stock-receipts/applications/ports/stock-receipt.repository'
+export const mockStockReceiptRepository = (): Mocked<IStockReceiptRepository> => ({
+  create: mock<IStockReceiptRepository['create']>(),
+  appendItems: mock<IStockReceiptRepository['appendItems']>(),
+  findById: mock<IStockReceiptRepository['findById']>(),
+  findAll: mock<IStockReceiptRepository['findAll']>(),
+})
