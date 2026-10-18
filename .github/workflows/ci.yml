@@ -50,3 +50,35 @@ jobs:
       - run: bun run lint
       # The same tests as `bun run test`, and the build fails when a line of the API or of the web's logic is not covered.
       - run: bun run coverage
+
+  # The browser checks, in parallel with `check`: they drive the Chrome that is installed on the runner, and
+  # create their own databases on the same PostgreSQL port the tests use.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: pos
+          POSTGRES_PASSWORD: pos
+          POSTGRES_DB: pos
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U pos -d pos"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run e2e
