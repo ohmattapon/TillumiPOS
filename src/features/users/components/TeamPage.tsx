@@ -14,7 +14,7 @@ import { RoleCard } from './RoleCard'
 import { UserFormDialog } from './UserFormDialog'
 import { UserPinDialog } from './UserPinDialog'
 
-/** Owner-only: every role as a card with its members. Route/sidebar wiring lands in Lane B. */
+/** Every role as a full-width card with its members, one under another so the tables line up. */
 export function TeamPage() {
   const { t } = useTranslation('users')
   const { t: tr } = useTranslation('roles')
@@ -58,7 +58,7 @@ export function TeamPage() {
         )}
       </PageHeader>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 content-start gap-4 overflow-y-auto p-4 xl:grid-cols-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
         {users.error && <p className="p-4 text-sm text-destructive">{users.error.message}</p>}
         {roles.error && <p className="p-4 text-sm text-destructive">{roles.error.message}</p>}
         {roles.isPending && !roles.error && <p className="p-4 text-sm text-muted-foreground">{tc('loading')}</p>}
