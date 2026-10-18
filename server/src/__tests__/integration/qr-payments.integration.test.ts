@@ -400,6 +400,23 @@ describe('paying a sale with a QR', () => {
 
     expect(sale.payments[0]).toMatchObject({ method: 'promptpay' })
   })
+
+  test('static mode takes promptpay on trust even with the bank set up, and a bank QR from before still works', async () => {
+    const tea = await seedProduct(owner, { priceSatang: 1000, stock: 5 })
+    const qr = await createQr(1000)
+    await customerPays(qr)
+    ok(await owner.api.settings.patch({ promptpayMode: 'static', promptpayTarget: '0812345678' }))
+
+    // No qrPaymentId: the staff confirm the money themselves.
+    const sale = ok(await cashier.api.sales.post({ items: [{ productId: tea.id, quantity: 1 }], payments: promptpay(1000) }))
+    expect(sale.payments).toEqual([{ method: 'promptpay', amountSatang: 1000 }])
+
+    // A bank-confirmed QR made before the switch still claims normally.
+    const second = ok(
+      await cashier.api.sales.post({ items: [{ productId: tea.id, quantity: 1 }], payments: promptpay(1000, qr.id) }),
+    )
+    expect(ok(await cashier.api.payments.qr({ id: qr.id }).get())).toMatchObject({ status: 'paid', saleId: second.id })
+  })
 })
 
 /** The session cookie of a user created by signIn, for the raw-fetch checks. */

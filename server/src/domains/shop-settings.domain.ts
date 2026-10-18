@@ -12,6 +12,15 @@ export type ReceiptPaperMm = (typeof RECEIPT_PAPER_WIDTHS)[number]
 export const HOME_VIEWS = ['till', 'tables'] as const
 export type HomeView = (typeof HOME_VIEWS)[number]
 
+/** How a PromptPay payment is taken: through the bank's QR API, or a static QR the shop configured itself. */
+export const PROMPTPAY_MODES = ['bank', 'static'] as const
+export type PromptPayMode = (typeof PROMPTPAY_MODES)[number]
+
+/** A PromptPay identifier: a 10-digit mobile number starting with 0, or a 13-digit citizen id. */
+export function isPromptPayTarget(value: string): boolean {
+  return /^\d+$/.test(value) && (value.length === 13 || (value.length === 10 && value.startsWith('0')))
+}
+
 /** The kinds of shop first-run setup asks about. Only the features they turn on are stored, not the type. */
 export const SHOP_TYPES = ['cafe', 'restaurant', 'retail', 'other'] as const
 export type ShopType = (typeof SHOP_TYPES)[number]
@@ -60,6 +69,10 @@ export interface ShopSettingsProps {
   tablesEnabled: boolean
   kitchenEnabled: boolean
   modifiersEnabled: boolean
+  /** How a PromptPay payment is taken; 'bank' keeps the current behaviour. */
+  promptpayMode: PromptPayMode
+  /** The shop's own PromptPay identifier for static QR; null means it is not set up. */
+  promptpayTarget: string | null
 }
 
 /** What a shop that has never been configured runs with. */
@@ -79,6 +92,8 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettingsProps = {
   tablesEnabled: true,
   kitchenEnabled: true,
   modifiersEnabled: true,
+  promptpayMode: 'bank',
+  promptpayTarget: null,
 }
 
 export type ShopSettingsChanges = Partial<ShopSettingsProps>
@@ -111,6 +126,8 @@ export class ShopSettingsEntity {
   public readonly tablesEnabled: boolean
   public readonly kitchenEnabled: boolean
   public readonly modifiersEnabled: boolean
+  public readonly promptpayMode: PromptPayMode
+  public readonly promptpayTarget: string | null
 
   constructor(props: ShopSettingsProps) {
     if (props.shopName.length < 1 || props.shopName.length > 100) throw invalid('ชื่อร้านต้องยาว 1 ถึง 100 ตัวอักษร')
@@ -130,6 +147,9 @@ export class ShopSettingsEntity {
       throw invalid('การเปิดปิดฟีเจอร์ต้องเป็นค่าจริงหรือเท็จ')
     if (!props.tablesEnabled && props.homeView === 'tables')
       throw invalid('ปิดการใช้โต๊ะอยู่ จึงตั้งผังโต๊ะเป็นหน้าแรกไม่ได้')
+    if (!PROMPTPAY_MODES.includes(props.promptpayMode)) throw invalid('วิธีรับพร้อมเพย์ไม่ถูกต้อง')
+    if (props.promptpayTarget !== null && !isPromptPayTarget(props.promptpayTarget))
+      throw invalid('ตัวระบุพร้อมเพย์ต้องเป็นเบอร์มือถือ 10 หลักขึ้นต้น 0 หรือเลขบัตร 13 หลัก')
 
     this.shopName = props.shopName
     this.taxId = props.taxId
@@ -146,6 +166,8 @@ export class ShopSettingsEntity {
     this.tablesEnabled = props.tablesEnabled
     this.kitchenEnabled = props.kitchenEnabled
     this.modifiersEnabled = props.modifiersEnabled
+    this.promptpayMode = props.promptpayMode
+    this.promptpayTarget = props.promptpayTarget
   }
 
   /**
@@ -179,6 +201,8 @@ export class ShopSettingsEntity {
       tablesEnabled: this.tablesEnabled,
       kitchenEnabled: this.kitchenEnabled,
       modifiersEnabled: this.modifiersEnabled,
+      promptpayMode: this.promptpayMode,
+      promptpayTarget: this.promptpayTarget,
     }
   }
 }

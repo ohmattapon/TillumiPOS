@@ -125,6 +125,10 @@ const th = {
     qr: {
       preparing: 'กำลังสร้าง QR…',
       scan: 'ให้ลูกค้าสแกนเพื่อชำระ',
+      staticScan: 'ให้ลูกค้าสแกนเพื่อชำระ {{amount}}',
+      staticNote: 'ตรวจยอดเงินในแอปธนาคาร แล้วกดยืนยันการชำระ',
+      staticMissing: 'ยังไม่ได้ตั้งค่าเลขพร้อมเพย์',
+      staticMissingHint: 'ไปที่ตั้งค่าร้านเพื่อกรอกเบอร์มือถือหรือเลขบัตรก่อนรับชำระด้วย QR นี้',
       imageAlt: 'QR สำหรับชำระเงิน',
       waiting: 'รอธนาคารยืนยันการชำระ…',
       remaining: 'หมดเวลาใน {{time}}',
@@ -285,6 +289,10 @@ const en = {
     qr: {
       preparing: 'Creating the QR…',
       scan: 'Ask the customer to scan to pay',
+      staticScan: 'Ask the customer to scan to pay {{amount}}',
+      staticNote: 'Check the money in your banking app, then confirm the payment',
+      staticMissing: 'No PromptPay number is set up yet',
+      staticMissingHint: 'Enter the mobile number or ID card number in shop settings before taking payment with this QR',
       imageAlt: 'Payment QR code',
       waiting: 'Waiting for the bank to confirm…',
       remaining: 'Expires in {{time}}',
