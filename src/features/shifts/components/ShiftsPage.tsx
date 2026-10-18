@@ -17,7 +17,7 @@ import { QrRecoveryPanel } from './QrRecoveryPanel'
 import { ShiftHistoryPanel } from './ShiftHistoryPanel'
 import { ShiftSummaryView } from './ShiftSummaryView'
 import { ShiftEntriesPanel } from './ShiftEntriesPanel'
-import { checkoutModeQuery, currentShiftQuery, registersQuery, useCancelClosing, useCloseShift, useCreateRegister, useOpenShift, useRecordCashMovement, useStartClosing, useUpdateRegister } from '../api'
+import { checkoutModeQuery, currentShiftQuery, registersQuery, shiftQuery, useCancelClosing, useCloseShift, useCreateRegister, useOpenShift, useRecordCashMovement, useStartClosing, useUpdateRegister } from '../api'
 
 export function ShiftsPage() {
   const { can } = useAuthorization()
@@ -49,11 +49,8 @@ export function ShiftsPage() {
   const shiftLoading = registers.isPending || (currentId !== null && current.isPending)
   const detailsId = current.data?.id
   const activeShift = useQuery({
-    queryKey: ['shifts', 'detail', detailsId],
-    queryFn: () => import('@/lib/api').then(({ apiV2, unwrap }) => unwrap(apiV2.shifts({ id: detailsId! }).get())),
+    ...shiftQuery(detailsId ?? 0),
     enabled: detailsId !== undefined,
-    refetchInterval: 5_000,
-    refetchOnWindowFocus: true,
   })
   const open = useOpenShift()
   const startClosing = useStartClosing()
