@@ -8,7 +8,7 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -48,4 +48,5 @@ jobs:
 
       - run: bun run typecheck
       - run: bun run lint
-      - run: bun run test
+      # The same tests as `bun run test`, and the build fails when a line of the API or of the web's logic is not covered.
+      - run: bun run coverage
