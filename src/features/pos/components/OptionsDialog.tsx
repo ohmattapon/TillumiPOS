@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useFormat } from '@/features/settings'
 import { cn } from '@/lib/utils'
-import { chooseOptions } from '../lib/options'
+import { chooseOptions, preselectedOptionIds } from '../lib/options'
 
 interface Props {
   product: Product
@@ -20,7 +20,8 @@ export function OptionsDialog({ product, groups, onConfirm, onCancel }: Props) {
   const { t } = useTranslation('pos')
   const { t: tc } = useTranslation()
   const { money } = useFormat()
-  const [chosen, setChosen] = useState<number[]>([])
+  // Starts on the group defaults: the common drink is confirmed in one tap, and the picks are sent as they are.
+  const [chosen, setChosen] = useState<number[]>(() => preselectedOptionIds(groups))
 
   const resolved = chooseOptions(groups, chosen)
   const unitPriceSatang = product.priceSatang + (resolved?.priceSatang ?? 0)

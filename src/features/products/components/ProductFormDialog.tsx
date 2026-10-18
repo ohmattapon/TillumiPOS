@@ -8,13 +8,15 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Field, FieldLabel } from '@/components/ui/field'
 import { Switch } from '@/components/ui/switch'
 import { ProductImage } from './ProductImage'
 import { modifierGroupsQuery } from '@/features/modifiers'
 import { useCan } from '@/features/auth'
 import { useFeatures, useFormat, useSettings } from '@/features/settings'
-import { imageStorageQuery, useSaveProduct } from '../api'
+import { imageStorageQuery, productsQuery, useSaveProduct } from '../api'
+import { CAFE_SKU_PREFIX, CAFE_SKU_SCAN_LIMIT, nextCafeSku } from '../lib/cafe-sku'
 
 // Radix Select cannot use an empty string as an item value.
 const NO_CATEGORY = 'none'
@@ -22,11 +24,13 @@ const NO_CATEGORY = 'none'
 interface Props {
   /** Omit to create a new product. */
   product?: Product
+  initialType?: Product['productType']
   categories: Category[]
+  onSaved: (product: Product) => void
   onClose: () => void
 }
 
-export function ProductFormDialog({ product, categories, onClose }: Props) {
+export function ProductFormDialog({ product, initialType = 'normal', categories, onSaved, onClose }: Props) {
   const { modifiers: showModifiers } = useFeatures()
   const canEditModifiers = useCan('modifiers.write') && showModifiers
   const { t } = useTranslation('products')
@@ -34,6 +38,7 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
   const { money, currency } = useFormat()
   const { vatMode } = useSettings()
   const [form, setForm] = useState({
+    productType: product?.productType ?? initialType,
     sku: product?.sku ?? '',
     barcode: product?.barcode ?? '',
     name: product?.name ?? '',
@@ -43,6 +48,20 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
     trackStock: product?.trackStock ?? true,
   })
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm({ ...form, [key]: value })
+
+  // A café product added from the café button starts on the next free CAFE-### code,
+  // which the owner may still overwrite; the server's unique SKU stays the authority.
+  const creatingCafe = product === undefined && initialType === 'cafe'
+  const cafeSkuFilters = { q: CAFE_SKU_PREFIX, includeInactive: true, limit: CAFE_SKU_SCAN_LIMIT }
+  const cafeProducts = useQuery({ ...productsQuery(cafeSkuFilters), enabled: creatingCafe })
+  const nextSku = cafeProducts.data ? nextCafeSku(cafeProducts.data.items.map((item) => item.sku)) : null
+  const skuPrefilled = useRef(false)
+  useEffect(() => {
+    if (!creatingCafe || !nextSku || skuPrefilled.current) return
+    skuPrefilled.current = true
+    // Fill only the untouched, empty field so nothing the owner typed is overwritten.
+    setForm((current) => (current.sku === '' ? { ...current, sku: nextSku } : current))
+  }, [creatingCafe, nextSku])
 
   const groups = useQuery(modifierGroupsQuery).data ?? []
   // The groups already offered on this product; until the owner touches them, what is stored.
@@ -84,6 +103,7 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
         // Only sent once the list has loaded, so a slow request never clears what a product offers.
         modifierGroupIds: canEditModifiers && groups.length > 0 ? chosenGroupIds : undefined,
         input: {
+          productType: form.productType,
           sku: product ? form.sku.trim() : form.sku.trim() || undefined,
           name: form.name.trim(),
           barcode: form.barcode.trim() || null,
@@ -96,6 +116,7 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
       {
         onSuccess: (saved) => {
           toast.success(t(product ? 'toast.updated' : 'toast.created', { name: saved.name }))
+          onSaved(saved)
           onClose()
         },
       },
@@ -149,10 +170,26 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
               <Label htmlFor="product-name">{t('form.name')}</Label>
               <Input id="product-name" className="h-10" value={form.name} onChange={(event) => set('name', event.target.value)} required autoFocus />
             </div>
+            <Field className="col-span-2">
+              <FieldLabel htmlFor="product-type">{t('form.productType')}</FieldLabel>
+              <Select value={form.productType} onValueChange={(value) => {
+                if (value === 'normal' || value === 'cafe') set('productType', value)
+              }}>
+                <SelectTrigger id="product-type" className="h-11! w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="normal" className="min-h-11">{t('types.normal')}</SelectItem>
+                    <SelectItem value="cafe" className="min-h-11">{t('types.cafe')}</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
             <div className="space-y-2">
               <Label htmlFor="product-sku">{t('form.sku')}</Label>
               <Input id="product-sku" className="h-11" value={form.sku} onChange={(event) => set('sku', event.target.value)} required={!!product} maxLength={64} placeholder={product ? undefined : t('form.skuAuto')} aria-describedby={product ? undefined : 'product-sku-hint'} />
-              {!product && <p id="product-sku-hint" className="text-xs text-muted-foreground">{t('form.skuAutoHint')}</p>}
+              {!product && <p id="product-sku-hint" className="text-xs text-muted-foreground">{t(creatingCafe ? 'form.cafeSkuAuto' : 'form.skuAutoHint')}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-barcode">{t('form.barcode')}</Label>
