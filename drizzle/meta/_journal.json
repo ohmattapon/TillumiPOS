@@ -190,6 +190,13 @@
       "when": 1792328800004,
       "tag": "0026_repair_product_type",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1792328900001,
+      "tag": "0027_auto_product_sku",
+      "breakpoints": true
     }
   ]
 }

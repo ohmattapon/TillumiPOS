@@ -45,7 +45,7 @@ export const imageStorageQuery = queryOptions({
 
 export interface ProductInput {
   productType: Product['productType']
-  sku: string
+  sku?: string
   name: string
   barcode: string | null
   categoryId: number | null

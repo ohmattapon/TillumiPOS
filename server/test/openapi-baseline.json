@@ -4577,7 +4577,6 @@
                   }
                 },
                 "required": [
-                  "sku",
                   "name",
                   "priceSatang"
                 ],
@@ -4666,7 +4665,6 @@
                   }
                 },
                 "required": [
-                  "sku",
                   "name",
                   "priceSatang"
                 ],
@@ -4755,7 +4753,6 @@
                   }
                 },
                 "required": [
-                  "sku",
                   "name",
                   "priceSatang"
                 ],

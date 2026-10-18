@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { ok, resetDatabase, seedProduct, signIn, type Session } from '../../../test/harness'
+import { client as sqlClient } from '../../libs/db'
 
 let owner: Session
 
@@ -11,6 +12,26 @@ beforeEach(async () => {
 const search = async (q: string) => ok(await owner.api.catalog.products.get({ query: { q } })).items.map((item) => item.name)
 
 describe('products', () => {
+  test('automatic SKUs skip existing codes, including inactive lowercase codes', async () => {
+    await sqlClient`select setval('product_sku_number_seq', 1, false)`
+    const existing = await seedProduct(owner, { sku: 'sku-000001' })
+    ok(await owner.api.catalog.products({ id: existing.id }).patch({ isActive: false }))
+    const created = ok(await owner.api.catalog.products.post({ name: 'Automatic', priceSatang: 100 }))
+    expect(created.sku).toBe('SKU-000002')
+    const renamed = ok(await owner.api.catalog.products({ id: created.id }).patch({ name: 'Renamed' }))
+    expect(renamed.sku).toBe(created.sku)
+    expect((await owner.api.catalog.products({ id: created.id }).patch({ sku: '' })).status).toBe(422)
+  })
+
+  test('parallel creations receive distinct SKUs and preserve manual codes', async () => {
+    const results = await Promise.all(Array.from({ length: 8 }, (_, i) =>
+      owner.api.catalog.products.post({ name: `Parallel ${i}`, priceSatang: 100 })))
+    const codes = results.map((result) => ok(result).sku)
+    expect(new Set(codes).size).toBe(8)
+    expect(codes.every((sku) => /^SKU-\d{6,}$/.test(sku))).toBe(true)
+    expect(ok(await owner.api.catalog.products.post({ sku: 'MANUAL', name: 'Manual', priceSatang: 100 })).sku).toBe('MANUAL')
+  })
+
   test('classification can be created, changed alone and preserved when omitted without changing stock or price', async () => {
     const input = { sku: 'CAFE-CUSTOM', name: 'Custom drink', priceSatang: 4900, productType: 'cafe' as const }
     const created = ok(await owner.api.catalog.products.post(input))
@@ -69,6 +90,7 @@ describe('products', () => {
     expect((await owner.api.catalog.products.get({ query: invalidQuery as never })).status).toBe(422)
     expect(ok(await owner.api.catalog.products({ id: product.id }).get())).toEqual(product)
   })
+
   test('a created product is found by name, SKU and barcode', async () => {
     const created = ok(
       await owner.api.catalog.products.post({

@@ -76,8 +76,19 @@ async function withDisposableDatabase(run: (connection: SQL, oldMigrations: stri
 }
 
 async function migrateFrom(connection: SQL, migrationsFolder = MIGRATIONS_FOLDER) {
-  const options = { migrationsFolder }
-  await migrate(drizzle(connection), options)
+  // This regression suite asserts the ledger of product-type migrations through
+  // 0026. Later feature migrations must not change that accounting or be replayed.
+  const folder = await mkdtemp(join(tmpdir(), 'product-type-scope-'))
+  try {
+    await mkdir(join(folder, 'meta'))
+    const journal = JSON.parse(await readFile(join(migrationsFolder, 'meta/_journal.json'), 'utf8'))
+    const entries = (journal.entries as MigrationEntry[]).filter(entry => entry.idx <= 26)
+    for (const entry of entries) await copyFile(join(migrationsFolder, `${entry.tag}.sql`), join(folder, `${entry.tag}.sql`))
+    await writeFile(join(folder, 'meta/_journal.json'), JSON.stringify({ ...journal, entries }))
+    await migrate(drizzle(connection), { migrationsFolder: folder })
+  } finally {
+    await rm(folder, { recursive: true, force: true })
+  }
 }
 
 test('fresh install gives products a normal default, cafe support, NOT NULL and allowed-values constraint', async () => {

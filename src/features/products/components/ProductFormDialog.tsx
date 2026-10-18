@@ -104,7 +104,7 @@ export function ProductFormDialog({ product, initialType = 'normal', categories,
         modifierGroupIds: canEditModifiers && groups.length > 0 ? chosenGroupIds : undefined,
         input: {
           productType: form.productType,
-          sku: form.sku.trim(),
+          sku: product ? form.sku.trim() : form.sku.trim() || undefined,
           name: form.name.trim(),
           barcode: form.barcode.trim() || null,
           categoryId: form.categoryId === NO_CATEGORY ? null : Number(form.categoryId),
@@ -188,8 +188,8 @@ export function ProductFormDialog({ product, initialType = 'normal', categories,
             </Field>
             <div className="space-y-2">
               <Label htmlFor="product-sku">{t('form.sku')}</Label>
-              <Input id="product-sku" className="h-10" value={form.sku} onChange={(event) => set('sku', event.target.value)} required />
-              {creatingCafe && <p className="text-xs text-muted-foreground">{t('form.skuAuto')}</p>}
+              <Input id="product-sku" className="h-11" value={form.sku} onChange={(event) => set('sku', event.target.value)} required={!!product} maxLength={64} placeholder={product ? undefined : t('form.skuAuto')} aria-describedby={product ? undefined : 'product-sku-hint'} />
+              {!product && <p id="product-sku-hint" className="text-xs text-muted-foreground">{t(creatingCafe ? 'form.cafeSkuAuto' : 'form.skuAutoHint')}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-barcode">{t('form.barcode')}</Label>
