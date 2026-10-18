@@ -197,6 +197,33 @@ describe('PublishDisplayStateUseCase', () => {
     const bad = { ...envelope(1), state: { kind: 'paying', lines: [], totalSatang: 100, qr: { image: 'javascript:alert(1)', expiresAt: now.toISOString() } } }
     await expect(publish.execute({ envelope: bad }, cashier)).rejects.toBeInstanceOf(ZodError)
   })
+
+  describe('a static PromptPay QR sent as its payload', () => {
+    const payload = '00020101021229370016A000000677010111011300668123456785802TH530376454041.006304ABCD'
+    const paying = (qr: unknown) => ({ ...envelope(1), state: { kind: 'paying', lines: [], totalSatang: 100, qr } })
+
+    test('reaches the screens as it was sent', async () => {
+      const screen = await start.execute()
+      await pair.execute({ code: screen.code, registerId: 4 }, cashier)
+      const heard: DisplayEvent[] = []
+      hub.subscribe(screen.id, (event) => heard.push(event))
+
+      await publish.execute({ registerId: 4, envelope: paying({ payload }) }, cashier)
+
+      expect(heard).toHaveLength(1)
+      expect(heard[0]).toMatchObject({ type: 'state', envelope: { state: { kind: 'paying', qr: { payload } } } })
+    })
+
+    test('refuses a payload that is empty, not printable ASCII, or too long', async () => {
+      for (const bad of ['', 'ไม่ใช่ QR', `${payload}\n`, 'A'.repeat(513)])
+        await expect(publish.execute({ envelope: paying({ payload: bad }) }, cashier)).rejects.toBeInstanceOf(ZodError)
+    })
+
+    test('refuses a QR that is both a picture and a payload', async () => {
+      const both = paying({ payload, image: 'iVBORw0KGgo=', expiresAt: now.toISOString() })
+      await expect(publish.execute({ envelope: both }, cashier)).rejects.toBeInstanceOf(ZodError)
+    })
+  })
 })
 
 describe('UnpairDisplayUseCase', () => {
