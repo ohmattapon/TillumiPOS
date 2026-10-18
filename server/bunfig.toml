@@ -7,8 +7,9 @@ preload = ["./test/setup.ts"]
 coverageSkipTestFiles = true
 # Bun checks the threshold file by file, and counts the constructor that TypeScript supplies for a class without
 # one as a function that never ran (four classes: the display hub, the pairing guard, the slide id generator and
-# the disabled media storage), so only lines are gated. Function coverage is still printed: it is 99.8%.
-coverageThreshold = { lines = 1 }
+# the disabled media storage), so only lines are gated (a threshold left out defaults to above zero, hence the 0).
+# Function coverage is still printed: it is 99.8%.
+coverageThreshold = { lines = 1, functions = 0 }
 coveragePathIgnorePatterns = [
   "src/index.ts",
   "src/infrastructure/database/migrate.ts",
