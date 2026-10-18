@@ -61,6 +61,10 @@ export interface DateFormat {
   time(value: Date | string): string
   longDate(value: Date | string): string
   calendarDate(value: string): string
+  /** A calendar day without its year, for a chart axis. */
+  calendarDayMonth(value: Date | string): string
+  /** A calendar day with a two-digit year, short enough for a report column. */
+  calendarDateShortYear(value: Date | string): string
   calendarYear(value: string): string
 }
 
@@ -70,6 +74,8 @@ export function createDateFormat(locale: Locale): DateFormat {
   const time = new Intl.DateTimeFormat(intlLocale, { timeStyle: 'short' })
   const longDate = new Intl.DateTimeFormat(intlLocale, { weekday: 'long', day: 'numeric', month: 'long' })
   const calendarDate = new Intl.DateTimeFormat(intlLocale, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+  const calendarDayMonth = new Intl.DateTimeFormat(intlLocale, { day: 'numeric', month: 'short', timeZone: 'UTC' })
+  const calendarDateShortYear = new Intl.DateTimeFormat(intlLocale, { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'UTC' })
   const calendarYear = new Intl.DateTimeFormat(intlLocale, { year: 'numeric', timeZone: 'UTC' })
 
   return {
@@ -77,6 +83,8 @@ export function createDateFormat(locale: Locale): DateFormat {
     time: (value) => time.format(new Date(value)),
     longDate: (value) => longDate.format(new Date(value)),
     calendarDate: (value) => calendarDate.format(new Date(value)),
+    calendarDayMonth: (value) => calendarDayMonth.format(new Date(value)),
+    calendarDateShortYear: (value) => calendarDateShortYear.format(new Date(value)),
     calendarYear: (value) => calendarYear.formatToParts(new Date(value)).find((part) => part.type === 'year')!.value,
   }
 }

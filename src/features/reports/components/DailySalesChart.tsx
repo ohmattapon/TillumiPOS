@@ -4,9 +4,8 @@ import { useFormat } from '@/features/settings'
 
 export function DailySalesChart({ days }: { days: SalesReport['days']['items'] }) {
   const { t } = useTranslation('reports')
-  const { money, locale } = useFormat()
+  const { money, date } = useFormat()
   const peak = Math.max(1, ...days.map((day) => day.totalSatang))
-  const formatDay = new Intl.DateTimeFormat(locale === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', timeZone: 'UTC' })
   const width = 880 / Math.max(1, days.length)
   const labels = [0, Math.floor((days.length - 1) / 2), days.length - 1]
     .filter((value, index, values) => value >= 0 && values.indexOf(value) === index)
@@ -28,7 +27,7 @@ export function DailySalesChart({ days }: { days: SalesReport['days']['items'] }
         })}
       </svg>
       <div aria-hidden="true" className={`mt-2 flex text-[11px] text-muted-foreground ${labels.length === 1 ? 'justify-center' : 'justify-between'}`}>
-        {labels.map((index) => <span key={index}>{formatDay.format(new Date(days[index]!.day))}</span>)}
+        {labels.map((index) => <span key={index}>{date.calendarDayMonth(days[index]!.day)}</span>)}
       </div>
     </div>
   </div>
