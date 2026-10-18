@@ -185,3 +185,62 @@ test('every one of the 20 frozen starter SKUs is eligible when applied audit evi
     expect(classified.map((row) => row.sku)).toEqual(CAFE_MENU_ITEMS.map((item) => item.key).sort())
   })
 }, MIGRATION_TEST_TIMEOUT_MS)
+
+test('repairs the product type column lost to an advanced ledger and keeps a later manual classification on rerun', async () => {
+  await withDisposableDatabase(async (connection, oldMigrations) => {
+    await migrateFrom(connection, oldMigrations)
+    const absent = await connection`select 1 from information_schema.columns where table_schema = 'public' and table_name = 'products' and column_name = 'product_type'`
+    expect(absent).toHaveLength(0)
+    for (const item of CAFE_MENU_ITEMS) {
+      await connection`insert into products (sku, name, price_satang, cost_satang, track_stock) values (${item.key}, ${item.name}, 12345, 4321, true)`
+    }
+    await connection`insert into products (sku, name, price_satang) values ('ordinary', 'ordinary', 500)`
+    // CAFE-COC-HOT stays unclassified: the frozen list alone is not evidence, only the applied audit is.
+    const auditedSkus = CAFE_MENU_ITEMS.map((item) => item.key).filter((sku) => sku !== 'CAFE-COC-HOT')
+    const auditAfter = JSON.stringify({ addedProducts: auditedSkus })
+    await connection`insert into audit_logs (actor_name, action, entity_type, entity_id, summary, "after") values ('owner', 'cafe_menu.applied', 'cafe_menu', 'starter', 'applied', ${auditAfter}::text::jsonb)`
+    await connection`insert into branch_stock (branch_id, product_id, qty) select b.id, p.id, 37 from branches b cross join products p where b.code = 'MAIN'`
+    const productsBefore = await connection`select * from products order by id`
+    const stockBefore = await connection`select * from branch_stock order by product_id`
+    // Another checkout on the shared server advanced the ledger past 0022, so the migrator skips 0022.
+    await connection`insert into drizzle.__drizzle_migrations (hash, created_at) values ('other-checkout', 1792328800000)`
+
+    await migrateFrom(connection)
+
+    const columns = await connection`select data_type, is_nullable, column_default from information_schema.columns where table_schema = 'public' and table_name = 'products' and column_name = 'product_type'`
+    expect(columns[0]?.data_type).toBe('text')
+    expect(columns[0]?.is_nullable).toBe('NO')
+    expect(columns[0]?.column_default).toContain('normal')
+    const constraints = await connection`select pg_get_constraintdef(oid) as definition from pg_constraint where conrelid = 'public.products'::regclass and conname = 'products_product_type_allowed'`
+    expect(constraints).toHaveLength(1)
+    expect(constraints[0]?.definition).toContain("'normal'")
+    expect(constraints[0]?.definition).toContain("'cafe'")
+
+    const productsAfter: ClassifiedProductRow[] = await connection`select * from products order by id`
+    const classified = productsAfter.filter((row) => row.product_type === 'cafe').map((row) => row.sku).sort()
+    expect(classified).toEqual([...auditedSkus].sort())
+    const withoutType = productsAfter.map(({ product_type: _type, ...row }) => row)
+    expect(withoutType).toEqual([...productsBefore])
+    expect([...(await connection`select * from branch_stock order by product_id`)]).toEqual([...stockBefore])
+
+    // A later change of classification must survive the repair running a second time.
+    await connection`update products set product_type = 'normal' where sku = 'CAFE-AME-HOT'`
+    await connection`update products set product_type = 'cafe' where sku = 'ordinary'`
+    const rerunProducts = await connection`select * from products order by id`
+    const rerunStock = await connection`select * from branch_stock order by product_id`
+    await connection`delete from drizzle.__drizzle_migrations where created_at > 1792328800000`
+    await migrateFrom(connection)
+
+    expect([...(await connection`select * from products order by id`)]).toEqual([...rerunProducts])
+    expect([...(await connection`select * from branch_stock order by product_id`)]).toEqual([...rerunStock])
+    const manual = await connection`select product_type from products where sku = 'CAFE-AME-HOT'`
+    expect(manual[0]?.product_type).toBe('normal')
+    const classifiedOutsideStarter = await connection`select product_type from products where sku = 'ordinary'`
+    expect(classifiedOutsideStarter[0]?.product_type).toBe('cafe')
+    const constraintCount = await connection`select count(*)::int as count from pg_constraint where conrelid = 'public.products'::regclass and conname = 'products_product_type_allowed'`
+    expect(constraintCount[0]?.count).toBe(1)
+    // The repair recorded itself once, so the second run re-executed the SQL instead of being skipped.
+    const recorded = await connection`select count(*)::int as count from drizzle.__drizzle_migrations where created_at > 1792328800000`
+    expect(recorded[0]?.count).toBe(1)
+  })
+}, MIGRATION_TEST_TIMEOUT_MS)
