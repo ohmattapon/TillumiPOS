@@ -1,7 +1,10 @@
 import type { ShopType } from '@pos/api/shop-settings'
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
+import i18n from 'i18next'
+import { toast } from 'sonner'
 import { authKeys } from '@/features/auth'
 import { api, unwrap } from '@/lib/api'
+import type { promptPayChangesFor } from './lib/setup-form'
 
 export const setupKeys = {
   status: ['setup', 'status'] as const,
@@ -22,13 +25,23 @@ export interface SetupInput {
   displayName: string
   password: string
   shopType: ShopType
+  /** Optional. The setup call has no such field, so it is saved right after, by the signed-in owner. */
+  promptpay?: ReturnType<typeof promptPayChangesFor>
 }
 
 export function useCompleteSetup() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (input: SetupInput) => unwrap(api.setup.post(input)),
+    mutationFn: async ({ promptpay, ...input }: SetupInput) => {
+      const owner = await unwrap(api.setup.post(input))
+      if (promptpay) {
+        // The shop is set up by now, so a failure here must not look like a failed setup: say so, and the
+        // owner can enter the number in the shop settings.
+        await unwrap(api.settings.patch(promptpay)).catch(() => toast.error(i18n.t('setup:promptpayFailed')))
+      }
+      return owner
+    },
     // The POST answer is not the full /me shape (it has no permissions), so let
     // the shell read the signed-in owner back from the server instead of caching it.
     onSuccess: () => {
