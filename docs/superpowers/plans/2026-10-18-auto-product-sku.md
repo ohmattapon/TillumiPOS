@@ -60,5 +60,46 @@ and PostgreSQL otherwise skipped the new migration. Fresh disposable database
 migrations and existing test database upgrades were exercised successfully.
 
 Runtime verification used only the disposable `pos_test` and `pos_e2e_shots`
-databases. The configured development database was not migrated; apply migration
-0023 when deploying this feature branch.
+databases. The configured development database was not migrated during that
+verification; the owner subsequently requested and applied the original 0023.
+
+## Integration with main (2026-10-18)
+
+Resolved conflicts against `origin/main` at `736df4c` on the feature branch.
+Preserved product classification, the cafe form's editable CAFE code prefill,
+both sets of product integration tests, and server generation for omitted SKUs.
+The cafe explanation has its own translation key so the normal creation hint
+still explains generation on save.
+
+Main now owns migrations 0023-0026. Renumbered the SKU migration to
+`0027_auto_product_sku`, with a timestamp after both main and the original SKU
+ledger entry. The sequence is created only when absent. This migration also
+reuses main's idempotent modifier-default and product-type repairs because an
+installation of the original SKU branch skips main's earlier timestamps.
+No counter is reset and an existing product classification is preserved.
+
+Added disposable-database regression tests for upgrades from main and the
+original SKU branch, sequence continuity, and repeated repair. Scoped the
+existing product-type migration suite to migrations through 0026 so its ledger
+assertions remain unchanged when later feature migrations are added.
+
+Deployments should apply 0027 rather than the historical 0023 SKU file. The
+configured development database was not changed while resolving these conflicts.
+
+Merge verification: typecheck, OpenAPI, lint, and the full test command passed
+(1621 API tests and 362 web tests). Focused product/migration tests passed 68
+cases. The first concurrent full run timed out in the repository secret scan;
+the isolated scan and the complete rerun passed without changing its assertions.
+
+E2E returned 40 passed / 3 failed on both the merged feature tree and a separate
+checkout of unmodified main `736df4c` with its own installed dependencies:
+the customer-display check rejects the existing display-slides API read, and
+the two 768px checks time out waiting for the sell heading during sign-in.
+Those baseline failures are retained; this integration does not change those
+screens or their assertions. The cafe creation/default-code checks pass on both.
+
+The complete screenshot command passed on rerun. Inspected the new product form
+at 390, 390x500, 768 and 1366px with main's classification field present; each
+viewport created a product with an omitted SKU and verified the generated code.
+The first concurrent screenshot run timed out in the English report calendar;
+the final full run completed without changing those assertions.

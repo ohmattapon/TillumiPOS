@@ -24,7 +24,7 @@ export class UpdateProductUseCase {
       if (!existing) throw new DomainNotFoundError('ไม่พบสินค้า')
 
       const updated = await this.products.update(existing.with(changes), branchId)
-      const delta = auditChanges(existing, updated, ['name', 'priceSatang', 'costSatang', 'isActive', 'categoryId', 'sku', 'barcode'])
+      const delta = auditChanges(existing, updated, ['name', 'productType', 'priceSatang', 'costSatang', 'isActive', 'categoryId', 'sku', 'barcode'])
       if (delta.changed) await this.audit.record({ id: actor.id, name: actor.displayName }, branchId, buildAuditEntry({
         action: 'product.update',
         entityType: 'product',

@@ -1,6 +1,9 @@
 import { DomainConflictError } from './errors/domain-conflict.error'
 import { DomainError } from './errors/domain-error'
 
+export const PRODUCT_TYPES = ['normal', 'cafe'] as const
+export type ProductType = (typeof PRODUCT_TYPES)[number]
+
 export interface ProductEntityProps {
   /** 0 until the product has been stored. */
   id: number
@@ -8,6 +11,7 @@ export interface ProductEntityProps {
   barcode: string | null
   name: string
   categoryId: number | null
+  productType: ProductType
   /** Selling price in satang, VAT included. */
   priceSatang: number
   costSatang: number
@@ -22,7 +26,7 @@ export interface ProductEntityProps {
 export type ProductChanges = Partial<
   Pick<
     ProductEntityProps,
-    'sku' | 'barcode' | 'name' | 'categoryId' | 'priceSatang' | 'costSatang' | 'trackStock' | 'isActive'
+    'sku' | 'barcode' | 'name' | 'categoryId' | 'productType' | 'priceSatang' | 'costSatang' | 'trackStock' | 'isActive'
   >
 >
 
@@ -36,6 +40,7 @@ export class ProductEntity {
   public readonly barcode: string | null
   public readonly name: string
   public readonly categoryId: number | null
+  public readonly productType: ProductType
   public readonly priceSatang: number
   public readonly costSatang: number
   public readonly trackStock: boolean
@@ -47,6 +52,7 @@ export class ProductEntity {
     if (!isLength(props.sku, 1, 64)) throw invalid('รหัสสินค้าต้องยาว 1 ถึง 64 ตัวอักษร')
     if (props.barcode !== null && !isLength(props.barcode, 1, 64)) throw invalid('บาร์โค้ดต้องยาว 1 ถึง 64 ตัวอักษร')
     if (!isLength(props.name, 1, 200)) throw invalid('ชื่อสินค้าต้องยาว 1 ถึง 200 ตัวอักษร')
+    if (!PRODUCT_TYPES.includes(props.productType)) throw invalid('ประเภทสินค้าต้องเป็น normal หรือ cafe')
     if (!isMoney(props.priceSatang) || !isMoney(props.costSatang))
       throw invalid('ราคาและต้นทุนต้องเป็นจำนวนเต็มสตางค์ที่ไม่ติดลบ')
     if (!Number.isInteger(props.stockQty)) throw invalid('จำนวนสต็อกต้องเป็นจำนวนเต็ม')
@@ -56,6 +62,7 @@ export class ProductEntity {
     this.barcode = props.barcode
     this.name = props.name
     this.categoryId = props.categoryId
+    this.productType = props.productType
     this.priceSatang = props.priceSatang
     this.costSatang = props.costSatang
     this.trackStock = props.trackStock
@@ -95,6 +102,7 @@ export class ProductEntity {
       barcode: this.barcode,
       name: this.name,
       categoryId: this.categoryId,
+      productType: this.productType,
       priceSatang: this.priceSatang,
       costSatang: this.costSatang,
       trackStock: this.trackStock,

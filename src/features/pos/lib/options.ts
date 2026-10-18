@@ -1,4 +1,4 @@
-import { resolveLineOptions, type ModifierGroupWithOptions, type ResolvedLineOptions } from '@pos/api/modifiers'
+import { defaultOptionIds, resolveLineOptions, type ModifierGroupWithOptions, type ResolvedLineOptions } from '@pos/api/modifiers'
 import type { ModifierGroup } from '@pos/api/types'
 
 /**
@@ -10,6 +10,14 @@ export function offeredGroups(groups: readonly ModifierGroup[], productId: numbe
     .filter((group) => group.isActive && group.productIds.includes(productId))
     .map((group) => ({ ...group, options: group.options.filter((option) => option.isActive) }))
     .filter((group) => group.options.length > 0)
+}
+
+/**
+ * The options the till starts with: the default of each group, in group order. The server never fills a
+ * default itself, so these picks travel like any other choice and end up on the bill as they are.
+ */
+export function preselectedOptionIds(groups: readonly ModifierGroup[]): number[] {
+  return defaultOptionIds(groups.map((group) => ({ group, options: group.options })))
 }
 
 /** The server's rule, applied here so the dialog and the server never disagree. Null when it is not allowed. */

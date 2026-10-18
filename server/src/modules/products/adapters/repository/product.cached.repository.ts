@@ -14,7 +14,8 @@ export class CachedProductRepository implements IProductRepository {
   ) {}
 
   findAll(query: IFindProductsQuery) {
-    return this.cache.read('products', cacheKey(query), 30, () => this.source.findAll(query),
+    // Older snapshots have no productType; keep the invalidation group but never hydrate those keys.
+    return this.cache.read('products', `v2:${cacheKey(query)}`, 30, () => this.source.findAll(query),
       (page) => ({ items: page.items.map((row) => row.toSnapshot()), total: page.total }),
       (value) => {
         const page = value as Page<ProductEntityProps>

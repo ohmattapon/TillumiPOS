@@ -16,6 +16,7 @@ const th = {
     edit: 'แก้ไขกลุ่ม',
     deactivate: 'ปิดใช้งานกลุ่ม',
     activate: 'เปิดใช้งานกลุ่ม',
+    defaultHint: 'ตั้งค่าเริ่มต้นได้ 1 อย่างต่อกลุ่ม ตัวเลือกนั้นจะถูกเลือกไว้ก่อนตอนขาย และราคาเพิ่มถูกคิดเข้าบิลตามปกติ',
   },
   option: {
     free: 'ไม่คิดเพิ่ม',
@@ -24,6 +25,8 @@ const th = {
     edit: 'แก้ไข',
     deactivate: 'ปิดใช้งาน',
     activate: 'เปิดใช้งาน',
+    default: 'ค่าเริ่มต้น',
+    setDefault: 'ตั้ง "{{name}}" เป็นค่าเริ่มต้น',
   },
   groupForm: {
     titleNew: 'เพิ่มกลุ่มตัวเลือก',
@@ -74,6 +77,7 @@ const en = {
     edit: 'Edit group',
     deactivate: 'Deactivate group',
     activate: 'Activate group',
+    defaultHint: 'One option per group can be the default. It is preselected on the sell screen and its extra price is charged as usual.',
   },
   option: {
     free: 'No extra charge',
@@ -82,6 +86,8 @@ const en = {
     edit: 'Edit',
     deactivate: 'Deactivate',
     activate: 'Activate',
+    default: 'Default',
+    setDefault: 'Make "{{name}}" the default',
   },
   groupForm: {
     titleNew: 'Add modifier group',
