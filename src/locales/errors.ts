@@ -103,5 +103,12 @@ export const errors = {
     BRANCH_IN_USE: 'The last open branch, or one that still has active staff, cannot be closed.',
     SINGLE_BRANCH_ONLY: 'This system runs on one branch, so no branch can be added.',
     MAIN_BRANCH_REQUIRED: 'The main branch cannot be closed.',
+    PIN_INVALID: 'Wrong PIN',
+    PIN_LOCKED: 'Too many wrong PINs. Try again in 15 minutes',
+    PIN_NOT_SET: 'This person has no PIN',
+    INVALID_PIN: 'A PIN is 4 to 6 digits',
+    OWNER_PIN_SELF_ONLY: "Only the owner can set the owner's PIN",
+    OWN_PIN_USE_ACCOUNT: 'Set your own PIN from the account menu, with your current password',
+    INVALID_PASSWORD: 'The current password is not correct',
   },
 }

@@ -1,4 +1,4 @@
-import { and, count, eq, sql } from 'drizzle-orm'
+import { and, asc, count, eq, isNotNull, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
@@ -9,7 +9,8 @@ import { isForeignKeyViolation, isUniqueViolation } from '../../../../libs/pg-er
 import { currentExecutor } from '../../../../libs/transaction-context'
 import type { IUserRepository } from '../../applications/ports/user.repository'
 
-// passwordHash is deliberately absent: it is selected only by findCredentialsByUsername.
+// passwordHash and pinHash are deliberately absent: only findCredentialsByUsername, findPasswordHashById
+// and findPinHash select them. hasPin is derived on read and never written.
 const columns = {
   id: users.id,
   username: users.username,
@@ -18,6 +19,7 @@ const columns = {
   roleId: users.roleId,
   branchId: users.branchId,
   isActive: users.isActive,
+  hasPin: sql<boolean>`${users.pinHash} is not null`,
 }
 
 const duplicate = () => new DomainConflictError('ข้อมูลซ้ำกับที่มีอยู่แล้ว', 'DUPLICATE')
@@ -61,9 +63,35 @@ export class DrizzleUserRepository implements IUserRepository {
     return { user: new UserEntity(props), passwordHash }
   }
 
+  async findPinHash(userId: number) {
+    const [row] = await currentExecutor()
+      .select({ pinHash: users.pinHash })
+      .from(users)
+      .where(and(eq(users.id, userId), eq(users.isActive, true)))
+    return row?.pinHash ?? null
+  }
+
+  async setPinHash(userId: number, pinHash: string | null) {
+    const rows = await currentExecutor().update(users).set({ pinHash }).where(eq(users.id, userId)).returning({ id: users.id })
+    if (rows.length === 0) throw new DomainNotFoundError('ไม่พบผู้ใช้')
+  }
+
+  async findSwitchable() {
+    return currentExecutor()
+      .select({ id: users.id, displayName: users.displayName })
+      .from(users)
+      .where(and(eq(users.isActive, true), isNotNull(users.pinHash)))
+      .orderBy(asc(users.displayName), asc(users.id))
+  }
+
+  async findPasswordHashById(userId: number) {
+    const [row] = await currentExecutor().select({ passwordHash: users.passwordHash }).from(users).where(eq(users.id, userId))
+    return row?.passwordHash ?? null
+  }
+
   async create(entity: UserEntity, passwordHash: string) {
     if (entity.roleId === null) throw new DomainError('ต้องระบุบทบาท', 'INVALID_USER')
-    const { id: _unassigned, ...values } = entity.toSnapshot()
+    const { id: _unassigned, hasPin: _derived, ...values } = entity.toSnapshot()
     try {
       const [row] = await currentExecutor()
         .insert(users)
@@ -80,7 +108,7 @@ export class DrizzleUserRepository implements IUserRepository {
   async update(entity: UserEntity, passwordHash?: string) {
     if (entity.roleId === null) throw new DomainError('ต้องระบุบทบาท', 'INVALID_USER')
     // The username is not updatable, so it is left out of the SET clause.
-    const { id, username: _fixed, ...values } = entity.toSnapshot()
+    const { id, username: _fixed, hasPin: _derived, ...values } = entity.toSnapshot()
     try {
     const [row] = await currentExecutor()
       .update(users)
