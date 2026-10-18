@@ -33,6 +33,8 @@ test('repairs a skipped option-default migration without replacing existing opti
   let migrationsFolder: string | undefined
   try {
     // Rewinding this repair's ledger must not replay unrelated, newer schema migrations.
+    // mkdtemp needs its parent to exist; CI runners do not pre-create it.
+    await mkdir(join(tmpdir(), 'opencode'), { recursive: true })
     migrationsFolder = await mkdtemp(join(tmpdir(), 'opencode', 'cafe-repair-migration-'))
     await mkdir(join(migrationsFolder, 'meta'))
     const journal = JSON.parse(await readFile(join(MIGRATIONS_FOLDER, 'meta/_journal.json'), 'utf8'))
