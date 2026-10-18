@@ -1,5 +1,5 @@
 export type { Sale } from '@pos/api/types'
-export { saleKeys } from './api'
+export { saleKeys, saleQuery } from './api'
 export { Receipt } from './components/Receipt'
 export { ReceiptPdfButton } from './components/ReceiptPdfButton'
 export { TodayPage } from './components/TodayPage'
