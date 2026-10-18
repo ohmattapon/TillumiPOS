@@ -16,10 +16,10 @@ const codeOf = (action: () => unknown): string | undefined => {
 const rules = (overrides: Partial<PromotionRules> = {}): PromotionRules => ({
   id: 1, kind: 'percent', value: 1000, maxDiscountSatang: null, minSubtotalSatang: 0,
   startsOn: null, endsOn: null, weekdays: null, windowStartMinute: null, windowEndMinute: null,
-  audience: 'everyone', isActive: true, ...overrides,
+  audience: 'everyone', isActive: true, scope: null, ...overrides,
 })
 const context = (overrides: Partial<PromotionContext> = {}): PromotionContext => ({
-  subtotalSatang: 10000, hasMember: false, at: new Date('2026-10-15T03:00:00Z'), timeZone: 'Asia/Bangkok', ...overrides,
+  subtotalSatang: 10000, hasMember: false, at: new Date('2026-10-15T03:00:00Z'), timeZone: 'Asia/Bangkok', lines: [], ...overrides,
 })
 const discount = (r: PromotionRules, c: PromotionContext) => {
   const result = evaluatePromotion(r, c)
@@ -59,6 +59,63 @@ describe('who and what it applies to', () => {
     const minimum = rules({ minSubtotalSatang: 10000 })
     expect(discount(minimum, context({ subtotalSatang: 9999 }))).toBeNull()
     expect(discount(minimum, context({ subtotalSatang: 10000 }))).toBe(1000)
+  })
+})
+
+describe('scoped to products and categories', () => {
+  // A 100-baht bill: 60 baht of coffee (category 1) and 40 baht of cake (category 2).
+  const bill = context({
+    subtotalSatang: 10000,
+    lines: [
+      { productId: 10, categoryId: 1, lineTotalSatang: 6000 },
+      { productId: 20, categoryId: 2, lineTotalSatang: 4000 },
+    ],
+  })
+
+  test('a percent promotion counts only the lines in its scope', () => {
+    expect(discount(rules({ value: 1000, scope: { productIds: [20], categoryIds: [] } }), bill)).toBe(400)
+    expect(discount(rules({ value: 1000, scope: { productIds: [], categoryIds: [1] } }), bill)).toBe(600)
+  })
+
+  test('a line matches by its product or by its category, and is counted once', () => {
+    expect(discount(rules({ value: 1000, scope: { productIds: [10], categoryIds: [1, 2] } }), bill)).toBe(1000)
+  })
+
+  test('a fixed promotion gives at most the total of the lines in its scope', () => {
+    expect(discount(rules({ kind: 'fixed', value: 5000, scope: { productIds: [20], categoryIds: [] } }), bill)).toBe(4000)
+    expect(discount(rules({ kind: 'fixed', value: 500, scope: { productIds: [20], categoryIds: [] } }), bill)).toBe(500)
+  })
+
+  test('the cap still applies to a scoped percent promotion', () => {
+    expect(discount(rules({ value: 5000, maxDiscountSatang: 1000, scope: { productIds: [], categoryIds: [1] } }), bill)).toBe(1000)
+  })
+
+  test('no line in its scope means it does not apply', () => {
+    expect(evaluatePromotion(rules({ scope: { productIds: [99], categoryIds: [7] } }), bill)).toEqual({ eligible: false })
+    expect(evaluatePromotion(rules({ scope: { productIds: [10], categoryIds: [] } }), context({ lines: [] }))).toEqual({ eligible: false })
+  })
+
+  test('a line with no category matches only by product', () => {
+    const uncategorised = context({ lines: [{ productId: 30, categoryId: null, lineTotalSatang: 10000 }] })
+    expect(evaluatePromotion(rules({ scope: { productIds: [], categoryIds: [1] } }), uncategorised)).toEqual({ eligible: false })
+    expect(discount(rules({ scope: { productIds: [30], categoryIds: [] } }), uncategorised)).toBe(1000)
+  })
+
+  test('the minimum is still compared with the whole bill', () => {
+    const scoped = rules({ value: 1000, minSubtotalSatang: 8000, scope: { productIds: [20], categoryIds: [] } })
+    expect(discount(scoped, bill)).toBe(400)
+    expect(discount(scoped, context({ ...bill, subtotalSatang: 7999 }))).toBeNull()
+  })
+
+  test('no scope is the whole bill, whatever lines are given', () => {
+    expect(discount(rules({ value: 1000 }), bill)).toBe(1000)
+  })
+
+  test('the best promotion compares scoped and whole-bill discounts on what each gives', () => {
+    const wholeBill = rules({ id: 2, kind: 'fixed', value: 500 })
+    const coffee = rules({ id: 3, value: 1000, scope: { productIds: [], categoryIds: [1] } })
+    expect(pickBestPromotion([wholeBill, coffee], bill)?.promotion.id).toBe(3)
+    expect(pickBestPromotion([wholeBill, rules({ id: 4, value: 1000, scope: { productIds: [20], categoryIds: [] } })], bill)?.promotion.id).toBe(2)
   })
 })
 
@@ -130,6 +187,20 @@ describe('PromotionEntity', () => {
     const entity = new PromotionEntity({ ...props, weekdays: [] })
     expect(entity.name).toBe('ลดวันพฤหัส')
     expect(entity.weekdays).toBeNull()
+  })
+
+  test('sorts and dedupes the scope, and an empty scope is the whole bill', () => {
+    const scoped = new PromotionEntity({ ...props, scope: { productIds: [5, 3, 5], categoryIds: [2, 2] } })
+    expect(scoped.scope).toEqual({ productIds: [3, 5], categoryIds: [2] })
+    expect(new PromotionEntity({ ...props, scope: { productIds: [], categoryIds: [] } }).scope).toBeNull()
+    expect(scoped.toSnapshot().scope).toEqual({ productIds: [3, 5], categoryIds: [2] })
+  })
+
+  test('rejects a scope that is not positive whole ids or is too long', () => {
+    invalid({ scope: { productIds: [0], categoryIds: [] } })
+    invalid({ scope: { productIds: [], categoryIds: [-1] } })
+    invalid({ scope: { productIds: [1.5], categoryIds: [] } })
+    invalid({ scope: { productIds: Array.from({ length: 501 }, (_, index) => index + 1), categoryIds: [] } })
   })
 
   test('sorts weekdays and drops repeats', () => {

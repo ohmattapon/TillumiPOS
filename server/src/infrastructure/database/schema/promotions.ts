@@ -25,6 +25,10 @@ export const promotions = pgTable(
     windowEndMinute: integer(),
     audience: promotionAudience().notNull().default('everyone'),
     isActive: boolean().notNull().default(true),
+    // The products and categories it is limited to; both null (or empty) means the whole bill. No foreign key:
+    // a product or category that is switched off later simply matches no line.
+    productIds: integer().array(),
+    categoryIds: integer().array(),
     // Storage key of the display image; null means no image. Only the image endpoints write it.
     imageKey: text(),
     ...timestamps,
