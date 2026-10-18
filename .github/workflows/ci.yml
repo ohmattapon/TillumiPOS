@@ -8,7 +8,7 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -26,6 +26,17 @@ jobs:
           --health-timeout 3s
           --health-retries 10
 
+      # Same host port as docker-compose.dev.yml: the Redis cache tests read REDIS_TEST_URL, default redis://127.0.0.1:6379.
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
 
@@ -37,4 +48,5 @@ jobs:
 
       - run: bun run typecheck
       - run: bun run lint
-      - run: bun run test
+      # The same tests as `bun run test`, and the build fails when a line of the API or of the web's logic is not covered.
+      - run: bun run coverage

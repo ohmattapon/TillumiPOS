@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -84,5 +84,19 @@ describe('media keys', () => {
     expect(isMediaKey('promotions/12/a.png/')).toBe(false)
     expect(isMediaKey('promotions/12/a.svg')).toBe(false)
     expect(isMediaKey('promotions/x/a.png')).toBe(false)
+  })
+
+  test('a folder that cannot be written to is reported as unavailable, and nothing is left behind', async () => {
+    const asFile = join(directory, 'not-a-folder')
+    await Bun.write(asFile, 'x')
+    const blocked = new LocalDiskMediaStorage(asFile)
+    const error = spyOn(console, 'error').mockImplementation(() => {})
+
+    try {
+      await expect(blocked.put('products/1/a.png', png())).rejects.toMatchObject({ code: 'MEDIA_UNAVAILABLE' })
+    } finally {
+      error.mockRestore()
+    }
+    expect(await readdir(directory)).toEqual(['not-a-folder'])
   })
 })

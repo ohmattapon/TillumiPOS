@@ -28,8 +28,8 @@ export interface FakeScb {
   pay(reference: string, options?: { amountSatang?: number; payerName?: string; reverseFlag?: string; at?: Date }): void
   /** Makes every access token already handed out invalid, as when they expire. */
   revokeTokens(): void
-  /** While set, every request answers with this HTTP status. */
-  setFailing(status: number | null): void
+  /** While set, every request answers with this HTTP status; `html` makes the body a web page, as a proxy in front of the bank does. */
+  setFailing(status: number | null, options?: { html?: boolean }): void
   /**
    * The next QR creation reaches the bank but its answer is lost on the way back (a gateway timeout).
    * `made` says whether the bank really made the QR before the answer was lost.
@@ -55,6 +55,7 @@ function start(): FakeScb {
   const payments = new Map<string, FakePayment>()
   let validTokens = new Set<string>()
   let failing: number | null = null
+  let failingWithHtml = false
   let lostAnswer: { made: boolean } | null = null
   let tokensIssued = 0
   let transactionCounter = 0
@@ -67,7 +68,11 @@ function start(): FakeScb {
       const body = request.method === 'POST' ? await request.json().catch(() => null) : null
       requests.push({ method: request.method, path: url.pathname + url.search, headers, body })
 
-      if (failing !== null) return Response.json(envelope(5000, 'down'), { status: failing })
+      if (failing !== null) {
+        return failingWithHtml
+          ? new Response('<html>Bad Gateway</html>', { status: failing, headers: { 'content-type': 'text/html' } })
+          : Response.json(envelope(5000, 'down'), { status: failing })
+      }
       if (headers.resourceownerid !== credentials.apiKey)
         return Response.json(envelope(1100, 'resourceOwnerId'), { status: 400 })
       if (!headers.requestuid) return Response.json(envelope(1100, 'requestUId'), { status: 400 })
@@ -172,8 +177,9 @@ function start(): FakeScb {
     loseNextCreateAnswer(made) {
       lostAnswer = { made }
     },
-    setFailing(status) {
+    setFailing(status, options) {
       failing = status
+      failingWithHtml = options?.html ?? false
     },
     enableIn(env) {
       env.SCB_API_KEY = credentials.apiKey
@@ -188,6 +194,7 @@ function start(): FakeScb {
       payments.clear()
       validTokens = new Set()
       failing = null
+      failingWithHtml = false
       lostAnswer = null
       tokensIssued = 0
       transactionCounter = 0

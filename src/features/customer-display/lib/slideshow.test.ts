@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, spyOn, test } from 'bun:test'
 import {
   createSlidesPoller,
   nextSlideIndex,
@@ -183,5 +183,21 @@ describe('createSlidesPoller', () => {
     fake.runs[0]!()
     await tick()
     expect(calls).toBe(1)
+  })
+
+  test('without an injected scheduler the poll is a real interval that stop() clears', async () => {
+    const set = spyOn(globalThis, 'setInterval').mockImplementation((() => 7) as unknown as typeof setInterval)
+    const cleared = spyOn(globalThis, 'clearInterval').mockImplementation(() => {})
+    try {
+      const poller = createSlidesPoller({ fetchSlides: async () => [], onSlides: () => {}, pollMs: 1234 })
+
+      poller.stop()
+
+      expect(set).toHaveBeenCalledWith(expect.any(Function), 1234)
+      expect(cleared).toHaveBeenCalledWith(7)
+    } finally {
+      set.mockRestore()
+      cleared.mockRestore()
+    }
   })
 })

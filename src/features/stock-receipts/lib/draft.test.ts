@@ -80,4 +80,18 @@ describe('durable receipt draft', () => {
     draft.uncertain()
     expect(() => draft.newDraft()).toThrow()
   })
+  it('takes a product out of the draft, and leaves the others alone', () => {
+    const env = setup(), draft = env.open()
+    draft.add(5); draft.add(6)
+
+    draft.remove(5)
+
+    expect(draft.value.items).toEqual([{ productId: 6, quantity: 1 }])
+  })
+  it('sends the products in id order, whatever order they were added in', () => {
+    const env = setup(), draft = env.open()
+    draft.add(9); draft.add(2)
+
+    expect(draft.begin().input.items).toEqual([{ productId: 2, quantity: 1 }, { productId: 9, quantity: 1 }])
+  })
 })
