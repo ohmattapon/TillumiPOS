@@ -183,7 +183,7 @@ export function DisplaySlidesPage() {
                   priority: 'primary',
                   cell: (slide) =>
                     slide.imageUrl ? (
-                      <img src={slide.imageUrl} alt="" className="h-14 w-24 rounded-md object-cover" loading="lazy" />
+                      <img src={slide.imageUrl} alt="" className="h-14 w-24 rounded-md bg-muted object-contain" loading="lazy" />
                     ) : (
                       <span>{t('columns.noImage')}</span>
                     ),
