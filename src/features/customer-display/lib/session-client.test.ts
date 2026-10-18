@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, test } from 'bun:test'
-import { DisplaySessionClient, type DisplayConnection, type StreamListeners } from './session-client'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { DisplaySessionClient, openEventSourceStream, type DisplayConnection, type StreamListeners } from './session-client'
 
 const flush = () => Bun.sleep(0)
 
@@ -132,5 +132,100 @@ describe('DisplaySessionClient', () => {
 
     expect(h.opened[0]!.closed).toBe(true)
     expect(h.started).toBe(1)
+  })
+})
+
+describe('with the browser timer', () => {
+  test('a failed start is tried again after the retry delay, by a real timer', async () => {
+    let starts = 0
+    const opened: string[] = []
+    const client = new DisplaySessionClient({
+      start: async () => {
+        starts += 1
+        if (starts === 1) throw new Error('offline')
+        return { token: 't', code: '123456', expiresAt: '2026-10-15T12:00:00Z' }
+      },
+      open: (token) => {
+        opened.push(token)
+        return { close: () => {} }
+      },
+      storage: { get: () => null, set: () => {}, clear: () => {} },
+      onMessage: () => {},
+      onStatus: () => {},
+      retryMs: 5,
+    })
+
+    client.start()
+    await Bun.sleep(60)
+    client.stop()
+
+    expect(starts).toBe(2)
+    expect(opened).toEqual(['t'])
+  })
+})
+
+describe('openEventSourceStream', () => {
+  const nativeEventSource = (globalThis as { EventSource?: unknown }).EventSource
+
+  class FakeEventSource {
+    static CLOSED = 2
+    static last: FakeEventSource
+    readyState = 1
+    closed = false
+    handlers = new Map<string, ((event: unknown) => void)[]>()
+    constructor(readonly url: string) { FakeEventSource.last = this }
+    addEventListener(name: string, handler: (event: unknown) => void) {
+      this.handlers.set(name, [...(this.handlers.get(name) ?? []), handler])
+    }
+    close() { this.closed = true }
+    emit(name: string, event: unknown = {}) { this.handlers.get(name)?.forEach((handler) => handler(event)) }
+  }
+
+  beforeEach(() => { (globalThis as { EventSource?: unknown }).EventSource = FakeEventSource })
+  afterEach(() => { (globalThis as { EventSource?: unknown }).EventSource = nativeEventSource })
+
+  const open = () => {
+    const events: [string, unknown][] = []
+    let closedFor = 0
+    const handle = openEventSourceStream('/api/v1/customer-display/stream', ['state', 'paired'])('a b', {
+      onEvent: (name, data) => events.push([name, data]),
+      onClosed: () => { closedFor += 1 },
+    })
+    return { handle, events, closed: () => closedFor }
+  }
+
+  test('opens the stream with the token in the query, escaped', () => {
+    open()
+
+    expect(FakeEventSource.last.url).toBe('/api/v1/customer-display/stream?token=a%20b')
+  })
+
+  test('hands every named event on as parsed JSON, and drops one that is not JSON', () => {
+    const { events } = open()
+
+    FakeEventSource.last.emit('state', { data: '{"seq":1}' })
+    FakeEventSource.last.emit('paired', { data: 'not json' })
+
+    expect(events).toEqual([['state', { seq: 1 }]])
+  })
+
+  test('an error while the browser is retrying is ignored, and a closed stream is reported', () => {
+    const { closed } = open()
+
+    FakeEventSource.last.readyState = 0
+    FakeEventSource.last.emit('error')
+    expect(closed()).toBe(0)
+
+    FakeEventSource.last.readyState = FakeEventSource.CLOSED
+    FakeEventSource.last.emit('error')
+    expect(closed()).toBe(1)
+  })
+
+  test('closing the handle closes the stream', () => {
+    const { handle } = open()
+
+    handle.close()
+
+    expect(FakeEventSource.last.closed).toBe(true)
   })
 })
