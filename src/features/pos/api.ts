@@ -5,6 +5,7 @@ import { withHeldQuote } from '@/features/promotions'
 import type { Sale } from '@pos/api/types'
 import { api, apiV2, unwrap } from '@/lib/api'
 import type { PaymentInput } from '@/lib/money'
+import { withIdempotencyKey } from '@/lib/idempotency-key'
 
 export interface CheckoutInput {
   memberId?: number | null
@@ -31,7 +32,7 @@ export function useCheckout() {
           const sale = await unwrap(
             apiV2.sales.post(
               { items, discountSatang: discount, payments: [payment], shiftId, memberId, quoteId: pinned },
-              { headers: { 'idempotency-key': idempotencyKey ?? crypto.randomUUID() } },
+              withIdempotencyKey(idempotencyKey),
             ),
           )
           return sale as unknown as Sale
@@ -103,7 +104,7 @@ export function useCreateQrPayment() {
       return unwrap(
         apiV2.payments.qr.post(
           { amountSatang, shiftId, quoteId },
-          { headers: { 'idempotency-key': idempotencyKey ?? crypto.randomUUID() } },
+          withIdempotencyKey(idempotencyKey),
         ),
       )
     },

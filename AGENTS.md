@@ -387,7 +387,6 @@ The rules above have no exceptions. The code below predates them: it is a fix li
 | The core generates random values | `products/.../set-product-image.usecase.ts`, `qr-payments/.../create-qr-payment.usecase.ts` and `create-qr-payment-v2.usecase.ts` call `crypto.randomUUID()`, and the two QR use cases build the reference with the same copied expression | Add one id-generator port in `modules/shared/ports/`; build the QR reference with one pure function in `domains/`. |
 | A module has its own id generator | `display-slides` declares `ISlideIdGenerator` | Replace it with the shared id-generator port. |
 | The core waits with `setTimeout` | `customer-display/.../open-display-stream.usecase.ts` | Take the wait (or the ping schedule) through a port so tests can drive it. |
-| The web builds idempotency keys inline | `crypto.randomUUID()` in `features/sales/api.ts`, `orders/api.ts`, `pos/api.ts`, `pos/components/PosPage.tsx`, `pos/hooks/use-qr-payment.ts`, `shifts/api.ts`, `shifts/components/ShiftsPage.tsx` and `stock-receipts/components/StockReceiptDraftPage.tsx` | Add one `newIdempotencyKey()` in `src/lib/` and call it everywhere. |
 
 ### Evolving the contract
 
