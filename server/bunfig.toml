@@ -2,3 +2,19 @@ env = false
 
 [test]
 preload = ["./test/setup.ts"]
+# Every line of the API must be covered. Left out: the programs that only run at start-up or by hand
+# (server entry, migrate and the seed scripts), and the test support itself.
+coverageSkipTestFiles = true
+# Bun checks the threshold file by file, and counts the constructor that TypeScript supplies for a class without
+# one as a function that never ran (four classes: the display hub, the pairing guard, the slide id generator and
+# the disabled media storage), so only lines are gated. Function coverage is still printed: it is 99.8%.
+coverageThreshold = { lines = 1 }
+coveragePathIgnorePatterns = [
+  "src/index.ts",
+  "src/infrastructure/database/migrate.ts",
+  "src/infrastructure/database/seed*.ts",
+  # Table definitions: their foreign-key callbacks only run when a relation is queried.
+  "src/infrastructure/database/schema/**",
+  "src/__tests__/**",
+  "test/**",
+]
