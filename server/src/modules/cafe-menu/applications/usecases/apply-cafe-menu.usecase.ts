@@ -121,6 +121,7 @@ export class ApplyCafeMenuUseCase {
             name: item.name,
             // A category of a created item was either just created or found above.
             categoryId: categoryIds.get(item.categoryKey) ?? null,
+            productType: 'cafe',
             priceSatang: item.priceSatang,
             costSatang: 0,
             // Counting starts off for the whole set: drinks are made to order, so nothing is greyed out.

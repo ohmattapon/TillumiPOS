@@ -78,6 +78,7 @@ describe('ApplyCafeMenuUseCase', () => {
       { sku: 'CAFE-TEA-HOT', name: 'ชาไทยร้อน', priceSatang: 4500, categoryId: 8 },
     ])
     expect(products.create.mock.calls[0]![1]).toBe(1)
+    expect(products.create.mock.calls.map(([product]) => product.productType)).toEqual(['cafe', 'cafe'])
     // The coffee gets sweetness and toppings, the tea only sweetness, in the order the set asks them.
     expect(modifiers.setProductGroups.mock.calls).toEqual([
       [100, [3, 4]],

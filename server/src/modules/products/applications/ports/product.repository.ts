@@ -1,5 +1,5 @@
 import type { Page } from '../../../../domains/page'
-import type { ProductEntity } from '../../../../domains/product.domain'
+import type { ProductEntity, ProductType } from '../../../../domains/product.domain'
 
 export interface IFindProductsQuery {
   /** Stock is read for this branch; the catalogue itself is shared by all branches. */
@@ -9,6 +9,7 @@ export interface IFindProductsQuery {
   /** An exact barcode or case-insensitive SKU, used by scanners independently of catalogue pages. */
   code?: string
   categoryId?: number
+  productType?: ProductType
   includeInactive?: boolean
   isActive?: boolean
   /** Tracked stock at or below this quantity in the requested branch. */

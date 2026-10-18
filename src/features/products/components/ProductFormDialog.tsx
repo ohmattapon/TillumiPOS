@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Field, FieldLabel } from '@/components/ui/field'
 import { Switch } from '@/components/ui/switch'
 import { ProductImage } from './ProductImage'
 import { modifierGroupsQuery } from '@/features/modifiers'
@@ -22,11 +23,13 @@ const NO_CATEGORY = 'none'
 interface Props {
   /** Omit to create a new product. */
   product?: Product
+  initialType?: Product['productType']
   categories: Category[]
+  onSaved: (product: Product) => void
   onClose: () => void
 }
 
-export function ProductFormDialog({ product, categories, onClose }: Props) {
+export function ProductFormDialog({ product, initialType = 'normal', categories, onSaved, onClose }: Props) {
   const { modifiers: showModifiers } = useFeatures()
   const canEditModifiers = useCan('modifiers.write') && showModifiers
   const { t } = useTranslation('products')
@@ -34,6 +37,7 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
   const { money, currency } = useFormat()
   const { vatMode } = useSettings()
   const [form, setForm] = useState({
+    productType: product?.productType ?? initialType,
     sku: product?.sku ?? '',
     barcode: product?.barcode ?? '',
     name: product?.name ?? '',
@@ -84,6 +88,7 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
         // Only sent once the list has loaded, so a slow request never clears what a product offers.
         modifierGroupIds: canEditModifiers && groups.length > 0 ? chosenGroupIds : undefined,
         input: {
+          productType: form.productType,
           sku: form.sku.trim(),
           name: form.name.trim(),
           barcode: form.barcode.trim() || null,
@@ -96,6 +101,7 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
       {
         onSuccess: (saved) => {
           toast.success(t(product ? 'toast.updated' : 'toast.created', { name: saved.name }))
+          onSaved(saved)
           onClose()
         },
       },
@@ -149,6 +155,22 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
               <Label htmlFor="product-name">{t('form.name')}</Label>
               <Input id="product-name" className="h-10" value={form.name} onChange={(event) => set('name', event.target.value)} required autoFocus />
             </div>
+            <Field className="col-span-2">
+              <FieldLabel htmlFor="product-type">{t('form.productType')}</FieldLabel>
+              <Select value={form.productType} onValueChange={(value) => {
+                if (value === 'normal' || value === 'cafe') set('productType', value)
+              }}>
+                <SelectTrigger id="product-type" className="h-11! w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="normal" className="min-h-11">{t('types.normal')}</SelectItem>
+                    <SelectItem value="cafe" className="min-h-11">{t('types.cafe')}</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
             <div className="space-y-2">
               <Label htmlFor="product-sku">{t('form.sku')}</Label>
               <Input id="product-sku" className="h-10" value={form.sku} onChange={(event) => set('sku', event.target.value)} required />

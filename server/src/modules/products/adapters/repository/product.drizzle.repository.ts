@@ -15,6 +15,7 @@ const columns = {
   barcode: products.barcode,
   name: products.name,
   categoryId: products.categoryId,
+  productType: products.productType,
   priceSatang: products.priceSatang,
   costSatang: products.costSatang,
   trackStock: products.trackStock,
@@ -45,6 +46,7 @@ export class DrizzleProductRepository implements IProductRepository {
     const pattern = term && `%${escapeLike(term)}%`
 
     const matching = and(
+      query.productType !== undefined ? eq(products.productType, query.productType) : undefined,
       query.isActive !== undefined ? eq(products.isActive, query.isActive)
         : query.includeInactive ? undefined : eq(products.isActive, true),
       query.stockAtMost !== undefined

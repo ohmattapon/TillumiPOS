@@ -3799,6 +3799,18 @@
           },
           {
             "in": "query",
+            "name": "productType",
+            "required": false,
+            "schema": {
+              "enum": [
+                "normal",
+                "cafe"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
             "name": "includeInactive",
             "required": false,
             "schema": {
@@ -3994,6 +4006,13 @@
                             ],
                             "minimum": 0
                           },
+                          "productType": {
+                            "enum": [
+                              "normal",
+                              "cafe"
+                            ],
+                            "type": "string"
+                          },
                           "sku": {
                             "maxLength": 64,
                             "minLength": 1,
@@ -4021,6 +4040,7 @@
                           "barcode",
                           "name",
                           "categoryId",
+                          "productType",
                           "priceSatang",
                           "costSatang",
                           "trackStock",
@@ -4130,6 +4150,13 @@
                     ],
                     "minimum": 0
                   },
+                  "productType": {
+                    "enum": [
+                      "normal",
+                      "cafe"
+                    ],
+                    "type": "string"
+                  },
                   "sku": {
                     "maxLength": 64,
                     "minLength": 1,
@@ -4212,6 +4239,13 @@
                     ],
                     "minimum": 0
                   },
+                  "productType": {
+                    "enum": [
+                      "normal",
+                      "cafe"
+                    ],
+                    "type": "string"
+                  },
                   "sku": {
                     "maxLength": 64,
                     "minLength": 1,
@@ -4293,6 +4327,13 @@
                       }
                     ],
                     "minimum": 0
+                  },
+                  "productType": {
+                    "enum": [
+                      "normal",
+                      "cafe"
+                    ],
+                    "type": "string"
                   },
                   "sku": {
                     "maxLength": 64,
@@ -4404,6 +4445,13 @@
                       ],
                       "minimum": 0
                     },
+                    "productType": {
+                      "enum": [
+                        "normal",
+                        "cafe"
+                      ],
+                      "type": "string"
+                    },
                     "sku": {
                       "maxLength": 64,
                       "minLength": 1,
@@ -4431,6 +4479,7 @@
                     "barcode",
                     "name",
                     "categoryId",
+                    "productType",
                     "priceSatang",
                     "costSatang",
                     "trackStock",
@@ -4565,6 +4614,13 @@
                       ],
                       "minimum": 0
                     },
+                    "productType": {
+                      "enum": [
+                        "normal",
+                        "cafe"
+                      ],
+                      "type": "string"
+                    },
                     "sku": {
                       "maxLength": 64,
                       "minLength": 1,
@@ -4592,6 +4648,7 @@
                     "barcode",
                     "name",
                     "categoryId",
+                    "productType",
                     "priceSatang",
                     "costSatang",
                     "trackStock",
@@ -4704,6 +4761,13 @@
                     ],
                     "minimum": 0
                   },
+                  "productType": {
+                    "enum": [
+                      "normal",
+                      "cafe"
+                    ],
+                    "type": "string"
+                  },
                   "sku": {
                     "maxLength": 64,
                     "minLength": 1,
@@ -4784,6 +4848,13 @@
                     ],
                     "minimum": 0
                   },
+                  "productType": {
+                    "enum": [
+                      "normal",
+                      "cafe"
+                    ],
+                    "type": "string"
+                  },
                   "sku": {
                     "maxLength": 64,
                     "minLength": 1,
@@ -4863,6 +4934,13 @@
                       }
                     ],
                     "minimum": 0
+                  },
+                  "productType": {
+                    "enum": [
+                      "normal",
+                      "cafe"
+                    ],
+                    "type": "string"
                   },
                   "sku": {
                     "maxLength": 64,
@@ -4969,6 +5047,13 @@
                       ],
                       "minimum": 0
                     },
+                    "productType": {
+                      "enum": [
+                        "normal",
+                        "cafe"
+                      ],
+                      "type": "string"
+                    },
                     "sku": {
                       "maxLength": 64,
                       "minLength": 1,
@@ -4996,6 +5081,7 @@
                     "barcode",
                     "name",
                     "categoryId",
+                    "productType",
                     "priceSatang",
                     "costSatang",
                     "trackStock",
@@ -5130,6 +5216,13 @@
                       ],
                       "minimum": 0
                     },
+                    "productType": {
+                      "enum": [
+                        "normal",
+                        "cafe"
+                      ],
+                      "type": "string"
+                    },
                     "sku": {
                       "maxLength": 64,
                       "minLength": 1,
@@ -5157,6 +5250,7 @@
                     "barcode",
                     "name",
                     "categoryId",
+                    "productType",
                     "priceSatang",
                     "costSatang",
                     "trackStock",
@@ -5357,6 +5451,13 @@
                       ],
                       "minimum": 0
                     },
+                    "productType": {
+                      "enum": [
+                        "normal",
+                        "cafe"
+                      ],
+                      "type": "string"
+                    },
                     "sku": {
                       "maxLength": 64,
                       "minLength": 1,
@@ -5384,6 +5485,7 @@
                     "barcode",
                     "name",
                     "categoryId",
+                    "productType",
                     "priceSatang",
                     "costSatang",
                     "trackStock",
