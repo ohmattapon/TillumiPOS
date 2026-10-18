@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { DomainError } from './errors/domain-error'
 import {
+  defaultOptionIds,
   lineKey,
   MAX_GROUP_SELECTIONS,
   ModifierGroupEntity,
@@ -13,7 +14,7 @@ import {
 const group = (overrides: Partial<ModifierGroupProps> = {}) =>
   new ModifierGroupEntity({ id: 1, name: 'ระดับความหวาน', required: true, maxSelections: 1, sortOrder: 0, isActive: true, ...overrides })
 const option = (overrides: Partial<ModifierOptionProps> = {}) =>
-  new ModifierOptionEntity({ id: 10, groupId: 1, name: 'หวานน้อย', priceSatang: 0, costSatang: 0, sortOrder: 0, isActive: true, ...overrides })
+  new ModifierOptionEntity({ id: 10, groupId: 1, name: 'หวานน้อย', priceSatang: 0, costSatang: 0, sortOrder: 0, isActive: true, isDefault: false, ...overrides })
 
 const codeOf = (run: () => unknown) => {
   try {
@@ -59,6 +60,58 @@ describe('ModifierOptionEntity', () => {
     ['a negative cost', { costSatang: -1 }],
   ])('rejects %s', (_label, overrides) => {
     expect(codeOf(() => option(overrides as Partial<ModifierOptionProps>))).toBe('INVALID_MODIFIER')
+  })
+
+  test('is not the default until it is marked, and the flag survives a copy', () => {
+    expect(option().isDefault).toBe(false)
+    expect(option({ isDefault: true }).with({ isDefault: false }).isDefault).toBe(false)
+    expect(option({ isDefault: true }).toSnapshot()).toMatchObject({ isDefault: true })
+  })
+
+  test('an option restored from a snapshot taken before the flag existed is not the default', () => {
+    const { isDefault, ...older } = option({ isDefault: true }).toSnapshot()
+
+    expect(new ModifierOptionEntity(older as ModifierOptionProps).isDefault).toBe(false)
+  })
+})
+
+describe('defaultOptionIds', () => {
+  const sweetness = {
+    group: group({ required: false }),
+    options: [
+      option({ id: 10, name: 'หวานน้อย' }),
+      option({ id: 11, name: 'หวานปกติ', isDefault: true }),
+      option({ id: 12, name: 'หวานมาก' }),
+    ],
+  }
+  const toppings = {
+    group: group({ id: 2, name: 'ท็อปปิ้ง', required: false, maxSelections: 3 }),
+    options: [option({ id: 20, groupId: 2, name: 'วิปครีม', priceSatang: 1000, isDefault: true })],
+  }
+
+  test('picks the flagged option of every group, in group order', () => {
+    expect(defaultOptionIds([sweetness, toppings])).toEqual([11, 20])
+  })
+
+  test('picks nothing when no option is flagged or there are no groups', () => {
+    expect(defaultOptionIds([{ group: group({ required: false }), options: [option({ id: 10 })] }])).toEqual([])
+    expect(defaultOptionIds([])).toEqual([])
+  })
+
+  test('skips an inactive group or an inactive option', () => {
+    const closedGroup = { group: group({ isActive: false }), options: [option({ id: 10, isDefault: true })] }
+    const closedOption = { group: group({ required: false }), options: [option({ id: 10, isDefault: true, isActive: false })] }
+
+    expect(defaultOptionIds([closedGroup, closedOption])).toEqual([])
+  })
+
+  test('takes one option only when a group has more than one flagged', () => {
+    const twice = {
+      group: group({ required: false, maxSelections: 3 }),
+      options: [option({ id: 10, isDefault: true }), option({ id: 11, isDefault: true })],
+    }
+
+    expect(defaultOptionIds([twice])).toEqual([10])
   })
 })
 

@@ -24,6 +24,8 @@ export interface ModifierOptionInput {
   priceSatang: number
   costSatang: number
   sortOrder: number
+  /** The option the till starts on; at most one per group. */
+  isDefault: boolean
 }
 
 export function useCreateModifierGroup() {

@@ -9,6 +9,7 @@ const option = t.Object({
   costSatang: t.Integer(),
   sortOrder: t.Integer(),
   isActive: t.Boolean(),
+  isDefault: t.Boolean(),
 })
 
 const group = t.Object({
@@ -46,6 +47,7 @@ export const modifierSchemas = {
     priceSatang: t.Optional(satang()),
     costSatang: t.Optional(satang()),
     sortOrder: t.Optional(t.Integer()),
+    isDefault: t.Optional(t.Boolean()),
   }),
   updateOption: t.Partial(
     t.Object({
@@ -54,6 +56,7 @@ export const modifierSchemas = {
       costSatang: satang(),
       sortOrder: t.Integer(),
       isActive: t.Boolean(),
+      isDefault: t.Boolean(),
     }),
   ),
   productGroups: t.Object({ groupIds: t.Array(t.Integer({ minimum: 1 }), { maxItems: 50 }) }),

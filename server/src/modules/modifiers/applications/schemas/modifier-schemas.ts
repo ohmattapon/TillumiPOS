@@ -22,10 +22,11 @@ export const createModifierOptionSchema = z.object({
   priceSatang: satang.optional(),
   costSatang: satang.optional(),
   sortOrder: sortOrder.optional(),
+  isDefault: z.boolean().optional(),
 })
 
 export const updateModifierOptionSchema = z
-  .object({ name, priceSatang: satang, costSatang: satang, sortOrder, isActive: z.boolean() })
+  .object({ name, priceSatang: satang, costSatang: satang, sortOrder, isActive: z.boolean(), isDefault: z.boolean() })
   .partial()
 
 export const setProductModifierGroupsSchema = z.object({
