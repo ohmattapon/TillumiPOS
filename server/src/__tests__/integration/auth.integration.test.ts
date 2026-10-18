@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { app } from '../../app'
 import { PERMISSIONS } from '../../domains/permission.vo'
-import { client, login, ok, PASSWORD, pngFile, resetDatabase, seedProduct, signIn } from '../../../test/harness'
+import { baseUrl, client, login, ok, PASSWORD, pngFile, resetDatabase, seedProduct, signIn } from '../../../test/harness'
 
 beforeEach(() => resetDatabase())
 
@@ -127,5 +127,22 @@ describe('roles', () => {
     const demoted = ok(await first.api.users({ id: second.user.id }).patch({ role: 'cashier' }))
 
     expect(demoted.role).toBe('cashier')
+  })
+})
+
+describe('logout', () => {
+  test('answers ok and expires the session cookie the browser holds', async () => {
+    await signIn('owner', 'boss')
+    const login = await fetch(`${baseUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: 'boss', password: PASSWORD }),
+    })
+    const cookie = login.headers.get('set-cookie')!.split(';')[0]!
+
+    const logout = await fetch(`${baseUrl}/auth/logout`, { method: 'POST', headers: { cookie } })
+
+    expect(await logout.json()).toEqual({ ok: true })
+    expect(logout.headers.get('set-cookie')).toContain('Max-Age=0')
   })
 })
