@@ -33,6 +33,9 @@
     "test:api": "cd server && bun --env-file=.env.test test",
     "test:unit": "cd server && bun --env-file=.env.test test src/domains src/libs src/modules",
     "test:web": "bun test ./src",
+    "coverage": "bun run coverage:api && bun run coverage:web",
+    "coverage:api": "cd server && bun --env-file=.env.test test --coverage",
+    "coverage:web": "bun test ./src --coverage",
     "openapi:check": "cd server && bun --env-file=.env.test test/openapi-snapshot.ts check",
     "hooks:install": "lefthook install"
   },

@@ -21,4 +21,11 @@ describe('WorkerMediaStorage', () => {
   test('a URL without a token is not enough', () => {
     expect(new WorkerMediaStorage({ mediaUrl: 'https://media.example.com', mediaToken: null }).isEnabled()).toBe(false)
   })
+
+  test('a Worker that cannot be reached is reported as unavailable', async () => {
+    // Port 9 is the discard service; nothing listens there in a test run.
+    const storage = new WorkerMediaStorage({ mediaUrl: 'http://127.0.0.1:9', mediaToken: 'token' })
+
+    await expect(storage.put('a.png', new Blob(['x']))).rejects.toMatchObject({ code: 'MEDIA_UNAVAILABLE' })
+  })
 })

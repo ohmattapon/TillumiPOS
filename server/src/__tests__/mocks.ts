@@ -37,6 +37,7 @@ import type { IShopSettingsRepository } from '../modules/settings/applications/p
 import type { ICheckoutPolicy } from '../modules/shared/ports/checkout-policy.port'
 import type { IShiftLedger } from '../modules/shared/ports/shift-ledger.port'
 import type { IShiftSettingsGuard } from '../modules/shifts/applications/ports/shift-settings-guard.port'
+import type { IShiftRepository } from '../modules/shifts/applications/ports/shift.repository'
 import type { IRegisterRepository } from '../modules/shifts/applications/ports/register.repository'
 import type { ISaleRepository } from '../modules/sales/applications/ports/sale.repository'
 import type { IMediaStorage } from '../modules/shared/ports/media-storage.port'
@@ -199,6 +200,18 @@ export const mockRegisterRepository = (): Mocked<IRegisterRepository> => ({
 export const mockCheckoutPolicy = (): Mocked<ICheckoutPolicy> => ({
   isShiftsEnabled: mock<ICheckoutPolicy['isShiftsEnabled']>(async () => false),
   activateShifts: mock<ICheckoutPolicy['activateShifts']>(async () => {}),
+})
+
+export const mockShiftRepository = (): Mocked<IShiftRepository> => ({
+  create: mock<IShiftRepository['create']>(),
+  findById: mock<IShiftRepository['findById']>(),
+  findByIdForUpdate: mock<IShiftRepository['findByIdForUpdate']>(),
+  findCurrentByRegister: mock<IShiftRepository['findCurrentByRegister']>(),
+  list: mock<IShiftRepository['list']>(),
+  update: mock<IShiftRepository['update']>(),
+  cashDeltas: mock<IShiftRepository['cashDeltas']>(),
+  addCashEntry: mock<IShiftRepository['addCashEntry']>(),
+  listCashEntries: mock<IShiftRepository['listCashEntries']>(),
 })
 
 export const mockShiftLedger = (): Mocked<IShiftLedger> => ({
