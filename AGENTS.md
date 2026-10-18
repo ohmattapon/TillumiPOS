@@ -352,7 +352,6 @@ Pragmatic choices that are allowed, and places where the code does not yet follo
 | Accepted | `applications/` uses tsyringe decorators and zod | Kept for brevity; they do no I/O. Do not add other frameworks to the core. |
 | Accepted | Domain errors carry a Thai message | The `code` and `params` are the contract; the web translates from them. |
 | Accepted | The use case class is the driving port, with no separate interface | Controllers depend on the class; add an interface only if a second implementation is needed. |
-| Deviation | `orders/adapters/repository/guarded-order.repository.ts` enforces `ORDER_LOCKED_BY_QR_PAYMENT` in the adapter layer | Move the decorator to `orders/applications/` so the rule lives in the core, wrapping `IOrderRepository`. |
 | Deviation | `auth/applications/usecases/login.usecase.ts` and `qr-payments/applications/services/qr-payment-refresher.ts` call `console` from the core | Add a logger port (or let the adapter log) and inject it. |
 | Deviation | `products/.../set-product-image.usecase.ts`, `qr-payments/.../create-qr-payment.usecase.ts` and `create-qr-payment-v2.usecase.ts` call `crypto.randomUUID()` in the use case | Generate keys and references through an id-generator port, as `customer-display` does with its identifiers port. |
 | Deviation | `customer-display/.../open-display-stream.usecase.ts` waits with `setTimeout` in the use case | Take the wait (or the ping schedule) through a port so tests can drive it. |
