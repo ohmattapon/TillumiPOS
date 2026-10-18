@@ -16,6 +16,7 @@ import { useReceiveStock } from '../api'
 import { ReceiptDraftStore } from '../lib/draft'
 import { ReceiptDetail } from './ReceiptDetail'
 import { ReceiptQuantityInput } from './ReceiptQuantityInput'
+import { newIdempotencyKey } from '@/lib/idempotency-key'
 
 export function StockReceiptDraftPage() {
   const me = useQuery(meQuery)
@@ -25,7 +26,7 @@ export function StockReceiptDraftPage() {
 function Draft({ actorId }: { actorId: number }) {
   const { t } = useTranslation('stockReceipts')
   const [store] = useState(() => {
-    try { return new ReceiptDraftStore(actorId, window.localStorage, () => crypto.randomUUID()) }
+    try { return new ReceiptDraftStore(actorId, window.localStorage, newIdempotencyKey) }
     catch { return null }
   })
   const [draft, setDraft] = useState(() => store?.value)

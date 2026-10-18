@@ -39,6 +39,7 @@ import { OpenOrdersDialog } from './OpenOrdersDialog'
 import { ProductPicker } from './ProductPicker'
 import { ReceiptDialog } from './ReceiptDialog'
 import { SaveOrderDialog } from './SaveOrderDialog'
+import { newIdempotencyKey } from '@/lib/idempotency-key'
 
 /** The sell screen: pick products, review the cart, take payment, show the receipt. */
 export function PosPage() {
@@ -156,7 +157,7 @@ export function PosPage() {
     const quoteId = options.arrived ? undefined : quote?.id
     // A pinned price already holds the discount; the till never adds a typed one on top.
     const discountSatang = quote ? 0 : cart.discountSatang
-    paymentCommandKey.current ??= crypto.randomUUID()
+    paymentCommandKey.current ??= newIdempotencyKey()
     // An open order is paid through the order, which sells it at the prices it quoted.
     if (cart.orderId !== null) {
       payOrder.mutate(
