@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { resolveCacheConfig } from './cache-config'
 
-const database = 'postgres://pos:secret@localhost:5433/pos'
+const database = 'postgres://pos:your-password@localhost:5433/pos'
 const names = ['REDIS_URL', 'CACHE_KEY_PREFIX', 'CACHE_TIMEOUT_MS'] as const
 const saved = Object.fromEntries(names.map((name) => [name, Bun.env[name]]))
 
@@ -27,8 +27,8 @@ describe('resolveCacheConfig', () => {
   test('the default prefix names the installation without its credentials', () => {
     configure({})
 
-    const same = resolveCacheConfig('postgres://other:pass@localhost:5433/pos').prefix
-    const another = resolveCacheConfig('postgres://pos:secret@localhost:5433/other').prefix
+    const same = resolveCacheConfig('postgres://other:your-password@localhost:5433/pos').prefix
+    const another = resolveCacheConfig('postgres://pos:your-password@localhost:5433/other').prefix
 
     expect(same).toBe(resolveCacheConfig(database).prefix)
     expect(another).not.toBe(same)
