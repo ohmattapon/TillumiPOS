@@ -1,7 +1,8 @@
 import { z } from 'zod'
-import { PROMOTION_AUDIENCES, PROMOTION_KINDS } from '../../../../domains/promotion.domain'
+import { MAX_SCOPE_IDS, PROMOTION_AUDIENCES, PROMOTION_KINDS } from '../../../../domains/promotion.domain'
 
 const minute = z.number().int().min(0).max(1439)
+const ids = z.array(z.number().int().positive()).max(MAX_SCOPE_IDS)
 const fields = {
   name: z.string().trim().min(1).max(80),
   kind: z.enum(PROMOTION_KINDS),
@@ -15,6 +16,7 @@ const fields = {
   windowEndMinute: minute.nullable(),
   audience: z.enum(PROMOTION_AUDIENCES),
   isActive: z.boolean(),
+  scope: z.object({ productIds: ids, categoryIds: ids }).nullable(),
 }
 
 export const createPromotionSchema = z.object({
@@ -30,6 +32,7 @@ export const createPromotionSchema = z.object({
   windowEndMinute: fields.windowEndMinute.optional(),
   audience: fields.audience.optional(),
   isActive: fields.isActive.optional(),
+  scope: fields.scope.optional(),
 })
 
 export const updatePromotionSchema = z.object({
@@ -45,6 +48,7 @@ export const updatePromotionSchema = z.object({
   windowEndMinute: fields.windowEndMinute.optional(),
   audience: fields.audience.optional(),
   isActive: fields.isActive.optional(),
+  scope: fields.scope.optional(),
 })
 
 export const promotionIdSchema = z.object({ id: z.number().int().positive() })

@@ -60,11 +60,18 @@ export class CreateQuoteUseCase {
     }
 
     const subtotalSatang = lines.reduce((total, line) => total + line.unitPriceSatang * line.quantity, 0)
+    // One question for both a cart and an order: an order's lines carry no category.
+    const categories = await this.products.categoriesOf([...new Set(lines.map((line) => line.productId))])
     const best = pickBestPromotion(await this.catalog.activePromotions(), {
       subtotalSatang,
       hasMember: member !== null,
       at: now,
       timeZone: shop.timeZone,
+      lines: lines.map((line) => ({
+        productId: line.productId,
+        categoryId: categories.get(line.productId) ?? null,
+        lineTotalSatang: line.unitPriceSatang * line.quantity,
+      })),
     })
 
     return this.quotes.create(

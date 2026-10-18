@@ -7,7 +7,7 @@ import { promotions } from '../../../../infrastructure/database/schema/promotion
 import { isUniqueViolation } from '../../../../libs/pg-error'
 import { currentExecutor } from '../../../../libs/transaction-context'
 import type { IPromotionRepository, PromotionListQuery } from '../../applications/ports/promotion.repository'
-import { snapshotOf } from '../promotion.snapshot'
+import { rowOf } from '../promotion.snapshot'
 
 const nameTaken = () => new DomainConflictError('ชื่อโปรโมชันนี้ถูกใช้แล้ว', 'PROMOTION_NAME_TAKEN')
 
@@ -19,8 +19,13 @@ const calendarDay = (value: string | Date | null): string | null =>
   value instanceof Date ? value.toISOString().slice(0, 10) : value
 
 /** Rebuilds a promotion from a row, with its dates as the YYYY-MM-DD strings the rules are written in. */
-const entityOf = (row: typeof promotions.$inferSelect) =>
-  new PromotionEntity({ ...row, startsOn: calendarDay(row.startsOn), endsOn: calendarDay(row.endsOn) })
+const entityOf = ({ productIds, categoryIds, ...row }: typeof promotions.$inferSelect) =>
+  new PromotionEntity({
+    ...row,
+    startsOn: calendarDay(row.startsOn),
+    endsOn: calendarDay(row.endsOn),
+    scope: productIds === null && categoryIds === null ? null : { productIds: productIds ?? [], categoryIds: categoryIds ?? [] },
+  })
 
 @injectable()
 export class DrizzlePromotionRepository implements IPromotionRepository {
@@ -48,7 +53,7 @@ export class DrizzlePromotionRepository implements IPromotionRepository {
   }
 
   async create(entity: PromotionEntity) {
-    const { id: _id, ...values } = snapshotOf(entity)
+    const { id: _id, ...values } = rowOf(entity)
     try {
       const [row] = await currentExecutor().insert(promotions).values(values).returning()
       return entityOf(row!)
@@ -60,7 +65,7 @@ export class DrizzlePromotionRepository implements IPromotionRepository {
 
   async update(entity: PromotionEntity) {
     // The image key is never patched: only setImageKey writes it, so a normal edit cannot clobber it.
-    const { id, createdAt: _createdAt, imageKey: _image, ...values } = snapshotOf(entity)
+    const { id, createdAt: _createdAt, imageKey: _image, ...values } = rowOf(entity)
     try {
       const [row] = await currentExecutor().update(promotions).set(values).where(eq(promotions.id, id)).returning()
       if (!row) throw new DomainNotFoundError('ไม่พบโปรโมชัน', 'PROMOTION_NOT_FOUND')
