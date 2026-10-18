@@ -58,6 +58,10 @@ describe('webPlugin', () => {
     expect(basename(root)).toBe('dist')
   })
 
+  test('a path with a broken percent escape is a 404', async () => {
+    expect((await get('/%E0%A4%A')).status).toBe(404)
+  })
+
   test('without a web root it adds nothing', async () => {
     const bare = new Elysia().use(webPlugin(undefined))
 

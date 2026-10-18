@@ -11,7 +11,9 @@ import { OrderEntity, type OrderEntityProps } from '../domains/order.domain'
 import { QrPaymentEntity, type QrPaymentEntityProps } from '../domains/qr-payment.domain'
 import { CategoryEntity, type CategoryEntityProps } from '../domains/category.domain'
 import { ProductEntity, type ProductEntityProps } from '../domains/product.domain'
+import { RegisterEntity, type RegisterProps } from '../domains/register.domain'
 import { SaleEntity, type SaleEntityProps } from '../domains/sale.domain'
+import { ShiftEntity, type ShiftProps } from '../domains/shift.domain'
 import { SlideEntity, type SlideEntityProps } from '../domains/slide.domain'
 import { StockMovementEntity, type StockMovementEntityProps } from '../domains/stock-movement.domain'
 import { UserEntity, type UserEntityProps } from '../domains/user.domain'
@@ -204,5 +206,35 @@ export const makePriceQuote = (overrides: Partial<PriceQuoteProps> = {}) =>
     createdById: 1,
     expiresAt: new Date('2026-10-15T05:15:00Z'),
     createdAt: new Date('2026-10-15T05:00:00Z'),
+    ...overrides,
+  })
+
+export const makeRegister = (overrides: Partial<RegisterProps> = {}) =>
+  new RegisterEntity({ id: 3, branchId: 1, code: 'FRONT', name: 'หน้าร้าน', isActive: true, ...overrides })
+
+export const makeShift = (overrides: Partial<ShiftProps> = {}) =>
+  new ShiftEntity({
+    id: 7,
+    branchId: 1,
+    registerId: 3,
+    status: 'open',
+    openedAt: new Date('2026-03-01T02:00:00Z'),
+    openedById: 1,
+    openedByName: 'เจ้าของร้าน',
+    openingCashSatang: 100_000,
+    openingNote: null,
+    currency: 'THB',
+    timeZone: 'Asia/Bangkok',
+    closingRevision: 0,
+    closingStartedAt: null,
+    closingStartedById: null,
+    closingStartedByName: null,
+    closingExpectedCashSatang: null,
+    closedAt: null,
+    closedById: null,
+    closedByName: null,
+    countedCashSatang: null,
+    cashDifferenceSatang: null,
+    differenceReason: null,
     ...overrides,
   })
