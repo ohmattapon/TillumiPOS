@@ -11,6 +11,7 @@ import { membersLocales } from '@/features/members'
 import { promotionsLocales } from '@/features/promotions'
 import { modifiersLocales } from '@/features/modifiers'
 import { posLocales } from '@/features/pos'
+import { stockReceiptsLocales } from '@/features/stock-receipts'
 import { productsLocales } from '@/features/products'
 import { salesLocales } from '@/features/sales'
 import { reportsLocales } from '@/features/reports'
@@ -46,6 +47,7 @@ export const resources = {
     users: usersLocales.th,
     pos: posLocales.th,
     products: productsLocales.th,
+    stockReceipts: stockReceiptsLocales.th,
     sales: salesLocales.th,
     reports: reportsLocales.th,
     settings: settingsLocales.th,
@@ -69,6 +71,7 @@ export const resources = {
     users: usersLocales.en,
     pos: posLocales.en,
     products: productsLocales.en,
+    stockReceipts: stockReceiptsLocales.en,
     sales: salesLocales.en,
     reports: reportsLocales.en,
     settings: settingsLocales.en,

@@ -6,6 +6,8 @@ export type StockMovementType = (typeof STOCK_MOVEMENT_TYPES)[number]
 
 /** What is known about a movement before it is stored: the ledger works out the balance. */
 export interface NewStockMovement {
+  /** Internal receipt linkage, excluded from the existing HTTP movement response. */
+  receiptId?: number | null
   /** The branch whose shelves change. */
   branchId: number
   productId: number
