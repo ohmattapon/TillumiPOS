@@ -19,6 +19,7 @@ import {
   PAID_SHOWN_MS,
   PairDisplayDialog,
   useCustomerDisplayPublisher,
+  type DisplayQr,
 } from '@/features/customer-display'
 import { checkoutModeQuery, currentShiftQuery, registersQuery, useRegisterSelectionStore } from '@/features/shifts'
 import { meQuery, SwitchStaffDialog, useLogout } from '@/features/auth'
@@ -73,7 +74,7 @@ export function PosPage() {
   const settings = useSettings()
   const features = useFeatures()
   // The bank QR the payment dialog is showing, and the sale just paid, for the customer's screen.
-  const [shownQr, setShownQr] = useState<{ image: string; expiresAt: string } | null>(null)
+  const [shownQr, setShownQr] = useState<DisplayQr | null>(null)
   const [paidSale, setPaidSale] = useState<{ totalSatang: number; changeSatang: number } | null>(null)
 
   // "Paid" stays on the customer's screen for a few seconds, then the idle screen returns.
