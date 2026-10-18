@@ -60,7 +60,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, toolbar, isPending,
               {table.getHeaderGroups()[0].headers.map((header) => {
                 const column = header.column.columnDef.meta!.column
                 return (
-                  <TableHead key={header.id} className={cn(tableHead, column.align === 'right' && 'text-right', wideOnly(column))}>
+                  <TableHead key={header.id} className={cn(tableHead, column.align === 'right' && 'text-right', column.width, wideOnly(column))}>
                     {flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 )
