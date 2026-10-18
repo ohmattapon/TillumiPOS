@@ -70,11 +70,6 @@ export function minuteOf(time: string): number | null {
 export const timeOf = (minute: number) =>
   `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`
 
-/** The calendar date in a time zone, as `YYYY-MM-DD`. */
-export function todayIn(timeZone: string, now: Date): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
-}
-
 /** Short name of a weekday (0 = Sunday) in the shop's language. */
 export function weekdayName(locale: string, day: number): string {
   // 2023-01-01 was a Sunday.

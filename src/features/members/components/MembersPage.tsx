@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
+import { todayIn } from '@/lib/calendar-date'
 import { Panel, tableToolbar } from '@/components/Panel'
 import { DataTable } from '@/components/DataTable'
 import { TableSearch } from '@/components/TableSearch'
@@ -157,13 +158,7 @@ export function MemberDetailsPage() {
     ),
     enabled: !from || !to || from <= to,
   })
-  const [now] = useState(() => new Date())
-  const today = new Intl.DateTimeFormat('en-CA', {
-    timeZone: shop.timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(now)
+  const [today] = useState(() => todayIn(shop.timeZone))
   return (
     <>
       <PageHeader

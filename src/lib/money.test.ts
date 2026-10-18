@@ -74,6 +74,14 @@ describe('createDateFormat', () => {
     expect(createDateFormat('en').longDate(at)).toContain('October')
   })
 
+  test('a calendar day from the API is the same day in any browser zone', () => {
+    // The API's calendar days are midnight UTC; a zone behind UTC must not turn the 13th into the 12th.
+    expect(createDateFormat('en').calendarDayMonth('2026-10-13')).toBe('Oct 13')
+    expect(createDateFormat('th').calendarDayMonth('2026-10-13')).toContain('13')
+    expect(createDateFormat('en').calendarDateShortYear('2026-10-13')).toBe('Oct 13, 26')
+    expect(createDateFormat('th').calendarDateShortYear('2026-10-13')).toContain('69')
+  })
+
   test('accepts the ISO strings the API sends', () => {
     expect(createDateFormat('en').time('2026-10-13T06:30:00.000Z')).toMatch(/\d/)
   })

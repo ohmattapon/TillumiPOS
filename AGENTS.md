@@ -284,7 +284,7 @@ src/
 
 - A new screen must work at 390, 768 and 1366px, per `DESIGN.md` (the section "Screen sizes and app structure"). e2e checks that every page does not overflow horizontally. If a new page is not in the list, add it.
 - Tables always use `DataTable`, and every column must specify a `priority` (`primary`, `secondary` or `wide-only`)
-- Tappable buttons and input fields must be at least 44px tall (`h-11` or `size-11`)
+- Tappable height follows the size table in `DESIGN.md`: at least 44px (`h-11` or `size-11`) on the sales page and in the payment dialog, 40px (`h-10`) for buttons and input fields in other dialogs, and 36px for buttons on management pages and in the page header. A new control uses the row of the screen it is on; never go below its row
 - The confirm button of a dialog without a form uses `DialogFooter sticky`, while in a form put the buttons at the end of the form (a sticky footer inside a form floats in the middle of the dialog)
 - Before merging screen work, run `bun run screenshots` and look at the phone / tablet / desktop images by eye
 
@@ -387,7 +387,6 @@ The rules above have no exceptions. The code below predates them: it is a fix li
 | The core generates random values | `products/.../set-product-image.usecase.ts`, `qr-payments/.../create-qr-payment.usecase.ts` and `create-qr-payment-v2.usecase.ts` call `crypto.randomUUID()`, and the two QR use cases build the reference with the same copied expression | Add one id-generator port in `modules/shared/ports/`; build the QR reference with one pure function in `domains/`. |
 | A module has its own id generator | `display-slides` declares `ISlideIdGenerator` | Replace it with the shared id-generator port. |
 | The core waits with `setTimeout` | `customer-display/.../open-display-stream.usecase.ts` | Take the wait (or the ping schedule) through a port so tests can drive it. |
-| The web builds idempotency keys inline | `crypto.randomUUID()` in `features/sales/api.ts`, `orders/api.ts`, `pos/api.ts`, `pos/components/PosPage.tsx`, `pos/hooks/use-qr-payment.ts`, `shifts/api.ts`, `shifts/components/ShiftsPage.tsx` and `stock-receipts/components/StockReceiptDraftPage.tsx` | Add one `newIdempotencyKey()` in `src/lib/` and call it everywhere. |
 
 ### Evolving the contract
 
@@ -410,7 +409,7 @@ The rules above have no exceptions. The code below predates them: it is a fix li
 - **Newest wins for streams of updates.** When updates replace each other (the customer display), keep one request in flight and send only the latest waiting value (`createServerSender`), so a slow network never replays stale states.
 - **Make the failure path visible.** Every query shows a skeleton, then data, an error with a retry, or an empty state. Never show "no results" while loading or after a failure.
 - **Optimistic UI only when the server can be undone.** Otherwise wait for the server. Never show money as paid before the server says so.
-- **Accessible by default.** Labels tied to inputs, `aria-label` on icon buttons, `role="alert"` on form errors, no meaning by color alone, and 44px touch targets.
+- **Accessible by default.** Labels tied to inputs, `aria-label` on icon buttons, `role="alert"` on form errors, no meaning by color alone, and touch targets of the height `DESIGN.md` gives the screen.
 
 ### Testing practices
 
