@@ -25,6 +25,18 @@ const notFound = { code: 'NOT_FOUND', message: 'ไม่พบสินค้�
 const png = () => new Blob(['image bytes'], { type: 'image/png' })
 
 describe('ListProductsUseCase', () => {
+  test('passes the product type filter without adding one to legacy queries', async () => {
+    repo.findAll.mockResolvedValue({ items: [], total: 0 })
+    const query = { productType: 'cafe' }
+    await new ListProductsUseCase(repo).execute(query, 1)
+    const expected = { productType: 'cafe', branchId: 1 }
+    expect(repo.findAll).toHaveBeenCalledWith(expected)
+  })
+
+  test('rejects an invalid product type before reading', async () => {
+    await expect(new ListProductsUseCase(repo).execute({ productType: 'other' }, 1)).rejects.toBeInstanceOf(ZodError)
+    expect(repo.findAll).not.toHaveBeenCalled()
+  })
   test('passes the validated query to the repository', async () => {
     const stored = { items: [makeProduct()], total: 1 }
     repo.findAll.mockResolvedValue(stored)
@@ -87,6 +99,7 @@ describe('CreateProductUseCase', () => {
       barcode: null,
       name: 'ใหม่',
       categoryId: null,
+      productType: 'normal',
       priceSatang: 100,
       costSatang: 0,
       trackStock: true,
@@ -105,9 +118,10 @@ describe('CreateProductUseCase', () => {
       categoryId: 3,
       costSatang: 60,
       trackStock: false,
+      productType: 'cafe',
     }, 1, { id: 1, displayName: 'ผู้ทดสอบ' })
 
-    expect(created.toSnapshot()).toMatchObject({ barcode: '885', categoryId: 3, costSatang: 60, trackStock: false })
+    expect(created.toSnapshot()).toMatchObject({ barcode: '885', categoryId: 3, costSatang: 60, trackStock: false, productType: 'cafe' })
   })
 
   test('opening stock, image and active flag cannot be set by the caller', async () => {
@@ -118,6 +132,7 @@ describe('CreateProductUseCase', () => {
 
   test.each([
     ['a missing price', { sku: 'A', name: 'a' }],
+    ['an invalid product type', { sku: 'A', name: 'a', priceSatang: 1, productType: 'other' }],
     ['a negative price', { sku: 'A', name: 'a', priceSatang: -1 }],
     ['a fractional price', { sku: 'A', name: 'a', priceSatang: 9.99 }],
     ['an empty SKU', { sku: '', name: 'a', priceSatang: 1 }],
@@ -130,6 +145,24 @@ describe('CreateProductUseCase', () => {
 })
 
 describe('UpdateProductUseCase', () => {
+  test('changes classification alone and preserves it when omitted', async () => {
+    repo.findById.mockResolvedValue(makeProduct())
+    repo.update.mockImplementation(async (entity) => entity)
+    const command = new UpdateProductUseCase(repo, auditUnitOfWork(), auditMock())
+    const actor = { id: 1, displayName: 'ผู้ทดสอบ' }
+    const updated = await command.execute(1, { productType: 'cafe' }, 1, actor)
+    expect(updated.productType).toBe('cafe')
+    repo.findById.mockResolvedValue(updated)
+    expect((await command.execute(1, { name: 'Renamed' }, 1, actor)).productType).toBe('cafe')
+  })
+
+  test('rejects an invalid classification before reading or writing', async () => {
+    const command = new UpdateProductUseCase(repo, auditUnitOfWork(), auditMock())
+    const actor = { id: 1, displayName: 'ผู้ทดสอบ' }
+    await expect(command.execute(1, { productType: null }, 1, actor)).rejects.toBeInstanceOf(ZodError)
+    expect(repo.findById).not.toHaveBeenCalled()
+    expect(repo.update).not.toHaveBeenCalled()
+  })
   let useCase: UpdateProductUseCase
 
   beforeEach(() => {

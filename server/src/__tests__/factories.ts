@@ -83,6 +83,7 @@ export const makeProduct = (overrides: Partial<ProductEntityProps> = {}) =>
     barcode: null,
     name: 'น้ำดื่ม',
     categoryId: null,
+    productType: 'normal',
     priceSatang: 1000,
     costSatang: 600,
     trackStock: true,

@@ -2,8 +2,26 @@ import { expect, test } from 'bun:test'
 import { SQL } from 'bun'
 import { drizzle } from 'drizzle-orm/bun-sql'
 import { migrate } from 'drizzle-orm/bun-sql/migrator'
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { MIGRATIONS_FOLDER } from '../src/infrastructure/database/migrations-folder'
 import { assertTestDatabase } from './database'
+
+/**
+ * This case creates, fully migrates and then drops its own private database. That takes a few seconds
+ * on an idle machine but can pass Bun's 30 s default while a whole suite runs at the same time, so the
+ * timeout is stated here instead of borrowing the default. No assertion depends on it.
+ */
+const MIGRATION_TEST_TIMEOUT_MS = 60_000
+
+interface MigrationEntry {
+  idx: number
+  tag: string
+  when: number
+  version: string
+  breakpoints: boolean
+}
 
 test('repairs a skipped option-default migration without replacing existing options, and can run twice', async () => {
   assertTestDatabase()
@@ -12,12 +30,23 @@ test('repairs a skipped option-default migration without replacing existing opti
   target.pathname = '/postgres'
   const admin = new SQL(target.href)
   let connection: SQL | undefined
+  let migrationsFolder: string | undefined
   try {
+    // Rewinding this repair's ledger must not replay unrelated, newer schema migrations.
+    migrationsFolder = await mkdtemp(join(tmpdir(), 'opencode', 'cafe-repair-migration-'))
+    await mkdir(join(migrationsFolder, 'meta'))
+    const journal = JSON.parse(await readFile(join(MIGRATIONS_FOLDER, 'meta/_journal.json'), 'utf8'))
+    const repairEntries = (journal.entries as MigrationEntry[]).filter((entry) => entry.idx <= 21)
+    for (const entry of repairEntries) {
+      await copyFile(join(MIGRATIONS_FOLDER, `${entry.tag}.sql`), join(migrationsFolder, `${entry.tag}.sql`))
+    }
+    const repairJournal = { ...journal, entries: repairEntries }
+    await writeFile(join(migrationsFolder, 'meta/_journal.json'), JSON.stringify(repairJournal), 'utf8')
     await admin.unsafe(`create database "${databaseName}"`)
     target.pathname = `/${databaseName}`
     connection = new SQL(target.href)
     const database = drizzle(connection)
-    const migrationOptions = { migrationsFolder: MIGRATIONS_FOLDER }
+    const migrationOptions = { migrationsFolder }
     await migrate(database, migrationOptions)
     await connection`alter table modifier_options drop column is_default`
     await connection`insert into modifier_groups (name) values ('existing group')`
@@ -42,5 +71,6 @@ test('repairs a skipped option-default migration without replacing existing opti
     await connection?.close()
     await admin.unsafe(`drop database if exists "${databaseName}"`)
     await admin.close()
+    if (migrationsFolder) await rm(migrationsFolder, { recursive: true, force: true })
   }
-}, 30000)
+}, MIGRATION_TEST_TIMEOUT_MS)

@@ -7,6 +7,8 @@ const th = {
     none: 'ไม่คิด VAT',
   },
   add: 'เพิ่มสินค้า',
+  addCafe: 'เพิ่มเมนูคาเฟ่',
+  types: { normal: 'สินค้าทั่วไป', cafe: 'เมนูคาเฟ่' },
   filters: {
     all: 'ทั้งหมด',
     low: 'ใกล้หมด',
@@ -54,6 +56,7 @@ const th = {
     stockNow: '"{{name}}" คงเหลือ {{count}} ชิ้น',
   },
   form: {
+    productType: 'ประเภทสินค้า',
     titleNew: 'เพิ่มสินค้า',
     titleEdit: 'แก้ไขสินค้า',
     description: '{{priceNote}} · จำนวนสต็อกแก้ที่ปุ่มรับเข้าหรือปรับยอด',
@@ -110,6 +113,8 @@ const en = {
     none: 'no VAT',
   },
   add: 'Add product',
+  addCafe: 'Add cafe menu item',
+  types: { normal: 'General products', cafe: 'Cafe menu' },
   filters: {
     all: 'All',
     low: 'Low stock',
@@ -157,6 +162,7 @@ const en = {
     stockNow: '"{{name}}" now has {{count}} in stock',
   },
   form: {
+    productType: 'Product type',
     titleNew: 'Add product',
     titleEdit: 'Edit product',
     description: '{{priceNote}} · change the stock with Receive or Adjust',

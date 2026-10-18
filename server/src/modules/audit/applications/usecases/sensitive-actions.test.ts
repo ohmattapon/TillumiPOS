@@ -54,6 +54,25 @@ import { DEFAULT_SHOP_SETTINGS, ShopSettingsEntity } from '../../../../domains/s
 const owner = { ...actor, role: 'owner' as const }
 const now = new Date('2026-10-16T06:00:00Z')
 
+test('classification-only updates audit both types inside the unit of work and reject audit failure', async () => {
+  const repo = productRepo()
+  const log = mockAuditLog()
+  let insideTransaction = false
+  const uow = { async run<T>(work: () => Promise<T>): Promise<T> {
+    insideTransaction = true
+    try { return await work() } finally { insideTransaction = false }
+  } }
+  repo.findById.mockResolvedValue(makeProduct())
+  repo.update.mockImplementation(async p => p)
+  log.record.mockImplementation(async () => { expect(insideTransaction).toBe(true) })
+  const command = new UpdateProductUseCase(repo, uow, log)
+  await command.execute(1, { productType: 'cafe' }, 1, actor)
+  const expected = { action: 'product.update', before: { productType: 'normal' }, after: { productType: 'cafe' } }
+  expect(log.record.mock.calls[0]?.[2]).toMatchObject(expected)
+  log.record.mockRejectedValue(new Error('audit unavailable'))
+  await expect(command.execute(1, { productType: 'cafe' }, 1, actor)).rejects.toThrow('audit unavailable')
+})
+
 test('product update includes only changed allowed values, and no-op/rejected updates have no history', async () => {
   const repo = productRepo(), log = mockAuditLog()
   repo.findById.mockResolvedValue(makeProduct())

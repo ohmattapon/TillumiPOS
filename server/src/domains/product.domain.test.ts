@@ -9,6 +9,7 @@ const valid: ProductEntityProps = {
   barcode: '8850000000011',
   name: 'น้ำดื่ม',
   categoryId: 2,
+  productType: 'normal',
   priceSatang: 1000,
   costSatang: 600,
   trackStock: true,
@@ -21,6 +22,29 @@ const product = (overrides: Partial<ProductEntityProps> = {}) => new ProductEnti
 describe('ProductEntity', () => {
   test('holds its properties', () => {
     expect(product().toSnapshot()).toEqual(valid)
+  })
+
+  describe('productType', () => {
+    test.each(['normal', 'cafe'] as const)('accepts and snapshots %s explicitly', (productType) => {
+      const classified = product({ productType })
+
+      expect(classified.productType).toBe(productType)
+      expect(classified.toSnapshot().productType).toBe(productType)
+    })
+
+    test.each(['coffee', 'CAFE', '', null, undefined, 1])('rejects invalid classification %s', (productType) => {
+      const props = { ...valid, productType } as unknown as ProductEntityProps
+      const attempt = () => new ProductEntity(props)
+
+      expect(attempt).toThrow(DomainError)
+      expect(attempt).toThrow(expect.objectContaining({ code: 'INVALID_PRODUCT' }))
+    })
+
+    test('does not infer classification from a cafe name, category or SKU', () => {
+      const classified = product({ name: 'กาแฟลาเต้', sku: 'CAFE-001', categoryId: 99, productType: 'normal' })
+
+      expect(classified.productType).toBe('normal')
+    })
   })
 
   test.each<[string, Partial<ProductEntityProps>]>([
@@ -45,6 +69,30 @@ describe('ProductEntity', () => {
   })
 
   describe('with', () => {
+    test.each(['normal', 'cafe'] as const)('preserves %s when classification is unchanged or undefined', (productType) => {
+      const original = product({ productType })
+
+      expect(original.with({}).productType).toBe(productType)
+      expect(original.with({ name: 'ชื่อใหม่', productType: undefined }).productType).toBe(productType)
+    })
+
+    test('changes only classification without mutating the original', () => {
+      const original = product()
+      const changed = original.with({ productType: 'cafe' })
+      const expected: ProductEntityProps = { ...valid, productType: 'cafe' }
+
+      expect(changed).not.toBe(original)
+      expect(changed.toSnapshot()).toEqual(expected)
+      expect(original.toSnapshot()).toEqual(valid)
+      expect(changed.with({ productType: 'normal' }).toSnapshot()).toEqual(valid)
+    })
+
+    test('rejects invalid classification changes', () => {
+      const changes = { productType: 'coffee' } as never
+
+      expect(() => product().with(changes)).toThrow(DomainError)
+    })
+
     test('changes the given fields and keeps the rest', () => {
       const changed = product().with({ name: 'น้ำแร่', priceSatang: 1500 })
 

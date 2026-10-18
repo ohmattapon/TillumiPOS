@@ -11,6 +11,7 @@ const product = (overrides: Partial<Product>): Product => ({
   sku: 'SKU-1',
   barcode: null,
   name: 'ชา',
+  productType: 'normal',
   categoryId: null,
   priceSatang: 2500,
   costSatang: 1500,
