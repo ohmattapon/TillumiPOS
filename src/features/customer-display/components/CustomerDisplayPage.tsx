@@ -5,6 +5,7 @@ import { createDateFormat, createMoney, type Locale, type Money } from '@/lib/mo
 import { cn } from '@/lib/utils'
 import { useDisplayReceiver } from '../hooks/use-display-receiver'
 import { useDisplaySlides } from '../hooks/use-display-slides'
+import { SlideImage } from './SlideImage'
 import { useFullscreen, useIdleCursor } from '../hooks/use-screen-chrome'
 import type { DisplayLine, DisplayState } from '../lib/display-state'
 import type { DisplaySlide } from '../lib/slideshow'
@@ -54,12 +55,12 @@ export function CustomerDisplayPage() {
         {state.kind === 'idle' && (
           <div className="relative flex flex-1 flex-col items-center justify-center gap-[2vh] overflow-hidden text-center">
             {slide !== null && slideIndex !== null ? (
-              <img
+              <SlideImage
                 key={slide.id}
                 src={slide.imageUrl}
                 alt={t('slideshow.alt', { index: slideIndex + 1, total: slides.length })}
                 onError={() => markBroken(slideIndex)}
-                className="absolute inset-0 h-full w-full object-cover motion-safe:animate-in motion-safe:fade-in"
+                className="absolute inset-0"
               />
             ) : (
               <>
@@ -178,14 +179,8 @@ function SlideStrip({
   const slide = index === null ? undefined : slides[index]
   if (!slide) return null
   return (
-    <div className="h-16 w-full shrink-0 overflow-hidden rounded-xl border bg-card shadow-xs">
-      <img
-        key={slide.id}
-        src={slide.imageUrl}
-        alt={alt}
-        onError={() => index !== null && onBroken(index)}
-        className="h-full w-full object-cover motion-safe:animate-in motion-safe:fade-in"
-      />
+    <div className="h-[10vh] min-h-16 w-full shrink-0 overflow-hidden rounded-xl border bg-card shadow-xs">
+      <SlideImage key={slide.id} src={slide.imageUrl} alt={alt} onError={() => index !== null && onBroken(index)} className="size-full" />
     </div>
   )
 }
