@@ -9,6 +9,29 @@ const envelope = (seq: number): DisplayEnvelope => ({
 const state = (seq: number) => ({ type: 'state' as const, envelope: envelope(seq) })
 
 describe('combineChannels', () => {
+  test('closing it closes every channel', () => {
+    const closed: string[] = []
+    const channel = (name: string) => ({ post: () => {}, subscribe: () => () => {}, close: () => void closed.push(name) })
+
+    combineChannels(channel('near'), channel('far')).close()
+
+    expect(closed).toEqual(['near', 'far'])
+  })
+
+  test('stops listening on every channel when the listener is removed', () => {
+    const near = createMemoryBus()
+    const far = createMemoryBus()
+    const screen = combineChannels(near.open(), far.open())
+    const heard: unknown[] = []
+    const stop = screen.subscribe((message) => heard.push(message))
+
+    stop()
+    near.open().post({ type: 'hello' })
+    far.open().post({ type: 'hello' })
+
+    expect(heard).toEqual([])
+  })
+
   test('posts to every channel and listens on all of them', () => {
     const near = createMemoryBus()
     const far = createMemoryBus()
@@ -117,5 +140,13 @@ describe('createServerSender', () => {
     await Bun.sleep(1)
 
     expect(sent).toEqual([1])
+  })
+
+  test('a sender never receives anything, and what it hands back to stop listening does nothing', () => {
+    const sender = createServerSender({ send: async () => {} })
+
+    const stop = sender.subscribe(() => {})
+
+    expect(stop()).toBeUndefined()
   })
 })

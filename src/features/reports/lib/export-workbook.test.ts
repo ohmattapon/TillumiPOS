@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from 'bun:test'
+import { afterEach, expect, spyOn, test } from 'bun:test'
 import { buildReportWorkbook, downloadReportWorkbook, type ReportExportData } from './export-workbook'
 
 const metrics = { saleCount: 1, voidedCount: 0, totalSatang: 10700, vatSatang: 700, discountSatang: 0, costSatang: 6000, netSalesSatang: 10000, profitSatang: 4000 }
@@ -35,9 +35,11 @@ test('a zero-decimal currency is exported without scaling its values', async () 
 const globals = globalThis as { document?: unknown }
 const nativeDocument = globals.document
 const nativeCreateObjectUrl = URL.createObjectURL
+const nativeRevokeObjectUrl = URL.revokeObjectURL
 afterEach(() => {
   globals.document = nativeDocument
   URL.createObjectURL = nativeCreateObjectUrl
+  URL.revokeObjectURL = nativeRevokeObjectUrl
 })
 
 test('the download is an .xlsx file named after the period, scope and time', async () => {
@@ -45,12 +47,25 @@ test('the download is an .xlsx file named after the period, scope and time', asy
   const blobs: Blob[] = []
   globals.document = { createElement: () => link }
   URL.createObjectURL = (blob) => (blobs.push(blob as Blob), 'blob:report')
+  const revoked: string[] = []
+  URL.revokeObjectURL = (url) => void revoked.push(url)
+  const timers: [() => void, number][] = []
+  const timer = spyOn(globalThis, 'setTimeout').mockImplementation(((run: () => void, ms: number) => timers.push([run, ms])) as unknown as typeof setTimeout)
 
-  await downloadReportWorkbook(fixture)
+  try {
+    await downloadReportWorkbook(fixture)
+  } finally {
+    timer.mockRestore()
+  }
 
   expect(link.href).toBe('blob:report')
   expect(link.download).toMatch(/^sales-2026-01-01-2026-01-01-all-\d{8}T\d{9}Z\.xlsx$/)
   expect(link.clicked).toBe(true)
   expect(blobs[0]!.type).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
   expect(blobs[0]!.size).toBeGreaterThan(0)
+  // The address is released a second later, once the browser has started the download.
+  expect(revoked).toEqual([])
+  expect(timers[0]![1]).toBe(1000)
+  timers[0]![0]()
+  expect(revoked).toEqual(['blob:report'])
 }, 30000)
