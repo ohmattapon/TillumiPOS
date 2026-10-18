@@ -94,7 +94,7 @@ export function useIsSavingLineNote() {
   return useIsMutating({ mutationKey: lineNoteMutationKey }) > 0
 }
 
-/** Writes or clears the note of one line. Refused by the API once the line has gone to the kitchen. */
+/** Writes or clears the note of one line. */
 export function useSetOrderLineNote() {
   const remember = useOrderCache()
 

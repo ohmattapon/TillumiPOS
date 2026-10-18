@@ -15,7 +15,6 @@ const line = (overrides: Partial<PricedLine> = {}): PricedLine => ({
   exceedsStock: false,
   stockQty: 50,
   unavailable: false,
-  sentQuantity: 0,
   note: null,
   ...overrides,
 })

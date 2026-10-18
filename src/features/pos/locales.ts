@@ -152,13 +152,9 @@ const th = {
     saved: 'บันทึกการขายแล้ว · เงินทอน',
     next: 'ขายรายการต่อไป',
   },
-  kitchen: {
-    send: 'ส่งครัว ({{count}})',
-    sent: 'ส่งครัวแล้ว',
-    sentBadge: 'ส่งแล้ว {{count}}',
+  note: {
     noteFor: 'หมายเหตุของ {{name}}',
     notePlaceholder: 'เช่น ไม่ใส่น้ำแข็ง',
-    lockedNote: 'ส่งครัวแล้ว แก้หมายเหตุไม่ได้',
   },
 }
 
@@ -316,13 +312,9 @@ const en = {
     saved: 'Sale recorded · change',
     next: 'Next sale',
   },
-  kitchen: {
-    send: 'Send to kitchen ({{count}})',
-    sent: 'Sent to the kitchen',
-    sentBadge: 'Sent {{count}}',
+  note: {
     noteFor: 'Note for {{name}}',
     notePlaceholder: 'e.g. no ice',
-    lockedNote: 'Sent to the kitchen. The note can no longer be changed.',
   },
 } satisfies typeof th
 

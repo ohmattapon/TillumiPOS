@@ -2039,662 +2039,6 @@
         ]
       }
     },
-    "/api/v1/catalog/categories/{id}/kitchen-station": {
-      "put": {
-        "operationId": "putApiV1CatalogCategoriesByIdKitchen-station",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "anyOf": [
-                {
-                  "default": 0,
-                  "format": "numeric",
-                  "type": "string"
-                },
-                {
-                  "minimum": 1,
-                  "type": "number"
-                }
-              ],
-              "minimum": 1
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "stationId": {
-                    "anyOf": [
-                      {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "minimum": 1,
-                            "type": "integer"
-                          }
-                        ],
-                        "minimum": 1
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "nullable": true
-                  }
-                },
-                "required": [
-                  "stationId"
-                ],
-                "type": "object"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "properties": {
-                  "stationId": {
-                    "anyOf": [
-                      {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "minimum": 1,
-                            "type": "integer"
-                          }
-                        ],
-                        "minimum": 1
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "nullable": true
-                  }
-                },
-                "required": [
-                  "stationId"
-                ],
-                "type": "object"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "properties": {
-                  "stationId": {
-                    "anyOf": [
-                      {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "minimum": 1,
-                            "type": "integer"
-                          }
-                        ],
-                        "minimum": 1
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "nullable": true
-                  }
-                },
-                "required": [
-                  "stationId"
-                ],
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "categoryId": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    },
-                    "stationId": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    }
-                  },
-                  "required": [
-                    "categoryId",
-                    "stationId"
-                  ],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Response for status 200"
-          }
-        },
-        "summary": "ผูกหมวดกับสถานีครัว (ไม่ส่งครัวเมื่อเป็น null)",
-        "tags": [
-          "Catalog"
-        ]
-      }
-    },
-    "/api/v1/catalog/kitchen-routing": {
-      "get": {
-        "operationId": "getApiV1CatalogKitchen-routing",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "items": {
-                      "items": {
-                        "properties": {
-                          "categoryId": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "stationId": {
-                            "anyOf": [
-                              {
-                                "anyOf": [
-                                  {
-                                    "default": 0,
-                                    "format": "integer",
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "integer"
-                                  }
-                                ]
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "nullable": true
-                          }
-                        },
-                        "required": [
-                          "categoryId",
-                          "stationId"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "total": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "items",
-                    "total"
-                  ],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Response for status 200"
-          }
-        },
-        "summary": "หมวดแต่ละหมวดส่งไปสถานีไหน",
-        "tags": [
-          "Catalog"
-        ]
-      }
-    },
-    "/api/v1/catalog/kitchen-stations": {
-      "get": {
-        "operationId": "getApiV1CatalogKitchen-stations",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "items": {
-                      "items": {
-                        "properties": {
-                          "id": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "isActive": {
-                            "type": "boolean"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "sortOrder": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "name",
-                          "sortOrder",
-                          "isActive"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "total": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "items",
-                    "total"
-                  ],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Response for status 200"
-          }
-        },
-        "summary": "สถานีครัว (รวมที่ปิดอยู่)",
-        "tags": [
-          "Catalog"
-        ]
-      },
-      "post": {
-        "operationId": "postApiV1CatalogKitchen-stations",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "name": {
-                    "maxLength": 50,
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "sortOrder": {
-                    "anyOf": [
-                      {
-                        "default": 0,
-                        "format": "integer",
-                        "type": "string"
-                      },
-                      {
-                        "type": "integer"
-                      }
-                    ]
-                  }
-                },
-                "required": [
-                  "name"
-                ],
-                "type": "object"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "properties": {
-                  "name": {
-                    "maxLength": 50,
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "sortOrder": {
-                    "anyOf": [
-                      {
-                        "default": 0,
-                        "format": "integer",
-                        "type": "string"
-                      },
-                      {
-                        "type": "integer"
-                      }
-                    ]
-                  }
-                },
-                "required": [
-                  "name"
-                ],
-                "type": "object"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "properties": {
-                  "name": {
-                    "maxLength": 50,
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "sortOrder": {
-                    "anyOf": [
-                      {
-                        "default": 0,
-                        "format": "integer",
-                        "type": "string"
-                      },
-                      {
-                        "type": "integer"
-                      }
-                    ]
-                  }
-                },
-                "required": [
-                  "name"
-                ],
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "id": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    },
-                    "isActive": {
-                      "type": "boolean"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "sortOrder": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "name",
-                    "sortOrder",
-                    "isActive"
-                  ],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Response for status 200"
-          }
-        },
-        "summary": "เพิ่มสถานีครัว",
-        "tags": [
-          "Catalog"
-        ]
-      }
-    },
-    "/api/v1/catalog/kitchen-stations/{id}": {
-      "patch": {
-        "operationId": "patchApiV1CatalogKitchen-stationsById",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "anyOf": [
-                {
-                  "default": 0,
-                  "format": "numeric",
-                  "type": "string"
-                },
-                {
-                  "minimum": 1,
-                  "type": "number"
-                }
-              ],
-              "minimum": 1
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "isActive": {
-                    "type": "boolean"
-                  },
-                  "name": {
-                    "maxLength": 50,
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "sortOrder": {
-                    "anyOf": [
-                      {
-                        "default": 0,
-                        "format": "integer",
-                        "type": "string"
-                      },
-                      {
-                        "type": "integer"
-                      }
-                    ]
-                  }
-                },
-                "type": "object"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "properties": {
-                  "isActive": {
-                    "type": "boolean"
-                  },
-                  "name": {
-                    "maxLength": 50,
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "sortOrder": {
-                    "anyOf": [
-                      {
-                        "default": 0,
-                        "format": "integer",
-                        "type": "string"
-                      },
-                      {
-                        "type": "integer"
-                      }
-                    ]
-                  }
-                },
-                "type": "object"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "properties": {
-                  "isActive": {
-                    "type": "boolean"
-                  },
-                  "name": {
-                    "maxLength": 50,
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "sortOrder": {
-                    "anyOf": [
-                      {
-                        "default": 0,
-                        "format": "integer",
-                        "type": "string"
-                      },
-                      {
-                        "type": "integer"
-                      }
-                    ]
-                  }
-                },
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "id": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    },
-                    "isActive": {
-                      "type": "boolean"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "sortOrder": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "name",
-                    "sortOrder",
-                    "isActive"
-                  ],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Response for status 200"
-          }
-        },
-        "summary": "แก้ไขสถานีครัว (ชื่อ ลำดับ เปิดปิด)",
-        "tags": [
-          "Catalog"
-        ]
-      }
-    },
     "/api/v1/catalog/modifier-groups": {
       "get": {
         "operationId": "getApiV1CatalogModifier-groups",
@@ -9823,636 +9167,6 @@
         ]
       }
     },
-    "/api/v1/kitchen/tickets": {
-      "get": {
-        "operationId": "getApiV1KitchenTickets",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "stationId",
-            "required": true,
-            "schema": {
-              "anyOf": [
-                {
-                  "default": 0,
-                  "format": "numeric",
-                  "type": "string"
-                },
-                {
-                  "minimum": 1,
-                  "type": "number"
-                }
-              ],
-              "minimum": 1
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "default": 0,
-                  "format": "numeric",
-                  "type": "string"
-                },
-                {
-                  "maximum": 200,
-                  "minimum": 1,
-                  "type": "number"
-                }
-              ],
-              "maximum": 200,
-              "minimum": 1
-            }
-          },
-          {
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "default": 0,
-                  "format": "numeric",
-                  "type": "string"
-                },
-                {
-                  "minimum": 0,
-                  "type": "number"
-                }
-              ],
-              "minimum": 0
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "items": {
-                      "items": {
-                        "properties": {
-                          "branchId": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "createdAt": {
-                            "anyOf": [
-                              {
-                                "format": "date-time",
-                                "type": "string"
-                              },
-                              {
-                                "format": "date",
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              }
-                            ]
-                          },
-                          "doneAt": {
-                            "anyOf": [
-                              {
-                                "anyOf": [
-                                  {
-                                    "format": "date-time",
-                                    "type": "string"
-                                  },
-                                  {
-                                    "format": "date",
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "number"
-                                  }
-                                ]
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "nullable": true
-                          },
-                          "doneById": {
-                            "anyOf": [
-                              {
-                                "anyOf": [
-                                  {
-                                    "default": 0,
-                                    "format": "integer",
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "integer"
-                                  }
-                                ]
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "nullable": true
-                          },
-                          "id": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "lines": {
-                            "items": {
-                              "properties": {
-                                "id": {
-                                  "anyOf": [
-                                    {
-                                      "default": 0,
-                                      "format": "integer",
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "integer"
-                                    }
-                                  ]
-                                },
-                                "note": {
-                                  "nullable": true,
-                                  "type": [
-                                    "string",
-                                    "null"
-                                  ]
-                                },
-                                "optionNames": {
-                                  "items": {
-                                    "type": "string"
-                                  },
-                                  "type": "array"
-                                },
-                                "productId": {
-                                  "anyOf": [
-                                    {
-                                      "default": 0,
-                                      "format": "integer",
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "integer"
-                                    }
-                                  ]
-                                },
-                                "productName": {
-                                  "type": "string"
-                                },
-                                "quantity": {
-                                  "anyOf": [
-                                    {
-                                      "default": 0,
-                                      "format": "integer",
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "integer"
-                                    }
-                                  ]
-                                },
-                                "voidedQuantity": {
-                                  "anyOf": [
-                                    {
-                                      "default": 0,
-                                      "format": "integer",
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "integer"
-                                    }
-                                  ]
-                                }
-                              },
-                              "required": [
-                                "id",
-                                "productId",
-                                "productName",
-                                "optionNames",
-                                "note",
-                                "quantity",
-                                "voidedQuantity"
-                              ],
-                              "type": "object"
-                            },
-                            "type": "array"
-                          },
-                          "orderId": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "orderLabel": {
-                            "nullable": true,
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "roundNo": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "sentById": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "stationId": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "status": {
-                            "enum": [
-                              "pending",
-                              "done"
-                            ],
-                            "type": "string"
-                          },
-                          "tableName": {
-                            "nullable": true,
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "branchId",
-                          "orderId",
-                          "stationId",
-                          "roundNo",
-                          "status",
-                          "sentById",
-                          "doneById",
-                          "doneAt",
-                          "createdAt",
-                          "lines",
-                          "orderLabel",
-                          "tableName"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "total": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "items",
-                    "total"
-                  ],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Response for status 200"
-          }
-        },
-        "summary": "ใบสั่งครัวที่ยังค้างของสถานี",
-        "tags": [
-          "Kitchen"
-        ]
-      }
-    },
-    "/api/v1/kitchen/tickets/{id}/done": {
-      "post": {
-        "operationId": "postApiV1KitchenTicketsByIdDone",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "anyOf": [
-                {
-                  "default": 0,
-                  "format": "numeric",
-                  "type": "string"
-                },
-                {
-                  "minimum": 1,
-                  "type": "number"
-                }
-              ],
-              "minimum": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "branchId": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    },
-                    "createdAt": {
-                      "anyOf": [
-                        {
-                          "format": "date-time",
-                          "type": "string"
-                        },
-                        {
-                          "format": "date",
-                          "type": "string"
-                        },
-                        {
-                          "type": "number"
-                        }
-                      ]
-                    },
-                    "doneAt": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "format": "date-time",
-                              "type": "string"
-                            },
-                            {
-                              "format": "date",
-                              "type": "string"
-                            },
-                            {
-                              "type": "number"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    },
-                    "doneById": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    },
-                    "id": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    },
-                    "lines": {
-                      "items": {
-                        "properties": {
-                          "id": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "note": {
-                            "nullable": true,
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "optionNames": {
-                            "items": {
-                              "type": "string"
-                            },
-                            "type": "array"
-                          },
-                          "productId": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "productName": {
-                            "type": "string"
-                          },
-                          "quantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "voidedQuantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "productId",
-                          "productName",
-                          "optionNames",
-                          "note",
-                          "quantity",
-                          "voidedQuantity"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "orderId": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    },
-                    "roundNo": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    },
-                    "sentById": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    },
-                    "stationId": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    },
-                    "status": {
-                      "enum": [
-                        "pending",
-                        "done"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "branchId",
-                    "orderId",
-                    "stationId",
-                    "roundNo",
-                    "status",
-                    "sentById",
-                    "doneById",
-                    "doneAt",
-                    "createdAt",
-                    "lines"
-                  ],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Response for status 200"
-          }
-        },
-        "summary": "ทำใบสั่งครัวเสร็จ",
-        "tags": [
-          "Kitchen"
-        ]
-      }
-    },
     "/api/v1/members/": {
       "get": {
         "operationId": "getApiV1Members",
@@ -11592,18 +10306,6 @@
                                     }
                                   ]
                                 },
-                                "sentQuantity": {
-                                  "anyOf": [
-                                    {
-                                      "default": 0,
-                                      "format": "integer",
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "integer"
-                                    }
-                                  ]
-                                },
                                 "sku": {
                                   "type": "string"
                                 },
@@ -11629,8 +10331,7 @@
                                 "quantity",
                                 "lineTotalSatang",
                                 "options",
-                                "note",
-                                "sentQuantity"
+                                "note"
                               ],
                               "type": "object"
                             },
@@ -12369,18 +11070,6 @@
                               }
                             ]
                           },
-                          "sentQuantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
                           "sku": {
                             "type": "string"
                           },
@@ -12406,8 +11095,7 @@
                           "quantity",
                           "lineTotalSatang",
                           "options",
-                          "note",
-                          "sentQuantity"
+                          "note"
                         ],
                         "type": "object"
                       },
@@ -12789,18 +11477,6 @@
                               }
                             ]
                           },
-                          "sentQuantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
                           "sku": {
                             "type": "string"
                           },
@@ -12826,8 +11502,7 @@
                           "quantity",
                           "lineTotalSatang",
                           "options",
-                          "note",
-                          "sentQuantity"
+                          "note"
                         ],
                         "type": "object"
                       },
@@ -13266,18 +11941,6 @@
                               }
                             ]
                           },
-                          "sentQuantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
                           "sku": {
                             "type": "string"
                           },
@@ -13303,8 +11966,7 @@
                           "quantity",
                           "lineTotalSatang",
                           "options",
-                          "note",
-                          "sentQuantity"
+                          "note"
                         ],
                         "type": "object"
                       },
@@ -13736,18 +12398,6 @@
                               }
                             ]
                           },
-                          "sentQuantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
                           "sku": {
                             "type": "string"
                           },
@@ -13773,8 +12423,7 @@
                           "quantity",
                           "lineTotalSatang",
                           "options",
-                          "note",
-                          "sentQuantity"
+                          "note"
                         ],
                         "type": "object"
                       },
@@ -14332,18 +12981,6 @@
                               }
                             ]
                           },
-                          "sentQuantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
                           "sku": {
                             "type": "string"
                           },
@@ -14369,8 +13006,7 @@
                           "quantity",
                           "lineTotalSatang",
                           "options",
-                          "note",
-                          "sentQuantity"
+                          "note"
                         ],
                         "type": "object"
                       },
@@ -14771,18 +13407,6 @@
                               }
                             ]
                           },
-                          "sentQuantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
                           "sku": {
                             "type": "string"
                           },
@@ -14808,8 +13432,7 @@
                           "quantity",
                           "lineTotalSatang",
                           "options",
-                          "note",
-                          "sentQuantity"
+                          "note"
                         ],
                         "type": "object"
                       },
@@ -15285,18 +13908,6 @@
                               }
                             ]
                           },
-                          "sentQuantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
                           "sku": {
                             "type": "string"
                           },
@@ -15322,8 +13933,7 @@
                           "quantity",
                           "lineTotalSatang",
                           "options",
-                          "note",
-                          "sentQuantity"
+                          "note"
                         ],
                         "type": "object"
                       },
@@ -15496,305 +14106,6 @@
         "summary": "ตั้งจำนวนสินค้าในออเดอร์",
         "tags": [
           "Orders"
-        ]
-      }
-    },
-    "/api/v1/orders/{id}/kitchen-send": {
-      "post": {
-        "operationId": "postApiV1OrdersByIdKitchen-send",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "anyOf": [
-                {
-                  "default": 0,
-                  "format": "numeric",
-                  "type": "string"
-                },
-                {
-                  "minimum": 1,
-                  "type": "number"
-                }
-              ],
-              "minimum": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "items": {
-                      "items": {
-                        "properties": {
-                          "branchId": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "createdAt": {
-                            "anyOf": [
-                              {
-                                "format": "date-time",
-                                "type": "string"
-                              },
-                              {
-                                "format": "date",
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              }
-                            ]
-                          },
-                          "doneAt": {
-                            "anyOf": [
-                              {
-                                "anyOf": [
-                                  {
-                                    "format": "date-time",
-                                    "type": "string"
-                                  },
-                                  {
-                                    "format": "date",
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "number"
-                                  }
-                                ]
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "nullable": true
-                          },
-                          "doneById": {
-                            "anyOf": [
-                              {
-                                "anyOf": [
-                                  {
-                                    "default": 0,
-                                    "format": "integer",
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "integer"
-                                  }
-                                ]
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "nullable": true
-                          },
-                          "id": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "lines": {
-                            "items": {
-                              "properties": {
-                                "id": {
-                                  "anyOf": [
-                                    {
-                                      "default": 0,
-                                      "format": "integer",
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "integer"
-                                    }
-                                  ]
-                                },
-                                "note": {
-                                  "nullable": true,
-                                  "type": [
-                                    "string",
-                                    "null"
-                                  ]
-                                },
-                                "optionNames": {
-                                  "items": {
-                                    "type": "string"
-                                  },
-                                  "type": "array"
-                                },
-                                "productId": {
-                                  "anyOf": [
-                                    {
-                                      "default": 0,
-                                      "format": "integer",
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "integer"
-                                    }
-                                  ]
-                                },
-                                "productName": {
-                                  "type": "string"
-                                },
-                                "quantity": {
-                                  "anyOf": [
-                                    {
-                                      "default": 0,
-                                      "format": "integer",
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "integer"
-                                    }
-                                  ]
-                                },
-                                "voidedQuantity": {
-                                  "anyOf": [
-                                    {
-                                      "default": 0,
-                                      "format": "integer",
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "integer"
-                                    }
-                                  ]
-                                }
-                              },
-                              "required": [
-                                "id",
-                                "productId",
-                                "productName",
-                                "optionNames",
-                                "note",
-                                "quantity",
-                                "voidedQuantity"
-                              ],
-                              "type": "object"
-                            },
-                            "type": "array"
-                          },
-                          "orderId": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "roundNo": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "sentById": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "stationId": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
-                          "status": {
-                            "enum": [
-                              "pending",
-                              "done"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "branchId",
-                          "orderId",
-                          "stationId",
-                          "roundNo",
-                          "status",
-                          "sentById",
-                          "doneById",
-                          "doneAt",
-                          "createdAt",
-                          "lines"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "total": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "items",
-                    "total"
-                  ],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Response for status 200"
-          }
-        },
-        "summary": "ส่งรายการที่ยังไม่เคยส่งของออเดอร์ไปครัว (หนึ่งใบต่อสถานี)",
-        "tags": [
-          "Kitchen"
         ]
       }
     },
@@ -16023,18 +14334,6 @@
                               }
                             ]
                           },
-                          "sentQuantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
                           "sku": {
                             "type": "string"
                           },
@@ -16060,8 +14359,7 @@
                           "quantity",
                           "lineTotalSatang",
                           "options",
-                          "note",
-                          "sentQuantity"
+                          "note"
                         ],
                         "type": "object"
                       },
@@ -16537,18 +14835,6 @@
                               }
                             ]
                           },
-                          "sentQuantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
                           "sku": {
                             "type": "string"
                           },
@@ -16574,8 +14860,7 @@
                           "quantity",
                           "lineTotalSatang",
                           "options",
-                          "note",
-                          "sentQuantity"
+                          "note"
                         ],
                         "type": "object"
                       },
@@ -17035,18 +15320,6 @@
                               }
                             ]
                           },
-                          "sentQuantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
                           "sku": {
                             "type": "string"
                           },
@@ -17072,8 +15345,7 @@
                           "quantity",
                           "lineTotalSatang",
                           "options",
-                          "note",
-                          "sentQuantity"
+                          "note"
                         ],
                         "type": "object"
                       },
@@ -17243,7 +15515,7 @@
             "description": "Response for status 200"
           }
         },
-        "summary": "หมายเหตุของบรรทัด (แก้ได้ก่อนส่งครัว)",
+        "summary": "หมายเหตุของบรรทัด (แก้ไขได้เสมอ)",
         "tags": [
           "Orders"
         ]
@@ -17556,18 +15828,6 @@
                               }
                             ]
                           },
-                          "sentQuantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
                           "sku": {
                             "type": "string"
                           },
@@ -17593,8 +15853,7 @@
                           "quantity",
                           "lineTotalSatang",
                           "options",
-                          "note",
-                          "sentQuantity"
+                          "note"
                         ],
                         "type": "object"
                       },
@@ -18053,18 +16312,6 @@
                               }
                             ]
                           },
-                          "sentQuantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
                           "sku": {
                             "type": "string"
                           },
@@ -18090,8 +16337,7 @@
                           "quantity",
                           "lineTotalSatang",
                           "options",
-                          "note",
-                          "sentQuantity"
+                          "note"
                         ],
                         "type": "object"
                       },
@@ -18574,18 +16820,6 @@
                               }
                             ]
                           },
-                          "sentQuantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
                           "sku": {
                             "type": "string"
                           },
@@ -18611,8 +16845,7 @@
                           "quantity",
                           "lineTotalSatang",
                           "options",
-                          "note",
-                          "sentQuantity"
+                          "note"
                         ],
                         "type": "object"
                       },
@@ -20039,18 +18272,6 @@
                               }
                             ]
                           },
-                          "sentQuantity": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "type": "integer"
-                              }
-                            ]
-                          },
                           "sku": {
                             "type": "string"
                           },
@@ -20076,8 +18297,7 @@
                           "quantity",
                           "lineTotalSatang",
                           "options",
-                          "note",
-                          "sentQuantity"
+                          "note"
                         ],
                         "type": "object"
                       },
@@ -29635,9 +27855,6 @@
                       ],
                       "type": "string"
                     },
-                    "kitchenEnabled": {
-                      "type": "boolean"
-                    },
                     "locale": {
                       "enum": [
                         "th",
@@ -29746,7 +27963,6 @@
                     "receiptFooter",
                     "homeView",
                     "tablesEnabled",
-                    "kitchenEnabled",
                     "modifiersEnabled",
                     "promptpayMode",
                     "promptpayTarget"
@@ -29789,9 +28005,6 @@
                       "tables"
                     ],
                     "type": "string"
-                  },
-                  "kitchenEnabled": {
-                    "type": "boolean"
                   },
                   "locale": {
                     "enum": [
@@ -29913,9 +28126,6 @@
                     ],
                     "type": "string"
                   },
-                  "kitchenEnabled": {
-                    "type": "boolean"
-                  },
                   "locale": {
                     "enum": [
                       "th",
@@ -30035,9 +28245,6 @@
                       "tables"
                     ],
                     "type": "string"
-                  },
-                  "kitchenEnabled": {
-                    "type": "boolean"
                   },
                   "locale": {
                     "enum": [
@@ -30165,9 +28372,6 @@
                       ],
                       "type": "string"
                     },
-                    "kitchenEnabled": {
-                      "type": "boolean"
-                    },
                     "locale": {
                       "enum": [
                         "th",
@@ -30276,7 +28480,6 @@
                     "receiptFooter",
                     "homeView",
                     "tablesEnabled",
-                    "kitchenEnabled",
                     "modifiersEnabled",
                     "promptpayMode",
                     "promptpayTarget"

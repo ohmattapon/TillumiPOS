@@ -35,7 +35,6 @@ export const updateShopSettingsSchema = z
     receiptFooter: optionalText(200),
     homeView: z.enum(HOME_VIEWS),
     tablesEnabled: z.boolean(),
-    kitchenEnabled: z.boolean(),
     modifiersEnabled: z.boolean(),
     promptpayMode: z.enum(PROMPTPAY_MODES),
     promptpayTarget: optionalPromptPayTarget,

@@ -17,7 +17,6 @@ const fields = {
   receiptFooter: t.Nullable(t.String({ maxLength: 200 })),
   homeView: t.Union([t.Literal('till'), t.Literal('tables')]),
   tablesEnabled: t.Boolean(),
-  kitchenEnabled: t.Boolean(),
   modifiersEnabled: t.Boolean(),
   promptpayMode: t.Union([t.Literal('bank'), t.Literal('static')]),
   promptpayTarget: t.Nullable(t.String({ maxLength: 13 })),

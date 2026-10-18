@@ -27,7 +27,6 @@ describe('ShopSettingsEntity', () => {
       receiptFooter: null,
       homeView: 'till',
       tablesEnabled: true,
-      kitchenEnabled: true,
       modifiersEnabled: true,
       promptpayMode: 'bank',
       promptpayTarget: null,
@@ -51,7 +50,7 @@ describe('ShopSettingsEntity', () => {
     ['a paper width no printer uses', { receiptPaperMm: 72 as never }],
     ['a receipt footer over 200 characters', { receiptFooter: 'x'.repeat(201) }],
     ['an unknown home view', { homeView: 'floor' as never }],
-    ['a feature switch that is not a boolean', { kitchenEnabled: 'yes' as never }],
+    ['a feature switch that is not a boolean', { tablesEnabled: 'yes' as never }],
     ['an unknown PromptPay mode', { promptpayMode: 'qr' as never }],
     ['a non-digit PromptPay target', { promptpayTarget: '081-234-5678' }],
     ['a 9-digit PromptPay target', { promptpayTarget: '081234567' }],
@@ -104,7 +103,7 @@ describe('ShopSettingsEntity', () => {
     })
 
     test('a switch survives with() and toSnapshot()', () => {
-      expect(settings().with({ kitchenEnabled: false }).toSnapshot().kitchenEnabled).toBe(false)
+      expect(settings().with({ tablesEnabled: false, homeView: 'till' }).toSnapshot().tablesEnabled).toBe(false)
     })
   })
 
@@ -159,10 +158,10 @@ describe('ShopSettingsEntity', () => {
 
 describe('shopFeaturesFor', () => {
   test.each([
-    ['cafe', { tablesEnabled: false, kitchenEnabled: false, modifiersEnabled: true, homeView: 'till' }],
-    ['restaurant', { tablesEnabled: true, kitchenEnabled: true, modifiersEnabled: true, homeView: 'tables' }],
-    ['retail', { tablesEnabled: false, kitchenEnabled: false, modifiersEnabled: false, homeView: 'till' }],
-    ['other', { tablesEnabled: true, kitchenEnabled: true, modifiersEnabled: true, homeView: 'till' }],
+    ['cafe', { tablesEnabled: false, modifiersEnabled: true, homeView: 'till' }],
+    ['restaurant', { tablesEnabled: true, modifiersEnabled: true, homeView: 'tables' }],
+    ['retail', { tablesEnabled: false, modifiersEnabled: false, homeView: 'till' }],
+    ['other', { tablesEnabled: true, modifiersEnabled: true, homeView: 'till' }],
   ] as const)('%s', (type, expected) => {
     expect(shopFeaturesFor(type)).toEqual(expected)
   })
