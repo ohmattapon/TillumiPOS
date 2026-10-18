@@ -7440,6 +7440,526 @@
         ]
       }
     },
+    "/api/v1/display-slides/": {
+      "get": {
+        "operationId": "getApiV1Display-slides",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "imageUrl": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "sortOrder": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "imageUrl",
+                          "sortOrder",
+                          "isActive"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "รูปสไลด์ที่แสดงบนจอลูกค้า",
+        "tags": [
+          "Display slides"
+        ]
+      },
+      "post": {
+        "operationId": "postApiV1Display-slides",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "default": "File",
+                    "extension": [
+                      "image/jpeg",
+                      "image/png",
+                      "image/webp"
+                    ],
+                    "format": "binary",
+                    "maxSize": "5m",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "default": "File",
+                    "extension": [
+                      "image/jpeg",
+                      "image/png",
+                      "image/webp"
+                    ],
+                    "format": "binary",
+                    "maxSize": "5m",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "default": "File",
+                    "extension": [
+                      "image/jpeg",
+                      "image/png",
+                      "image/webp"
+                    ],
+                    "format": "binary",
+                    "maxSize": "5m",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "imageUrl": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "sortOrder": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "imageUrl",
+                    "sortOrder",
+                    "isActive"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "อัปโหลดรูปสไลด์ (JPEG, PNG, WebP ไม่เกิน 5 MB)",
+        "tags": [
+          "Display slides"
+        ]
+      }
+    },
+    "/api/v1/display-slides/{id}": {
+      "delete": {
+        "operationId": "deleteApiV1Display-slidesById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ลบรูปสไลด์",
+        "tags": [
+          "Display slides"
+        ]
+      },
+      "patch": {
+        "operationId": "patchApiV1Display-slidesById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "sortOrder": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "imageUrl": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "sortOrder": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "imageUrl",
+                    "sortOrder",
+                    "isActive"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "เรียงลำดับหรือเปิด/ปิดรูปสไลด์",
+        "tags": [
+          "Display slides"
+        ]
+      }
+    },
+    "/api/v1/display-slides/all": {
+      "get": {
+        "operationId": "getApiV1Display-slidesAll",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "imageUrl": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "sortOrder": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "imageUrl",
+                          "sortOrder",
+                          "isActive"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "รูปสไลด์ทั้งหมด (เจ้าของร้าน)",
+        "tags": [
+          "Display slides"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "getApiV1Health",

@@ -157,7 +157,7 @@ async function main() {
         ['11-today', '/today'], ['12-products', '/products'], ['13-categories', '/categories'], ['14-modifiers', '/modifiers'],
         ['15-tables', '/tables'], ['17-users', '/users'], ['18-settings', '/settings'], ['19-shifts', '/shifts'],
         ['22-reports', '/reports'],
-        ['23-promotions', '/promotions'],
+        ['23-promotions', '/promotions'], ['16-display-slides', '/display-slides'],
         ['24-roles', '/roles'], ['25-audit', '/audit'],
       ] as const) {
         await page.goto(`${WEB}${path}`)

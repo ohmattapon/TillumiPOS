@@ -148,6 +148,13 @@
       "when": 1792328600000,
       "tag": "0020_user_pin",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792328700000,
+      "tag": "0021_display_slides",
+      "breakpoints": true
     }
   ]
 }
