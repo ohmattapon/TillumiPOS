@@ -44,6 +44,8 @@ async function withDisposableDatabase(run: (connection: SQL, oldMigrations: stri
   const phases: Record<string, number> = {}
   let started = performance.now()
   try {
+    // mkdtemp needs its parent to exist; CI runners do not pre-create it.
+    await mkdir(join(tmpdir(), 'opencode'), { recursive: true })
     folder = await mkdtemp(join(tmpdir(), 'opencode', 'product-type-migration-'))
     await mkdir(join(folder, 'meta'))
     const journal = JSON.parse(await readFile(join(MIGRATIONS_FOLDER, 'meta/_journal.json'), 'utf8'))
