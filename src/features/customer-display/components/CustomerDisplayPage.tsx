@@ -5,6 +5,7 @@ import { createDateFormat, createMoney, type Locale, type Money } from '@/lib/mo
 import { cn } from '@/lib/utils'
 import { useDisplayReceiver } from '../hooks/use-display-receiver'
 import { useDisplaySlides } from '../hooks/use-display-slides'
+import { ScanQr } from './ScanQr'
 import { useFullscreen, useIdleCursor } from '../hooks/use-screen-chrome'
 import type { DisplayLine, DisplayState } from '../lib/display-state'
 import type { DisplaySlide } from '../lib/slideshow'
@@ -114,16 +115,12 @@ export function CustomerDisplayPage() {
               {state.qr && (
                 <>
                   <p className={cn('font-semibold', size.row)}>{t('paying.scan')}</p>
-                  <img
-                    src={`data:image/png;base64,${state.qr.image}`}
-                    alt={t('paying.qrAlt')}
-                    className="aspect-square max-h-[48vh] min-h-0 rounded-xl bg-white p-[1.5vh]"
-                  />
+                  <ScanQr qr={state.qr} alt={t('paying.qrAlt')} />
                 </>
               )}
               <p className={cn('text-muted-foreground', size.label)}>{t('paying.due')}</p>
               <p className={cn('font-semibold tabular-nums', state.qr ? size.title : size.total)}>{money.format(state.totalSatang)}</p>
-              {state.qr && (
+              {state.qr && 'expiresAt' in state.qr && (
                 <p className={cn('text-muted-foreground tabular-nums', size.label)}>
                   {t('paying.expires', { time: clock.time(state.qr.expiresAt) })}
                 </p>
