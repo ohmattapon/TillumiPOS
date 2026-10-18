@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import { MAX_AMOUNT_SATANG } from './sale.domain'
 import {
   PriceQuoteEntity, QUOTE_VALID_FOR_MS,
   type NewPriceQuote, type PriceQuoteProps, type QuoteRequest,
@@ -35,6 +36,13 @@ const request = (overrides: Partial<QuoteRequest> = {}): QuoteRequest => ({
 const after = (ms: number) => new Date(now.getTime() + ms)
 
 describe('pricing a quote', () => {
+  test('a basket worth more than the system can carry is refused, before and after VAT', () => {
+    const line = (unitPriceSatang: number) => ({ productId: 1, productName: 'ทอง', sku: 'G1', unitPriceSatang, quantity: 1, options: [] })
+
+    expect(codeOf(() => PriceQuoteEntity.price(input({ lines: [line(MAX_AMOUNT_SATANG + 1)] }), now))).toBe('AMOUNT_TOO_LARGE')
+    expect(codeOf(() => PriceQuoteEntity.price(input({ lines: [line(MAX_AMOUNT_SATANG)], vatMode: 'exclusive' }), now))).toBe('AMOUNT_TOO_LARGE')
+  })
+
   test('totals come from the lines and the shared pricing rule', () => {
     const priced = PriceQuoteEntity.price(input(), now)
     expect(priced).toMatchObject({ subtotalSatang: 15000, discountSatang: 0, vatSatang: 981, totalSatang: 15000 })
