@@ -6,6 +6,7 @@ import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found
 import { MAX_AMOUNT_SATANG } from '../../../../domains/sale.domain'
 import { shifts } from '../../../../infrastructure/database/schema/shifts'
 import { shiftCashEntries } from '../../../../infrastructure/database/schema/shift-cash-entries'
+import { isUniqueViolation, violatedConstraint } from '../../../../libs/pg-error'
 import { currentExecutor } from '../../../../libs/transaction-context'
 import type { IShiftLedger } from '../../../shared/ports/shift-ledger.port'
 
@@ -74,7 +75,7 @@ export class DrizzleShiftLedgerAdapter implements IShiftLedger {
         actorId: input.actorId, actorName: input.actorName, reason: input.reason, createdAt: input.createdAt,
       })
     } catch (error) {
-      if (error && typeof error === 'object' && 'constraint' in error && error.constraint === 'shift_cash_entries_one_refund_per_sale')
+      if (isUniqueViolation(error) && violatedConstraint(error) === 'shift_cash_entries_one_refund_per_sale')
         throw new DomainConflictError('บิลนี้มีรายการคืนเงินสดแล้ว', 'SALE_ALREADY_REFUNDED')
       throw error
     }
