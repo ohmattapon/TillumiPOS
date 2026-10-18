@@ -2,6 +2,7 @@ import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query
 import { productKeys } from '@/features/products'
 import { api, unwrap } from '@/lib/api'
 import type { ReceiptInput } from './lib/draft'
+import { withIdempotencyKey } from '@/lib/idempotency-key'
 
 export interface StockReceipt {
   id: number; branchId: number; receivedById: number; receivedByName: string; createdAt: string; note: string | null
@@ -23,7 +24,7 @@ export const stockReceiptQuery = (actorId: number, id: number) => queryOptions({
 export function useReceiveStock(actorId: number) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: ({ key, input }: { key: string; input: ReceiptInput }) => unwrap(api.inventory.receipts.post(input, { headers: { 'idempotency-key': key } })),
+    mutationFn: ({ key, input }: { key: string; input: ReceiptInput }) => unwrap(api.inventory.receipts.post(input, withIdempotencyKey(key))),
     onSuccess: () => Promise.all([
       client.invalidateQueries({ queryKey: productKeys.all }),
       client.invalidateQueries({ queryKey: stockReceiptKeys.all(actorId) }),
