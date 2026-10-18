@@ -24,6 +24,7 @@
     "db:seed:catalog": "bun --env-file=.env server/src/infrastructure/database/seed-demo-catalog.run.ts",
     "db:studio": "bun --env-file=.env drizzle-kit studio",
     "e2e": "bun e2e/run.ts",
+    "e2e:stock-receipts": "bun e2e/stock-receipts.ts",
     "screenshots": "bun e2e/shots.ts",
     "scb:inquiry": "bun --env-file=.env server/scripts/scb-inquiry.ts",
     "typecheck": "tsc -b && tsc -p server && bun run --filter '*' typecheck",
