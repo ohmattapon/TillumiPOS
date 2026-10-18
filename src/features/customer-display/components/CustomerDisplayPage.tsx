@@ -84,7 +84,7 @@ export function CustomerDisplayPage() {
 
         {state.kind === 'selling' && (
           <>
-            <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-[3vh] lg:grid-rows-none lg:grid-cols-[3fr_2fr]">
+            <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-[3vh] lg:landscape:grid-rows-none lg:landscape:grid-cols-[3fr_2fr]">
               <Lines lines={state.lines} money={money} />
               <Summary
                 rows={[
@@ -109,7 +109,7 @@ export function CustomerDisplayPage() {
 
         {state.kind === 'paying' && (
           <>
-            <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-[3vh] lg:grid-rows-none lg:grid-cols-[3fr_2fr]">
+            <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-[3vh] lg:landscape:grid-rows-none lg:landscape:grid-cols-[3fr_2fr]">
               <Lines lines={state.lines} money={money} />
               <section className="flex min-h-0 flex-col items-center justify-center gap-[2vh] rounded-xl border bg-card p-[3vh] text-center shadow-xs">
               {state.qr && (
