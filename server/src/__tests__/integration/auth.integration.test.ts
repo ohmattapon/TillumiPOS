@@ -19,6 +19,7 @@ describe('login', () => {
       roleName: expect.any(String),
       branchId: 1,
       isActive: true,
+      hasPin: false,
     })
   })
 

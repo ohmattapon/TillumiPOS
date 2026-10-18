@@ -120,7 +120,7 @@ export function ProductPicker({ searchRef }: Props) {
         </span>
       </form>
 
-      <div className="-mx-4 overflow-x-auto px-4">
+      <div className="-mx-4 overflow-x-auto px-4 no-scrollbar">
         {categories.isPending ? (
           <Skeleton className="h-13 w-72 rounded-xl" />
         ) : (
@@ -139,7 +139,7 @@ export function ProductPicker({ searchRef }: Props) {
       </div>
 
       {products.error && <p className="text-sm text-destructive">{products.error.message}</p>}
-      <div ref={gridRef} className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-3 overflow-y-auto pb-1">
+      <div ref={gridRef} className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-3 overflow-y-auto pb-1 no-scrollbar">
         {(products.isPending || searching) && <SkeletonCardGrid className="contents" count={8} />}
         {visibleProducts.map((product) => (
           <button
