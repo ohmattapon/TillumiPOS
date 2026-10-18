@@ -4,6 +4,7 @@ import { CachedModifierRepository } from './adapters/repository/modifier.cached.
 import { lineOptionsResolverToken } from './applications/ports/line-options-resolver.port'
 import { modifierRepositoryToken } from './applications/ports/modifier.repository'
 import { LineOptionsResolver } from './applications/services/line-options-resolver'
+import { GroupDefaults } from './applications/services/group-defaults'
 import { CreateModifierGroupUseCase } from './applications/usecases/create-modifier-group.usecase'
 import { CreateModifierOptionUseCase } from './applications/usecases/create-modifier-option.usecase'
 import { ListModifierGroupsUseCase } from './applications/usecases/list-modifier-groups.usecase'
@@ -13,6 +14,7 @@ import { UpdateModifierOptionUseCase } from './applications/usecases/update-modi
 
 container.register(modifierRepositoryToken, { useClass: CachedModifierRepository })
 container.register(lineOptionsResolverToken, { useClass: LineOptionsResolver })
+container.registerSingleton(GroupDefaults)
 container.registerSingleton(ListModifierGroupsUseCase)
 container.registerSingleton(CreateModifierGroupUseCase)
 container.registerSingleton(UpdateModifierGroupUseCase)

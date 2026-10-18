@@ -93,6 +93,7 @@ export const makeProduct = (overrides: Partial<ProductEntityProps> = {}) =>
     barcode: null,
     name: 'น้ำดื่ม',
     categoryId: null,
+    productType: 'normal',
     priceSatang: 1000,
     costSatang: 600,
     trackStock: true,
@@ -163,7 +164,7 @@ export const makeModifierGroup = (overrides: Partial<ModifierGroupProps> = {}) =
   new ModifierGroupEntity({ id: 1, name: 'ระดับความหวาน', required: true, maxSelections: 1, sortOrder: 0, isActive: true, ...overrides })
 
 export const makeModifierOption = (overrides: Partial<ModifierOptionProps> = {}) =>
-  new ModifierOptionEntity({ id: 10, groupId: 1, name: 'หวานน้อย', priceSatang: 0, costSatang: 0, sortOrder: 0, isActive: true, ...overrides })
+  new ModifierOptionEntity({ id: 10, groupId: 1, name: 'หวานน้อย', priceSatang: 0, costSatang: 0, sortOrder: 0, isActive: true, isDefault: false, ...overrides })
 
 export const makeTable = (overrides: Partial<DiningTableProps> = {}) =>
   new DiningTableEntity({

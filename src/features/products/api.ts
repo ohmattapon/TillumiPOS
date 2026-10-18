@@ -12,6 +12,7 @@ export const productKeys = {
 }
 
 export interface ProductListFilters {
+  productType?: Product['productType']
   q?: string
   code?: string
   categoryId?: number
@@ -43,6 +44,7 @@ export const imageStorageQuery = queryOptions({
 })
 
 export interface ProductInput {
+  productType: Product['productType']
   sku: string
   name: string
   barcode: string | null

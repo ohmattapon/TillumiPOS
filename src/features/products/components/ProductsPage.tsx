@@ -32,7 +32,10 @@ import { isLowStock, LOW_STOCK_THRESHOLD } from '../lib/stock'
 
 type Filter = 'all' | 'low' | 'inactive'
 
-type OpenDialog = { kind: 'form'; product?: Product } | { kind: 'stock'; product: Product; mode: StockMode } | null
+type OpenDialog =
+  | { kind: 'form'; product?: Product; initialType?: Product['productType'] }
+  | { kind: 'stock'; product: Product; mode: StockMode }
+  | null
 
 export function ProductsPage() {
   const { can } = useAuthorization()
@@ -43,18 +46,19 @@ export function ProductsPage() {
   const categories = useQuery(categoriesQuery)
 
   const [filter, setFilter] = useState<Filter>('all')
+  const [productType, setProductType] = useState<Product['productType']>('normal')
   const [search, setSearch] = useState('')
   const [dialog, setDialog] = useState<OpenDialog>(null)
   const term = useDebouncedValue(search.trim())
-  const paging = useListPagination(`${filter}:${search.trim()}`)
+  const paging = useListPagination(`${productType}:${filter}:${search.trim()}`)
   const products = useQuery(productsQuery({
-    includeInactive: true, q: term, limit: paging.pageSize, offset: paging.offset,
+    productType, includeInactive: true, q: term, limit: paging.pageSize, offset: paging.offset,
     ...(filter === 'low' && { isActive: true, stockAtMost: LOW_STOCK_THRESHOLD }),
     ...(filter === 'inactive' && { isActive: false }),
   }))
-  const counts = useQuery(productsQuery({ includeInactive: true, limit: 1 }))
-  const lowCount = useQuery(productsQuery({ stockAtMost: LOW_STOCK_THRESHOLD, limit: 1 }))
-  const inactiveCount = useQuery(productsQuery({ includeInactive: true, isActive: false, limit: 1 }))
+  const counts = useQuery(productsQuery({ productType, includeInactive: true, limit: 1 }))
+  const lowCount = useQuery(productsQuery({ productType, stockAtMost: LOW_STOCK_THRESHOLD, limit: 1 }))
+  const inactiveCount = useQuery(productsQuery({ productType, includeInactive: true, isActive: false, limit: 1 }))
 
   const setActive = useSetProductActive()
   const toggleActive = (product: Product) =>
@@ -70,6 +74,9 @@ export function ProductsPage() {
   const categoryName = new Map(categories.data?.map((category) => [category.id, category.name]))
   const searching = term !== search.trim()
   const visible = searching ? [] : products.data?.items ?? []
+  const normalTypeOption = { value: 'normal' as const, label: t('types.normal') }
+  const cafeTypeOption = { value: 'cafe' as const, label: t('types.cafe') }
+  const typeOptions = [normalTypeOption, cafeTypeOption]
 
   return (
     <>
@@ -84,13 +91,25 @@ export function ProductsPage() {
               })
         }
       >
-        {can('products.write') && <Button className="h-11 px-3" onClick={() => setDialog({ kind: 'form' })}>
-          <Plus />
-          {t('add')}
-        </Button>}
+        {can('products.write') && <div className="flex flex-wrap justify-end gap-2 max-sm:max-w-40">
+          <Button variant="outline" className="h-11 px-3" onClick={() => setDialog({ kind: 'form', initialType: 'cafe' })}>
+            <Plus data-icon="inline-start" />
+            {t('addCafe')}
+          </Button>
+          <Button className="h-11 px-3" onClick={() => setDialog({ kind: 'form', initialType: 'normal' })}>
+            <Plus data-icon="inline-start" />
+            {t('add')}
+          </Button>
+        </div>}
       </PageHeader>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+        <SegmentedTabs
+          value={productType}
+          onChange={setProductType}
+          size="touch"
+          options={typeOptions}
+        />
         <div className="flex flex-wrap items-center gap-3">
           <SegmentedTabs
             value={filter}
@@ -209,7 +228,18 @@ export function ProductsPage() {
       </div>
 
       {dialog?.kind === 'form' && (
-        <ProductFormDialog product={dialog.product} categories={categories.data ?? []} onClose={() => setDialog(null)} />
+        <ProductFormDialog
+          product={dialog.product}
+          initialType={dialog.initialType}
+          categories={categories.data ?? []}
+          onSaved={(saved) => {
+            setProductType(saved.productType)
+            setFilter('all')
+            setSearch('')
+            paging.setPage(0)
+          }}
+          onClose={() => setDialog(null)}
+        />
       )}
       {dialog?.kind === 'stock' && (
         <StockDialog product={dialog.product} mode={dialog.mode} onClose={() => setDialog(null)} />

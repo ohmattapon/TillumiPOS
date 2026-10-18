@@ -162,6 +162,34 @@
       "when": 1792328800000,
       "tag": "0022_promotion_image",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792328800001,
+      "tag": "0023_gray_green_goblin",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792328800002,
+      "tag": "0024_repair_modifier_option_default",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792328800003,
+      "tag": "0025_product_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792328800004,
+      "tag": "0026_repair_product_type",
+      "breakpoints": true
     }
   ]
 }

@@ -26,6 +26,7 @@ export class CreateProductUseCase {
           barcode: dto.barcode ?? null,
           name: dto.name,
           categoryId: dto.categoryId ?? null,
+          productType: dto.productType ?? 'normal',
           priceSatang: dto.priceSatang,
           costSatang: dto.costSatang ?? 0,
           trackStock: dto.trackStock ?? true,
@@ -41,7 +42,7 @@ export class CreateProductUseCase {
         entityType: 'product',
         entityId: String(result.id),
         summary: 'สร้างสินค้า',
-        after: { name: result.name, sku: result.sku, priceSatang: result.priceSatang, costSatang: result.costSatang, categoryId: result.categoryId, barcode: result.barcode, isActive: result.isActive },
+        after: { name: result.name, sku: result.sku, productType: result.productType, priceSatang: result.priceSatang, costSatang: result.costSatang, categoryId: result.categoryId, barcode: result.barcode, isActive: result.isActive },
       }))
       return result
     })

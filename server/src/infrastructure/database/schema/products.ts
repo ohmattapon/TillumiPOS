@@ -10,6 +10,7 @@ export const products = pgTable(
     sku: text().notNull().unique(),
     barcode: text().unique(),
     name: text().notNull(),
+    productType: text().$type<'normal' | 'cafe'>().notNull().default('normal'),
     // Object key in the media bucket; the public URL is derived from it.
     imageKey: text(),
     categoryId: integer().references(() => categories.id, { onDelete: 'set null' }),
@@ -24,5 +25,6 @@ export const products = pgTable(
     index().on(table.categoryId),
     index().on(table.name),
     check('products_price_non_negative', sql`${table.priceSatang} >= 0 and ${table.costSatang} >= 0`),
+    check('products_product_type_allowed', sql`${table.productType} in ('normal', 'cafe')`),
   ],
 )
