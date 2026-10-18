@@ -1,4 +1,4 @@
-import { ClipboardList, Minus, Plus, ShoppingCart, Trash2, X } from 'lucide-react'
+import { ClipboardList, Minus, Plus, ShoppingCart, Tag, Trash2, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -143,6 +143,22 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
               </ul>
             )}
             {unavailable && <p className="text-xs font-medium text-destructive">{t('cart.optionUnavailable')}</p>}
+            {cart.productPromotions.has(line.productId) && (
+              <ul aria-label={t('cart.promotions', { name })} className="flex flex-wrap gap-1.5">
+                {cart.productPromotions.get(line.productId)!.map((promotion) => (
+                  <li key={promotion.id} className="inline-flex max-w-full items-center gap-1 rounded-md bg-accent px-2 py-0.5 text-xs text-accent-foreground">
+                    <Tag className="size-3 shrink-0" aria-hidden />
+                    <span className="truncate">
+                      {[
+                        promotion.name,
+                        promotion.minSubtotalSatang > 0 && t('cart.promotionMin', { amount: money.format(promotion.minSubtotalSatang) }),
+                        promotion.membersOnly && t('cart.promotionMembers'),
+                      ].filter(Boolean).join(' · ')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"

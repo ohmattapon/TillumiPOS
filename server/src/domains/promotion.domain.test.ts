@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import {
-  evaluatePromotion, pickBestPromotion, PromotionEntity,
+  evaluatePromotion, pickBestPromotion, promotionsFor, PromotionEntity,
   type PromotionContext, type PromotionRules,
 } from './promotion.domain'
 
@@ -116,6 +116,43 @@ describe('scoped to products and categories', () => {
     const coffee = rules({ id: 3, value: 1000, scope: { productIds: [], categoryIds: [1] } })
     expect(pickBestPromotion([wholeBill, coffee], bill)?.promotion.id).toBe(3)
     expect(pickBestPromotion([wholeBill, rules({ id: 4, value: 1000, scope: { productIds: [20], categoryIds: [] } })], bill)?.promotion.id).toBe(2)
+  })
+})
+
+describe('the promotions a product is part of', () => {
+  const at = new Date('2026-10-15T03:00:00Z') // Thursday 10:00 in Bangkok
+  const coffee: { productId: number; categoryId: number | null } = { productId: 10, categoryId: 1 }
+  const find = (promotions: PromotionRules[], item = coffee) => promotionsFor(promotions, item, at, 'Asia/Bangkok').map((p) => p.id)
+
+  test('lists the running promotions scoped to the product or its category, in id order', () => {
+    expect(find([
+      rules({ id: 3, scope: { productIds: [], categoryIds: [1] } }),
+      rules({ id: 2, scope: { productIds: [10], categoryIds: [] } }),
+      rules({ id: 4, scope: { productIds: [20], categoryIds: [2] } }),
+    ])).toEqual([2, 3])
+  })
+
+  test('leaves out whole-bill promotions, which are not about this product', () => {
+    expect(find([rules({ id: 1 })])).toEqual([])
+  })
+
+  test('leaves out what is switched off or not running now', () => {
+    const scope = { productIds: [10], categoryIds: [] }
+    expect(find([
+      rules({ id: 1, scope, isActive: false }),
+      rules({ id: 2, scope, weekdays: [1] }),
+      rules({ id: 3, scope, windowStartMinute: 14 * 60, windowEndMinute: 17 * 60 }),
+      rules({ id: 4, scope, endsOn: '2026-10-14' }),
+    ])).toEqual([])
+  })
+
+  test('keeps a promotion the cart does not qualify for yet, so the cashier can mention it', () => {
+    const scope = { productIds: [10], categoryIds: [] }
+    expect(find([rules({ id: 1, scope, minSubtotalSatang: 50000 }), rules({ id: 2, scope, audience: 'members' })])).toEqual([1, 2])
+  })
+
+  test('a product with no category matches by product only', () => {
+    expect(find([rules({ id: 1, scope: { productIds: [], categoryIds: [1] } })], { productId: 10, categoryId: null })).toEqual([])
   })
 })
 
