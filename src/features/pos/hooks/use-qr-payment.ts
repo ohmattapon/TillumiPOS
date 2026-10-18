@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { QR_POLL_MS, qrPaymentQuery, useCancelQrPayment, useCreateQrPayment } from '../api'
+import { newIdempotencyKey } from '@/lib/idempotency-key'
 
 interface IssuedQr {
   id: number
@@ -26,7 +27,7 @@ export function useQrPayment({ amountSatang, quoteId, active, shiftId }: { amoun
     setIssued(null)
     // A new key per QR: a lost answer is then resolved from the shift page, never by asking twice.
     create.mutate(
-      { amountSatang, quoteId, shiftId, idempotencyKey: crypto.randomUUID() },
+      { amountSatang, quoteId, shiftId, idempotencyKey: newIdempotencyKey() },
       { onSuccess: (qr) => setIssued({ id: qr.id, image: qr.qrImage, expiresAt: new Date(qr.expiresAt) }) },
     )
     // `create` is a stable mutation object per render; only the amount and shift decide a new QR.
