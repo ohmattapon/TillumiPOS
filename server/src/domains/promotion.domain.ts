@@ -141,6 +141,22 @@ export function evaluatePromotion(rules: PromotionRules, context: PromotionConte
   return discountSatang >= 1 ? { eligible: true, discountSatang } : NOT_ELIGIBLE
 }
 
+/**
+ * The running promotions limited to this product or its category, in id order, so the till can tell the
+ * cashier about a deal on what was just added. The cart's size and member are not checked: a promotion the
+ * cart does not qualify for yet is still worth mentioning. Whole-bill promotions are left out.
+ */
+export function promotionsFor<T extends PromotionRules>(
+  promotions: readonly T[],
+  item: { productId: number; categoryId: number | null },
+  at: Date,
+  timeZone: string,
+): T[] {
+  return promotions
+    .filter((promotion) => promotion.isActive && promotion.scope !== null && inScope(promotion.scope, item) && isRunningAt(promotion, at, timeZone))
+    .sort((a, b) => a.id - b.id)
+}
+
 /** The promotion that gives the most; a tie goes to the lowest id so the answer is always the same. */
 export function pickBestPromotion<T extends PromotionRules>(
   promotions: readonly T[],

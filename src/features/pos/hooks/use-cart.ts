@@ -3,7 +3,7 @@ import { useEffect, useMemo } from 'react'
 import { memberQuery } from '@/features/members'
 import { modifierGroupsQuery } from '@/features/modifiers'
 import { orderQuery } from '@/features/orders'
-import { promotionLines, useBestPromotion } from '@/features/promotions'
+import { promotionLines, useBestPromotion, useProductPromotions } from '@/features/promotions'
 import { productQuery } from '@/features/products'
 import { useFormat, useSettings } from '@/features/settings'
 import { priceCart, priceOrder, type PricingOptions } from '../lib/cart'
@@ -61,11 +61,9 @@ export function useCart() {
   }
   // The promotion the server would give a cart this size, then the cart priced with it unless declined.
   const base = price(null)
-  const best = useBestPromotion({
-    subtotalSatang: base.subtotalSatang,
-    hasMember: memberId !== null,
-    lines: promotionLines(base.lines, productsById),
-  })
+  const cartLines = promotionLines(base.lines, productsById)
+  const best = useBestPromotion({ subtotalSatang: base.subtotalSatang, hasMember: memberId !== null, lines: cartLines })
+  const productPromotions = useProductPromotions(cartLines)
   const priced = best && !declined ? price(best) : base
   // A pinned price is used when a promotion applies, or when no discount is typed. A typed discount is
   // never sent with a quote (the quote would drop it), so such a cart is sold the one-step way instead.
@@ -79,6 +77,7 @@ export function useCart() {
     hasUnavailableProducts: products.some((result) => result.data && !result.data.isActive),
     orderId, order: order.data, memberId, member: member.data, memberError: member.error,
     availablePromotion: best,
+    productPromotions,
     promotionDeclined: declined,
     usesQuote,
   }
