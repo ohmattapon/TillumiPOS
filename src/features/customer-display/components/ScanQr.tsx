@@ -5,7 +5,7 @@ import type { DisplayQr } from '../lib/display-state'
 export function ScanQr({ qr, alt }: { qr: DisplayQr; alt: string }) {
   if ('payload' in qr)
     return (
-      <div role="img" aria-label={alt} className="aspect-square w-full max-w-[44vh] rounded-xl bg-white p-[1.5vh]">
+      <div role="img" aria-label={alt} className="aspect-square w-full max-w-[44vh] portrait:max-w-[34vh] rounded-xl bg-white p-[1.5vh]">
         <QRCodeSVG value={qr.payload} size={512} marginSize={0} className="size-full" />
       </div>
     )
