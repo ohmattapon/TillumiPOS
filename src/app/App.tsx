@@ -17,6 +17,7 @@ import { SetupPage, setupStatusQuery } from '@/features/setup'
 import { TablesPage } from '@/features/tables'
 import { clearCart, FloorPage, PosPage } from '@/features/pos'
 import { ProductsPage } from '@/features/products'
+import { StockReceiptsPage, StockReceiptDraftPage } from '@/features/stock-receipts'
 import { TodayPage } from '@/features/sales'
 import { ReportsPage } from '@/features/reports'
 import { FeatureRoute, SettingsPage, useSettings } from '@/features/settings'
@@ -50,6 +51,8 @@ function Shell({ user }: { user: User }) {
           <Route path="today" element={<TodayPage isOwner={can('reports.read')} />} />
           {can('reports.read') && <Route path="reports" element={<ReportsPage />} />}
           {(can('products.write') || can('inventory.receive') || can('inventory.adjust')) && <Route path="products" element={<ProductsPage />} />}
+          {can('inventory.receive') && <Route path="stock-receipts" element={<StockReceiptsPage />} />}
+          {can('inventory.receive') && <Route path="stock-receipts/new" element={<StockReceiptDraftPage />} />}
           {can('categories.write') && <Route path="categories" element={<CategoriesPage />} />}
           {can('modifiers.write') && <Route path="modifiers" element={<FeatureRoute feature="modifiers"><ModifiersPage /></FeatureRoute>} />}
           {can('tables.write') && <Route path="tables" element={<FeatureRoute feature="tables"><TablesPage /></FeatureRoute>} />}
