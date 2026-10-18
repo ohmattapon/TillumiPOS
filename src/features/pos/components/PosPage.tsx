@@ -198,15 +198,15 @@ export function PosPage() {
   return (
     <>
       <PageHeader title={t('title')} highlight={date.longDate(today)} description={t('description')}>
-        {/* Wide screens keep the buttons in the header; smaller screens put the same actions in one menu. */}
-        {me && <span className="hidden max-w-48 truncate text-sm text-muted-foreground sm:inline">{t('header.sellingAs', { name: me.displayName })}</span>}
-        {/* On phones the "selling as" line does not fit, so the seller's name sits in the switch button itself. */}
+        {/* Wide screens (xl) keep the buttons in the header; a tablet has no room for them beside the title, so it puts the same actions in one menu. */}
+        {me && <span className="hidden max-w-48 truncate text-sm text-muted-foreground xl:inline">{t('header.sellingAs', { name: me.displayName })}</span>}
+        {/* Below xl the "selling as" line does not fit, so the seller's name sits in the switch button itself. */}
         <Button variant="outline" className="h-11 px-3" onClick={() => setIsSwitching(true)}>
           <UserRoundCog />
-          {me && <span className="max-w-28 truncate sm:hidden">{me.displayName}</span>}
+          {me && <span className="max-w-28 truncate xl:hidden">{me.displayName}</span>}
           <span className="max-sm:sr-only">{t('header.switchStaff')}</span>
         </Button>
-        <div className="hidden items-center gap-2 sm:flex">
+        <div className="hidden items-center gap-2 xl:flex">
           {needsShift && (
             <Button variant="outline" className="h-11 px-3" onClick={() => navigate('/shifts')}>
               {shiftReady ? t('shiftReady') : t('shiftRequired')}
@@ -236,7 +236,7 @@ export function PosPage() {
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="size-11 sm:hidden" aria-label={t('moreActions')}>
+            <Button variant="outline" className="size-11 xl:hidden" aria-label={t('moreActions')}>
               <MoreHorizontal />
             </Button>
           </DropdownMenuTrigger>
