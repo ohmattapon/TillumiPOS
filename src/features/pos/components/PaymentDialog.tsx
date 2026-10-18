@@ -11,9 +11,11 @@ import { useFormat, settingsQuery } from '@/features/settings'
 import { unclaimedQrQuery } from '@/features/shifts'
 import type { Quote } from '@/features/promotions'
 import type { PaymentInput, PaymentMethod } from '@/lib/money'
+import type { DisplayQr } from '@/features/customer-display'
 import { cn } from '@/lib/utils'
 import { qrConfigQuery } from '../api'
 import { useQrPayment } from '../hooks/use-qr-payment'
+import { pickDisplayQr } from '../lib/display-qr'
 import { resolveStaticQr } from '../lib/static-qr'
 import { QrPaymentPanel } from './QrPaymentPanel'
 import { StaticQrPanel } from './StaticQrPanel'
@@ -43,10 +45,10 @@ interface Props {
   /** The method the dialog opens on: the one chosen when the price was asked again. */
   initialMethod?: PaymentMethod
   /**
-   * Tells the till which bank QR is showing (or null), so the customer's screen can show the same one.
-   * Called again with null when the QR is paid, replaced or the dialog closes.
+   * Tells the till which QR is showing (or null), so the customer's screen can show the same one: the bank's
+   * QR, or the payload of a static PromptPay QR. Called again with null when the QR is paid, replaced or the dialog closes.
    */
-  onQrChange?: (qr: { image: string; expiresAt: string } | null) => void
+  onQrChange?: (qr: DisplayQr | null) => void
 }
 
 export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfirm, onCancel, shiftId, onRequote, initialMethod = 'cash', onQrChange }: Props) {
@@ -68,13 +70,13 @@ export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfi
 
   // The customer's screen follows the QR on this dialog. It is keyed by the QR's id: a new QR is a new
   // message, and a paid QR (or a closed dialog) clears it.
-  const shownQr = usesQr && qr.issued && !qr.paid ? qr.issued : null
+  const shown = pickDisplayQr({ bank: usesQr && qr.issued && !qr.paid ? qr.issued : null, staticQr })
   useEffect(() => {
-    onQrChange?.(shownQr ? { image: shownQr.image, expiresAt: shownQr.expiresAt.toISOString() } : null)
+    onQrChange?.(shown?.qr ?? null)
     return () => onQrChange?.(null)
     // The callback is a state setter, stable by design; only another QR should send again.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shownQr?.id])
+  }, [shown?.key])
 
   // Money that already arrived for exactly this total and has no sale yet (a late payment, or a sale that
   // failed after the customer paid). Using it means the customer does not pay twice.
