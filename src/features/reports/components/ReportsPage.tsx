@@ -10,11 +10,12 @@ import { Panel } from '@/components/Panel'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { reportQuery, productsReportQuery, readReport, readProducts } from '../api'
-import { validRange, todayInTimeZone, type ReportFilters as Filters } from '../lib/date-range'
+import { validRange, type ReportFilters as Filters } from '../lib/date-range'
 import { collectPages } from '../lib/collect-pages'
 import { ReportFilters } from './ReportFilters'
 import { ReportDataTable } from './ReportDataTable'
 import { PaginationBar } from '@/components/PaginationBar'
+import { todayIn } from '@/lib/calendar-date'
 import { DailySalesChart } from './DailySalesChart'
 
 export function ReportsPage() {
@@ -25,7 +26,7 @@ export function ReportsPage() {
   const { money, currency, locale } = useFormat()
   const [params, setParams] = useSearchParams()
   const [exporting, setExporting] = useState(false)
-  const today = todayInTimeZone(shop.timeZone)
+  const today = todayIn(shop.timeZone)
   const filters: Filters = {
     from: params.get('from') ?? today.slice(0, 7) + '-01',
     to: params.get('to') ?? today,
