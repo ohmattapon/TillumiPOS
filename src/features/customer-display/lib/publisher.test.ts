@@ -1,6 +1,6 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, spyOn, test } from 'bun:test'
 import { createMemoryBus } from './channel'
-import { parseMessage, type DisplayEnvelope, type DisplayView } from './display-state'
+import { HEARTBEAT_MS, parseMessage, type DisplayEnvelope, type DisplayView } from './display-state'
 import { DisplayPublisher, type Scheduler } from './publisher'
 
 /** A heartbeat the test fires by hand. */
@@ -121,5 +121,22 @@ describe('DisplayPublisher', () => {
 
     expect(scheduler.count()).toBe(0)
     expect(envelopes()).toHaveLength(1)
+  })
+
+  test('without an injected scheduler the heartbeat is a real interval that stop() clears', () => {
+    const set = spyOn(globalThis, 'setInterval').mockImplementation((() => 42) as unknown as typeof setInterval)
+    const cleared = spyOn(globalThis, 'clearInterval').mockImplementation(() => {})
+    try {
+      const publisher = new DisplayPublisher({ channel: createMemoryBus().open(), sessionId: 'till-1' })
+
+      publisher.start()
+      publisher.stop()
+
+      expect(set).toHaveBeenCalledWith(expect.any(Function), HEARTBEAT_MS)
+      expect(cleared).toHaveBeenCalledWith(42)
+    } finally {
+      set.mockRestore()
+      cleared.mockRestore()
+    }
   })
 })

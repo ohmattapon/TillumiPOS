@@ -99,4 +99,23 @@ describe('createServerSender', () => {
     expect(sent).toEqual([2, 3])
     expect(errors).toHaveLength(1)
   })
+
+  test('a sender that is closed drops the envelope that was waiting behind the one in flight', async () => {
+    const sent: number[] = []
+    let finish!: () => void
+    const sender = createServerSender({
+      send: (envelope) => {
+        sent.push(envelope.seq)
+        return new Promise<void>((resolve) => { finish = resolve })
+      },
+    })
+
+    sender.post(state(1))
+    sender.post(state(2))
+    sender.close()
+    finish()
+    await Bun.sleep(1)
+
+    expect(sent).toEqual([1])
+  })
 })
