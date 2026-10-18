@@ -1,6 +1,6 @@
 const th = {
   title: 'บทบาทและสิทธิ์', description: 'กำหนดสิ่งที่พนักงานแต่ละบทบาททำได้', add: 'เพิ่มบทบาท', edit: 'แก้ไข', remove: 'ลบ',
-  name: 'ชื่อบทบาท', users: 'ผู้ใช้', permissions: 'สิทธิ์', empty: 'ยังไม่มีบทบาท', system: 'บทบาทระบบ', ownerHint: 'เจ้าของร้านมีทุกสิทธิ์เสมอ',
+  name: 'ชื่อบทบาท', users: 'ผู้ใช้', permissions: 'สิทธิ์', empty: 'ยังไม่มีบทบาท', system: 'บทบาทระบบ', grantedSummary: '{{granted}} จาก {{total}} สิทธิ์', ownerHint: 'เจ้าของร้านมีทุกสิทธิ์เสมอ',
   newTitle: 'สร้างบทบาท', editTitle: 'แก้ไขบทบาท', formHint: 'เลือกเฉพาะหน้าที่ที่ต้องการมอบหมาย', save: 'บันทึก', saving: 'กำลังบันทึก…', saved: 'บันทึกบทบาทแล้ว', removed: 'ลบบทบาทแล้ว',
   deleteTitle: 'ลบบทบาทนี้?', deleteHint: 'ลบ {{name}} ได้เมื่อไม่มีผู้ใช้ถือบทบาทนี้',
   groups: { sales: 'การขายและรายงาน', catalog: 'สินค้าและบริการ', inventory: 'สต็อก', operations: 'การทำงานของร้าน', admin: 'ผู้ใช้และประวัติ' },
@@ -15,7 +15,7 @@ const th = {
 }
 const en = {
   title: 'Roles and permissions', description: 'Choose what staff in each role can do', add: 'Add role', edit: 'Edit', remove: 'Delete',
-  name: 'Role name', users: 'Users', permissions: 'Permissions', empty: 'No roles', system: 'System role', ownerHint: 'Owners always have every permission',
+  name: 'Role name', users: 'Users', permissions: 'Permissions', empty: 'No roles', system: 'System role', grantedSummary: '{{granted}} of {{total}}', ownerHint: 'Owners always have every permission',
   newTitle: 'Create role', editTitle: 'Edit role', formHint: 'Grant only the responsibilities this role needs', save: 'Save', saving: 'Saving…', saved: 'Role saved', removed: 'Role deleted',
   deleteTitle: 'Delete this role?', deleteHint: '{{name}} can be deleted when no user holds it',
   groups: { sales: 'Sales and reports', catalog: 'Products and services', inventory: 'Stock', operations: 'Shop operations', admin: 'Users and history' },

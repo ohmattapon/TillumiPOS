@@ -33,7 +33,7 @@ interface RoleCardProps {
   canManageRoles: boolean
 }
 
-/** One role and its members. Lane C mounts the permission toggles + role menu in the Panel action slot. */
+/** One role: its members, then its permissions folded into a summary line at the foot of the card. */
 export function RoleCard({ role, members, isPending, onAdd, onEdit, onSetPin, onToggleActive, canManageMembers, canManageRoles }: RoleCardProps) {
   const { t } = useTranslation('users')
   const { t: tr } = useTranslation('roles')
@@ -44,12 +44,13 @@ export function RoleCard({ role, members, isPending, onAdd, onEdit, onSetPin, on
 
   return (
     <Panel
+      className="shrink-0"
       title={role?.name ?? t('team.unassigned')}
       description={`${t('team.members', { count: members.length })}${system}`}
       action={(canManageMembers && onAdd) || (canManageRoles && role) ? (
         <div className="flex items-center gap-1">
           {canManageMembers && onAdd && (
-            <Button className="h-11 px-3" onClick={onAdd}>
+            <Button variant="outline" className="h-11 px-3" aria-label={t('team.addUserTo', { role: role?.name })} onClick={onAdd}>
               <Plus />
               {t('team.addUser')}
             </Button>
@@ -69,6 +70,7 @@ export function RoleCard({ role, members, isPending, onAdd, onEdit, onSetPin, on
             id: 'name',
             header: t('columns.name'),
             priority: 'primary',
+            width: 'w-[36%]',
             className: 'font-medium',
             cell: (user) => (
               <>
@@ -77,12 +79,12 @@ export function RoleCard({ role, members, isPending, onAdd, onEdit, onSetPin, on
               </>
             ),
           },
-          { id: 'username', header: t('columns.username'), priority: 'secondary', cell: (user) => user.username },
-          { id: 'role', header: t('columns.role'), priority: 'secondary', cell: (user) => role?.name ?? t(`roles.${user.role}`) },
+          { id: 'username', header: t('columns.username'), priority: 'secondary', width: 'w-[24%]', cell: (user) => user.username },
           {
             id: 'pin',
             header: t('columns.pin'),
             priority: 'secondary',
+            width: 'w-[18%]',
             cell: (user) => <StatusBadge tone={user.hasPin ? 'success' : 'neutral'}>{user.hasPin ? t('pin.set') : t('pin.none')}</StatusBadge>,
           },
           {
