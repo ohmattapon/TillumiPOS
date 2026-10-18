@@ -13,9 +13,20 @@ const KEY_PATTERN = /^(products|promotions)\/\d+\/[A-Za-z0-9-]+\.(jpg|png|webp)$
 
 export const isMediaKey = (key: string) => KEY_PATTERN.test(key)
 
+// The only shape the slide upload use case produces (see SlideEntity): a separate strict form,
+// so the product form above is never relaxed.
+const SLIDE_KEY_PATTERN = /^slides\/[A-Za-z0-9-]+\.(jpg|png|webp)$/
+
+export const isSlideMediaKey = (key: string) => SLIDE_KEY_PATTERN.test(key)
+
 export function contentTypeOf(key: string): string | null {
   const match = KEY_PATTERN.exec(key)
   return match ? CONTENT_TYPE_BY_EXTENSION[match[2]!]! : null
+}
+
+export function slideContentTypeOf(key: string): string | null {
+  const match = SLIDE_KEY_PATTERN.exec(key)
+  return match ? CONTENT_TYPE_BY_EXTENSION[match[1]!]! : null
 }
 
 const unavailable = () =>
@@ -63,7 +74,8 @@ export class LocalDiskMediaStorage implements IMediaStorage {
   }
 
   private pathOf(key: string): string | null {
-    if (!isMediaKey(key)) return null
+    // Product and slide keys are two separate strict forms; nothing else is ever stored.
+    if (!isMediaKey(key) && !isSlideMediaKey(key)) return null
     const path = resolve(this.directory, key)
     return path.startsWith(this.directory + sep) ? path : null
   }

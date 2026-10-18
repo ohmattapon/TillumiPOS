@@ -294,3 +294,13 @@
     display: none;
   }
 }
+
+/* Scrollable carousel strips hide their scrollbars but stay scrollable
+   by touch, wheel and keyboard. Data lists keep their thumbs. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

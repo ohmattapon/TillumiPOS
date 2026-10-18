@@ -13,6 +13,8 @@ function readSelections(): Record<string, number> {
 interface RegisterSelectionState {
   selections: Record<string, number>
   select: (userId: number, registerId: number) => void
+  /** Another person takes over this till: the till's current register becomes theirs. */
+  handOver: (toUserId: number, registerId: number | undefined) => void
   clear: () => void
 }
 
@@ -23,6 +25,16 @@ export const useRegisterSelectionStore = create<RegisterSelectionState>((set) =>
     localStorage.setItem(STORAGE_KEY, JSON.stringify(selections))
     return { selections }
   }),
+  handOver: (toUserId, registerId) => {
+    if (registerId === undefined) return
+    set((state) => {
+      const selections = { ...state.selections, [String(toUserId)]: registerId }
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(selections))
+      } catch { /* Storage may be unavailable; the choice still holds for this session. */ }
+      return { selections }
+    })
+  },
   clear: () => {
     localStorage.removeItem(STORAGE_KEY)
     set({ selections: {} })
