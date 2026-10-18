@@ -4,8 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { createDateFormat, createMoney, type Locale, type Money } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { useDisplayReceiver } from '../hooks/use-display-receiver'
+import { useDisplaySlides } from '../hooks/use-display-slides'
 import { useFullscreen, useIdleCursor } from '../hooks/use-screen-chrome'
 import type { DisplayLine, DisplayState } from '../lib/display-state'
+import type { DisplaySlide } from '../lib/slideshow'
 
 // One unit that follows the height of the screen, so the text is as large as the screen allows at 1 to 2 metres.
 const UNIT = { '--u': 'clamp(12px, 1.9vh, 28px)' } as CSSProperties
@@ -18,10 +20,11 @@ const size = {
 
 const IDLE: DisplayState = { kind: 'idle' }
 
-/** The screen the customer faces. It shows only what the till sends and asks the server for nothing. */
+/** The screen the customer faces. It shows what the till sends; only the marketing pictures come from the server's public endpoint, never the sale itself. */
 export function CustomerDisplayPage() {
   const { t, i18n } = useTranslation('customerDisplay')
   const { view, connection } = useDisplayReceiver()
+  const { slides, index: slideIndex, current: slide, markBroken } = useDisplaySlides()
   const hidden = useIdleCursor(3_000)
   const fullscreen = useFullscreen()
 
@@ -49,11 +52,23 @@ export function CustomerDisplayPage() {
       {/* Keyed by the kind of screen, so a change fades in; users who ask for less motion get none. */}
       <main key={state.kind} className="flex min-h-0 flex-1 flex-col p-[3vh] motion-safe:animate-in motion-safe:fade-in">
         {state.kind === 'idle' && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-[2vh] text-center">
-            <p className={cn('font-semibold', size.title)}>{shopName}</p>
-            <p className={cn('text-muted-foreground', size.row)}>{t('idle.welcome')}</p>
+          <div className="relative flex flex-1 flex-col items-center justify-center gap-[2vh] overflow-hidden text-center">
+            {slide !== null && slideIndex !== null ? (
+              <img
+                key={slide.id}
+                src={slide.imageUrl}
+                alt={t('slideshow.alt', { index: slideIndex + 1, total: slides.length })}
+                onError={() => markBroken(slideIndex)}
+                className="absolute inset-0 h-full w-full object-cover motion-safe:animate-in motion-safe:fade-in"
+              />
+            ) : (
+              <>
+                <p className={cn('font-semibold', size.title)}>{shopName}</p>
+                <p className={cn('text-muted-foreground', size.row)}>{t('idle.welcome')}</p>
+              </>
+            )}
             {connection.phase === 'waiting' && (
-              <section className="mt-[3vh] rounded-xl border bg-card px-[3vh] py-[2vh] shadow-xs">
+              <section className="relative mt-[3vh] rounded-xl border bg-card px-[3vh] py-[2vh] shadow-xs">
                 <p className={cn('text-muted-foreground', size.label)}>{t('pairing.hint')}</p>
                 <p
                   className={cn('font-semibold tabular-nums tracking-[0.2em]', size.title)}
@@ -67,26 +82,35 @@ export function CustomerDisplayPage() {
         )}
 
         {state.kind === 'selling' && (
-          <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-[3vh] lg:grid-rows-none lg:grid-cols-[3fr_2fr]">
-            <Lines lines={state.lines} money={money} />
-            <Summary
-              rows={[
-                [t('selling.subtotal'), money.format(state.subtotalSatang)],
-                ...(state.discountSatang > 0 ? [[t('selling.discount'), `−${money.format(state.discountSatang)}`] as const] : []),
-                ...(state.vatMode !== 'none' && state.vatSatang > 0
-                  ? [[state.vatMode === 'inclusive' ? t('selling.vatIncluded') : t('selling.vatAdded'), money.format(state.vatSatang)] as const]
-                  : []),
-              ]}
-              totalLabel={t('selling.total')}
-              total={money.format(state.totalSatang)}
+          <>
+            <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-[3vh] lg:grid-rows-none lg:grid-cols-[3fr_2fr]">
+              <Lines lines={state.lines} money={money} />
+              <Summary
+                rows={[
+                  [t('selling.subtotal'), money.format(state.subtotalSatang)],
+                  ...(state.discountSatang > 0 ? [[t('selling.discount'), `−${money.format(state.discountSatang)}`] as const] : []),
+                  ...(state.vatMode !== 'none' && state.vatSatang > 0
+                    ? [[state.vatMode === 'inclusive' ? t('selling.vatIncluded') : t('selling.vatAdded'), money.format(state.vatSatang)] as const]
+                    : []),
+                ]}
+                totalLabel={t('selling.total')}
+                total={money.format(state.totalSatang)}
+              />
+            </div>
+            <SlideStrip
+              slides={slides}
+              index={slideIndex}
+              alt={slideIndex === null ? '' : t('slideshow.alt', { index: slideIndex + 1, total: slides.length })}
+              onBroken={markBroken}
             />
-          </div>
+          </>
         )}
 
         {state.kind === 'paying' && (
-          <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-[3vh] lg:grid-rows-none lg:grid-cols-[3fr_2fr]">
-            <Lines lines={state.lines} money={money} />
-            <section className="flex min-h-0 flex-col items-center justify-center gap-[2vh] rounded-xl border bg-card p-[3vh] text-center shadow-xs">
+          <>
+            <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-[3vh] lg:grid-rows-none lg:grid-cols-[3fr_2fr]">
+              <Lines lines={state.lines} money={money} />
+              <section className="flex min-h-0 flex-col items-center justify-center gap-[2vh] rounded-xl border bg-card p-[3vh] text-center shadow-xs">
               {state.qr && (
                 <>
                   <p className={cn('font-semibold', size.row)}>{t('paying.scan')}</p>
@@ -106,6 +130,13 @@ export function CustomerDisplayPage() {
               )}
             </section>
           </div>
+          <SlideStrip
+            slides={slides}
+            index={slideIndex}
+            alt={slideIndex === null ? '' : t('slideshow.alt', { index: slideIndex + 1, total: slides.length })}
+            onBroken={markBroken}
+          />
+          </>
         )}
 
         {state.kind === 'paid' && (
@@ -128,6 +159,33 @@ export function CustomerDisplayPage() {
       {!fullscreen.active && (
         <footer className={cn('shrink-0 pb-[1.5vh] text-center text-muted-foreground', size.label)}>{t('fullscreen')}</footer>
       )}
+    </div>
+  )
+}
+
+/** The pictures as a quiet strip under the sale: it rotates with the idle carousel, with no buttons. */
+function SlideStrip({
+  slides,
+  index,
+  alt,
+  onBroken,
+}: {
+  slides: readonly DisplaySlide[]
+  index: number | null
+  alt: string
+  onBroken: (index: number) => void
+}) {
+  const slide = index === null ? undefined : slides[index]
+  if (!slide) return null
+  return (
+    <div className="h-16 w-full shrink-0 overflow-hidden rounded-xl border bg-card shadow-xs">
+      <img
+        key={slide.id}
+        src={slide.imageUrl}
+        alt={alt}
+        onError={() => index !== null && onBroken(index)}
+        className="h-full w-full object-cover motion-safe:animate-in motion-safe:fade-in"
+      />
     </div>
   )
 }

@@ -38,6 +38,7 @@ describe('users', () => {
       roleId: expect.any(Number),
       branchId: 1,
       isActive: true,
+      hasPin: false,
     })
   })
 

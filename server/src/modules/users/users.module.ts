@@ -6,6 +6,7 @@ import { DrizzleFirstRunGuard } from './adapters/repository/first-run-guard.driz
 import { userRepositoryToken } from './applications/ports/user.repository'
 import { CreateUserUseCase } from './applications/usecases/create-user.usecase'
 import { ListUsersUseCase } from './applications/usecases/list-users.usecase'
+import { SetUserPinUseCase } from './applications/usecases/set-user-pin.usecase'
 import { UpdateUserUseCase } from './applications/usecases/update-user.usecase'
 import { roleUsageToken } from '../roles/applications/ports/role-usage.port'
 import { DrizzleRoleUsage } from './adapters/repository/role-usage.drizzle.adapter'
@@ -16,4 +17,5 @@ container.register(firstRunGuardToken, { useClass: DrizzleFirstRunGuard })
 container.registerSingleton(ListUsersUseCase)
 container.registerSingleton(CreateUserUseCase)
 container.registerSingleton(UpdateUserUseCase)
+container.registerSingleton(SetUserPinUseCase)
 container.registerSingleton(UserElysiaController)

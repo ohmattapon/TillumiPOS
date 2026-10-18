@@ -12,11 +12,21 @@ import { QrPaymentEntity, type QrPaymentEntityProps } from '../domains/qr-paymen
 import { CategoryEntity, type CategoryEntityProps } from '../domains/category.domain'
 import { ProductEntity, type ProductEntityProps } from '../domains/product.domain'
 import { SaleEntity, type SaleEntityProps } from '../domains/sale.domain'
+import { SlideEntity, type SlideEntityProps } from '../domains/slide.domain'
 import { StockMovementEntity, type StockMovementEntityProps } from '../domains/stock-movement.domain'
 import { UserEntity, type UserEntityProps } from '../domains/user.domain'
 
 export const makeCategory = (overrides: Partial<CategoryEntityProps> = {}) =>
   new CategoryEntity({ id: 1, name: 'เครื่องดื่ม', sortOrder: 0, isActive: true, ...overrides })
+
+export const makeSlide = (overrides: Partial<SlideEntityProps> = {}) =>
+  new SlideEntity({
+    id: 1,
+    imageKey: 'slides/550e8400-e29b-41d4-a716-446655440000.png',
+    sortOrder: 0,
+    isActive: true,
+    ...overrides,
+  })
 
 export const makeBranch = (overrides: Partial<BranchEntityProps> = {}) =>
   new BranchEntity({ id: 1, code: 'MAIN', name: 'สาขาหลัก', address: null, phone: null, isActive: true, ...overrides })

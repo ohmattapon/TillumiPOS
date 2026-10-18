@@ -9,10 +9,12 @@ import {
   mockUnitOfWork,
   mockUserRepository,
 } from '../../../../__tests__/mocks'
+import { DomainForbiddenError } from '../../../../domains/errors/domain-forbidden.error'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import { CreateUserUseCase } from './create-user.usecase'
 import { ListUsersUseCase } from './list-users.usecase'
+import { SetUserPinUseCase } from './set-user-pin.usecase'
 import { UpdateUserUseCase } from './update-user.usecase'
 
 let repo: ReturnType<typeof mockUserRepository>
@@ -56,6 +58,7 @@ describe('CreateUserUseCase', () => {
       role: 'cashier',
       branchId: 1,
       isActive: true,
+      hasPin: false,
     })
     const [entity, passwordHash] = repo.create.mock.calls[0]!
     expect(entity.toSnapshot()).toMatchObject({ id: 0, username: 'somchai', isActive: true })
@@ -247,5 +250,149 @@ describe('roles on users', () => {
   })
   test.each([0, -1, 1.5])('rejects invalid roleId %p', async (roleId) => {
     await expect(new CreateUserUseCase(repo, branches, hasher, auditUnitOfWork(), roles, auditMock()).execute({ ...input, roleId }, 1, { id: null, displayName: 'Test fixture' })).rejects.toBeInstanceOf(ZodError)
+  })
+})
+
+describe('SetUserPinUseCase', () => {
+  let useCase: SetUserPinUseCase
+  let audit: ReturnType<typeof auditMock>
+  const manager = { id: 9, displayName: 'ผู้จัดการ', role: 'cashier' as const, permissions: ['users.manage' as const] }
+  const owner = { id: 1, displayName: 'เจ้าของ', role: 'owner' as const, permissions: [] }
+
+  beforeEach(() => {
+    audit = auditMock()
+    repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 5 }))
+    repo.setPinHash.mockResolvedValue(undefined)
+    useCase = new SetUserPinUseCase(repo, hasher, auditUnitOfWork(), audit)
+  })
+
+  test('a manager sets a PIN: hashed, stored, audited without the PIN or the hash', async () => {
+    await useCase.execute(5, { pin: '4321' }, manager)
+
+    expect(hasher.hash).toHaveBeenCalledWith('4321')
+    expect(repo.setPinHash).toHaveBeenCalledWith(5, 'hashed:4321')
+    const [, , entry] = audit.record.mock.calls[0]!
+    expect(entry.action).toBe('user.pin_set')
+    expect(entry.entityId).toBe('5')
+    expect(JSON.stringify(entry)).not.toContain('4321')
+    expect(JSON.stringify(entry)).not.toContain('hashed')
+  })
+
+  test('null clears the PIN and is audited as cleared', async () => {
+    await useCase.execute(5, { pin: null }, manager)
+
+    expect(hasher.hash).not.toHaveBeenCalled()
+    expect(repo.setPinHash).toHaveBeenCalledWith(5, null)
+    expect(audit.record.mock.calls[0]![2].action).toBe('user.pin_cleared')
+  })
+
+  test('returns the updated user', async () => {
+    repo.findById.mockResolvedValue(makeUser({ id: 5, hasPin: true }))
+
+    expect((await useCase.execute(5, { pin: '4321' }, manager)).hasPin).toBe(true)
+  })
+
+  test('a manager cannot set the PIN of an owner', async () => {
+    repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 1, role: 'owner' }))
+
+    await expect(useCase.execute(1, { pin: '4321' }, manager)).rejects.toMatchObject({ code: 'OWNER_PIN_SELF_ONLY' })
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+    expect(audit.record).not.toHaveBeenCalled()
+  })
+
+  test('an owner sets their own PIN only through the account menu, which asks for their password', async () => {
+    repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 1, role: 'owner' }))
+
+    await expect(useCase.execute(1, { pin: '4321' }, owner)).rejects.toMatchObject({ code: 'OWN_PIN_USE_ACCOUNT' })
+    await expect(useCase.execute(1, { pin: null }, owner)).rejects.toBeInstanceOf(DomainForbiddenError)
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+    expect(audit.record).not.toHaveBeenCalled()
+  })
+
+  test('a manager cannot set their own PIN through the users route either', async () => {
+    repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 9 }))
+
+    await expect(useCase.execute(9, { pin: '4321' }, manager)).rejects.toMatchObject({ code: 'OWN_PIN_USE_ACCOUNT' })
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+  })
+
+  test.each(['12', '1234567', 'abcd', ''])('rejects the PIN %p without writing', async (pin) => {
+    await expect(useCase.execute(5, { pin }, manager)).rejects.toMatchObject({ code: 'INVALID_PIN' })
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+  })
+
+  test('rejects a non-string, non-null PIN', async () => {
+    await expect(useCase.execute(5, { pin: 1234 }, manager)).rejects.toBeInstanceOf(ZodError)
+  })
+
+  test('an actor without users.manage is refused', async () => {
+    const cashier = { id: 3, displayName: 'แคชเชียร์', role: 'cashier' as const, permissions: [] }
+
+    await expect(useCase.execute(5, { pin: '4321' }, cashier)).rejects.toBeInstanceOf(DomainForbiddenError)
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+  })
+
+  test('a missing user is not found', async () => {
+    repo.findByIdForUpdate.mockResolvedValue(null)
+
+    await expect(useCase.execute(5, { pin: '4321' }, manager)).rejects.toBeInstanceOf(DomainNotFoundError)
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+  })
+})
+
+describe('UpdateUserUseCase and the PIN of a new owner', () => {
+  let audit: ReturnType<typeof auditMock>
+  let useCase: UpdateUserUseCase
+  const manager = { id: 9, displayName: 'ผู้จัดการ' }
+
+  beforeEach(() => {
+    audit = auditMock()
+    repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 4, hasPin: true }))
+    repo.update.mockImplementation(async (entity) => entity)
+    repo.setPinHash.mockResolvedValue(undefined)
+    repo.findById.mockResolvedValue(makeUser({ id: 4, role: 'owner', hasPin: false }))
+    useCase = new UpdateUserUseCase(repo, branches, hasher, mockUnitOfWork(), roles, audit)
+  })
+
+  // An owner's PIN is set only by that owner, so a PIN someone else chose must not survive the promotion.
+  test('making someone else an owner clears the PIN they had, and audits it in the same unit of work', async () => {
+    const updated = await useCase.execute(4, { role: 'owner' }, manager)
+
+    expect(repo.setPinHash).toHaveBeenCalledWith(4, null)
+    expect(updated.hasPin).toBe(false)
+    const actions = audit.record.mock.calls.map(([, , entry]) => entry.action)
+    expect(actions).toContain('user.pin_cleared')
+    const cleared = audit.record.mock.calls.find(([, , entry]) => entry.action === 'user.pin_cleared')!
+    expect(cleared[0]).toEqual({ id: 9, name: 'ผู้จัดการ' })
+    expect(cleared[2]).toMatchObject({ entityType: 'user', entityId: '4', before: { hasPin: true }, after: { hasPin: false } })
+  })
+
+  test('a new owner without a PIN has nothing to clear', async () => {
+    repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 4, hasPin: false }))
+
+    await useCase.execute(4, { role: 'owner' }, manager)
+
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+    expect(audit.record.mock.calls.map(([, , entry]) => entry.action)).not.toContain('user.pin_cleared')
+  })
+
+  test('an edit that does not make them an owner keeps the PIN', async () => {
+    await useCase.execute(4, { displayName: 'สมชาย ใจดี' }, manager)
+
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+  })
+
+  test('making oneself an owner keeps the PIN one chose oneself', async () => {
+    await useCase.execute(4, { role: 'owner' }, { id: 4, displayName: 'สมชาย' })
+
+    expect(repo.setPinHash).not.toHaveBeenCalled()
+  })
+
+  test('someone who already is an owner keeps their own PIN on other edits', async () => {
+    repo.findByIdForUpdate.mockResolvedValue(makeUser({ id: 4, role: 'owner', hasPin: true }))
+
+    await useCase.execute(4, { role: 'owner', displayName: 'เจ้าของ' }, manager)
+
+    expect(repo.setPinHash).not.toHaveBeenCalled()
   })
 })
