@@ -1,4 +1,5 @@
 import { container } from 'tsyringe'
+import { quoteMembersToken } from '../quotes/applications/ports/quote-members.port'
 import { MemberElysiaController } from './adapters/controllers/member.controller'
 import { DrizzleMemberRepository } from './adapters/repository/member.drizzle.repository'
 import { memberRepositoryToken } from './applications/ports/member.repository'
@@ -9,6 +10,7 @@ import { ListMembersUseCase } from './applications/usecases/list-members.usecase
 import { GetMemberSalesHistoryUseCase } from './applications/usecases/get-member-sales-history.usecase'
 
 container.register(memberRepositoryToken, { useClass: DrizzleMemberRepository })
+container.register(quoteMembersToken, { useToken: memberRepositoryToken })
 container.registerSingleton(CreateMemberUseCase)
 container.registerSingleton(UpdateMemberUseCase)
 container.registerSingleton(GetMemberUseCase)

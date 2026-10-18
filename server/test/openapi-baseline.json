@@ -19431,6 +19431,55 @@
                             "minLength": 1,
                             "type": "string"
                           },
+                          "scope": {
+                            "nullable": true,
+                            "properties": {
+                              "categoryIds": {
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "minimum": 1,
+                                      "type": "integer"
+                                    }
+                                  ],
+                                  "minimum": 1
+                                },
+                                "maxItems": 500,
+                                "type": "array"
+                              },
+                              "productIds": {
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "default": 0,
+                                      "format": "integer",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "minimum": 1,
+                                      "type": "integer"
+                                    }
+                                  ],
+                                  "minimum": 1
+                                },
+                                "maxItems": 500,
+                                "type": "array"
+                              }
+                            },
+                            "required": [
+                              "productIds",
+                              "categoryIds"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
                           "startsOn": {
                             "nullable": true,
                             "type": [
@@ -19539,6 +19588,7 @@
                           "windowEndMinute",
                           "audience",
                           "isActive",
+                          "scope",
                           "imageUrl",
                           "createdAt",
                           "updatedAt"
@@ -19648,6 +19698,55 @@
                     "maxLength": 80,
                     "minLength": 1,
                     "type": "string"
+                  },
+                  "scope": {
+                    "nullable": true,
+                    "properties": {
+                      "categoryIds": {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
+                        "maxItems": 500,
+                        "type": "array"
+                      },
+                      "productIds": {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
+                        "maxItems": 500,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "productIds",
+                      "categoryIds"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
                   },
                   "startsOn": {
                     "format": "date",
@@ -19821,6 +19920,55 @@
                     "minLength": 1,
                     "type": "string"
                   },
+                  "scope": {
+                    "nullable": true,
+                    "properties": {
+                      "categoryIds": {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
+                        "maxItems": 500,
+                        "type": "array"
+                      },
+                      "productIds": {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
+                        "maxItems": 500,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "productIds",
+                      "categoryIds"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
                   "startsOn": {
                     "format": "date",
                     "nullable": true,
@@ -19992,6 +20140,55 @@
                     "maxLength": 80,
                     "minLength": 1,
                     "type": "string"
+                  },
+                  "scope": {
+                    "nullable": true,
+                    "properties": {
+                      "categoryIds": {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
+                        "maxItems": 500,
+                        "type": "array"
+                      },
+                      "productIds": {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
+                        "maxItems": 500,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "productIds",
+                      "categoryIds"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
                   },
                   "startsOn": {
                     "format": "date",
@@ -20200,6 +20397,55 @@
                       "minLength": 1,
                       "type": "string"
                     },
+                    "scope": {
+                      "nullable": true,
+                      "properties": {
+                        "categoryIds": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 500,
+                          "type": "array"
+                        },
+                        "productIds": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 500,
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "productIds",
+                        "categoryIds"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
                     "startsOn": {
                       "nullable": true,
                       "type": [
@@ -20308,6 +20554,7 @@
                     "windowEndMinute",
                     "audience",
                     "isActive",
+                    "scope",
                     "imageUrl",
                     "createdAt",
                     "updatedAt"
@@ -20450,6 +20697,55 @@
                       "minLength": 1,
                       "type": "string"
                     },
+                    "scope": {
+                      "nullable": true,
+                      "properties": {
+                        "categoryIds": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 500,
+                          "type": "array"
+                        },
+                        "productIds": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 500,
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "productIds",
+                        "categoryIds"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
                     "startsOn": {
                       "nullable": true,
                       "type": [
@@ -20558,6 +20854,7 @@
                     "windowEndMinute",
                     "audience",
                     "isActive",
+                    "scope",
                     "imageUrl",
                     "createdAt",
                     "updatedAt"
@@ -20667,6 +20964,55 @@
                     "maxLength": 80,
                     "minLength": 1,
                     "type": "string"
+                  },
+                  "scope": {
+                    "nullable": true,
+                    "properties": {
+                      "categoryIds": {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
+                        "maxItems": 500,
+                        "type": "array"
+                      },
+                      "productIds": {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
+                        "maxItems": 500,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "productIds",
+                      "categoryIds"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
                   },
                   "startsOn": {
                     "format": "date",
@@ -20835,6 +21181,55 @@
                     "minLength": 1,
                     "type": "string"
                   },
+                  "scope": {
+                    "nullable": true,
+                    "properties": {
+                      "categoryIds": {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
+                        "maxItems": 500,
+                        "type": "array"
+                      },
+                      "productIds": {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
+                        "maxItems": 500,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "productIds",
+                      "categoryIds"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
                   "startsOn": {
                     "format": "date",
                     "nullable": true,
@@ -21001,6 +21396,55 @@
                     "maxLength": 80,
                     "minLength": 1,
                     "type": "string"
+                  },
+                  "scope": {
+                    "nullable": true,
+                    "properties": {
+                      "categoryIds": {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
+                        "maxItems": 500,
+                        "type": "array"
+                      },
+                      "productIds": {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          ],
+                          "minimum": 1
+                        },
+                        "maxItems": 500,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "productIds",
+                      "categoryIds"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
                   },
                   "startsOn": {
                     "format": "date",
@@ -21204,6 +21648,55 @@
                       "minLength": 1,
                       "type": "string"
                     },
+                    "scope": {
+                      "nullable": true,
+                      "properties": {
+                        "categoryIds": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 500,
+                          "type": "array"
+                        },
+                        "productIds": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 500,
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "productIds",
+                        "categoryIds"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
                     "startsOn": {
                       "nullable": true,
                       "type": [
@@ -21312,6 +21805,7 @@
                     "windowEndMinute",
                     "audience",
                     "isActive",
+                    "scope",
                     "imageUrl",
                     "createdAt",
                     "updatedAt"
@@ -21454,6 +21948,55 @@
                       "minLength": 1,
                       "type": "string"
                     },
+                    "scope": {
+                      "nullable": true,
+                      "properties": {
+                        "categoryIds": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 500,
+                          "type": "array"
+                        },
+                        "productIds": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 500,
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "productIds",
+                        "categoryIds"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
                     "startsOn": {
                       "nullable": true,
                       "type": [
@@ -21562,6 +22105,7 @@
                     "windowEndMinute",
                     "audience",
                     "isActive",
+                    "scope",
                     "imageUrl",
                     "createdAt",
                     "updatedAt"
@@ -21770,6 +22314,55 @@
                       "minLength": 1,
                       "type": "string"
                     },
+                    "scope": {
+                      "nullable": true,
+                      "properties": {
+                        "categoryIds": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 500,
+                          "type": "array"
+                        },
+                        "productIds": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 500,
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "productIds",
+                        "categoryIds"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
                     "startsOn": {
                       "nullable": true,
                       "type": [
@@ -21878,6 +22471,7 @@
                     "windowEndMinute",
                     "audience",
                     "isActive",
+                    "scope",
                     "imageUrl",
                     "createdAt",
                     "updatedAt"

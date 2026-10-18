@@ -33,6 +33,7 @@ export class CreatePromotionUseCase {
         windowEndMinute: dto.windowEndMinute ?? null,
         audience: dto.audience ?? 'everyone',
         isActive: dto.isActive ?? true,
+        scope: dto.scope ?? null,
         imageKey: null,
         createdAt: now,
         updatedAt: now,

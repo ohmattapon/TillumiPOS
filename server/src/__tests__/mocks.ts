@@ -1,3 +1,4 @@
+import type { IQuoteProducts } from '../modules/quotes/applications/ports/quote-products.port'
 import type { IAuditLog } from '../modules/audit/applications/ports/audit-log.port'
 import { mock, type Mock } from 'bun:test'
 import type { IRoleRepository } from '../modules/roles/applications/ports/role.repository'
@@ -225,6 +226,12 @@ export const mockModifierRepository = (): Mocked<IModifierRepository> => ({
 })
 
 /** Resolves every choice to nothing by default: a product without option groups. */
+/** Every product uncategorised unless a test says otherwise. */
+export const mockQuoteProducts = (): Mocked<IQuoteProducts> => ({
+  findById: mock<IQuoteProducts['findById']>(),
+  categoriesOf: mock<IQuoteProducts['categoriesOf']>(async (productIds) => new Map(productIds.map((id) => [id, null]))),
+})
+
 export const mockLineOptionsResolver = (): Mocked<ILineOptionsResolver> => ({
   resolve: mock<ILineOptionsResolver['resolve']>(async () => ({ options: [], priceSatang: 0, costSatang: 0, key: '' })),
 })

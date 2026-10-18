@@ -19,6 +19,8 @@ import {
   emptyPromotionForm, fromPromotion, toBody, todayIn, weekdayName,
   type PromotionForm,
 } from '../lib/promotion-form'
+import { emptyScope, scopeOf, scopeToBody, type ScopeSelection } from '../lib/promotion-scope'
+import { PromotionScopePicker } from './PromotionScopePicker'
 
 export function PromotionFormDialog({ promotion, onClose }: { promotion?: Promotion; onClose: () => void }) {
   const { t } = useTranslation('promotions')
@@ -26,6 +28,7 @@ export function PromotionFormDialog({ promotion, onClose }: { promotion?: Promot
   const { money, date, locale, currency } = useFormat()
   const shop = useSettings()
   const [form, setForm] = useState<PromotionForm>(() => (promotion ? fromPromotion(promotion, money) : emptyPromotionForm))
+  const [scope, setScope] = useState<ScopeSelection>(() => (promotion ? scopeOf(promotion) : emptyScope))
   const [today] = useState(() => todayIn(shop.timeZone, new Date()))
   const create = useCreatePromotion()
   const update = useUpdatePromotion()
@@ -45,8 +48,9 @@ export function PromotionFormDialog({ promotion, onClose }: { promotion?: Promot
       toast.success(t(promotion ? 'toast.updated' : 'toast.created', { name: saved.name }))
       onClose()
     }
-    if (promotion) update.mutate({ id: promotion.id, changes: result.body }, { onSuccess: done })
-    else create.mutate(result.body, { onSuccess: done })
+    const body = { ...result.body, scope: scopeToBody(scope) }
+    if (promotion) update.mutate({ id: promotion.id, changes: body }, { onSuccess: done })
+    else create.mutate(body, { onSuccess: done })
   }
 
   return (
@@ -105,6 +109,8 @@ export function PromotionFormDialog({ promotion, onClose }: { promotion?: Promot
                   <p className="text-xs text-muted-foreground">{t('form.maxDiscountHint')}</p>
                 </Field>
               )}
+
+              <PromotionScopePicker value={scope} onChange={setScope} />
 
               <Field>
                 <FieldLabel htmlFor="promotion-min">{t('form.minSubtotal', { currency })}</FieldLabel>

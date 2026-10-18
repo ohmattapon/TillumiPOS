@@ -1,6 +1,8 @@
 import { container } from 'tsyringe'
+import { quoteProductsToken } from '../quotes/applications/ports/quote-products.port'
 import { ProductElysiaController } from './adapters/controllers/product.controller'
 import { CachedProductRepository } from './adapters/repository/product.cached.repository'
+import { DrizzleQuoteProducts } from './adapters/repository/quote-products.drizzle.adapter'
 import { productRepositoryToken } from './applications/ports/product.repository'
 import { CreateProductUseCase } from './applications/usecases/create-product.usecase'
 import { GetProductUseCase } from './applications/usecases/get-product.usecase'
@@ -10,6 +12,8 @@ import { SetProductImageUseCase } from './applications/usecases/set-product-imag
 import { UpdateProductUseCase } from './applications/usecases/update-product.usecase'
 
 container.register(productRepositoryToken, { useClass: CachedProductRepository })
+// Quotes price carts and find categories through their own port.
+container.register(quoteProductsToken, { useClass: DrizzleQuoteProducts })
 container.registerSingleton(ListProductsUseCase)
 container.registerSingleton(GetProductUseCase)
 container.registerSingleton(CreateProductUseCase)
