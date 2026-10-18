@@ -16,6 +16,7 @@ import { createMoney, type Locale } from '@/lib/money'
 import { settingsQuery, useUpdateSettings } from '../api'
 import { withTablesSwitch } from '../lib/feature-switches'
 import { canSavePromptPay, normalizePromptPayTarget } from '../lib/promptpay'
+import { currencyNameIn, timeZoneOptions } from '../lib/shop-options'
 
 // Currencies a Thai shop is likely to meet; the list is a convenience, the API accepts any ISO 4217 code.
 const CURRENCIES = ['THB', 'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'SGD', 'MYR', 'VND', 'IDR', 'PHP', 'KRW', 'LAK', 'KHR', 'MMK']
@@ -87,12 +88,8 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
   })
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm({ ...form, [key]: value })
 
-  const timeZones = useMemo(() => {
-    const zones = Intl.supportedValuesOf('timeZone')
-    return zones.includes(settings.timeZone) ? zones : [settings.timeZone, ...zones]
-  }, [settings.timeZone])
-
-  const currencyNames = useMemo(() => new Intl.DisplayNames(form.locale, { type: 'currency' }), [form.locale])
+  const timeZones = useMemo(() => timeZoneOptions(settings.timeZone), [settings.timeZone])
+  const currencyName = useMemo(() => currencyNameIn(form.locale), [form.locale])
   const currencies = CURRENCIES.includes(form.currency) ? CURRENCIES : [form.currency, ...CURRENCIES]
 
   const rate = Number(form.vatRate)
@@ -203,7 +200,7 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
             <SelectContent>
               {currencies.map((code) => (
                 <SelectItem key={code} value={code}>
-                  {code} · {currencyNames.of(code)}
+                  {code} · {currencyName(code)}
                 </SelectItem>
               ))}
             </SelectContent>

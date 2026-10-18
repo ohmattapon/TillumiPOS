@@ -1,6 +1,6 @@
 const th = {
   title: 'ประวัติการกระทำ', description: 'ตรวจสอบการเปลี่ยนแปลงด้านเงิน สต็อก และสิทธิ์', empty: 'ไม่พบประวัติในช่วงที่เลือก',
-  from: 'ตั้งแต่วันที่', to: 'ถึงวันที่', actor: 'ผู้กระทำ (รหัสผู้ใช้)', action: 'เหตุการณ์', all: 'ทั้งหมด', apply: 'ค้นหา', reset: 'ล้างตัวกรอง',
+  from: 'ตั้งแต่วันที่', to: 'ถึงวันที่', actor: 'ผู้กระทำ (รหัสผู้ใช้)', action: 'เหตุการณ์', all: 'ทั้งหมด', apply: 'ค้นหา', reset: 'ล้างตัวกรอง', clearDates: 'ล้างวันที่', invalidRange: 'วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม',
   time: 'เวลา', person: 'ผู้กระทำ', summary: 'รายการ', details: 'ค่าที่เปลี่ยนแปลง', field: 'ข้อมูล', before: 'ก่อน', after: 'หลัง', reason: 'เหตุผล', noChanges: 'ไม่มีค่าก่อนและหลัง', noValue: 'ไม่มีค่า',
   actions: {
     'sale.void': 'ยกเลิกบิล', 'sale.cash_refund': 'คืนเงินสด', 'qr.dismiss': 'ปิดรายการ QR',
@@ -11,7 +11,7 @@ const th = {
 }
 const en = {
   title: 'Action history', description: 'Review changes to money, stock and permissions', empty: 'No actions match these filters',
-  from: 'From date', to: 'To date', actor: 'Actor (user ID)', action: 'Action', all: 'All', apply: 'Search', reset: 'Clear filters',
+  from: 'From date', to: 'To date', actor: 'Actor (user ID)', action: 'Action', all: 'All', apply: 'Search', reset: 'Clear filters', clearDates: 'Clear dates', invalidRange: 'The end date must not be before the start date',
   time: 'Time', person: 'Actor', summary: 'Action', details: 'Changed values', field: 'Field', before: 'Before', after: 'After', reason: 'Reason', noChanges: 'No before or after values', noValue: 'No value',
   actions: {
     'sale.void': 'Sale voided', 'sale.cash_refund': 'Cash refunded', 'qr.dismiss': 'QR payment dismissed',
