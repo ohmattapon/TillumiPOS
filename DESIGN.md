@@ -173,7 +173,7 @@ Design and test at three sizes. These values match the Tailwind breakpoints `sm`
 - Dialogs: at most `100svh - 2rem` tall and scrollable inside. A dialog without a form uses `DialogFooter sticky` so the buttons stay at the bottom. A dialog with a form puts its buttons at the end of the form, and you scroll down to reach them.
 - Table floor plan: below 640px it is a list where you can edit the name and seats and turn a table on or off. Positions cannot be dragged.
 - No page scrolls horizontally at 390, 768 and 1366px (checked by e2e).
-- Login page (`LoginPage`): from 1024px up it is split in two. The left panel has a picture of a till on top and a `primary` background below showing the main capabilities briefly. This is an exception, for this page only, to the rule "one accent button per screen". The right side is a white form card on the `canvas` background. Below that width it is a single column with the system name on top.
+- Login page (`LoginPage`): a single floating card centered on the `muted` background. From 1024px up the card holds two halves in about a 1:1 ratio, a till picture filling the left half, and the form on the right. Below that width the picture is hidden and the card shows the form only. The card stays flat at elevation level 1, a border with no shadow.
 - Touch target: every visible button and input field is at least 44px tall, with no exceptions (checked on the sales page by e2e).
 
 ## Elevation & Depth
