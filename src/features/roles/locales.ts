@@ -7,7 +7,7 @@ const th = {
   permission: {
     'sales.void': 'ยกเลิกบิลและคืนเงินสด', 'qr.dismiss': 'ปิดรายการ QR', 'reports.read': 'ดูและส่งออกรายงาน',
     'products.write': 'จัดการสินค้าและรูป', 'categories.write': 'จัดการหมวดหมู่', 'modifiers.write': 'จัดการตัวเลือกเสริม',
-    'promotions.write': 'จัดการโปรโมชัน', 'members.write': 'แก้ไขสมาชิก', 'tables.write': 'จัดการโต๊ะ', 'kitchen.write': 'จัดการสถานีครัว',
+    'promotions.write': 'จัดการโปรโมชัน', 'members.write': 'แก้ไขสมาชิก', 'tables.write': 'จัดการโต๊ะ',
     'inventory.receive': 'รับสินค้าเข้า', 'inventory.adjust': 'ปรับยอดสต็อก', 'registers.manage': 'จัดการจุดขาย', 'branches.manage': 'จัดการสาขา',
     'branches.switch': 'สลับสาขาที่ทำงาน', 'shifts.override': 'ปิดหรือตรวจนับกะแทนผู้อื่น', 'settings.write': 'แก้การตั้งค่าร้าน',
     'users.manage': 'จัดการผู้ใช้', 'roles.manage': 'จัดการบทบาทและสิทธิ์', 'audit.read': 'ดูประวัติการกระทำ',
@@ -22,7 +22,7 @@ const en = {
   permission: {
     'sales.void': 'Void sales and refund cash', 'qr.dismiss': 'Dismiss QR payments', 'reports.read': 'Read and export reports',
     'products.write': 'Manage products and images', 'categories.write': 'Manage categories', 'modifiers.write': 'Manage modifiers',
-    'promotions.write': 'Manage promotions', 'members.write': 'Edit members', 'tables.write': 'Manage tables', 'kitchen.write': 'Manage kitchen stations',
+    'promotions.write': 'Manage promotions', 'members.write': 'Edit members', 'tables.write': 'Manage tables',
     'inventory.receive': 'Receive stock', 'inventory.adjust': 'Adjust stock', 'registers.manage': 'Manage registers', 'branches.manage': 'Manage branches',
     'branches.switch': 'Switch working branch', 'shifts.override': 'Override another staff member’s shift count', 'settings.write': 'Edit shop settings',
     'users.manage': 'Manage users', 'roles.manage': 'Manage roles and permissions', 'audit.read': 'Read action history',

@@ -55,16 +55,16 @@ describe('UpdateShopSettingsUseCase', () => {
   test('turns a feature off and records it in the audit log', async () => {
     const audit = auditMock()
     const saved = await new UpdateShopSettingsUseCase(repo, shiftGuard, mockUnitOfWork(), audit).execute(
-      { kitchenEnabled: false },
+      { modifiersEnabled: false },
       { id: 1, displayName: 'ผู้ทดสอบ' },
     )
 
-    expect(saved.kitchenEnabled).toBe(false)
+    expect(saved.modifiersEnabled).toBe(false)
     expect(repo.save).toHaveBeenCalledWith(saved)
     expect(audit.record).toHaveBeenCalledWith(
       expect.anything(),
       null,
-      expect.objectContaining({ after: expect.objectContaining({ kitchenEnabled: false }) }),
+      expect.objectContaining({ after: expect.objectContaining({ modifiersEnabled: false }) }),
     )
   })
 

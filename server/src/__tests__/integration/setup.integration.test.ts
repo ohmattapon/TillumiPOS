@@ -60,7 +60,7 @@ describe('first-run setup', () => {
     const session = response.headers.get('set-cookie')!.split(';')[0]!
 
     const settings = await fetch(`${baseUrl}/settings`, { headers: { cookie: session } })
-    expect(await settings.json()).toMatchObject({ tablesEnabled: false, kitchenEnabled: false, modifiersEnabled: true })
+    expect(await settings.json()).toMatchObject({ tablesEnabled: false, modifiersEnabled: true })
   })
 
   test('a wrong code, and no code issued, are refused and make no one', async () => {

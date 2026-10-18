@@ -81,7 +81,6 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     receiptFooter: settings.receiptFooter ?? '',
     homeView: settings.homeView,
     tablesEnabled: settings.tablesEnabled,
-    kitchenEnabled: settings.kitchenEnabled,
     modifiersEnabled: settings.modifiersEnabled,
     promptpayMode: settings.promptpayMode,
     promptpayTarget: settings.promptpayTarget ?? '',
@@ -113,7 +112,6 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     receiptFooter: form.receiptFooter.trim() || null,
     homeView: form.homeView,
     tablesEnabled: form.tablesEnabled,
-    kitchenEnabled: form.kitchenEnabled,
     modifiersEnabled: form.modifiersEnabled,
     promptpayMode: form.promptpayMode,
     promptpayTarget: normalizePromptPayTarget(form.promptpayTarget),
@@ -187,12 +185,6 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
           hint={t('features.tablesHint')}
           checked={form.tablesEnabled}
           onChange={(on) => setForm(withTablesSwitch(form, on))}
-        />
-        <FeatureSwitch
-          label={t('features.kitchen')}
-          hint={t('features.kitchenHint')}
-          checked={form.kitchenEnabled}
-          onChange={(on) => set('kitchenEnabled', on)}
         />
         <FeatureSwitch
           label={t('features.modifiers')}
