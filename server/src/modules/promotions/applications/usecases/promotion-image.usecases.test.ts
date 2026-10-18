@@ -120,6 +120,14 @@ describe('RemovePromotionImageUseCase', () => {
     expect(media.delete).toHaveBeenCalledWith('promotions/4/old.png')
   })
 
+  test('a stored image that cannot be deleted does not fail the removal', async () => {
+    media.delete.mockRejectedValue(new Error('storage down'))
+
+    const updated = await useCase.execute(4)
+
+    expect(updated.imageKey).toBeNull()
+  })
+
   test('a promotion without an image deletes nothing', async () => {
     repo.findById.mockResolvedValue(makePromotion({ imageKey: null }))
 
