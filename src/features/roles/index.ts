@@ -1,3 +1,6 @@
-export { RolesPage } from './components/RolesPage'
+export { RoleCardMenu } from './components/RoleCardMenu'
+export { RoleDialog } from './components/RoleDialog'
+export { RolePermissionToggles } from './components/RolePermissionToggles'
+export { canDeleteRole } from './lib/can-delete-role'
 export { rolesQuery, roleOptionsQuery, roleKeys, useCreateRole, useUpdateRole, useDeleteRole, type Role } from './api'
 export { locales as rolesLocales } from './locales'

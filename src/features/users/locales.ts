@@ -24,6 +24,15 @@ const th = {
     inactive: 'ปิดใช้งาน',
   },
   you: 'คุณ',
+  team: {
+    title: 'ผู้ใช้และบทบาท',
+    description: '{{items}} · จัดสมาชิกตามบทบาท',
+    addUser: 'เพิ่มผู้ใช้',
+    unassigned: 'ยังไม่กำหนดบทบาท',
+    empty: 'ยังไม่มีสมาชิกในบทบาทนี้',
+    members_one: '{{count}} คน',
+    members_other: '{{count}} คน',
+  },
   actions: {
     more: 'การทำงานอื่นของ {{name}}',
     edit: 'แก้ไข',
@@ -98,6 +107,15 @@ const en = {
     inactive: 'Deactivated',
   },
   you: 'you',
+  team: {
+    title: 'Users and roles',
+    description: '{{items}} · members grouped by role',
+    addUser: 'Add user',
+    unassigned: 'Unassigned',
+    empty: 'No members in this role yet',
+    members_one: '{{count}} member',
+    members_other: '{{count}} members',
+  },
   actions: {
     more: 'More actions for {{name}}',
     edit: 'Edit',

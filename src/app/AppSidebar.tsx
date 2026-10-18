@@ -24,7 +24,6 @@ import {
   Tags,
   UserRound,
   Users,
-  ShieldCheck,
   History,
   type LucideIcon,
 } from 'lucide-react'
@@ -112,9 +111,8 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
               ...(can('categories.write') ? [{ to: '/categories', label: t('nav.categories'), icon: Tags }] : []),
               ...(features.modifiers && can('modifiers.write') ? [{ to: '/modifiers', label: t('nav.modifiers'), icon: SlidersHorizontal }] : []),
               ...(features.tables && can('tables.write') ? [{ to: '/tables', label: t('nav.tables'), icon: LayoutGrid }] : []),
-              ...(can('users.manage') ? [{ to: '/users', label: t('nav.users'), icon: Users }] : []),
+              ...((can('users.manage') || can('roles.manage')) ? [{ to: '/users', label: t('nav.users'), icon: Users }] : []),
               ...(can('settings.write') ? [{ to: '/settings', label: t('nav.settings'), icon: Settings }] : []),
-              ...(can('roles.manage') ? [{ to: '/roles', label: t('nav.roles'), icon: ShieldCheck }] : []),
               ...(can('audit.read') ? [{ to: '/audit', label: t('nav.audit'), icon: History }] : []),
             ],
           },

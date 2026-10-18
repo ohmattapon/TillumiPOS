@@ -180,10 +180,10 @@ async function main() {
 
       for (const [name, path] of [
         ['11-today', '/today'], ['12-products', '/products'], ['13-categories', '/categories'], ['14-modifiers', '/modifiers'],
-        ['15-tables', '/tables'], ['17-users', '/users'], ['18-settings', '/settings'], ['19-shifts', '/shifts'],
+        ['15-tables', '/tables'], ['18-settings', '/settings'], ['19-shifts', '/shifts'],
         ['22-reports', '/reports'],
         ['23-promotions', '/promotions'], ['16-display-slides', '/display-slides'],
-        ['24-roles', '/roles'], ['25-audit', '/audit'],
+        ['24-users-team', '/users'], ['25-audit', '/audit'],
         ['31-stock-receipts', '/stock-receipts'], ['32-stock-receipt-draft', '/stock-receipts/new'],
       ] as const) {
         await page.goto(`${WEB}${path}`)
@@ -191,7 +191,7 @@ async function main() {
         await shot(name)
       }
       await shootCustomerDisplay(context, size.name)
-      await page.goto(`${WEB}/roles`)
+      await page.goto(`${WEB}/users`)
       await page.getByRole('button', { name: 'เพิ่มบทบาท', exact: true }).click()
       await page.getByRole('dialog').waitFor()
       await shot('26-role-form')
