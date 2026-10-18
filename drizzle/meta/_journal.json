@@ -162,6 +162,13 @@
       "when": 1792281026949,
       "tag": "0022_product_type",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792328800001,
+      "tag": "0023_repair_product_type",
+      "breakpoints": true
     }
   ]
 }
