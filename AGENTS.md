@@ -173,6 +173,17 @@ Every operation is a use case that is exactly one of a command or a query, and t
 - A command that changes money, stock, users, roles or the shop settings must call `IAuditLog.record` inside the same unit of work as the command (so they roll back together). `audit_logs` is write-only: there must be no update/delete in either the port or the adapter, and passwords or hashes must never be stored (`buildAuditEntry` strips secret fields). The exception is `auth.login_failed`, which is written outside a transaction and must never make a login fail.
 - A test suite that truncates every table (`resetDatabase`) must put the system roles back, otherwise `signIn()` fails every test
 
+### Quick staff switch (auth, users)
+
+- A signed-in till hands over to another active user who has a PIN, without a password: `POST /auth/switch` (`SwitchUserUseCase`), with `GET /auth/switch-users` for the list and `PUT /auth/me/pin` / `PUT /users/{id}/pin` to set or clear a PIN. The switch is `auth: true` and is never a login method: it needs an existing session, and a user with no PIN answers `PIN_NOT_SET`.
+- The PIN hash lives only in `users.pin_hash` and is read only by `IUserRepository.findPinHash`. It never enters `UserEntity` (the entity carries `hasPin` only) and never appears in a log, an audit entry or a response.
+- The PIN rule (4 to 6 ASCII digits) lives only in `domains/pin.vo.ts` (`assertValidPin`).
+- A wrong PIN answers 400 (`PIN_INVALID`), never 401, so the web does not treat the till as signed out, and the session cookie is set only after the use case accepts the PIN, so a wrong PIN sets no cookie. A locked user answers 409 (`PIN_LOCKED`).
+- `IPinGuard.begin(userId)` reserves an attempt synchronously, before the hash check is awaited, so parallel requests cannot all pass before a failure is counted. 5 tries lock the target user for 15 minutes, and `recordSuccess` clears the count. The counters are in memory (`InMemoryPinGuard`), so this works with a single API instance only, like the customer display.
+- A PIN of an `owner` is set or cleared only by that owner (`OWNER_PIN_SELF_ONLY`), so a user manager cannot take over an owner's quick switch.
+- Audit: `auth.switch` and `user.pin_set` / `user.pin_cleared` are recorded in the command's own unit of work (with `hasPin` only, never the PIN). `auth.switch_failed` is written outside a transaction and must never change the answer.
+- The web keeps the cart on a switch. Before `me` is reloaded, `handOver` in `features/shifts/store/register-selection.ts` gives the till's current register to the new user, and `handOverSession` (`features/auth/lib/hand-over-session.ts`) drops every other cached query so nothing of the last person's data shows. The `me` query is never set to `null`, so the login page does not appear.
+
 ### Customer display through the server (customer-display)
 
 - The customer display listens through two entrances into a single receiver: `BroadcastChannel` (same browser, still the fallback) and the server's SSE stream `GET /api/v1/customer-display/stream?token=`. Never remove the BroadcastChannel.

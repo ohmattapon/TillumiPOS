@@ -11,6 +11,8 @@ export interface UserEntityProps {
   /** The branch this person works in. An owner may act in any branch. */
   branchId: number
   isActive: boolean
+  /** Whether a PIN is set for the quick staff switch. The hash itself never enters the entity. */
+  hasPin?: boolean
 }
 
 export type UserChanges = Partial<Pick<UserEntityProps, 'displayName' | 'role' | 'roleId' | 'branchId' | 'isActive'>>
@@ -27,6 +29,7 @@ export class UserEntity {
   public readonly roleId: number | null
   public readonly branchId: number
   public readonly isActive: boolean
+  public readonly hasPin: boolean
 
   constructor(props: UserEntityProps) {
     if (!USERNAME_PATTERN.test(props.username))
@@ -42,6 +45,7 @@ export class UserEntity {
     this.roleId = props.roleId ?? null
     this.branchId = props.branchId
     this.isActive = props.isActive
+    this.hasPin = props.hasPin ?? false
   }
 
   /** Usernames are stored and compared in lower case. */
@@ -59,6 +63,7 @@ export class UserEntity {
       roleId: changes.roleId === undefined ? this.roleId : changes.roleId,
       branchId: changes.branchId ?? this.branchId,
       isActive: changes.isActive ?? this.isActive,
+      hasPin: this.hasPin,
     })
   }
 
@@ -69,7 +74,7 @@ export class UserEntity {
     return after.role !== 'owner' || !after.isActive
   }
 
-  toSnapshot(): UserEntityProps {
+  toSnapshot(): UserEntityProps & { hasPin: boolean } {
     return {
       id: this.id,
       username: this.username,
@@ -77,6 +82,7 @@ export class UserEntity {
       role: this.role,
       branchId: this.branchId,
       isActive: this.isActive,
+      hasPin: this.hasPin,
     }
   }
 }
