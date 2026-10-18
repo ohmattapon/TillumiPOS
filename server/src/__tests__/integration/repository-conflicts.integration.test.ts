@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { makeBranch, makeModifierGroup, makeModifierOption, makeSlide, makeTable, makeUser } from '../factories'
+import { makeBranch, makeModifierGroup, makeModifierOption, makeRegister, makeSlide, makeTable, makeUser } from '../factories'
 import { DomainConflictError } from '../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../domains/errors/domain-not-found.error'
 import { MemberEntity } from '../../domains/member.domain'
@@ -192,6 +192,10 @@ describe('branches that no route reaches any more', () => {
 
 describe('registers', () => {
   const registers = new DrizzleRegisterRepository()
+
+  test('updating a register that is gone is not found', async () => {
+    await expect(registers.update(makeRegister({ id: 99999 }))).rejects.toMatchObject({ code: 'REGISTER_NOT_FOUND' })
+  })
 
   test('the MAIN register of a branch is created once, however often it is asked for', async () => {
     await registers.createMainForBranch(1)
