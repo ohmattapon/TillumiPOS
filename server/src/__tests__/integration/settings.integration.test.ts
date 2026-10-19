@@ -31,6 +31,10 @@ describe('shop settings', () => {
       modifiersEnabled: true,
       promptpayMode: 'bank',
       promptpayTarget: null,
+      receiptPrinterIp: null,
+      receiptPrinterPort: 9100,
+      receiptPrinterEnabled: false,
+      cashDrawerEnabled: false,
     })
   })
 
@@ -142,6 +146,53 @@ describe('shop settings', () => {
     expect(result.error?.value).toMatchObject({ code: 'INVALID_SHOP_SETTINGS' })
     expect(ok(await owner.api.settings.get()).promptpayTarget).toBeNull()
   })
+
+  test('the owner sets the LAN printer and the drawer, and they round-trip', async () => {
+    const updated = ok(
+      await owner.api.settings.patch({
+        receiptPrinterIp: '192.168.1.50',
+        receiptPrinterPort: 9100,
+        receiptPrinterEnabled: true,
+        cashDrawerEnabled: true,
+      }),
+    )
+
+    expect(updated).toMatchObject({
+      receiptPrinterIp: '192.168.1.50',
+      receiptPrinterPort: 9100,
+      receiptPrinterEnabled: true,
+      cashDrawerEnabled: true,
+    })
+    expect(ok(await owner.api.settings.get())).toMatchObject({
+      receiptPrinterIp: '192.168.1.50',
+      receiptPrinterEnabled: true,
+      cashDrawerEnabled: true,
+    })
+  })
+
+  test.each([[{ receiptPrinterPort: 0 }], [{ receiptPrinterPort: 65536 }], [{ receiptPrinterIp: 'http://printer' }]])(
+    'rejects %p as a validation error and changes nothing',
+    async (body) => {
+      const result = await owner.api.settings.patch(body as never)
+
+      expect(result.status).toBe(422)
+      expect(ok(await owner.api.settings.get())).toMatchObject({ receiptPrinterIp: null })
+    },
+  )
+
+  test.each([[{ receiptPrinterEnabled: true }], [{ receiptPrinterIp: '192.168.1.50', cashDrawerEnabled: true }]])(
+    'refuses %p by the rules, with its own code',
+    async (body) => {
+      const result = await owner.api.settings.patch(body as never)
+
+      expect(result.status).toBe(400)
+      expect(result.error?.value).toMatchObject({ code: 'INVALID_SHOP_SETTINGS' })
+      expect(ok(await owner.api.settings.get())).toMatchObject({
+        receiptPrinterEnabled: false,
+        cashDrawerEnabled: false,
+      })
+    },
+  )
 })
 
 describe('sales follow the settings', () => {
