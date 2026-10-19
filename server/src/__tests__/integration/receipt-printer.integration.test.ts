@@ -42,7 +42,7 @@ describe('receipt printer', () => {
 
     expect(printed.saleId).toBe(1)
     expect(printed.sentBytes).toBe(printer.bytes().length)
-    expect(typeof printed.printedAt).toBe('string')
+    expect(printed.printedAt).toBeInstanceOf(Date)
     const bytes = [...printer.bytes()]
     // GS v 0 raster first, then the partial cut, then the drawer kick.
     expect(bytes.slice(0, 4)).toEqual([0x1d, 0x76, 0x30, 0x00])
