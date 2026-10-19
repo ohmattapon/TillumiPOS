@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Not supported yet: Linux has not been tested (Windows is the supported platform, see docs/install.md).
+# Linux and macOS: neither has been tested on a real machine yet (Windows is the tested platform, see docs/install.md).
 # Loads a backup made by scripts/backup.sh. It REPLACES everything in the database.
 #   scripts/restore.sh backups/easypos-20261014-210000.sql.gz [--yes]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 . scripts/podman-compose.sh
+prepare_podman || exit 1
 
 FILE="${1:-}"
 if [ -z "$FILE" ] || [ ! -f "$FILE" ]; then
