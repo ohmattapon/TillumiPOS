@@ -9,6 +9,9 @@
                   (Task 4 moves this pointer on update; the data dir never moves)
     {{DATA_DIR}}  writable data root, e.g. C:\ProgramData\TillumiPOS
                   (holds .env, data\media, backups, logs)
+    {{APP_DIR}}   versioned app folder, e.g. C:\Program Files\TillumiPOS\app-1.0.0
+                  (the web page the API serves and the database migrations;
+                  Task 4 moves this pointer on update, the data dir never moves)
     {{PORT_API}}  API TCP port, default 3000
     {{PORT_DB}}   postgres TCP port, default 5435
 
@@ -24,6 +27,9 @@
   - DATABASE_URL uses trust auth on 127.0.0.1 with NO password (see the AUTH
     TRADEOFF note in first-install.ps1). Safe to keep here: no credential, and
     postgres never listens beyond loopback.
+  - WEB_DIST points at the shop page shipped beside the API ({{APP_DIR}}\web,
+    the `vite build` output). It MUST move with {{APP_EXE}} on update (Task 4):
+    the page and the API are one version.
   - Migrations run at API boot (Task 3 wires the migrate step before the first
     start; Task 1 proved the compiled exe boots in ~3s and serves everything).
   - The API binds 127.0.0.1 literally: resolving "localhost" may hang on some
@@ -53,6 +59,7 @@
   <startmode>Automatic</startmode>
   <env name="PORT" value="{{PORT_API}}"/>
   <env name="DATABASE_URL" value="postgres://pos@127.0.0.1:{{PORT_DB}}/pos"/>
+  <env name="WEB_DIST" value="{{APP_DIR}}\web"/>
   <logpath>{{DATA_DIR}}\logs</logpath>
   <log mode="roll-by-size">
     <sizeThreshold>10240</sizeThreshold>
