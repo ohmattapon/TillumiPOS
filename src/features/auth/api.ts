@@ -4,6 +4,7 @@ import { settingsKeys } from '@/features/settings'
 import { api, unwrap } from '@/lib/api'
 import { forgetSession } from './lib/forget-session'
 import { completeHandOver } from './lib/hand-over-session'
+import { meRefetchInterval } from './lib/me-refetch-interval'
 
 export const authKeys = {
   me: ['auth', 'me'] as const,
@@ -16,7 +17,7 @@ export const meQuery = queryOptions({
   queryFn: () => unwrap(api.auth.me.get()),
   retry: false,
   staleTime: 0,
-  refetchInterval: 30_000,
+  refetchInterval: meRefetchInterval,
 })
 
 export function useLogin() {
