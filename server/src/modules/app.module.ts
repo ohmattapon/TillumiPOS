@@ -16,6 +16,7 @@ import { QrPaymentElysiaController } from './qr-payments/adapters/controllers/qr
 import { ProductElysiaController } from './products/adapters/controllers/product.controller'
 import { PromotionElysiaController } from './promotions/adapters/controllers/promotion.controller'
 import { QuoteElysiaController } from './quotes/adapters/controllers/quote.controller'
+import { ReceiptPrinterElysiaController } from './receipt-printer/adapters/controllers/receipt-printer.controller'
 import { SaleElysiaController } from './sales/adapters/controllers/sale.controller'
 import { SalesReportElysiaController } from './sales/adapters/controllers/sales-report.controller'
 import { SettingsElysiaController } from './settings/adapters/controllers/settings.controller'
@@ -69,3 +70,4 @@ export const appModule = new Elysia({ name: 'api', prefix: '/api/v1' })
   .use(orderController.getRoutes())
   .use(qrPaymentController.getRoutes())
   .use(settingsController.getRoutes())
+  .use(container.resolve(ReceiptPrinterElysiaController).getRoutes())
