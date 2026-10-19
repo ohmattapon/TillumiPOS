@@ -6,6 +6,10 @@ import { SaleV2ElysiaController } from './sales/adapters/controllers/sale-v2.con
 import { PayOrderV2ElysiaController } from './orders/adapters/controllers/pay-order-v2.controller'
 import { CapabilitiesV2Controller } from './capabilities-v2.controller'
 import { QrPaymentV2ElysiaController } from './qr-payments/adapters/controllers/qr-payment-v2.controller'
+// The container must be wired before the resolves below run. di-registrations
+// evaluates asynchronously (dynamic branches), so this import — not app.ts's
+// import order — is what keeps this module's body after the wiring.
+import './di-registrations'
 
 const registers = container.resolve(RegisterElysiaController)
 const shifts = container.resolve(ShiftElysiaController)

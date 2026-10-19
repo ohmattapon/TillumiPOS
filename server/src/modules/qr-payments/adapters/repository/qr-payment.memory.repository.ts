@@ -1,7 +1,6 @@
 import { inject, injectable } from 'tsyringe'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import { QrPaymentEntity, type NewQrPayment, type QrPaymentEntityProps } from '../../../../domains/qr-payment.domain'
-import type { Page } from '../../../../domains/page'
 import type { IClock } from '../../../shared/ports/clock.port'
 import { TOKENS } from '../../../tokens'
 import type { IQrPaymentRepository } from '../../applications/ports/qr-payment.repository'

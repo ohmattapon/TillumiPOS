@@ -15,16 +15,6 @@ const DAY_MS = 86_400_000
 const NOON_MS = 12 * 3_600_000
 const METHOD_ORDER: PaymentMethod[] = ['card', 'cash', 'promptpay']
 
-const emptySums = (): SalesReportSums => ({
-  saleCount: 0,
-  voidedCount: 0,
-  totalSatang: 0,
-  vatSatang: 0,
-  discountSatang: 0,
-  costSatang: 0,
-  changeSatang: 0,
-})
-
 // Shop-calendar day of an instant, like the drizzle twin's
 // `(created_at at time zone $tz)::date`. en-CA formats as YYYY-MM-DD, and
 // format() takes an epoch instant, so no date is constructed here.

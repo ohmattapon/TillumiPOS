@@ -31,6 +31,7 @@ import { shiftRepositoryToken, type IShiftRepository } from '../shifts/applicati
 import { shiftSummaryRepositoryToken, type IShiftSummaryRepository } from '../shifts/applications/ports/shift-summary.repository'
 import { shopSettingsRepositoryToken, type IShopSettingsRepository } from '../settings/applications/ports/shop-settings.repository'
 import type { IPasswordHasher } from '../shared/ports/password-hasher.port'
+import type { IClock } from '../shared/ports/clock.port'
 import { tableRepositoryToken, type ITableRepository } from '../tables/applications/ports/table.repository'
 import { userRepositoryToken, type IUserRepository } from '../users/applications/ports/user.repository'
 import { TOKENS } from '../tokens'
@@ -173,10 +174,13 @@ const demoPrices = (product: DemoCatalogRow, category: DemoCategory): { priceSat
  * silently duplicating. Task 5 owns calling this at boot, before requests.
  */
 export async function seedDemoMemory(container: DependencyContainer): Promise<DemoSeedSummary> {
-  // Clock first: every memory repository below stamps through IClock, so they
-  // must all capture this instance. Nothing else may bind TOKENS.Clock.
-  const clock = new MemoryClock()
-  container.register(TOKENS.Clock, { useValue: clock })
+  // Clock first: every memory repository stamps through IClock, so seeding
+  // must pin the same instance they captured. The demo composition root binds
+  // the shared MemoryClock singleton before calling here; standalone callers
+  // (tests) get a fresh clock registered for them instead.
+  const bound = container.isRegistered(TOKENS.Clock) ? container.resolve<IClock>(TOKENS.Clock) : null
+  const clock = bound instanceof MemoryClock ? bound : new MemoryClock()
+  if (!container.isRegistered(TOKENS.Clock)) container.register(TOKENS.Clock, { useValue: clock })
 
   const settings = container.resolve<IShopSettingsRepository>(shopSettingsRepositoryToken)
   const branches = container.resolve<IBranchRepository>(branchRepositoryToken)
