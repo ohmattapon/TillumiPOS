@@ -6,8 +6,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # Podman runs rootful (see install.sh): sudo unless already root, so a root crontab works unchanged.
+# POS_COMPOSE replaces the command altogether; the tests use it to stand in for Podman.
 compose() {
-  if [ "$(id -u)" -eq 0 ]; then podman compose "$@"; else sudo podman compose "$@"; fi
+  if [ -n "${POS_COMPOSE:-}" ]; then "$POS_COMPOSE" "$@"
+  elif [ "$(id -u)" -eq 0 ]; then podman compose "$@"
+  else sudo podman compose "$@"; fi
 }
 
 DIR="${1:-backups}"
@@ -16,12 +19,19 @@ FILE="$DIR/easypos-$(date +%Y%m%d-%H%M%S).sql.gz"
 
 # --clean --if-exists: the file can be loaded over a database that already has the tables.
 compose -f docker-compose.yml exec -T db pg_dump -U pos -d pos --clean --if-exists --no-owner \
-  | gzip > "$FILE"
+  | gzip > "$FILE" || { rm -f "$FILE"; echo "The backup failed: is the database running? (sudo podman compose ps)" >&2; exit 1; }
 
 # A dump that is only the gzip header means pg_dump failed.
 if [ "$(wc -c < "$FILE")" -lt 200 ]; then
   rm -f "$FILE"
   echo "The backup failed: is the database running? (sudo podman compose ps)" >&2
+  exit 1
+fi
+# pg_dump ends every complete dump with this line. A dump cut off by a failure (a full disk, a dropped connection)
+# is a valid gzip file that would wipe the shop's data when restored, so it is not kept as a backup.
+if ! gunzip -c "$FILE" | tail -n 20 | grep -q 'PostgreSQL database dump complete'; then
+  rm -f "$FILE"
+  echo "The backup failed: the dump is incomplete (is the disk full?)." >&2
   exit 1
 fi
 echo "Backup saved: $FILE ($(du -h "$FILE" | cut -f1))"
