@@ -24,3 +24,8 @@ import './quotes/quotes.module'
 import './customer-display/customer-display.module'
 import './display-slides/display-slides.module'
 import './stock-receipts/stock-receipts.module'
+
+// Demo mode runs without PostgreSQL: the memory bindings registered after the
+// drizzle ones replace them. This file stays the single composition switch —
+// later demo tasks add their bindings in demo-memory.module, not here.
+if (Bun.env.DEMO_MODE === 'memory') await import('./demo-memory/demo-memory.module')
