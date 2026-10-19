@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test'
+import { readFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { APP_VERSION, compareVersions, isUpdateVersion } from './update-version'
 
 describe('isUpdateVersion', () => {
@@ -44,5 +47,19 @@ describe('compareVersions', () => {
         expect(error).toMatchObject({ code: 'INVALID_VERSION' })
       }
     }
+  })
+})
+
+describe('version parity with installer/tillumi.iss', () => {
+  test('APP_VERSION matches the installer AppVersion define', async () => {
+    // Release rule: the update check compares the feed against APP_VERSION,
+    // and the installer wizard shows AppVersion — the two must never drift.
+    // Reads both files from disk; needs no database.
+    const here = dirname(fileURLToPath(import.meta.url))
+    const iss = await readFile(join(here, '../../../installer/tillumi.iss'), 'utf8')
+    const match = /#define AppVersion "(\d+\.\d+\.\d+)"/.exec(iss)
+    expect(match?.[1]).toBeDefined()
+    expect(isUpdateVersion(match?.[1])).toBe(true)
+    expect(match?.[1]).toBe(APP_VERSION)
   })
 })
