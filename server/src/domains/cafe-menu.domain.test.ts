@@ -5,6 +5,7 @@ import {
   CAFE_MENU_OPTION_GROUPS,
   cafeMenuItem,
   planCafeMenu,
+  starterOptionGroupsFor,
   type CafeMenuExisting,
 } from './cafe-menu.domain'
 
@@ -156,5 +157,21 @@ describe('planCafeMenu', () => {
     expect(plan.toCreate.categories).toEqual([])
     expect(plan.toCreate.groups).toEqual([])
     expect(plan.toReuse).toEqual({ categories: [], groups: [] })
+  })
+})
+
+describe('the option groups a new shop starts with', () => {
+  test('a cafe starts with every group of the set, so drinks can be added by hand to them', () => {
+    expect(starterOptionGroupsFor('cafe', [])).toEqual([...CAFE_MENU_OPTION_GROUPS])
+  })
+
+  test('the other kinds of shop start with none', () => {
+    for (const shopType of ['restaurant', 'retail', 'other'] as const) expect(starterOptionGroupsFor(shopType, [])).toEqual([])
+  })
+
+  test('a group the shop already has, by name, is not made twice', () => {
+    const names = starterOptionGroupsFor('cafe', [' ความหวาน ']).map((group) => group.key)
+
+    expect(names).toEqual(['toppings'])
   })
 })

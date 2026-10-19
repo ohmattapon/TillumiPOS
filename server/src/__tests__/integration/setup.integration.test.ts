@@ -63,6 +63,28 @@ describe('first-run setup', () => {
     expect(await settings.json()).toMatchObject({ tablesEnabled: false, modifiersEnabled: true })
   })
 
+  test('a cafe starts with the sweetness and topping groups, other shops with none', async () => {
+    const setUp = async (shopType: string) => {
+      const response = await fetch(`${baseUrl}/setup`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body({ shopType })),
+      })
+      expect(response.status).toBe(200)
+      const session = response.headers.get('set-cookie')!.split(';')[0]!
+      const groups = await fetch(`${baseUrl}/catalog/modifier-groups`, { headers: { cookie: session } })
+      return (await groups.json()) as { items: { name: string; options: { name: string }[] }[] }
+    }
+
+    const cafe = await setUp('cafe')
+    expect(cafe.items.map((group) => group.name)).toEqual(['ความหวาน', 'ท็อปปิ้ง'])
+    expect(cafe.items[0]!.options.map((option) => option.name)).toEqual(['หวานปกติ', 'หวานน้อย', 'หวานมาก', 'ไม่ใส่น้ำตาล'])
+
+    await resetDatabase()
+    code = store().issue()
+    expect((await setUp('retail')).items).toEqual([])
+  })
+
   test('a wrong code, and no code issued, are refused and make no one', async () => {
     const wrong = await client().setup.post(body({ setupCode: 'WRONGWRONGWR' }))
     store().retire()

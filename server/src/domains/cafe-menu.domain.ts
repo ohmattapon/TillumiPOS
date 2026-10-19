@@ -7,6 +7,8 @@
  * which parts of it a shop is still missing.
  */
 
+import type { ShopType } from './shop-settings.domain'
+
 export interface CafeMenuCategory {
   /** Stable id of the category inside the set; items point at it. */
   key: string
@@ -178,4 +180,15 @@ export function planCafeMenu(keys: readonly string[], existing: CafeMenuExisting
     toSkip: selected.filter(taken),
     unknown: asked.filter((key) => !cafeMenuItem(key)),
   }
+}
+
+/**
+ * The option groups a shop of this kind has from its first day, before it has added a single drink: a
+ * cafe is asked about sweetness and toppings on nearly every order, so those are ready to be attached to
+ * its products. A group the shop already has (matched by name) is left alone.
+ */
+export function starterOptionGroupsFor(shopType: ShopType, existingGroupNames: readonly string[]): CafeMenuOptionGroup[] {
+  if (shopType !== 'cafe') return []
+  const taken = new Set(existingGroupNames.map(normalize))
+  return CAFE_MENU_OPTION_GROUPS.filter((group) => !taken.has(normalize(group.name)))
 }
