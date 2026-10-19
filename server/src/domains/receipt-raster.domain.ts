@@ -32,7 +32,10 @@ export function buildRasterCommand(widthDots: number, heightDots: number, bits: 
   const data = new Uint8Array(heightDots * bytesPerRow)
   for (let row = 0; row < heightDots; row += 1) {
     for (let col = 0; col < widthDots; col += 1) {
-      if (bits[row * widthDots + col]) data[row * bytesPerRow + (col >> 3)] |= 0x80 >> (col & 7)
+      if (bits[row * widthDots + col] ?? false) {
+        const at = row * bytesPerRow + (col >> 3)
+        data[at] = (data[at] ?? 0) | (0x80 >> (col & 7))
+      }
     }
   }
 
