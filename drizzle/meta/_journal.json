@@ -225,6 +225,13 @@
       "when": 1792328900005,
       "tag": "0031_cooing_robbie_robertson",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792386717710,
+      "tag": "0032_printer_settings",
+      "breakpoints": true
     }
   ]
 }

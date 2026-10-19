@@ -20,6 +20,10 @@ const fields = {
   modifiersEnabled: t.Boolean(),
   promptpayMode: t.Union([t.Literal('bank'), t.Literal('static')]),
   promptpayTarget: t.Nullable(t.String({ maxLength: 13 })),
+  receiptPrinterIp: t.Nullable(t.String({ maxLength: 45 })),
+  receiptPrinterPort: t.Integer({ minimum: 1, maximum: 65535 }),
+  receiptPrinterEnabled: t.Boolean(),
+  cashDrawerEnabled: t.Boolean(),
 }
 
 export const settingsSchemas = {

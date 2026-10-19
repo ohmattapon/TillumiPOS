@@ -30,6 +30,13 @@ export const shopSettings = pgTable(
     promptpayMode: text().notNull().default('bank'),
     // The shop's own PromptPay identifier for static QR; null means it is not set up.
     promptpayTarget: text(),
+    // LAN thermal printer (ESC/POS over TCP); null IP means it is not set up.
+    receiptPrinterIp: text(),
+    receiptPrinterPort: integer().notNull().default(9100),
+    // Off by default so existing shops keep printing through the browser until they set an IP.
+    receiptPrinterEnabled: boolean().notNull().default(false),
+    // The drawer kicks through the printer, so it needs the printer on.
+    cashDrawerEnabled: boolean().notNull().default(false),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [check('shop_settings_single_row', sql`${table.id} = 1`)],

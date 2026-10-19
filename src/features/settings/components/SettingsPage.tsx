@@ -81,6 +81,10 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     locale: settings.locale,
     receiptPaperMm: settings.receiptPaperMm,
     receiptFooter: settings.receiptFooter ?? '',
+    receiptPrinterIp: settings.receiptPrinterIp ?? '',
+    receiptPrinterPort: String(settings.receiptPrinterPort),
+    receiptPrinterEnabled: settings.receiptPrinterEnabled,
+    cashDrawerEnabled: settings.cashDrawerEnabled,
     homeView: settings.homeView,
     tablesEnabled: settings.tablesEnabled,
     modifiersEnabled: settings.modifiersEnabled,
@@ -96,6 +100,16 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
   const rate = Number(form.vatRate)
   const isRateValid = form.vatRate.trim() !== '' && Number.isFinite(rate) && rate >= 0 && rate <= 100
   const isPromptPayValid = canSavePromptPay(form.promptpayMode, form.promptpayTarget)
+  const printerIp = form.receiptPrinterIp.trim()
+  const isPrinterIpValid = printerIp === '' || /^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$/.test(printerIp)
+  const printerPort = Number(form.receiptPrinterPort)
+  const isPrinterPortValid =
+    form.receiptPrinterPort.trim() !== '' && Number.isInteger(printerPort) && printerPort >= 1 && printerPort <= 65535
+  const isPrinterValid =
+    isPrinterIpValid &&
+    isPrinterPortValid &&
+    (!form.receiptPrinterEnabled || printerIp !== '') &&
+    (!form.cashDrawerEnabled || form.receiptPrinterEnabled)
   const changes: ShopSettings = {
     shopName: form.shopName.trim(),
     taxId: form.taxId.trim() || null,
@@ -108,6 +122,10 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     locale: form.locale,
     receiptPaperMm: form.receiptPaperMm,
     receiptFooter: form.receiptFooter.trim() || null,
+    receiptPrinterIp: printerIp || null,
+    receiptPrinterPort: isPrinterPortValid ? printerPort : settings.receiptPrinterPort,
+    receiptPrinterEnabled: form.receiptPrinterEnabled,
+    cashDrawerEnabled: form.cashDrawerEnabled,
     homeView: form.homeView,
     tablesEnabled: form.tablesEnabled,
     modifiersEnabled: form.modifiersEnabled,
@@ -115,7 +133,7 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     promptpayTarget: normalizePromptPayTarget(form.promptpayTarget),
   }
   const isDirty = JSON.stringify(changes) !== JSON.stringify(settings)
-  const canSave = isDirty && isRateValid && isPromptPayValid && changes.shopName !== '' && !save.isPending
+  const canSave = isDirty && isRateValid && isPromptPayValid && isPrinterValid && changes.shopName !== '' && !save.isPending
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -332,6 +350,48 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
             onChange={(event) => set('receiptFooter', event.target.value)}
           />
         </Field>
+      </Section>
+
+      <Section title={t('printer.title')}>
+        <Field
+          label={t('printer.ip')}
+          hint={!isPrinterIpValid ? t('printer.invalidIp') : t('printer.ipHint')}
+        >
+          <Input
+            className="h-10 tabular-nums"
+            inputMode="decimal"
+            value={form.receiptPrinterIp}
+            maxLength={45}
+            placeholder="192.168.1.50"
+            aria-invalid={!isPrinterIpValid}
+            onChange={(event) => set('receiptPrinterIp', event.target.value)}
+          />
+        </Field>
+        <Field
+          label={t('printer.port')}
+          hint={!isPrinterPortValid ? t('printer.invalidPort') : t('printer.portHint')}
+        >
+          <Input
+            className="h-10 text-right tabular-nums"
+            inputMode="numeric"
+            value={form.receiptPrinterPort}
+            maxLength={5}
+            aria-invalid={!isPrinterPortValid}
+            onChange={(event) => set('receiptPrinterPort', event.target.value)}
+          />
+        </Field>
+        <FeatureSwitch
+          label={t('printer.enabled')}
+          hint={printerIp === '' ? t('printer.needsIp') : t('printer.enabledHint')}
+          checked={form.receiptPrinterEnabled}
+          onChange={(on) => set('receiptPrinterEnabled', on)}
+        />
+        <FeatureSwitch
+          label={t('printer.drawer')}
+          hint={!form.receiptPrinterEnabled ? t('printer.needsPrinter') : t('printer.drawerHint')}
+          checked={form.cashDrawerEnabled}
+          onChange={(on) => set('cashDrawerEnabled', on)}
+        />
       </Section>
 
       {save.error && (

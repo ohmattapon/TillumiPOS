@@ -3,6 +3,8 @@ import { productKeys } from '@/features/products'
 import { api, apiV2, unwrap } from '@/lib/api'
 import { checkoutModeQuery, shiftKeys } from '@/features/shifts'
 import { withIdempotencyKey } from '@/lib/idempotency-key'
+import { lanPrintBody } from './lib/lan-print'
+import type { ReceiptBitmap } from './lib/rasterize-receipt'
 
 export const saleKeys = {
   /** Prefix of every sales query: invalidate this after a sale is made or voided. */
@@ -63,5 +65,17 @@ export function useCashRefund(saleId: number) {
     mutationFn: ({ shiftId, reason }: { shiftId: number; reason: string }) =>
       unwrap(apiV2.sales({ id: saleId })['cash-refund'].post({ shiftId, reason }, withIdempotencyKey())),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: shiftKeys.all }),
+  })
+}
+
+/**
+ * Prints a rasterized receipt on the LAN printer. The key identifies one print: a retry after a
+ * failure sends the same key, while a reprint after success is a new command with a new key.
+ * Printing changes nothing the till caches, so there is nothing to invalidate.
+ */
+export function useLanPrint(saleId: number) {
+  return useMutation({
+    mutationFn: ({ bitmap, key }: { bitmap: ReceiptBitmap; key: string }) =>
+      unwrap(api['receipt-printer'].print.post(lanPrintBody(saleId, bitmap), withIdempotencyKey(key))),
   })
 }

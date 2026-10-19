@@ -21,6 +21,11 @@ export function isPromptPayTarget(value: string): boolean {
   return /^\d+$/.test(value) && (value.length === 13 || (value.length === 10 && value.startsWith('0')))
 }
 
+/** A LAN printer address: an IPv4 address or a local hostname (letters, digits, dots, hyphens). */
+export function isPrinterHost(value: string): boolean {
+  return value.length >= 1 && value.length <= 45 && /^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$/.test(value)
+}
+
 /** The kinds of shop first-run setup asks about. Only the features they turn on are stored, not the type. */
 export const SHOP_TYPES = ['cafe', 'restaurant', 'retail', 'other'] as const
 export type ShopType = (typeof SHOP_TYPES)[number]
@@ -71,6 +76,14 @@ export interface ShopSettingsProps {
   promptpayMode: PromptPayMode
   /** The shop's own PromptPay identifier for static QR; null means it is not set up. */
   promptpayTarget: string | null
+  /** LAN address of the thermal printer; null means it is not set up. */
+  receiptPrinterIp: string | null
+  /** TCP port the printer listens on; 9100 is the ESC/POS default. */
+  receiptPrinterPort: number
+  /** Print through the LAN printer instead of the browser. Needs an IP. */
+  receiptPrinterEnabled: boolean
+  /** Kick the drawer through the printer after printing. Needs the printer on. */
+  cashDrawerEnabled: boolean
 }
 
 /** What a shop that has never been configured runs with. */
@@ -91,6 +104,10 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettingsProps = {
   modifiersEnabled: true,
   promptpayMode: 'bank',
   promptpayTarget: null,
+  receiptPrinterIp: null,
+  receiptPrinterPort: 9100,
+  receiptPrinterEnabled: false,
+  cashDrawerEnabled: false,
 }
 
 export type ShopSettingsChanges = Partial<ShopSettingsProps>
@@ -124,6 +141,10 @@ export class ShopSettingsEntity {
   public readonly modifiersEnabled: boolean
   public readonly promptpayMode: PromptPayMode
   public readonly promptpayTarget: string | null
+  public readonly receiptPrinterIp: string | null
+  public readonly receiptPrinterPort: number
+  public readonly receiptPrinterEnabled: boolean
+  public readonly cashDrawerEnabled: boolean
 
   constructor(props: ShopSettingsProps) {
     if (props.shopName.length < 1 || props.shopName.length > 100) throw invalid('ชื่อร้านต้องยาว 1 ถึง 100 ตัวอักษร')
@@ -146,6 +167,16 @@ export class ShopSettingsEntity {
     if (!PROMPTPAY_MODES.includes(props.promptpayMode)) throw invalid('วิธีรับพร้อมเพย์ไม่ถูกต้อง')
     if (props.promptpayTarget !== null && !isPromptPayTarget(props.promptpayTarget))
       throw invalid('ตัวระบุพร้อมเพย์ต้องเป็นเบอร์มือถือ 10 หลักขึ้นต้น 0 หรือเลขบัตร 13 หลัก')
+    if (props.receiptPrinterIp !== null && !isPrinterHost(props.receiptPrinterIp))
+      throw invalid('IP เครื่องพิมพ์ต้องเป็นตัวเลข 4 ชุดคั่นจุด หรือชื่อเครื่องในแลน')
+    if (!Number.isInteger(props.receiptPrinterPort) || props.receiptPrinterPort < 1 || props.receiptPrinterPort > 65535)
+      throw invalid('พอร์ตเครื่องพิมพ์ต้องเป็นจำนวนเต็ม 1 ถึง 65535')
+    if (typeof props.receiptPrinterEnabled !== 'boolean' || typeof props.cashDrawerEnabled !== 'boolean')
+      throw invalid('การเปิดปิดเครื่องพิมพ์และลิ้นชักต้องเป็นค่าจริงหรือเท็จ')
+    if (props.receiptPrinterEnabled && props.receiptPrinterIp === null)
+      throw invalid('เปิดพิมพ์ผ่านแลนต้องกรอก IP เครื่องพิมพ์ก่อน')
+    if (props.cashDrawerEnabled && !props.receiptPrinterEnabled)
+      throw invalid('เปิดลิ้นชักต้องเปิดพิมพ์ผ่านแลนก่อน เพราะลิ้นชักเตะผ่านเครื่องพิมพ์')
 
     this.shopName = props.shopName
     this.taxId = props.taxId
@@ -163,6 +194,10 @@ export class ShopSettingsEntity {
     this.modifiersEnabled = props.modifiersEnabled
     this.promptpayMode = props.promptpayMode
     this.promptpayTarget = props.promptpayTarget
+    this.receiptPrinterIp = props.receiptPrinterIp
+    this.receiptPrinterPort = props.receiptPrinterPort
+    this.receiptPrinterEnabled = props.receiptPrinterEnabled
+    this.cashDrawerEnabled = props.cashDrawerEnabled
   }
 
   /**
@@ -197,6 +232,10 @@ export class ShopSettingsEntity {
       modifiersEnabled: this.modifiersEnabled,
       promptpayMode: this.promptpayMode,
       promptpayTarget: this.promptpayTarget,
+      receiptPrinterIp: this.receiptPrinterIp,
+      receiptPrinterPort: this.receiptPrinterPort,
+      receiptPrinterEnabled: this.receiptPrinterEnabled,
+      cashDrawerEnabled: this.cashDrawerEnabled,
     }
   }
 }
