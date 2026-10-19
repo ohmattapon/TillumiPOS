@@ -93,8 +93,13 @@ async function check(name: string, run: () => Promise<void>) {
   }
 }
 
-async function signIn(browser: Browser, username: string, password: string, viewport = { width: 1366, height: 900 }): Promise<Page> {
+/**
+ * `insecureContext` is how a tablet sees the till when it is opened at http://192.168.x.x: the browser only gives
+ * crypto.randomUUID to secure pages (https or localhost), and these checks run on localhost, so it is taken away.
+ */
+async function signIn(browser: Browser, username: string, password: string, viewport = { width: 1366, height: 900 }, insecureContext = false): Promise<Page> {
   const context = await browser.newContext({ viewport, locale: 'th-TH' })
+  if (insecureContext) await context.addInitScript(() => Object.defineProperty(Crypto.prototype, 'randomUUID', { value: undefined, configurable: true }))
   const page = await context.newPage()
   page.setDefaultTimeout(15_000)
   await page.goto(WEB)
@@ -274,6 +279,13 @@ async function main() {
       await sellOneForCash(owner)
     })
 
+    await check('opened over plain http at the shop IP (no crypto.randomUUID), the till still opens and sells', async () => {
+      const tablet = await signIn(browser, 'admin', OWNER_PASSWORD, { width: 1024, height: 768 }, true)
+      if ((await tablet.evaluate(() => typeof crypto.randomUUID)) !== 'undefined') throw new Error('The check did not take randomUUID away, so it proves nothing')
+      await sellOneForCash(tablet)
+      await tablet.context().close()
+    })
+
     await check('on a phone the cashier sells with the cart bar: open the cart, change the quantity both ways, pay', async () => {
       const phone = await signIn(browser, 'cashier', CASHIER_PASSWORD, { width: 390, height: 844 })
       try {
@@ -322,7 +334,7 @@ async function main() {
         await display.getByText('น้ำดื่ม 600 มล.').waitFor()
         await display.getByText('ยอดสุทธิ').waitFor()
         await cashier.getByRole('button', { name: /^ชำระเงิน/ }).click()
-        // Not cash: the checks that close the shift assert exactly what the drawer should hold (฿169.00, and
+        // Not cash: the checks that close the shift assert exactly what the drawer should hold (฿179.00, and
         // a difference of -฿25.00), so this sale must not add to it.
         await cashier.getByRole('button', { name: 'พร้อมเพย์' }).click()
         await cashier.getByRole('button', { name: 'ยืนยันการชำระ' }).click()
@@ -720,10 +732,10 @@ async function main() {
     await check('the owner starts counting: the report is frozen and shows what the drawer should hold', async () => {
       await owner.getByRole('button', { name: 'เริ่มนับปิดกะ' }).click()
       await owner.getByText(/ยอดที่หยุดไว้ตอนเริ่มนับ/).waitFor()
-      // 100.00 opening + six cash sales of 69.00: four of 10.00 (one of them on a phone),
-      // one of 9.00 (a 10.00 sale with the 10% promotion), one of 20.00 (10.00 and a 10.00 topping).
+      // 100.00 opening + seven cash sales of 79.00: five of 10.00 (one of them on a phone, one on a tablet over plain
+      // http), one of 9.00 (a 10.00 sale with the 10% promotion), one of 20.00 (10.00 and a 10.00 topping).
       await owner.getByText('เงินสดที่ควรมี').first().waitFor()
-      await owner.getByText('฿169.00').first().waitFor()
+      await owner.getByText('฿179.00').first().waitFor()
     })
 
     await check('the other till can no longer take payment once counting has started', async () => {
@@ -737,8 +749,8 @@ async function main() {
     })
 
     await check('a count that differs needs a reason before the shift can be closed', async () => {
-      // Counted 144.00 against an expected 169.00: a difference of -25.00 that needs a reason.
-      await owner.getByLabel('เงินสดที่นับได้').fill('144')
+      // Counted 154.00 against an expected 179.00: a difference of -25.00 that needs a reason.
+      await owner.getByLabel('เงินสดที่นับได้').fill('154')
       const close = owner.getByRole('button', { name: 'ยืนยันปิดกะ' })
       if (!(await close.isDisabled())) throw new Error('Close is enabled without a reason for the difference')
       await owner.getByLabel('เหตุผลของยอดเงินที่ต่างกัน').fill('ทอนเงินผิด')

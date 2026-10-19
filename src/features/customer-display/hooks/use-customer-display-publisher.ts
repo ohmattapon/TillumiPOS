@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
+import { newUuid } from '@/lib/uuid'
 import { displayPairingQuery, publishDisplayState } from '../api'
 import { isChannelSupported, openBroadcastChannel, type DisplayChannel } from '../lib/channel'
 import type { DisplayView } from '../lib/display-state'
@@ -36,7 +37,7 @@ export function useCustomerDisplayPublisher(view: DisplayView, options: { regist
     })
     const channels: DisplayChannel[] = isChannelSupported() ? [openBroadcastChannel(), server] : [server]
     const channel = combineChannels(...channels)
-    const instance = new DisplayPublisher({ channel, sessionId: crypto.randomUUID() })
+    const instance = new DisplayPublisher({ channel, sessionId: newUuid() })
     instance.start()
     publisher.current = instance
     const leave = () => instance.leave()
