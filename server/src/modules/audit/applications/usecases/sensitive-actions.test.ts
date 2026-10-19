@@ -2,7 +2,7 @@ import 'reflect-metadata'
 import { expect, test } from 'bun:test'
 import { mock, spyOn } from 'bun:test'
 import { makeProduct } from '../../../../__tests__/factories'
-import { mockProductRepository, mockUnitOfWork, mockUserRepository, mockPasswordHasher } from '../../../../__tests__/mocks'
+import { mockProductRepository, mockUnitOfWork, mockUserRepository, mockPasswordHasher, mockLoginAttemptGuard } from '../../../../__tests__/mocks'
 import { CreateProductUseCase } from '../../../products/applications/usecases/create-product.usecase'
 import { LoginUseCase } from '../../../auth/applications/usecases/login.usecase'
 const actor = { id: 5, displayName: 'สมหญิง' }
@@ -25,7 +25,7 @@ test('product creation records the real actor within its transaction and audit f
 test('failed login records only the attempted username and audit failure preserves unauthorized', async () => {
   const users = mockUserRepository(), log = audit()
   users.findCredentialsByUsername.mockResolvedValue(null)
-  const command = new LoginUseCase(users, mockPasswordHasher(), log)
+  const command = new LoginUseCase(users, mockPasswordHasher(), log, mockLoginAttemptGuard())
   await expect(command.execute({ username: 'someone', password: 'super-secret-password' })).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
   expect(log.record).toHaveBeenCalledWith({ id: null, name: 'someone' }, null, expect.objectContaining({ action: 'auth.login_failed' }))
   expect(JSON.stringify(log.record.mock.calls)).not.toContain('super-secret-password')
