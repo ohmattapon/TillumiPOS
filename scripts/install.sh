@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Not supported yet: Linux has not been tested (Windows is the supported platform, see docs/install.md).
+# Linux and macOS: neither has been tested on a real machine yet (Windows is the tested platform, see docs/install.md).
 # Installs TillumiPOS with Podman Compose: writes .env with fresh secrets, starts it, and prints the setup code.
 #
 #   scripts/install.sh                      http://localhost:3000
@@ -17,8 +17,10 @@ done
 
 . scripts/podman-compose.sh
 
+install_podman_mac || exit 1
 command -v podman >/dev/null 2>&1 || { echo "Podman is not installed. Install it first: https://podman.io/getting-started/installation" >&2; exit 1; }
-compose version >/dev/null 2>&1 || { echo "Podman Compose is not available: check with: sudo podman compose version" >&2; exit 1; }
+prepare_podman || exit 1
+compose version >/dev/null 2>&1 || { echo "Podman Compose is not available: check with: $(compose_hint) version" >&2; exit 1; }
 
 secret() { head -c 256 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c "$1"; }
 
@@ -58,7 +60,7 @@ for _ in $(seq 1 90); do
   sleep 2
 done
 curl -fsS "http://localhost:${PORT}/api/v1/health" >/dev/null 2>&1 || {
-  echo "The system did not start. See: sudo podman compose logs app" >&2
+  echo "The system did not start. See: $(compose_hint) logs app" >&2
   exit 1
 }
 
