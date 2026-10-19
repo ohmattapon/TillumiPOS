@@ -4,6 +4,18 @@ Date: 2026-10-19. Worktree: `D:\worktrees\POS-windows-installer`; branch `ohmatt
 
 ## Reviewable output
 
+### Follow-up: autonomous provisioning in 0.1.2
+
+The user correctly rejected a manual `podman machine init` rescue as proof of installer readiness. The original 0.1.1 failure's exact cause cannot be recovered from ENGINE_COMMAND_FAILED alone; no network/hardware cause is asserted as fact.
+
+The runtime now retries only recognized transient network failures (at most3 init attempts), reads registration state after an unsuccessful init before deciding to retry, and resumes a registered machine without deletion/reinitialization. Permanent failures stop with phase-specific codes, native exit code, classified reason and bounded redacted bootstrap diagnostics. URLs and credential-bearing diagnostic lines are omitted; native app/compose output is never put in this log. The GUI explains the failure category in Thai.
+
+Regression tests cover first-attempt network failure recovered by bootstrap, partial registration resumed without a second init, permanent failure not retried, bounded exhausted retries, and diagnostics redaction. The transient recovery case was observed failing before implementation, then passed under Windows PowerShell5.1. A separate real-worker test also verifies that a permanent init failure reaches JSON as ENGINE_INIT_FAILED with PERMISSION reason, rather than losing the cause during a rethrow.
+
+An opt-in `bootstrap.tests.ps1` now uses the actual packaged worker in Windows PowerShell5.1 with a new machine name and separate shop/port. Unlike the old smoke, it does not replace Initialize-InstallerEngine and does not pre-create/start a VM. Native engine-only provisioning passed with `tillumipos-boot-test-67ce7bde`; the packaged full worker passed with `tillumipos-boot-test-d31313a8`: VALIDATING11:22:56, STARTING_ENGINE11:22:58, LOADING_IMAGE11:23:21, STARTING_SHOP11:24:01, READY11:24:19, STOPPED11:24:24. It created the VM, loaded the bundled app, started database/Redis/app, served first-run HTTP and stopped through its own Stop worker. Setup codes remained in captured memory, not logs. This proves provisioning on this host with WSL/Podman already installed, not pristine Windows prerequisite installation.
+
+The final staged runtime (including redacted diagnostics) was tested again with another absent machine, `tillumipos-boot-test-d7d39922`, through the same packaged Start/Stop workers; all steps passed. Compiler exit0, PowerShell parser, runtime/packaging tests passed. Final trial output: `dist-installer/ready/TillumiPOS-Setup-0.1.2.exe`; SHA256 `9F4BEA89E34F125A8580740A824D174BCDBDE1A961D95B225116095931CC3208`. The original Windows-clean-install/code-signing release gates remain open. Application TypeScript/API code did not change in this patch; the historical full-suite evidence below is retained, not represented as a new full-suite run.
+
 ### Follow-up: existing LAN forwarding blocked first start
 
 The first actual user launch of 0.1.0 stopped at PORT_IN_USE. Windows had only IP Helper listening on `192.168.1.34:3000` for an existing netsh forward to `127.0.0.1:3000`; no app listened on localhost. The initial preflight treated this reusable forwarding rule as a competing app.

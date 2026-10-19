@@ -38,16 +38,34 @@ function Write-InstallerStatus([string]$ShopDirectory, [string]$Stage) {
   Add-Content -LiteralPath (Join-Path $ShopDirectory 'launcher.log') -Value "$(Get-Date -Format s) $Stage" -Encoding UTF8
 }
 
-function Use-ShopConnection {
+function Use-ShopConnection([string]$MachineName = 'tillumipos') {
+  if ($MachineName.Length -gt 30 -or $MachineName -notmatch '^tillumipos(?:-[a-z0-9-]+)?$') { throw 'ENGINE_CONFLICT' }
   # Only this worker's environment changes; somebody else's Docker/Podman context stays untouched.
   foreach ($name in @('DOCKER_HOST', 'DOCKER_CONTEXT', 'CONTAINER_HOST', 'PODMAN_COMPOSE_PROVIDER', 'COMPOSE_PROFILES')) {
     [Environment]::SetEnvironmentVariable($name, $null, 'Process')
   }
-  $env:CONTAINER_CONNECTION = 'tillumipos-root'
+  $env:CONTAINER_CONNECTION = "$MachineName-root"
 }
 
-function Initialize-InstallerEngine([string]$ProgramDirectory) {
-  Use-ShopConnection
+function Get-EngineFailureReason([string]$Diagnostic) {
+  if ($Diagnostic -match '(?i)connection reset|connection refused|TLS handshake timeout|unexpected EOF|i/o timeout|context deadline|temporary failure|no such host|network is unreachable|connection timed out') { return 'NETWORK' }
+  if ($Diagnostic -match '(?i)no space|insufficient.*space|disk.*full') { return 'DISK' }
+  if ($Diagnostic -match '(?i)access.*denied|permission denied|unauthorized|forbidden') { return 'PERMISSION' }
+  if ($Diagnostic -match '(?i)virtualization|0x80370102|WSL.*kernel|Hyper-V.*not') { return 'WSL' }
+  return 'UNKNOWN'
+}
+
+function Get-SafeEngineDiagnostic([string]$Diagnostic) {
+  foreach ($line in @($Diagnostic -split '\r?\n' | Where-Object { $_.Trim() } | Select-Object -Last 8)) {
+    if ($line -match '(?i)password|token|secret|authorization|cookie|credential|private key|-----BEGIN') { '[sensitive diagnostic removed]'; continue }
+    $clean = [regex]::Replace($line, 'https?://\S+', '[endpoint]')
+    $clean = [regex]::Replace($clean, '[\x00-\x08\x0b\x0c\x0e-\x1f]', '')
+    $clean.Substring(0, [Math]::Min(512, $clean.Length))
+  }
+}
+
+function Initialize-InstallerEngine([string]$ProgramDirectory, [string]$MachineName = 'tillumipos') {
+  Use-ShopConnection $MachineName
   . (Join-Path $ProgramDirectory 'payload/scripts/podman-windows.ps1')
   $script:Podman = Find-Podman
   if (-not $script:Podman) {
@@ -58,12 +76,24 @@ function Initialize-InstallerEngine([string]$ProgramDirectory) {
   }
   # A shop never stops, reconfigures or adopts somebody else's default machine.
   $machines = @(Invoke-ShopPodman machine list --format json | Out-String | ConvertFrom-Json)
-  if (-not ($machines | Where-Object { $_.Name -eq 'tillumipos' })) {
-    Invoke-ShopPodman machine init --rootful tillumipos | Out-Null
+  if (-not ($machines | Where-Object { $_.Name -eq $MachineName })) {
+    foreach ($attempt in 1..3) {
+      try { Invoke-ShopPodman machine init --rootful $MachineName | Out-Null; break }
+      catch {
+        $failure = $_
+        # Init may finish registering the machine before reporting a failure. Never delete it or init twice.
+        $now = @(Invoke-ShopPodman machine list --format json | Out-String | ConvertFrom-Json)
+        if ($now | Where-Object { $_.Name -eq $MachineName }) { break }
+        $reason = Get-EngineFailureReason ([string]$failure.Exception.Data['Diagnostic'])
+        if ($reason -ne 'NETWORK' -or $attempt -eq 3) { throw $failure }
+        if ($script:ShopDirectory) { Write-InstallerStatus $script:ShopDirectory 'RETRYING_ENGINE_DOWNLOAD' }
+        Start-Sleep -Seconds (2 * $attempt)
+      }
+    }
   }
-  $machine = @(Invoke-ShopPodman machine inspect tillumipos | Out-String | ConvertFrom-Json) | Select-Object -First 1
+  $machine = @(Invoke-ShopPodman machine inspect $MachineName | Out-String | ConvertFrom-Json) | Select-Object -First 1
   if (-not $machine.Rootful) { throw 'ENGINE_CONFLICT' }
-  if ($machine.State -ne 'running') { Invoke-ShopPodman machine start tillumipos | Out-Null }
+  if ($machine.State -ne 'running') { Invoke-ShopPodman machine start $MachineName | Out-Null }
   Set-ComposeProvider
   Use-AnonymousRegistryPulls
 }
@@ -73,7 +103,31 @@ function Invoke-ShopPodman {
   $previous = $ErrorActionPreference
   try { $ErrorActionPreference = 'Continue'; $result = & $script:Podman @args 2>&1; $code = $LASTEXITCODE }
   finally { $ErrorActionPreference = $previous }
-  if ($code -ne 0) { throw 'ENGINE_COMMAND_FAILED' }
+  if ($code -ne 0) {
+    $diagnostic = ($result | ForEach-Object {
+      if ($_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { [string]$_ }
+    }) -join "`n"
+    $errorCode = 'ENGINE_COMMAND_FAILED'
+    if ($args[0] -eq 'machine') {
+      $codes = @{ init = 'ENGINE_INIT_FAILED'; start = 'ENGINE_START_FAILED'; list = 'ENGINE_INSPECT_FAILED'; inspect = 'ENGINE_INSPECT_FAILED'; stop = 'ENGINE_STOP_FAILED' }
+      if ($codes.ContainsKey([string]$args[1])) { $errorCode = $codes[[string]$args[1]] }
+    }
+    $reason = Get-EngineFailureReason $diagnostic
+    if ($script:ShopDirectory) {
+      Write-InstallerStatus $script:ShopDirectory "$errorCode EXIT_$code REASON_$reason"
+      # Bootstrap-only diagnostics: never log native app/compose output, which may contain shop secrets.
+      if ($args[0] -eq 'machine') {
+        foreach ($line in @(Get-SafeEngineDiagnostic $diagnostic)) {
+          Add-Content -LiteralPath (Join-Path $script:ShopDirectory 'launcher.log') -Value "$(Get-Date -Format s) ENGINE_DETAIL $line" -Encoding UTF8
+        }
+      }
+    }
+    $failure = New-Object InvalidOperationException($errorCode)
+    $failure.Data['ExitCode'] = $code
+    $failure.Data['Diagnostic'] = $diagnostic
+    $failure.Data['Reason'] = $reason
+    throw $failure
+  }
   $result
 }
 
@@ -150,7 +204,7 @@ function Invoke-ShopBackup([string]$ShopDirectory) {
   $directory
 }
 
-function Start-InstalledShop([string]$ProgramDirectory, [string]$ShopDirectory) {
+function Start-InstalledShop([string]$ProgramDirectory, [string]$ShopDirectory, [string]$MachineName = 'tillumipos') {
   $script:ShopDirectory = $ShopDirectory
   Initialize-ShopSettings $ShopDirectory
   Write-InstallerStatus $ShopDirectory 'VALIDATING'
@@ -174,7 +228,7 @@ function Start-InstalledShop([string]$ProgramDirectory, [string]$ShopDirectory) 
   $changed = -not $installed -or $installed.version -ne $manifest.version
   if (-not $installed -and -not $pending) { Assert-ShopPortAvailable $port $ProgramDirectory }
   Write-InstallerStatus $ShopDirectory 'STARTING_ENGINE'
-  Initialize-InstallerEngine $ProgramDirectory
+  Initialize-InstallerEngine $ProgramDirectory $MachineName
   if ($changed) {
     if ($installed) {
       Write-InstallerStatus $ShopDirectory 'STOPPING_FOR_UPDATE'

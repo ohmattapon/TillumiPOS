@@ -2,6 +2,7 @@ $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/runtime.ps1"
 $engineImplementation = ${function:Initialize-InstallerEngine}
 $portImplementation = ${function:Assert-ShopPortAvailable}
+$nativeCommandImplementation = ${function:Invoke-ShopPodman}
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('tillumipos-test-' + [guid]::NewGuid())
 New-Item -ItemType Directory $testRoot | Out-Null
 function Assert($Condition, $Message) { if (-not $Condition) { throw $Message } }
@@ -37,6 +38,23 @@ try {
   Must-Fail { & $portImplementation 3000 $portProgram } 'A proxy hid an actual localhost listener'
   Remove-Item Function:\Get-NetTCPConnection
   Remove-Item Function:\netsh
+
+  $script:ShopDirectory = $shop
+  $fakeCommand = Join-Path $testRoot 'native-failure.cmd'
+  [IO.File]::WriteAllText($fakeCommand, "@echo off`r`necho connection reset by peer https://example.invalid/private-marker`r`necho password=private-credential`r`nexit /b 125`r`n", [Text.Encoding]::ASCII)
+  $script:Podman = $fakeCommand
+  try { & $nativeCommandImplementation machine init --rootful tillumipos; throw 'Native failure was accepted' }
+  catch {
+    Assert ($_.Exception.Message -eq 'ENGINE_INIT_FAILED') 'Native failure did not identify init stage'
+    Assert ($_.Exception.Data['Reason'] -eq 'NETWORK') 'Native failure reason lost'
+    Assert ($_.Exception.Data['ExitCode'] -eq 125) 'Native exit code lost'
+  }
+  $failureLog = Get-Content (Join-Path $shop 'launcher.log') -Raw
+  Assert ($failureLog -match 'ENGINE_INIT_FAILED EXIT_125 REASON_NETWORK') 'Safe diagnostic missing'
+  Assert ($failureLog -notmatch 'private-marker|https:') 'Native output leaked into diagnostic log'
+  Assert ($failureLog -match 'ENGINE_DETAIL connection reset by peer') 'Safe underlying bootstrap error was lost'
+  Assert ($failureLog -notmatch 'private-credential') 'Credential-bearing diagnostic line leaked'
+  $script:ShopDirectory = $null
 
   $payload = Join-Path $testRoot 'payload'
   New-Item -ItemType Directory $payload | Out-Null
@@ -78,6 +96,43 @@ function Use-AnonymousRegistryPulls { }
   Assert ($script:engineCalls -contains 'machine init --rootful tillumipos') 'Dedicated machine not created'
   Assert ($script:engineCalls -contains 'machine start tillumipos') 'Dedicated machine not started'
   Assert (-not ($script:engineCalls -match 'stop|set --rootful|other-project')) 'Another machine was changed'
+
+  # A transient first download failure must be recovered by bootstrap itself, not a manual machine init.
+  $script:creationAttempts = 0
+  $script:createdMachine = $false
+  $script:startedMachine = $false
+  $script:faultMode = 'transient'
+  function Start-Sleep { }
+  function Invoke-ShopPodman {
+    $command = $args -join ' '
+    if ($command -eq 'machine list --format json') {
+      if ($script:createdMachine) { '[{"Name":"tillumipos"}]' } else { '[]' }
+    } elseif ($command -eq 'machine init --rootful tillumipos') {
+      $script:creationAttempts++
+      if ($script:creationAttempts -eq 1 -or $script:faultMode -in @('permanent', 'exhausted')) {
+        if ($script:faultMode -eq 'partial') { $script:createdMachine = $true }
+        $failure = New-Object InvalidOperationException('ENGINE_COMMAND_FAILED')
+        $failure.Data['Diagnostic'] = if ($script:faultMode -eq 'permanent') { 'permission denied' } else { 'connection reset by peer' }
+        throw $failure
+      }
+      $script:createdMachine = $true
+    } elseif ($command -eq 'machine inspect tillumipos') { '[{"Rootful":true,"State":"stopped"}]' }
+    elseif ($command -eq 'machine start tillumipos') { $script:startedMachine = $true }
+  }
+  & $engineImplementation $engineProgram
+  Assert ($script:creationAttempts -eq 2 -and $script:startedMachine) 'Transient bootstrap failed to recover itself'
+  foreach ($mode in @('partial', 'permanent', 'exhausted')) {
+    $script:creationAttempts = 0; $script:createdMachine = $false; $script:startedMachine = $false; $script:faultMode = $mode
+    if ($mode -eq 'partial') {
+      & $engineImplementation $engineProgram
+      Assert ($script:creationAttempts -eq 1 -and $script:startedMachine) 'Registered machine was initialized twice instead of resumed'
+    } else {
+      Must-Fail { & $engineImplementation $engineProgram } "Bootstrap accepted $mode failure"
+      $expectedAttempts = if ($mode -eq 'permanent') { 1 } else { 3 }
+      Assert ($script:creationAttempts -eq $expectedAttempts -and -not $script:startedMachine) "Unbounded or inappropriate retries for $mode"
+    }
+  }
+  Remove-Item Function:\Start-Sleep
 
   # Drive the actual update orchestration, replacing only external operations.
   $script:stages = [Collections.Generic.List[string]]::new()
@@ -134,6 +189,28 @@ function Use-AnonymousRegistryPulls { }
   $stopOutput = & powershell -NoProfile -File "$PSScriptRoot/worker.ps1" -Action Stop -ProgramDirectory $engineProgram -ShopDirectory $stopShop
   Assert (($stopOutput | ConvertFrom-Json).Ok) 'Stopping a never-started installation failed'
   Assert (-not (Test-Path (Join-Path $stopShop '.env'))) 'Uninstall created shop credentials'
+
+  # The real worker must retain the init phase/reason across a rethrow and JSON boundary.
+  $workerShop = Join-Path $testRoot 'failed-bootstrap'
+  Initialize-ShopSettings $workerShop
+  $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
+  $listener.Start(); $freePort = $listener.LocalEndpoint.Port; $listener.Stop()
+  (Get-Content (Join-Path $workerShop '.env')) -replace '^PORT=3000$', "PORT=$freePort" | Set-Content (Join-Path $workerShop '.env') -Encoding ASCII
+  $nativeBody = @'
+@echo off
+if "%1"=="machine" if "%2"=="list" (
+echo []
+exit /b 0
+)
+echo Error: permission denied
+exit /b 125
+'@
+  [IO.File]::WriteAllText($fakeCommand, $nativeBody.Replace("`n", "`r`n"), [Text.Encoding]::ASCII)
+  New-Item -ItemType Directory (Join-Path $program 'payload/scripts') -Force | Out-Null
+  [IO.File]::WriteAllText((Join-Path $program 'payload/scripts/podman-windows.ps1'), ("function Find-Podman { '" + $fakeCommand.Replace("'", "''") + "' }"))
+  $failedOutput = & powershell -NoProfile -File "$PSScriptRoot/worker.ps1" -Action Start -ProgramDirectory $program -ShopDirectory $workerShop
+  $failedReply = $failedOutput | ConvertFrom-Json
+  Assert (-not $failedReply.Ok -and $failedReply.Code -eq 'ENGINE_INIT_FAILED' -and $failedReply.Reason -eq 'PERMISSION') 'Worker discarded the underlying bootstrap phase/reason'
   Write-Host 'PASS: settings, payload validation, backup failure, health failure, update order, idempotent startup'
 } finally {
   # This path is a newly generated test directory; never the installed shop.
