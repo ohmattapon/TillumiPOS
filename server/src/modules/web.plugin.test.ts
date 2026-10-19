@@ -16,6 +16,7 @@ beforeAll(async () => {
   await mkdir(join(root, 'assets'), { recursive: true })
   await writeFile(join(root, 'index.html'), '<html>TillumiPOS</html>')
   await writeFile(join(root, 'assets', 'app.js'), 'console.log(1)')
+  await writeFile(join(root, 'manifest.webmanifest'), '{"name":"TillumiPOS"}')
   // A file beside the web root that must never be reachable.
   secretName = 'secret.txt'
   await writeFile(join(parent, secretName), 'secret')
@@ -40,6 +41,13 @@ describe('webPlugin', () => {
 
     expect(response.status).toBe(200)
     expect(await response.text()).toBe('console.log(1)')
+  })
+
+  test('serves the app manifest as a manifest, so a tablet can install the app', async () => {
+    const response = await get('/manifest.webmanifest')
+
+    expect(response.headers.get('content-type')).toContain('application/manifest+json')
+    expect(response.headers.get('cache-control')).toBe('no-cache')
   })
 
   test('an API route is left to the API, and an unknown one is a 404, not the page', async () => {
