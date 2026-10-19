@@ -357,6 +357,22 @@ export const mockPinGuard = (): Mocked<IPinGuard> => {
   }
 }
 
+import type { ILoginAttemptGuard } from '../modules/auth/applications/ports/login-attempt-guard.port'
+
+/** Counts attempts per name like the real guard (the 5th locks), without a clock: a lock lasts for the whole test. */
+export const mockLoginAttemptGuard = (): Mocked<ILoginAttemptGuard> => {
+  const attempts = new Map<string, number>()
+  return {
+    begin: mock((username: string) => {
+      const count = attempts.get(username) ?? 0
+      if (count >= 5) return 'locked' as const
+      attempts.set(username, count + 1)
+      return 'ok' as const
+    }),
+    recordSuccess: mock((username: string) => { attempts.delete(username) }),
+  }
+}
+
 import type { IStockReceiptRepository } from '../modules/stock-receipts/applications/ports/stock-receipt.repository'
 export const mockStockReceiptRepository = (): Mocked<IStockReceiptRepository> => ({
   create: mock<IStockReceiptRepository['create']>(),
