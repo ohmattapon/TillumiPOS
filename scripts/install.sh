@@ -15,10 +15,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# Podman runs rootful here (ports 80 and 443 need it), so every call uses sudo unless the script already runs as root.
-compose() {
-  if [ "$(id -u)" -eq 0 ]; then podman compose "$@"; else sudo podman compose "$@"; fi
-}
+. scripts/podman-compose.sh
 
 command -v podman >/dev/null 2>&1 || { echo "Podman is not installed. Install it first: https://podman.io/getting-started/installation" >&2; exit 1; }
 compose version >/dev/null 2>&1 || { echo "Podman Compose is not available: check with: sudo podman compose version" >&2; exit 1; }

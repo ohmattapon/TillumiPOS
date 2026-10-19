@@ -5,13 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# Podman runs rootful (see install.sh): sudo unless already root, so a root crontab works unchanged.
-# POS_COMPOSE replaces the command altogether; the tests use it to stand in for Podman.
-compose() {
-  if [ -n "${POS_COMPOSE:-}" ]; then "$POS_COMPOSE" "$@"
-  elif [ "$(id -u)" -eq 0 ]; then podman compose "$@"
-  else sudo podman compose "$@"; fi
-}
+. scripts/podman-compose.sh
 
 DIR="${1:-backups}"
 mkdir -p "$DIR"
