@@ -70,6 +70,6 @@ describe('buildDrawerCommand', () => {
 
   test('invalid pin throws', async () => {
     const { buildDrawerCommand } = await import('./receipt-raster.domain')
-    expect(() => buildDrawerCommand(2)).toThrow(DomainError)
+    expect(() => buildDrawerCommand(2 as never)).toThrow(DomainError)
   })
 })
