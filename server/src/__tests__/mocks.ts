@@ -22,6 +22,7 @@ import type { ICategoryRepository } from '../modules/categories/applications/por
 import type { IStockLedger } from '../modules/inventory/applications/ports/stock-ledger.port'
 import type { IStockMovementRepository } from '../modules/inventory/applications/ports/stock-movement.repository'
 import type { ILineOptionsResolver } from '../modules/modifiers/applications/ports/line-options-resolver.port'
+import type { IStarterOptionGroups } from '../modules/setup/applications/ports/starter-option-groups.port'
 import type { IModifierRepository } from '../modules/modifiers/applications/ports/modifier.repository'
 import type { IOrderRepository } from '../modules/orders/applications/ports/order.repository'
 import type { IFirstRunGuard } from '../modules/setup/applications/ports/first-run-guard.port'
@@ -222,6 +223,11 @@ export const mockShiftLedger = (): Mocked<IShiftLedger> => ({
 
 export const mockShiftSettingsGuard = (): Mocked<IShiftSettingsGuard> => ({
   assertCurrencyChangeAllowed: mock<IShiftSettingsGuard['assertCurrencyChangeAllowed']>(async () => {}),
+})
+
+/** Adds nothing unless a test says otherwise. */
+export const mockStarterOptionGroups = (): Mocked<IStarterOptionGroups> => ({
+  addFor: mock<IStarterOptionGroups['addFor']>(async () => {}),
 })
 
 export const mockModifierRepository = (): Mocked<IModifierRepository> => ({
