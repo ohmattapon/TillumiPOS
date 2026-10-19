@@ -87,6 +87,11 @@ const th = {
     pdfSaving: 'กำลังสร้าง PDF…',
     pdfSaved: 'บันทึกใบเสร็จ PDF แล้ว',
     pdfFailed: 'สร้างใบเสร็จ PDF ไม่สำเร็จ',
+    lanPrint: 'พิมพ์ใบเสร็จ (LAN)',
+    lanPrinting: 'กำลังพิมพ์…',
+    lanPrinted: 'พิมพ์ใบเสร็จแล้ว',
+    lanFailed: 'พิมพ์ผ่านแลนไม่สำเร็จ: {{reason}}',
+    lanFallbackHint: 'ใช้ปุ่มบันทึก PDF หรือพิมพ์ผ่านเบราว์เซอร์แทนได้',
   },
 }
 
@@ -179,6 +184,11 @@ const en = {
     pdfSaving: 'Creating PDF…',
     pdfSaved: 'Receipt PDF saved',
     pdfFailed: 'Could not create the receipt PDF',
+    lanPrint: 'Print receipt (LAN)',
+    lanPrinting: 'Printing…',
+    lanPrinted: 'Receipt printed',
+    lanFailed: 'LAN printing failed: {{reason}}',
+    lanFallbackHint: 'You can still use the PDF button or browser print instead.',
   },
 } satisfies typeof th
 

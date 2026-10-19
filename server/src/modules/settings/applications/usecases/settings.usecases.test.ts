@@ -101,9 +101,36 @@ describe('UpdateShopSettingsUseCase', () => {
     expect(saved.promptpayTarget).toBeNull()
   })
 
+  test('stores a LAN printer setup with its drawer', async () => {
+    const saved = await update({
+      receiptPrinterIp: ' 192.168.1.50 ',
+      receiptPrinterPort: 9100,
+      receiptPrinterEnabled: true,
+      cashDrawerEnabled: true,
+    })
+
+    expect(saved.toSnapshot()).toEqual({
+      ...current.toSnapshot(),
+      receiptPrinterIp: '192.168.1.50',
+      receiptPrinterPort: 9100,
+      receiptPrinterEnabled: true,
+      cashDrawerEnabled: true,
+    })
+    expect(repo.save).toHaveBeenCalledWith(saved)
+  })
+
+  test('a blank printer IP is cleared, not stored as an empty string', async () => {
+    const saved = await update({ receiptPrinterIp: '   ' })
+
+    expect(saved.receiptPrinterIp).toBeNull()
+  })
+
   test.each([
     ['an unknown PromptPay mode', { promptpayMode: 'qr' }],
     ['a non-digit PromptPay target', { promptpayTarget: '081-234-5678' }],
+    ['a printer host with a scheme', { receiptPrinterIp: 'http://printer' }],
+    ['a printer port of 0', { receiptPrinterPort: 0 }],
+    ['a printer port above 65535', { receiptPrinterPort: 65536 }],
   ])('rejects %s before reading or storing anything', async (_label, input) => {
     await expect(update(input)).rejects.toBeInstanceOf(ZodError)
     expect(repo.getForUpdate).not.toHaveBeenCalled()
@@ -146,6 +173,10 @@ describe('UpdateShopSettingsUseCase', () => {
   test('a value the schema accepts but the rules refuse is a domain error, and nothing is stored', async () => {
     await expect(update({ timeZone: 'Mars/Olympus' })).rejects.toBeInstanceOf(DomainError)
     await expect(update({ timeZone: 'Mars/Olympus' })).rejects.toMatchObject({ code: 'INVALID_SHOP_SETTINGS' })
+    await expect(update({ receiptPrinterEnabled: true })).rejects.toMatchObject({ code: 'INVALID_SHOP_SETTINGS' })
+    await expect(update({ receiptPrinterIp: '192.168.1.50', cashDrawerEnabled: true })).rejects.toMatchObject({
+      code: 'INVALID_SHOP_SETTINGS',
+    })
     expect(repo.save).not.toHaveBeenCalled()
   })
 })

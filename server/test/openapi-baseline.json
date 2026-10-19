@@ -24171,6 +24171,362 @@
         ]
       }
     },
+    "/api/v1/receipt-printer/drawer/open": {
+      "post": {
+        "operationId": "postApiV1Receipt-printerDrawerOpen",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "kickedAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "sentBytes": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "sentBytes",
+                    "kickedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "เปิดลิ้นชักผ่านเครื่องพิมพ์โดยไม่พิมพ์ใบเสร็จ",
+        "tags": [
+          "Printing"
+        ]
+      }
+    },
+    "/api/v1/receipt-printer/print": {
+      "post": {
+        "operationId": "postApiV1Receipt-printerPrint",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "bits": {
+                    "items": {
+                      "type": "boolean"
+                    },
+                    "maxItems": 1728000,
+                    "type": "array"
+                  },
+                  "cut": {
+                    "type": "boolean"
+                  },
+                  "heightDots": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 3000,
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 3000,
+                    "minimum": 1
+                  },
+                  "kickDrawer": {
+                    "type": "boolean"
+                  },
+                  "saleId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
+                  "widthDots": {
+                    "enum": [
+                      384,
+                      576
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "saleId",
+                  "widthDots",
+                  "heightDots",
+                  "bits"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "bits": {
+                    "items": {
+                      "type": "boolean"
+                    },
+                    "maxItems": 1728000,
+                    "type": "array"
+                  },
+                  "cut": {
+                    "type": "boolean"
+                  },
+                  "heightDots": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 3000,
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 3000,
+                    "minimum": 1
+                  },
+                  "kickDrawer": {
+                    "type": "boolean"
+                  },
+                  "saleId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
+                  "widthDots": {
+                    "enum": [
+                      384,
+                      576
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "saleId",
+                  "widthDots",
+                  "heightDots",
+                  "bits"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "bits": {
+                    "items": {
+                      "type": "boolean"
+                    },
+                    "maxItems": 1728000,
+                    "type": "array"
+                  },
+                  "cut": {
+                    "type": "boolean"
+                  },
+                  "heightDots": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 3000,
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 3000,
+                    "minimum": 1
+                  },
+                  "kickDrawer": {
+                    "type": "boolean"
+                  },
+                  "saleId": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
+                  "widthDots": {
+                    "enum": [
+                      384,
+                      576
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "saleId",
+                  "widthDots",
+                  "heightDots",
+                  "bits"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "printedAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "saleId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "sentBytes": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "saleId",
+                    "sentBytes",
+                    "printedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "พิมพ์ใบเสร็จที่เรนเดอร์แล้วผ่านเครื่องพิมพ์แลน (คีย์ซ้ำไม่พิมพ์ซ้ำ)",
+        "tags": [
+          "Printing"
+        ]
+      }
+    },
+    "/api/v1/receipt-printer/test-connection": {
+      "post": {
+        "operationId": "postApiV1Receipt-printerTest-connection",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "ok": {
+                      "const": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ทดสอบว่าเครื่องพิมพ์ที่ตั้งไว้ตอบสนองหรือไม่ (ไม่พิมพ์อะไร)",
+        "tags": [
+          "Printing"
+        ]
+      }
+    },
     "/api/v1/roles/": {
       "get": {
         "operationId": "getApiV1Roles",
@@ -28437,6 +28793,9 @@
                         "null"
                       ]
                     },
+                    "cashDrawerEnabled": {
+                      "type": "boolean"
+                    },
                     "currency": {
                       "maxLength": 3,
                       "minLength": 3,
@@ -28496,6 +28855,33 @@
                         80
                       ],
                       "type": "string"
+                    },
+                    "receiptPrinterEnabled": {
+                      "type": "boolean"
+                    },
+                    "receiptPrinterIp": {
+                      "maxLength": 45,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "receiptPrinterPort": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "maximum": 65535,
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "maximum": 65535,
+                      "minimum": 1
                     },
                     "shopName": {
                       "maxLength": 100,
@@ -28559,7 +28945,11 @@
                     "tablesEnabled",
                     "modifiersEnabled",
                     "promptpayMode",
-                    "promptpayTarget"
+                    "promptpayTarget",
+                    "receiptPrinterIp",
+                    "receiptPrinterPort",
+                    "receiptPrinterEnabled",
+                    "cashDrawerEnabled"
                   ],
                   "type": "object"
                 }
@@ -28587,6 +28977,9 @@
                       "string",
                       "null"
                     ]
+                  },
+                  "cashDrawerEnabled": {
+                    "type": "boolean"
                   },
                   "currency": {
                     "maxLength": 3,
@@ -28647,6 +29040,33 @@
                       80
                     ],
                     "type": "string"
+                  },
+                  "receiptPrinterEnabled": {
+                    "type": "boolean"
+                  },
+                  "receiptPrinterIp": {
+                    "maxLength": 45,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "receiptPrinterPort": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 65535,
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 65535,
+                    "minimum": 1
                   },
                   "shopName": {
                     "maxLength": 100,
@@ -28708,6 +29128,9 @@
                       "null"
                     ]
                   },
+                  "cashDrawerEnabled": {
+                    "type": "boolean"
+                  },
                   "currency": {
                     "maxLength": 3,
                     "minLength": 3,
@@ -28767,6 +29190,33 @@
                       80
                     ],
                     "type": "string"
+                  },
+                  "receiptPrinterEnabled": {
+                    "type": "boolean"
+                  },
+                  "receiptPrinterIp": {
+                    "maxLength": 45,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "receiptPrinterPort": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 65535,
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 65535,
+                    "minimum": 1
                   },
                   "shopName": {
                     "maxLength": 100,
@@ -28828,6 +29278,9 @@
                       "null"
                     ]
                   },
+                  "cashDrawerEnabled": {
+                    "type": "boolean"
+                  },
                   "currency": {
                     "maxLength": 3,
                     "minLength": 3,
@@ -28887,6 +29340,33 @@
                       80
                     ],
                     "type": "string"
+                  },
+                  "receiptPrinterEnabled": {
+                    "type": "boolean"
+                  },
+                  "receiptPrinterIp": {
+                    "maxLength": 45,
+                    "nullable": true,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "receiptPrinterPort": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 65535,
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 65535,
+                    "minimum": 1
                   },
                   "shopName": {
                     "maxLength": 100,
@@ -28954,6 +29434,9 @@
                         "null"
                       ]
                     },
+                    "cashDrawerEnabled": {
+                      "type": "boolean"
+                    },
                     "currency": {
                       "maxLength": 3,
                       "minLength": 3,
@@ -29013,6 +29496,33 @@
                         80
                       ],
                       "type": "string"
+                    },
+                    "receiptPrinterEnabled": {
+                      "type": "boolean"
+                    },
+                    "receiptPrinterIp": {
+                      "maxLength": 45,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "receiptPrinterPort": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "maximum": 65535,
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "maximum": 65535,
+                      "minimum": 1
                     },
                     "shopName": {
                       "maxLength": 100,
@@ -29076,7 +29586,11 @@
                     "tablesEnabled",
                     "modifiersEnabled",
                     "promptpayMode",
-                    "promptpayTarget"
+                    "promptpayTarget",
+                    "receiptPrinterIp",
+                    "receiptPrinterPort",
+                    "receiptPrinterEnabled",
+                    "cashDrawerEnabled"
                   ],
                   "type": "object"
                 }
