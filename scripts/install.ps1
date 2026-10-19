@@ -7,6 +7,7 @@ $ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..')
 
 . (Join-Path $PSScriptRoot 'podman-windows.ps1')
+. (Join-Path $PSScriptRoot 'lan-address.ps1')
 Initialize-Podman
 
 function New-Secret([int]$Length) {
@@ -50,6 +51,7 @@ if (-not $up) { Write-Error 'The system did not start. See: podman compose logs 
 $url = if ($Domain) { "https://$Domain" } else { "http://localhost:$port" }
 Write-Host ''
 Write-Host "TillumiPOS is running: $url"
+if (-not $Domain) { Show-LanAddress $port }
 $log = compose -f docker-compose.yml logs app 2>$null | Out-String
 $match = [regex]::Matches($log, 'SETUP CODE[^:]*:\s+([A-Z0-9]+)') | Select-Object -Last 1
 if ($match) {
