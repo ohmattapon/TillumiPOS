@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { resolveMediaStorage } from './media-storage-mode'
+import { liveMediaToken, resolveMediaStorage } from './media-storage-mode'
 
 describe('resolveMediaStorage', () => {
   test('nothing set: the shop keeps images on its own disk', () => {
@@ -29,5 +29,14 @@ describe('resolveMediaStorage', () => {
 
   test('an empty value counts as not set', () => {
     expect(resolveMediaStorage({ MEDIA_STORAGE: '' })).toBe('local')
+  })
+
+  test('a placeholder token counts as no token: the shop keeps images on its own disk', () => {
+    expect(resolveMediaStorage({ MEDIA_URL: 'https://m.example.com', MEDIA_TOKEN: 'change-me' })).toBe('local')
+    expect(resolveMediaStorage({ MEDIA_URL: 'https://m.example.com', MEDIA_TOKEN: 'your-token' })).toBe('local')
+    expect(liveMediaToken('change-me')).toBeNull()
+    expect(liveMediaToken('your-token')).toBeNull()
+    expect(liveMediaToken('real-token')).toBe('real-token')
+    expect(liveMediaToken(undefined)).toBeNull()
   })
 })
