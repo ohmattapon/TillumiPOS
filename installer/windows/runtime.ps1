@@ -103,8 +103,15 @@ function Wait-ShopHealth([int]$Port) {
   throw 'HEALTH_FAILED'
 }
 
-function Assert-ShopPortAvailable([int]$Port) {
-  if (Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue) { throw 'PORT_IN_USE' }
+function Assert-ShopPortAvailable([int]$Port, [string]$ProgramDirectory) {
+  $listeners = @(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue)
+  if (-not $listeners.Count) { return }
+  # An existing LAN -> localhost proxy is reusable by WSL. It is not an app bound to localhost.
+  . (Join-Path $ProgramDirectory 'payload/scripts/lan-address.ps1')
+  $forwarded = @(Get-ForwardedAddresses @(netsh interface portproxy show v4tov4) ([string]$Port))
+  foreach ($listener in $listeners) {
+    if ($listener.LocalAddress -in @('127.0.0.1', '::1', '0.0.0.0', '::') -or $listener.LocalAddress -notin $forwarded) { throw 'PORT_IN_USE' }
+  }
 }
 
 function Get-ShopSetupCode([int]$Port) {
@@ -165,7 +172,7 @@ function Start-InstalledShop([string]$ProgramDirectory, [string]$ShopDirectory) 
     }
   }
   $changed = -not $installed -or $installed.version -ne $manifest.version
-  if (-not $installed -and -not $pending) { Assert-ShopPortAvailable $port }
+  if (-not $installed -and -not $pending) { Assert-ShopPortAvailable $port $ProgramDirectory }
   Write-InstallerStatus $ShopDirectory 'STARTING_ENGINE'
   Initialize-InstallerEngine $ProgramDirectory
   if ($changed) {

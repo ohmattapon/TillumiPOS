@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/runtime.ps1"
 $engineImplementation = ${function:Initialize-InstallerEngine}
+$portImplementation = ${function:Assert-ShopPortAvailable}
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('tillumipos-test-' + [guid]::NewGuid())
 New-Item -ItemType Directory $testRoot | Out-Null
 function Assert($Condition, $Message) { if (-not $Condition) { throw $Message } }
@@ -20,6 +21,22 @@ try {
   Add-Content (Join-Path $shop '.env') 'PORT=invalid'
   Must-Fail { Get-ShopPort $shop } 'Invalid port accepted'
   Set-Content (Join-Path $shop '.env') $before -Encoding ascii
+
+  $portProgram = Join-Path $testRoot 'port-program'
+  New-Item -ItemType Directory (Join-Path $portProgram 'payload/scripts') -Force | Out-Null
+  Copy-Item "$PSScriptRoot/../../scripts/lan-address.ps1" (Join-Path $portProgram 'payload/scripts/lan-address.ps1')
+  function Get-NetTCPConnection { foreach ($address in @($script:listeningAddress)) { [pscustomobject]@{ LocalAddress = $address; LocalPort = 3000 } } }
+  function netsh { '192.168.1.34    3000    127.0.0.1    3000' }
+  $script:listeningAddress = '192.168.1.34'
+  & $portImplementation 3000 $portProgram
+  foreach ($address in @('127.0.0.1', '::1', '0.0.0.0', '::', '192.168.1.35')) {
+    $script:listeningAddress = $address
+    Must-Fail { & $portImplementation 3000 $portProgram } "Accepted occupied address $address"
+  }
+  $script:listeningAddress = @('192.168.1.34', '127.0.0.1')
+  Must-Fail { & $portImplementation 3000 $portProgram } 'A proxy hid an actual localhost listener'
+  Remove-Item Function:\Get-NetTCPConnection
+  Remove-Item Function:\netsh
 
   $payload = Join-Path $testRoot 'payload'
   New-Item -ItemType Directory $payload | Out-Null

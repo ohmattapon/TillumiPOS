@@ -4,6 +4,16 @@ Date: 2026-10-19. Worktree: `D:\worktrees\POS-windows-installer`; branch `ohmatt
 
 ## Reviewable output
 
+### Follow-up: existing LAN forwarding blocked first start
+
+The first actual user launch of 0.1.0 stopped at PORT_IN_USE. Windows had only IP Helper listening on `192.168.1.34:3000` for an existing netsh forward to `127.0.0.1:3000`; no app listened on localhost. The initial preflight treated this reusable forwarding rule as a competing app.
+
+The 0.1.1 runtime accepts only listener addresses backed by the existing shared parser's same-port IPv4-to-localhost forwarding rules. Real localhost/wildcard listeners, unknown LAN listeners, and a proxy alongside a real localhost listener still block installation. No rule or running app was removed. Regression failed against 0.1.0 and passed after the fix, including a read-only check against this machine's actual existing rule. Runtime/packaging tests and PowerShell parsing passed. App source and API contract are unchanged; the app image is retagged for the patch installer version.
+
+The 0.1.0 build and full application-suite results below remain historical validation for the initial candidate; use the 0.1.1 installer for this port-forwarding fix.
+
+### Original 0.1.0 candidate
+
 - Trial installer: `dist-installer/ready/TillumiPOS-Setup-0.1.0.exe`, 275529602 bytes.
 - SHA256: `D6EF7CF26BC71F6E224E7C7736CBC77ECF9CFEDFB9717C503A4B7298C495BA01` (also in the adjacent `.sha256` file).
 - Unsigned (`Get-AuthenticodeSignature`: NotSigned). This is a local candidate, not a published release.
