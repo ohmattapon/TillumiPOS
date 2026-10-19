@@ -18,6 +18,10 @@ function requestHash(value: unknown): string {
   return createHash('sha256').update(body).digest('hex')
 }
 
+/** One generator for the shape of every idempotency key: a UUID, compared case-insensitively. */
+export const isIdempotencyKey = (key: string): boolean =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key)
+
 /** Replays successful command results inside the caller's UOW and binds a key to one actor, action and request body. */
 @injectable()
 export class CommandIdempotency {
@@ -30,7 +34,7 @@ export class CommandIdempotency {
     serialize: (result: T) => Stored,
     restore: (result: unknown) => Promise<T>,
   ): Promise<T> {
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(scope.key))
+    if (!isIdempotencyKey(scope.key))
       throw new DomainError('กรุณาส่ง Idempotency-Key เป็น UUID', 'IDEMPOTENCY_KEY_REQUIRED')
     const normalizedScope = { ...scope, key: scope.key.toLowerCase() }
     const hash = requestHash(input)
