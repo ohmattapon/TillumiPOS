@@ -78,7 +78,7 @@ describe('LoginUseCase', () => {
     expect(audit.record).not.toHaveBeenCalled()
   })
 
-  test.each([[{ username: '', password: 'x' }], [{ username: 'x', password: '' }], [{ username: 'x' }], [null]])(
+  test.each([[{ username: '', password: 'x' }], [{ username: 'x', password: '' }], [{ username: 'x' }], [null], [{ username: 'x', password: 'x'.repeat(73) }]])(
     'rejects malformed input %p without a lookup',
     async (input) => {
       await expect(useCase.execute(input)).rejects.toBeInstanceOf(ZodError)
