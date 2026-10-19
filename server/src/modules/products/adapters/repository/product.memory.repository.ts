@@ -127,6 +127,22 @@ export class MemoryProductRepository implements IProductRepository {
     return this.entityOf(row, branchId)
   }
 
+  /**
+   * The category of each product; an unknown id is simply absent. Not part
+   * of the port: the quote-products twin in this module reads through here,
+   * because the port's reads are branch-scoped while a category never varies
+   * by branch.
+   */
+  async categoriesOf(productIds: readonly number[]) {
+    if (productIds.length === 0) return new Map<number, number | null>()
+    const wanted = new Set(productIds)
+    return new Map(
+      [...this.rows.values()]
+        .filter((row) => wanted.has(row.id))
+        .map((row) => [row.id, row.categoryId] as const),
+    )
+  }
+
   private entityOf(row: ProductRow, branchId: number) {
     return new ProductEntity({ ...row, stockQty: this.stockOf(row.id, branchId) })
   }
