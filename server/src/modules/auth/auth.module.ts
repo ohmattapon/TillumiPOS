@@ -9,6 +9,8 @@ import { ListSwitchableUsersUseCase } from './applications/usecases/list-switcha
 import { SwitchUserUseCase } from './applications/usecases/switch-user.usecase'
 import { pinGuardToken } from './applications/ports/pin-guard.port'
 import { InMemoryPinGuard } from './adapters/in-memory-pin-guard'
+import { loginAttemptGuardToken } from './applications/ports/login-attempt-guard.port'
+import { InMemoryLoginGuard } from './adapters/in-memory-login-guard'
 
 container.registerSingleton(LoginUseCase)
 container.registerSingleton(AuthorizeSessionUseCase)
@@ -19,4 +21,5 @@ container.registerSingleton(AuthElysiaController)
 
 // One instance for the process: the failure counts must be shared by every request.
 container.registerInstance(pinGuardToken, new InMemoryPinGuard())
+container.registerInstance(loginAttemptGuardToken, new InMemoryLoginGuard())
 container.register(sessionAuthorizationReaderToken, { useClass: DrizzleSessionAuthorizationReader })
