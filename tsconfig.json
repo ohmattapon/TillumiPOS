@@ -18,6 +18,7 @@
       "@pos/api/dining-table": ["./server/src/domains/dining-table.domain.ts"],
       "@pos/api/pin": ["./server/src/domains/pin.vo.ts"],
       "@pos/api/promptpay-qr": ["./server/src/domains/promptpay-qr.domain.ts"],
+      "@pos/api/receipt-raster": ["./server/src/domains/receipt-raster.domain.ts"],
       "@pos/api/permissions": ["./server/src/permissions.ts"]
     }
   },
