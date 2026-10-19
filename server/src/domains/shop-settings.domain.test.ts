@@ -30,6 +30,10 @@ describe('ShopSettingsEntity', () => {
       modifiersEnabled: true,
       promptpayMode: 'bank',
       promptpayTarget: null,
+      receiptPrinterIp: null,
+      receiptPrinterPort: 9100,
+      receiptPrinterEnabled: false,
+      cashDrawerEnabled: false,
     })
   })
 
@@ -126,6 +130,56 @@ describe('ShopSettingsEntity', () => {
       const changed = settings().with({ promptpayMode: 'static', promptpayTarget: '0812345678' })
 
       expect(changed.toSnapshot()).toEqual({ ...DEFAULT_SHOP_SETTINGS, promptpayMode: 'static', promptpayTarget: '0812345678' })
+    })
+  })
+
+  describe('lan printer', () => {
+    test('the default is browser printing with no printer set up', () => {
+      expect(DEFAULT_SHOP_SETTINGS.receiptPrinterIp).toBeNull()
+      expect(DEFAULT_SHOP_SETTINGS.receiptPrinterPort).toBe(9100)
+      expect(DEFAULT_SHOP_SETTINGS.receiptPrinterEnabled).toBe(false)
+      expect(DEFAULT_SHOP_SETTINGS.cashDrawerEnabled).toBe(false)
+    })
+
+    test('an enabled printer with an IP and the drawer survives with() and toSnapshot()', () => {
+      const changed = settings().with({
+        receiptPrinterIp: '192.168.1.50',
+        receiptPrinterEnabled: true,
+        cashDrawerEnabled: true,
+      })
+
+      expect(changed.toSnapshot()).toEqual({
+        ...DEFAULT_SHOP_SETTINGS,
+        receiptPrinterIp: '192.168.1.50',
+        receiptPrinterEnabled: true,
+        cashDrawerEnabled: true,
+      })
+    })
+
+    test.each<[string, Partial<ShopSettingsProps>]>([
+      ['a printer host with spaces', { receiptPrinterIp: '192.168.1. 50' }],
+      ['a printer host with a scheme', { receiptPrinterIp: 'http://printer' }],
+      ['a printer host over 45 characters', { receiptPrinterIp: `${'a'.repeat(40)}.local` }],
+      ['a printer port of 0', { receiptPrinterPort: 0 }],
+      ['a printer port above 65535', { receiptPrinterPort: 65536 }],
+      ['a fractional printer port', { receiptPrinterPort: 9100.5 }],
+      ['a non-boolean printer switch', { receiptPrinterEnabled: 'yes' as never }],
+      ['an enabled printer with no IP', { receiptPrinterEnabled: true }],
+      ['a drawer without the printer on', { receiptPrinterIp: '192.168.1.50', cashDrawerEnabled: true }],
+    ])('rejects %s', (_label, overrides) => {
+      expect(() => settings(overrides)).toThrow(
+        expect.objectContaining({ code: 'INVALID_SHOP_SETTINGS' }),
+      )
+    })
+
+    test.each([
+      { receiptPrinterIp: '192.168.1.50' },
+      { receiptPrinterIp: 'printer.local', receiptPrinterPort: 9101 },
+      { receiptPrinterIp: '192.168.1.50', receiptPrinterPort: 1 },
+      { receiptPrinterIp: '192.168.1.50', receiptPrinterPort: 65535 },
+      { receiptPrinterIp: null },
+    ])('accepts the printer value %p', (overrides) => {
+      expect(() => settings(overrides)).not.toThrow()
     })
   })
 
