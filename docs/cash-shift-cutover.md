@@ -1,6 +1,6 @@
 # Cash shift cutover
 
-The migration creates a `MAIN` register for each existing branch and a new branch receives one in its create transaction. It does not open shifts or change old sales. `CHECKOUT_MODE` defaults to `legacy` in `.env.example`.
+The migration creates a `MAIN` register for the single `MAIN` branch (branches can no longer be created). It does not open shifts or change old sales. `CHECKOUT_MODE` defaults to `legacy` in `.env.example`.
 
 ## Current implementation boundary
 

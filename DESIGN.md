@@ -229,11 +229,11 @@ Interaction patterns:
 - **Loading** uses a skeleton (`Skeleton`) shaped like the real content. Do not use a bare "Loading" text and do not use a spinner. Use the components from `components/Skeletons.tsx`, or the built-in skeleton of `DataTable` while there is no data yet. Never show a zero ("0 items", "All stock is sufficient", "No bills yet") or an empty-state message while loading, because people will read it as a real answer. Every skeleton is a `role="status"` with a hidden "Loading" text, and the shimmer stops when the user asks for reduced motion.
 - **Shortcuts on the sales page:** F2 goes to the search field and F9 takes payment. The key is shown on the button.
 - **Focus:** after adding a product or closing a receipt, focus returns to the search field only when the device has a mouse, so the keyboard on a touch screen does not pop up.
-- **Printing** prints only the receipt, 72mm wide for an 80mm printer. Anything that should not print gets the `print:hidden` class.
+- **Printing** has two paths. LAN printing renders the on-screen receipt to 1-bit pixels (384 dots for 58mm, 576 for 80mm) and sends them as `GS v 0` raster with cut and drawer kick, so Thai prints the same on every brand; the browser print/PDF path stays as the fallback and prints only the receipt. Anything that should not print gets the `print:hidden` class.
 
 ## Customer display
 
-The `/customer` page is a second screen facing the customer at the counter. It works only on the same machine and browser as the sales page (the data travels over a `BroadcastChannel` named `easypos-customer-display`). It only displays: it has no buttons or input fields.
+The `/customer` page is a second screen facing the customer at the counter. It works through the server's SSE stream to a paired display on another device; the same-browser `BroadcastChannel` (`easypos-customer-display`) stays as the fallback. It only displays: it has no buttons or input fields.
 
 | State | Shows |
 |---|---|
@@ -276,8 +276,6 @@ This list is where the current system does not yet meet the standard of this doc
 | Contrast of the primary button | White text on `#0f766e` gives 5.47:1 on a white background (5.25:1 on the canvas background), which passes WCAG AA. Checked with `scripts/check-contrast.mjs` |
 | Contrast of status badges | 12px text in `success` (about 4.4:1) and `warning` (about 3.8:1) on white is below 4.5:1, and lower still on a pale background |
 | Long forms on a phone | The confirm button of a dialog that has a form is not always pinned to the bottom; you have to scroll down to it (see the screen sizes section) |
-| Multiple languages | Thai text is embedded in the components and has not yet been split into language files (item 4 in the roadmap) |
 | Dark mode | The `dark` and `midnight` themes exist. Check screens and dialogs when adding or changing a component |
-| Receipt | It does not yet have the shop name, address and tax id (item 11 in the roadmap) |
 
 The contrast ratios above were calculated from the color values by hand and have not been verified with a tool.
