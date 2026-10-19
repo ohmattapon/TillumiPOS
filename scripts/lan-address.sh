@@ -32,6 +32,6 @@ show_lan_address() {
   # This request goes out through the same address another device would use, so it fails when the system only
   # listens on this computer. It cannot see a firewall that blocks other computers.
   if ! curl -fsS --max-time 5 "http://${ip}:${port}/api/v1/health" >/dev/null 2>&1; then
-    echo "Warning: the system did not answer on that address. Other devices will not reach it until this is fixed (see docs/install.md, section \"เชื่อมต่อเครื่องอื่น\")." >&2
+    echo "Warning: the system did not answer on that address. Other devices will not reach it until this is fixed (see docs/install.md, the section about connecting other devices)." >&2
   fi
 }

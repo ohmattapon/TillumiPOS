@@ -47,5 +47,5 @@ function Show-LanAddress([string]$Port) {
   # This request goes out through the same address another device would use, so it fails when the system only
   # listens on this computer. It cannot see a firewall that blocks other computers.
   try { Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 "http://${ip}:$Port/api/v1/health" | Out-Null }
-  catch { Write-Warning 'The system did not answer on that address. Other devices will not reach it until this is fixed (see docs/install.md, section "เชื่อมต่อเครื่องอื่น").' }
+  catch { Write-Warning 'The system did not answer on that address. Other devices will not reach it until this is fixed (see docs/install.md, the section about connecting other devices).' }
 }
