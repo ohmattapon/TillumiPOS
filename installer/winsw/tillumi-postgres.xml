@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  TillumiPOS native Windows installer — PostgreSQL service wrapper (WinSW v2).
+
+  PLACEHOLDER CONTRACT (substituted at install time by installer/tillumi.iss, Task 3;
+  the installed copy must contain NO {{...}} token — Task 3 asserts that):
+    {{INSTALL_DIR}}  Program Files target, e.g. C:\Program Files\TillumiPOS
+                     (postgres binaries live at {{INSTALL_DIR}}\pgsql\bin)
+    {{DATA_DIR}}     writable data root, e.g. C:\ProgramData\TillumiPOS
+                     (cluster at {{DATA_DIR}}\pgdata, logs at {{DATA_DIR}}\logs)
+    {{PORT_DB}}      postgres TCP port, default 5435. Never 5432/5433/5434:
+                     those may belong to the developer's own databases.
+
+  SHOP DATA SAFETY (review focus): the cluster lives under {{DATA_DIR}}
+  (ProgramData), strictly separated from {{INSTALL_DIR}} (Program Files), so
+  updates and reinstalls never touch shop data. The uninstaller must ask before
+  deleting {{DATA_DIR}} (Task 3).
+
+  WINSW RULES (do not break):
+  - The WinSW binary must sit next to the INSTALLED copy of this file and share
+    its basename: tillumi-postgres.exe + tillumi-postgres.xml (Task 3 copies the
+    downloaded WinSW-x64.exe twice, once per service). The binary itself is never
+    committed to git; Task 3 fetches WinSW v2 (v2.12.0 proven) into the installer
+    staging dir at build time.
+  - postgres runs in the FOREGROUND (postgres.exe, not `pg_ctl start`) so the
+    service manager owns the postmaster process. Shutdown goes through
+    <stopexecutable> (`pg_ctl stop -m fast`) for a clean checkpoint; anything
+    still alive after <stoptimeout> is terminated by WinSW.
+  - The API service (tillumi-pos.xml) declares <depend>tillumi-postgres</depend>,
+    so Windows always starts postgres first and stops it last.
+
+  SERVICE COMMANDS (need an ELEVATED shell — documented only, Task 2 does not
+  test service installation):
+    tillumi-postgres.exe install
+    net start tillumi-postgres
+    net stop tillumi-postgres
+    tillumi-postgres.exe uninstall
+-->
+<service>
+  <id>tillumi-postgres</id>
+  <name>TillumiPOS PostgreSQL</name>
+  <description>PostgreSQL database for TillumiPOS (shop data only, listens on 127.0.0.1)</description>
+  <executable>{{INSTALL_DIR}}\pgsql\bin\postgres.exe</executable>
+  <arguments>-D "{{DATA_DIR}}\pgdata" -p {{PORT_DB}} -c listen_addresses=127.0.0.1 -c log_destination=stderr -c logging_collector=off</arguments>
+  <workingdirectory>{{DATA_DIR}}</workingdirectory>
+  <stopexecutable>{{INSTALL_DIR}}\pgsql\bin\pg_ctl.exe</stopexecutable>
+  <stoparguments>stop -D "{{DATA_DIR}}\pgdata" -m fast -w -t 60</stoparguments>
+  <stopparentprocessfirst>true</stopparentprocessfirst>
+  <stoptimeout>90 sec</stoptimeout>
+  <startmode>Automatic</startmode>
+  <logpath>{{DATA_DIR}}\logs</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>8</keepFiles>
+  </log>
+  <onfailure action="restart" delay="10 sec"/>
+</service>
