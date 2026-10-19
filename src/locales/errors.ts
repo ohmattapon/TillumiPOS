@@ -109,5 +109,10 @@ export const errors = {
     OWNER_PIN_SELF_ONLY: "Only the owner can set the owner's PIN",
     OWN_PIN_USE_ACCOUNT: 'Set your own PIN from the account menu, with your current password',
     INVALID_PASSWORD: 'The current password is not correct',
+    UPDATE_FEED_UNAVAILABLE: 'The update information could not be reached. Check the connection and try again.',
+    UPDATE_FEED_INVALID: 'The update information is not valid. Please tell your technician.',
+    UPDATE_DOWNLOAD_FAILED: 'The update package could not be downloaded. Please try again.',
+    UPDATE_NOT_AVAILABLE: 'This is already the latest version.',
+    UPDATE_HASH_MISMATCH: 'The update file does not match its signature. Please try again.',
   },
 }

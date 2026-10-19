@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { createMoney, type Locale } from '@/lib/money'
 import { settingsQuery, useUpdateSettings } from '../api'
 import { ConnectDevicesPanel } from './ConnectDevicesPanel'
+import { UpdatePanel } from './UpdatePanel'
 import { withTablesSwitch } from '../lib/feature-switches'
 import { canSavePromptPay, normalizePromptPayTarget } from '../lib/promptpay'
 import { currencyNameIn, timeZoneOptions } from '../lib/shop-options'
@@ -424,6 +425,11 @@ export function SettingsPage() {
         {settings.data && (
           <div className="mx-auto mt-6 max-w-3xl">
             <ConnectDevicesPanel />
+          </div>
+        )}
+        {settings.data && (
+          <div className="mx-auto mt-4 max-w-3xl">
+            <UpdatePanel />
           </div>
         )}
       </div>
