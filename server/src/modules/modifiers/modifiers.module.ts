@@ -1,6 +1,8 @@
 import { container } from 'tsyringe'
+import { starterOptionGroupsToken } from '../setup/applications/ports/starter-option-groups.port'
 import { quoteLineOptionsToken } from '../quotes/applications/ports/quote-line-options.port'
 import { ModifierElysiaController } from './adapters/controllers/modifier.controller'
+import { ModifierStarterOptionGroups } from './adapters/starter-option-groups'
 import { CachedModifierRepository } from './adapters/repository/modifier.cached.repository'
 import { lineOptionsResolverToken } from './applications/ports/line-options-resolver.port'
 import { modifierRepositoryToken } from './applications/ports/modifier.repository'
@@ -16,6 +18,7 @@ import { UpdateModifierOptionUseCase } from './applications/usecases/update-modi
 container.register(modifierRepositoryToken, { useClass: CachedModifierRepository })
 container.register(lineOptionsResolverToken, { useClass: LineOptionsResolver })
 container.register(quoteLineOptionsToken, { useToken: lineOptionsResolverToken })
+container.register(starterOptionGroupsToken, { useClass: ModifierStarterOptionGroups })
 container.registerSingleton(GroupDefaults)
 container.registerSingleton(ListModifierGroupsUseCase)
 container.registerSingleton(CreateModifierGroupUseCase)

@@ -18,10 +18,12 @@ import { firstRunGuardToken } from '../ports/first-run-guard.port'
 import type { IFirstRunGuard } from '../ports/first-run-guard.port'
 import { setupCodeToken } from '../ports/setup-code.port'
 import type { ISetupCode } from '../ports/setup-code.port'
+import { starterOptionGroupsToken } from '../ports/starter-option-groups.port'
+import type { IStarterOptionGroups } from '../ports/starter-option-groups.port'
 import { completeSetupSchema } from '../schemas/setup-schemas'
 
 /**
- * Command: makes the first owner and names the shop. Works once: it is refused as soon as anyone has an
+ * Command: makes the first owner, names the shop and gives it the options its kind of shop starts with. Works once: it is refused as soon as anyone has an
  * account, and until then only with the code the server printed in its log.
  */
 @injectable()
@@ -35,6 +37,7 @@ export class CompleteSetupUseCase {
     @inject(TOKENS.PasswordHasher) private readonly hasher: IPasswordHasher,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
     @inject(roleDirectoryToken) private readonly roles: IRoleDirectory,
+    @inject(starterOptionGroupsToken) private readonly starterGroups: IStarterOptionGroups,
   ) {}
 
   async execute(input: unknown): Promise<UserEntity> {
@@ -55,6 +58,8 @@ export class CompleteSetupUseCase {
       if (!branch) throw new DomainNotFoundError('ไม่พบสาขา', 'BRANCH_NOT_FOUND')
       await this.branches.update(branch.with({ name: dto.branchName ?? dto.shopName }))
       await this.settings.save((await this.settings.getForUpdate()).with({ shopName: dto.shopName, ...shopFeaturesFor(dto.shopType) }))
+      // In the same transaction, so a shop is never left half-made with its owner but not its starting options.
+      await this.starterGroups.addFor(dto.shopType)
 
       const ownerRole = await this.roles.findBySystemKey('owner')
       return this.users.create(
