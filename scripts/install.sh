@@ -17,6 +17,8 @@ done
 
 . scripts/podman-compose.sh
 
+. scripts/lan-address.sh
+
 install_podman_mac || exit 1
 command -v podman >/dev/null 2>&1 || { echo "Podman is not installed. Install it first: https://podman.io/getting-started/installation" >&2; exit 1; }
 prepare_podman || exit 1
@@ -68,6 +70,7 @@ URL="http://localhost:${PORT}"
 [ -n "$DOMAIN" ] && URL="https://${DOMAIN}"
 echo
 echo "TillumiPOS is running: ${URL}"
+[ -z "$DOMAIN" ] && show_lan_address "$PORT"
 CODE="$(compose -f docker-compose.yml logs app 2>/dev/null | grep -o 'SETUP CODE[^:]*:  *[A-Z0-9]*' | tail -1 | grep -o '[A-Z0-9]*$' || true)"
 if [ -n "$CODE" ]; then
   echo "First-time setup code: ${CODE}"
