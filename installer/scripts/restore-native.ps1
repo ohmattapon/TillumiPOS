@@ -64,6 +64,12 @@ try {
 if (-not $complete) { throw "$File is not a complete backup (it was cut off). Nothing was changed." }
 
 $mediaFile = $File -replace '\.sql\.gz$', '.media.tar.gz'
+# Reject a damaged archive before changing the database or stopping the shop.
+if (Test-Path $mediaFile) {
+  if (-not (Get-Command tar.exe -ErrorAction SilentlyContinue)) { throw 'tar.exe not found. Nothing was changed.' }
+  & tar.exe -tzf $mediaFile | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw 'The image backup is damaged. Nothing was changed.' }
+}
 if (-not $Yes) {
   Write-Host "This replaces ALL data in the shop's database with the contents of: $File"
   if (Test-Path $mediaFile) { Write-Host "  and the product images in $mediaFile" }
@@ -93,7 +99,6 @@ try {
 } finally {
   Remove-Item $tmpSql -ErrorAction SilentlyContinue
 }
-if ($stoppedByMe) { Start-Service 'tillumi-pos' }
 
 # The images saved with it, if any. A dump without them leaves the images that are there alone.
 if (Test-Path $mediaFile) {
@@ -103,8 +108,29 @@ if (Test-Path $mediaFile) {
   $mediaDir = Join-Path $DataDir 'data\media'
   New-Item -ItemType Directory -Force -Path $mediaDir | Out-Null
   Write-Host 'Restoring the images...'
-  Get-ChildItem -Path $mediaDir -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-  & tar.exe -xzf $mediaFile -C $mediaDir
+  # Unpack separately; a failed extraction must preserve the current images.
+  # On a post-database failure the API deliberately stays stopped for recovery.
+  $stagedMedia = Join-Path $DataDir ('media-restore-' + [guid]::NewGuid().ToString('N'))
+  New-Item -ItemType Directory -Path $stagedMedia | Out-Null
+  & tar.exe -xzf $mediaFile -C $stagedMedia
   if ($LASTEXITCODE -ne 0) { throw "$mediaFile could not be unpacked; the database is restored but the images are not." }
+  $previousMedia = Join-Path $DataDir ('media-before-restore-' + [guid]::NewGuid().ToString('N'))
+  $dataRoot = [IO.Path]::GetFullPath($DataDir).TrimEnd('\') + '\'
+  foreach ($path in @($mediaDir, $stagedMedia, $previousMedia)) {
+    if (-not ([IO.Path]::GetFullPath($path)).StartsWith($dataRoot, [StringComparison]::OrdinalIgnoreCase)) {
+      throw 'Refusing to move images outside the shop data directory.'
+    }
+    if ((Test-Path -LiteralPath $path) -and ((Get-Item -LiteralPath $path -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+      throw 'Refusing to move an image directory that is a junction or symbolic link.'
+    }
+  }
+  Move-Item -LiteralPath $mediaDir -Destination $previousMedia
+  try { Move-Item -LiteralPath $stagedMedia -Destination $mediaDir }
+  catch {
+    Move-Item -LiteralPath $previousMedia -Destination $mediaDir
+    throw
+  }
+  Write-Host "Previous images kept for recovery: $previousMedia"
 }
+if ($stoppedByMe) { Start-Service 'tillumi-pos' }
 Write-Host "Restored from $File"

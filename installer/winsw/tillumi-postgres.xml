@@ -39,6 +39,11 @@
 <service>
   <id>tillumi-postgres</id>
   <name>TillumiPOS PostgreSQL</name>
+  <!-- WinSW v2 uses domain/user, not the v3 username element. -->
+  <serviceaccount>
+    <domain>NT AUTHORITY</domain>
+    <user>LocalService</user>
+  </serviceaccount>
   <description>PostgreSQL database for TillumiPOS (shop data only, listens on 127.0.0.1)</description>
   <executable>{{INSTALL_DIR}}\pgsql\bin\postgres.exe</executable>
   <arguments>-D "{{DATA_DIR}}\pgdata" -p {{PORT_DB}} -c listen_addresses=127.0.0.1 -c log_destination=stderr -c logging_collector=off</arguments>

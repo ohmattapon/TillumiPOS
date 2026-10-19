@@ -1,4 +1,4 @@
-# ติดตั้งอัปเดต TillumiPOS บนเครื่องร้าน (Task 4 คู่กับ server/src/modules/update).
+﻿# ติดตั้งอัปเดต TillumiPOS บนเครื่องร้าน (Task 4 คู่กับ server/src/modules/update).
 #
 # ภาพรวม (เบราว์เซอร์หยุด Windows service ไม่ได้ จึงแยกเป็นสองขั้น):
 #   1. เจ้าของกด "โหลดรุ่นใหม่" ในหน้าตั้งค่า: ตัว API โหลดไฟล์รุ่นใหม่จาก feed
@@ -114,7 +114,11 @@ function Test-ShopHealth([string]$Url) {
 
 function Stop-ApiService {
   if ($TestMode) { return }
-  & net.exe stop $ApiService | Out-Null
+  $service = Get-Service $ApiService -ErrorAction Stop
+  if ($service.Status -ne 'Stopped') {
+    Stop-Service $ApiService -ErrorAction Stop
+    $service.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(60))
+  }
 }
 
 function Start-ApiService {
@@ -160,16 +164,7 @@ try {
   # อัปฐานข้อมูลก่อนสตาร์ทเสมอ (migrate-then-start ตาม installer/tillumi.iss):
   # postgres ไม่ได้หยุดไปด้วยจึงใช้ต่อได้เลย พังขั้นนี้ = รุ่นเก่ายังไม่โดนแตะ
   if (-not $TestMode) {
-    $migrate = Join-Path $newDir 'tillumi-migrate.exe'
-    $env:MIGRATIONS_DIR = Join-Path $newDir 'drizzle'
-    $env:DATABASE_URL = "postgres://pos@127.0.0.1:$PortDb/pos"
-    try {
-      & $migrate
-      if ($LASTEXITCODE -ne 0) { throw "อัปฐานข้อมูลไม่สำเร็จ (รหัส $LASTEXITCODE)" }
-    } finally {
-      Remove-Item Env:\MIGRATIONS_DIR -ErrorAction SilentlyContinue
-      Remove-Item Env:\DATABASE_URL -ErrorAction SilentlyContinue
-    }
+    & (Join-Path $PSScriptRoot 'migrate-native.ps1') -AppDir $newDir -DataDir $DataDir -PortDb $PortDb
   }
 
   Write-ServiceXmlPointer $xmlPath $currentVersion $Version
@@ -188,9 +183,21 @@ try {
 } catch {
   $reason = $_.Exception.Message
   if (-not $swapped) {
-    throw "ติดตั้งรุ่น $Version ไม่สำเร็จ ($reason) — รุ่นเดิมยังอยู่ ไม่มีการเปลี่ยน"
+    # The old pointer is intact, but we already stopped the API. Always reopen it,
+    # and remove only this attempt's version directory so the same release can retry.
+    $recovered = $false
+    try {
+      if (Test-Path -LiteralPath $newDir) { Remove-Item -LiteralPath $newDir -Recurse -Force }
+    } catch { $reason += "; ล้างไฟล์พักไม่สำเร็จ: $($_.Exception.Message)" }
+    try {
+      Start-ApiService
+      $recovered = Test-ShopHealth "$ShopUrl/api/v1/setup"
+    } catch { $recovered = $false }
+    if ($recovered) { throw "ติดตั้งรุ่น $Version ไม่สำเร็จ ($reason) — เปิดรุ่น $currentVersion กลับแล้ว" }
+    throw "ติดตั้งรุ่น $Version ไม่สำเร็จ ($reason) และเปิดรุ่นเดิมกลับไม่ได้ กรุณาแจ้งช่าง"
   }
   # rollback: ชี้กลับรุ่นเดิม + สตาร์ท (โฟลเดอร์รุ่นที่พังลบทิ้ง ไม่เก็บของเสียไว้)
+  Stop-ApiService
   Copy-Item -LiteralPath "$xmlPath.bak" -Destination $xmlPath -Force
   if (Test-Path -LiteralPath $newDir) { Remove-Item -LiteralPath $newDir -Recurse -Force }
   $backUp = $false

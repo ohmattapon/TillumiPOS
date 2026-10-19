@@ -1,7 +1,7 @@
 const th = {
   title: 'ตั้งค่าร้านครั้งแรก',
   subtitle: 'สร้างบัญชีเจ้าของร้านและตั้งชื่อร้าน',
-  codeNote: 'ตัวติดตั้งพิมพ์รหัสตั้งค่าให้ตอนติดตั้งเสร็จ ถ้าหาไม่เจอ เปิด PowerShell หรือ Terminal ในโฟลเดอร์ที่ติดตั้งระบบ แล้วรัน "podman compose logs app" และมองหา SETUP CODE',
+  codeNote: 'ถ้าติดตั้งด้วยไฟล์ .exe ให้เปิดเมนู Start → TillumiPOS → รหัสตั้งค่าร้าน หากติดตั้งผ่าน Podman ให้ดูรหัสที่ตัวติดตั้งพิมพ์ไว้ หรือรัน "podman compose logs app" ในโฟลเดอร์ระบบแล้วมองหา SETUP CODE',
   setupCode: 'รหัสตั้งค่า',
   codeHint: 'เป็นตัวอักษรอังกฤษกับตัวเลข (ตัวพิมพ์เล็กหรือใหญ่ก็ได้)',
   codeKeyboard: 'มีตัวอักษรไทยในช่องนี้ ให้สลับแป้นพิมพ์เป็นภาษาอังกฤษ (Win+Space หรือ Alt+Shift) แล้วพิมพ์ใหม่',
@@ -34,7 +34,7 @@ const th = {
 const en = {
   title: 'First-time setup',
   subtitle: 'Create the owner account and name the shop',
-  codeNote: 'The installer prints the setup code when it finishes. If you cannot find it, open PowerShell or Terminal in the folder where the system is installed, run "podman compose logs app" and look for SETUP CODE',
+  codeNote: 'For the Windows .exe installation, open Start → TillumiPOS → รหัสตั้งค่าร้าน (setup code). For a Podman installation, use the code printed by the installer, or run "podman compose logs app" in the system folder and look for SETUP CODE',
   setupCode: 'Setup code',
   codeHint: 'English letters and digits (upper or lower case)',
   codeKeyboard: 'There are Thai characters in this field. Switch the keyboard to English (Win+Space or Alt+Shift) and type it again.',

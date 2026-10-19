@@ -27,11 +27,9 @@
 # <env> backstop in tillumi-pos.xml) must gain the password; backup/restore read
 # it from the PGPASSWORD environment variable automatically.
 #
-# SERVICE ACCOUNT (for Task 3): services run as LocalSystem by default, which can
-# already write everywhere below. If Task 3 switches to a dedicated account, Inno
-# must grant it full control BEFORE starting the services, e.g.:
-#   icacls "$DataDir" /grant 'NT SERVICE\tillumi-postgres:(OI)(CI)F' /T
-#   icacls "$DataDir" /grant 'NT SERVICE\tillumi-pos:(OI)(CI)F' /T
+# SERVICE ACCOUNT: PostgreSQL runs as LocalService (it refuses LocalSystem).
+# configure-postgres-service.ps1 grants read/execute on binaries and modify on
+# pgdata/logs before startup, including clusters kept from older installations.
 param(
   [Parameter(Mandatory = $true)][string]$InstallDir,
   [Parameter(Mandatory = $true)][string]$DataDir,

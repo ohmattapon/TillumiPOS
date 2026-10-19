@@ -31,9 +31,9 @@
    - หน้า "การเชื่อมต่อในร้าน" มีช่องติ๊ก **"ให้เครื่องอื่นในร้านเปิดหน้าขายได้ด้วย (เช่น iPad ผ่านวายฟายร้าน)"**
      - ติ๊กช่องนี้ถ้าจะให้ iPad / มือถือ / เครื่องที่สองเปิดหน้าขายผ่านวายฟายร้าน
      - ไม่ติ๊ก = เปิดได้เฉพาะเครื่องหลักเครื่องเดียว (ปลอดภัยที่สุด)
-3. ติ๊ก **"เปิดหน้าร้านเลย"** แล้วกด Finish — หน้าขายจะเปิดขึ้นมาเต็มจอเอง
+3. ติ๊ก **"ดูรหัสสำหรับตั้งค่าร้านครั้งแรก"** และ **"เปิดหน้าร้านเลย"** แล้วกด Finish — โปรแกรมจะแสดงรหัสตั้งค่าและเปิดหน้าร้าน
 4. **ตั้งค่าร้านครั้งแรก:** กรอกชื่อร้าน สร้างบัญชีเจ้าของ ตามหน้าจอ (เหมือนหัวข้อ "ตั้งค่าร้านครั้งแรก" ใน `install.md`)
-   - **รหัสตั้งค่า** ดูในไฟล์ log ล่าสุดที่โฟลเดอร์ `C:\ProgramData\TillumiPOS\logs` เปิดไฟล์ล่าสุดแล้วค้นหา `SETUP CODE`
+   - **รหัสตั้งค่า** ดูจากหน้าต่างที่เปิดหลังติดตั้ง หากปิดไปแล้วให้เปิด **Start → TillumiPOS → รหัสตั้งค่าร้าน** รหัสจะอ่านจาก log ของระบบโดยไม่สร้างไฟล์รหัสเพิ่ม ร้านที่ตั้งค่าแล้วจะไม่แสดงรหัส
    - กรอกผิด 5 ครั้งจะถูกล็อก 15 นาที ต้องสลับแป้นพิมพ์เป็นภาษาอังกฤษก่อนกรอก
 
 ## ใช้งานทุกวัน (ไม่ต้องทำอะไร)
@@ -91,6 +91,30 @@ restore-native.ps1 -File "C:\ProgramData\TillumiPOS\backups\easypos-วันท
 ---
 
 ## สำหรับช่าง (technician notes)
+
+### ตรวจการแก้ไขตัวติดตั้ง (20 ตุลาคม 2026)
+
+- Migration ใช้ `migrate-native.ps1` แทน `cmd /c set ...` เพื่อรักษาพาธที่มีช่องว่าง และคืน environment/working directory หลังรัน
+- ติดตั้งทับจะหยุด service ก่อนคัดไฟล์ ใช้ registration เดิม และเก็บ XML เดิมไว้สำหรับกู้คืนเมื่อขั้นตอนติดตั้งล้มเหลว
+- อัปเดตที่ล้มก่อนสลับรุ่นจะพยายามเปิดรุ่นเดิมกลับ ตรวจสุขภาพ และล้างโฟลเดอร์รุ่นที่ติดตั้งไม่สำเร็จเพื่อให้ลองใหม่ได้
+- Restore ตรวจ archive รูปก่อนเปลี่ยนฐานข้อมูล แตกไว้แยก และเปิด API หลังสลับรูปเสร็จ รูปเดิมเก็บใน `media-before-restore-*` หากคืนรูปหลังฐานข้อมูลสำเร็จไม่ได้ ระบบจะคง API ไว้ในสถานะหยุดเพื่อให้ผู้ดูแลแก้ไข
+- การ rollback อัปเดตเป็นการคืนตัวโปรแกรมและ XML ไม่ได้ย้อน schema ฐานข้อมูล ต้องสำรองข้อมูลและใช้ migration ที่เข้ากันได้กับรุ่นก่อนหน้า
+
+ทดสอบ regression บน Windows โดยไม่ติดตั้ง service และไม่แตะข้อมูลร้าน:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/regressions.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/native-runners.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/service-account.ps1
+```
+
+เพิ่มเติมจาก log ติดตั้งจริงเวลา 06:08 วันที่ 20 ตุลาคม: PostgreSQL ปฏิเสธการเริ่มด้วย LocalSystem (`Execution of PostgreSQL by a user with administrative permissions is not permitted`). ปรับ XML ให้ใช้ LocalService ตาม [WinSW v2.12.0](https://github.com/winsw/winsw/blob/v2.12.0/doc/xmlConfigFile.md#localservice-account) และเพิ่ม `configure-postgres-service.ps1` ซึ่งกำหนดสิทธิ์อ่าน/รันที่โปรแกรม สิทธิ์แก้ไขที่ pgdata/logs และเปลี่ยน registration เดิมก่อนเริ่มฐานข้อมูล การทดสอบจำลองยืนยันกรณีลงครั้งแรก/ลงซ้ำ และการหยุดเมื่อ ACL/SCM/บัญชีที่ตรวจกลับไม่ถูกต้อง ยังไม่ได้ยืนยัน service จริงในรอบแก้นี้ เพราะ shell ของผู้พัฒนาไม่ได้ยกระดับสิทธิ์
+
+ทดสอบแล้ว: ปัญหาเดิมทั้งห้าจุดมี regression checks, พาธที่มีช่องว่าง, migration ล้มแล้วคืน environment, อัปเดตสำเร็จ/ย้อนรุ่น/ไฟล์ไม่ครบ, ลำดับ restore ฐานข้อมูลและรูป รวมถึง archive เสียและแตกไฟล์ไม่สำเร็จ นอกจากนี้ compiled migrator รันกับฐานข้อมูลชั่วคราวได้ และ compiled API ตอบ `/api/v1/setup` กับหน้าเว็บได้ ทดสอบ backup → เปลี่ยนข้อมูล/รูป → restore กับ PostgreSQL จริงใน cluster ชั่วคราวแล้ว ทั้งข้อมูลและรูปกลับมาตรงต้นฉบับ (จำลองการควบคุม service เพื่อไม่แตะ service ของเครื่อง)
+
+ยังต้องทดสอบบน Windows VM ที่ยกระดับสิทธิ์: wizard เต็มขั้นตอน, ติดตั้งซ้ำกับ service จริง, กล่องรหัสตั้งค่า, Task Scheduler, firewall, ถอนติดตั้ง และรีบูต ข้อความข้างต้นไม่ใช่หลักฐานว่ารอบทดสอบเหล่านี้ผ่านแล้ว
+
+ผลตรวจรอบนี้: typecheck/build ผ่าน, web 510 ผ่าน, ชุด update/migrations-folder/repo-secrets 44 ผ่าน และ regression scripts ข้างต้นผ่าน ชุด API เต็มบน Windows กับ PostgreSQL ชั่วคราวผ่าน 1,924 ข้อ แต่ไม่ผ่าน 27 ข้อ (สคริปต์ Unix บน Windows และ Redis integration ที่ไม่ได้เปิด Redis) จึงยังไม่ผ่านเงื่อนไขชุดทดสอบทั้งหมด ห้ามใช้ผลนี้ยืนยันว่า production-ready
 
 ข้อมูลทางเทคนิคทั้งหมดนี้ตรวจสอบจาก `installer/tillumi.iss`, `installer/scripts/*.ps1`,
 `installer/winsw/*.xml` และ `server/src/modules/update/**` ณ วันที่เขียนเอกสาร

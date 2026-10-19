@@ -90,6 +90,7 @@ Name: "thai"; MessagesFile: "compiler:Languages\Thai.isl"
 thai.TaskGroup=การเชื่อมต่อในร้าน
 thai.TaskLan=ให้เครื่องอื่นในร้านเปิดหน้าขายได้ด้วย (เช่น iPad ผ่านวายฟายร้าน)
 thai.OpenShopNow=เปิดหน้าร้านเลย
+thai.ShowSetupCode=ดูรหัสสำหรับตั้งค่าร้านครั้งแรก
 
 [Tasks]
 Name: "lan"; Description: "{cm:TaskLan}"; GroupDescription: "{cm:TaskGroup}"
@@ -116,9 +117,11 @@ Name: "{autodesktop}\เปิดหน้าร้าน"; Filename: "{#ShopUrl
 Name: "{group}\เปิดหน้าร้าน"; Filename: "{code:ChromePath}"; Parameters: "--kiosk {#ShopUrl}"; Check: HaveChrome
 Name: "{group}\เปิดหน้าร้าน"; Filename: "{code:EdgePath}"; Parameters: "--kiosk {#ShopUrl}"; Check: HaveEdgeOnly
 Name: "{group}\เปิดหน้าร้าน"; Filename: "{#ShopUrl}"; Check: HaveNoKioskBrowser
+Name: "{group}\รหัสตั้งค่าร้าน"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\scripts\show-setup-code.ps1"" -DataDir ""{commonappdata}\{#DataDirName}"" -PortApi {#PortApi}"; IconFilename: "{sys}\shell32.dll"
 
 [Run]
-Filename: "{code:GetShopLink}"; Description: "{cm:OpenShopNow}"; Flags: postinstall nowait skipifsilent shellexec
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\scripts\show-setup-code.ps1"" -DataDir ""{commonappdata}\{#DataDirName}"" -PortApi {#PortApi}"; Description: "{cm:ShowSetupCode}"; Flags: postinstall nowait skipifsilent; Check: InstalledSuccessfully
+Filename: "{code:GetShopLink}"; Description: "{cm:OpenShopNow}"; Flags: postinstall nowait skipifsilent shellexec; Check: InstalledSuccessfully
 
 [Code]
 const
@@ -127,6 +130,15 @@ const
 
 var
   FailedStep: String;
+  HadPostgresService, HadApiService: Boolean;
+  PostgresWasRunning, ApiWasRunning: Boolean;
+  CreatedPostgresService, CreatedApiService, ServicesPrepared: Boolean;
+  InstallationCompleted, RecoveryAttempted: Boolean;
+
+function InstalledSuccessfully(): Boolean;
+begin
+  Result := InstallationCompleted;
+end;
 
 function DataDirPath(): String;
 begin
@@ -198,6 +210,78 @@ begin
   RunHidden(ExpandConstant('{app}\tillumi-postgres.exe'), 'uninstall', ExpandConstant('{app}'), ExitCode);
 end;
 
+function ServiceExists(const Name: String): Boolean;
+var
+  ExitCode: Integer;
+begin
+  Result := RunHidden(ExpandConstant('{sys}\sc.exe'), 'query ' + Name, '', ExitCode);
+  if Result then Result := ExitCode = 0;
+end;
+
+function ServiceRunning(const Name: String): Boolean;
+var
+  ExitCode: Integer;
+begin
+  Result := RunHidden('powershell.exe', '-NoProfile -Command "if ((Get-Service -Name ''' + Name + ''').Status -eq ''Running'') { exit 0 } else { exit 1 }"', '', ExitCode);
+  if Result then Result := ExitCode = 0;
+end;
+
+procedure RecoverPreviousServices();
+var
+  ExitCode: Integer;
+begin
+  if RecoveryAttempted then Exit;
+  RecoveryAttempted := True;
+  { Remove only services created by THIS attempt. Existing shops keep their registrations. }
+  if ServicesPrepared then
+  begin
+    if HadApiService then RunHidden(ExpandConstant('{sys}\net.exe'), 'stop ' + ApiService, '', ExitCode);
+    if HadPostgresService then RunHidden(ExpandConstant('{sys}\net.exe'), 'stop ' + PostgresService, '', ExitCode);
+  end;
+  if CreatedApiService then
+  begin
+    RunHidden(ExpandConstant('{sys}\net.exe'), 'stop ' + ApiService, '', ExitCode);
+    RunHidden(ExpandConstant('{app}\tillumi-pos.exe'), 'uninstall', ExpandConstant('{app}'), ExitCode);
+  end;
+  if CreatedPostgresService then
+  begin
+    RunHidden(ExpandConstant('{sys}\net.exe'), 'stop ' + PostgresService, '', ExitCode);
+    RunHidden(ExpandConstant('{app}\tillumi-postgres.exe'), 'uninstall', ExpandConstant('{app}'), ExitCode);
+  end;
+  if HadApiService and FileExists(ExpandConstant('{tmp}\tillumi-old-api.xml')) then
+    FileCopy(ExpandConstant('{tmp}\tillumi-old-api.xml'), ExpandConstant('{app}\tillumi-pos.xml'), False);
+  if HadPostgresService and FileExists(ExpandConstant('{tmp}\tillumi-old-postgres.xml')) then
+    FileCopy(ExpandConstant('{tmp}\tillumi-old-postgres.xml'), ExpandConstant('{app}\tillumi-postgres.xml'), False);
+  if PostgresWasRunning then RunHidden(ExpandConstant('{sys}\net.exe'), 'start ' + PostgresService, '', ExitCode);
+  if ApiWasRunning then RunHidden(ExpandConstant('{sys}\net.exe'), 'start ' + ApiService, '', ExitCode);
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := '';
+  if ServicesPrepared then Exit;
+  RecoveryAttempted := False;
+  HadPostgresService := ServiceExists(PostgresService);
+  HadApiService := ServiceExists(ApiService);
+  PostgresWasRunning := HadPostgresService and ServiceRunning(PostgresService);
+  ApiWasRunning := HadApiService and ServiceRunning(ApiService);
+  try
+    if HadApiService and (not FileCopy(ExpandConstant('{app}\tillumi-pos.xml'), ExpandConstant('{tmp}\tillumi-old-api.xml'), False)) then
+      RaiseException('เก็บไฟล์ตั้งค่าระบบเดิมไม่สำเร็จ ยังไม่ได้เปลี่ยนไฟล์ร้าน');
+    if HadPostgresService and (not FileCopy(ExpandConstant('{app}\tillumi-postgres.xml'), ExpandConstant('{tmp}\tillumi-old-postgres.xml'), False)) then
+      RaiseException('เก็บไฟล์ตั้งค่าฐานข้อมูลเดิมไม่สำเร็จ ยังไม่ได้เปลี่ยนไฟล์ร้าน');
+    { Stop before copying binaries, rather than after Inno has replaced them. }
+    if HadApiService then
+      MustRun('powershell.exe', '-NoProfile -Command "Stop-Service tillumi-pos -ErrorAction Stop; (Get-Service tillumi-pos).WaitForStatus(''Stopped'', [TimeSpan]::FromSeconds(60))"', '', 'หยุดหน้าร้านเดิม');
+    if HadPostgresService then
+      MustRun('powershell.exe', '-NoProfile -Command "Stop-Service tillumi-postgres -ErrorAction Stop; (Get-Service tillumi-postgres).WaitForStatus(''Stopped'', [TimeSpan]::FromSeconds(60))"', '', 'หยุดฐานข้อมูลเดิม');
+    ServicesPrepared := True;
+  except
+    Result := GetExceptionMessage();
+    RecoverPreviousServices();
+  end;
+end;
+
 procedure WriteServiceXml(const TemplateName, DestName: String);
 var
   Cmd: String;
@@ -250,10 +334,6 @@ begin
     Exit;
 
   try
-    { ลงทับของเดิม: หยุด service เก่าก่อนไม่งั้นแทนไฟล์ไม่ได้ (ข้อมูลร้านอยู่ ProgramData ไม่โดนแตะ) }
-    RunHidden(ExpandConstant('{sys}\net.exe'), 'stop ' + ApiService, '', ExitCode);
-    RunHidden(ExpandConstant('{sys}\net.exe'), 'stop ' + PostgresService, '', ExitCode);
-
     { 1. ฐานข้อมูล + รหัส: รันซ้ำได้ ของเดิมไม่หาย }
     MustRun('powershell.exe',
       '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\scripts\first-install.ps1') + '"'
@@ -269,13 +349,24 @@ begin
     WriteServiceXml('tillumi-pos.xml', 'tillumi-pos.xml');
 
     { 3. ฐานข้อมูลก่อน แล้วอัปตาราง แล้วค่อยตัวร้าน (ผูกลำดับไว้ใน xml ด้วย <depend>) }
-    MustRun(ExpandConstant('{app}\tillumi-postgres.exe'), 'install', ExpandConstant('{app}'), 'ติดตั้ง service ฐานข้อมูล');
+    if not HadPostgresService then
+    begin
+      MustRun(ExpandConstant('{app}\tillumi-postgres.exe'), 'install', ExpandConstant('{app}'), 'ติดตั้ง service ฐานข้อมูล');
+      CreatedPostgresService := True;
+    end;
+    MustRun('powershell.exe',
+      '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\scripts\configure-postgres-service.ps1') + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + DataDirPath() + '"',
+      DataDirPath(), 'กำหนดสิทธิ์บัญชีฐานข้อมูล');
     MustRun(ExpandConstant('{sys}\net.exe'), 'start ' + PostgresService, '', 'สตาร์ทฐานข้อมูล');
-    MustRun(ExpandConstant('{sys}\cmd.exe'),
-      '/c "set MIGRATIONS_DIR=' + AppVerDir() + '\drizzle && set DATABASE_URL=postgres://pos@127.0.0.1:{#PortDb}/pos && "' + AppVerDir() + '\tillumi-migrate.exe""',
+    MustRun('powershell.exe',
+      '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\scripts\migrate-native.ps1') + '" -AppDir "' + AppVerDir() + '" -DataDir "' + DataDirPath() + '" -PortDb {#PortDb}',
       DataDirPath(),
       'อัปฐานข้อมูลให้เป็นรุ่นล่าสุด');
-    MustRun(ExpandConstant('{app}\tillumi-pos.exe'), 'install', ExpandConstant('{app}'), 'ติดตั้ง service หน้าร้าน');
+    if not HadApiService then
+    begin
+      MustRun(ExpandConstant('{app}\tillumi-pos.exe'), 'install', ExpandConstant('{app}'), 'ติดตั้ง service หน้าร้าน');
+      CreatedApiService := True;
+    end;
     MustRun(ExpandConstant('{sys}\net.exe'), 'start ' + ApiService, '', 'สตาร์ทหน้าร้าน');
 
     { 4. หน้าร้านต้องตอบจริงจึงนับว่าเสร็จ }
@@ -293,10 +384,17 @@ begin
       + ' /tr "\"powershell.exe\" -NoProfile -ExecutionPolicy Bypass -File \"' + ExpandConstant('{app}\scripts\backup-native.ps1') + '\" -PgsqlBinDir \"' + ExpandConstant('{app}\pgsql\bin') + '\" -DataDir \"' + DataDirPath() + '\""'
       + ' /sc daily /st 02:00 /ru SYSTEM /f',
       '', 'ตั้งงานสำรองข้อมูลทุกคืน');
+    InstallationCompleted := True;
   except
-    StopAndRemoveServices();
+    RecoverPreviousServices();
     RaiseException(GetExceptionMessage());
   end;
+end;
+
+procedure DeinitializeSetup();
+begin
+  { Also recover when copying files fails or setup is cancelled after preparation. }
+  if ServicesPrepared and (not InstallationCompleted) then RecoverPreviousServices();
 end;
 
 procedure CurUninstallStepChanged(CurStep: TUninstallStep);
