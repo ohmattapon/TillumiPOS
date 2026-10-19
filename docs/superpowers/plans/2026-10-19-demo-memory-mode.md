@@ -28,7 +28,7 @@
 
 ## Review Focus
 
-1. **โหมด demo แตะ DB จริงไม่ได้เลย:** memory adapter ห้าม import `libs/db`, `libs/env` (ยกเว้น composition root), `drizzle-orm` ใช้เป็น type ได้ ห้าม query; `DATABASE_URL` ที่ demo script ส่งเป็น dummy ที่ไม่มี server ฟัง (`postgres://demo:demo@127.0.0.1:1/demo`) ตรวจด้วย grep ก่อน commit
+1. **โหมด demo แตะ DB จริงไม่ได้เลย:** memory adapter ห้าม import `libs/db`, `libs/env` (ยกเว้น composition root), `drizzle-orm` ใช้เป็น type ได้ ห้าม query; `DATABASE_URL` ที่ demo script ส่งเป็น dummy ที่ไม่มี server ฟัง (`postgres://your-demo-user:your-demo-password@127.0.0.1:1/demo`) ตรวจด้วย grep ก่อน commit
 2. **รหัส demo ไม่รั่วไป production:** ผู้ใช้ demo (รหัสคงที่) อยู่ใน seeder ของ demo เท่านั้น มี banner ตอนบูตว่า DEMO MODE ห้ามเอา code นี้ไปรันกับข้อมูลจริง
 3. **ForUpdate = no-op:** memory เป็น single process จึงไม่ล็อก แต่ต้องคอมเมนต์ไว้ทุก port ที่สัญญาว่าล็อก กันคนเอาไปใช้ผิดที่
 4. **Idempotency/command_receipts:** แฝด memory ใช้ Map ตาม scope เดิม (actor+branch+action+key)
@@ -55,7 +55,7 @@
 **Files:**
 - Create: `server/src/modules/demo-memory/memory/unit-of-work.memory.ts` (`run` เรียก fn ตรง ไม่มี tx), `command-receipts.memory.ts` (Map ตาม scope + `lock()` no-op), `audit-log.memory.ts` (array + `list` แบบง่าย)
 - Create: `server/src/modules/demo-memory/demo-memory.module.ts` (ตอนนี้ bind 3 ตัวบน + import ใน `di-registrations.ts` แบบมีเงื่อนไข `Bun.env.DEMO_MODE === 'memory'`)
-- Modify: `package.json` เพิ่ม `"demo:memory": "DEMO_MODE=memory MEDIA_STORAGE=none DATABASE_URL=postgres://demo:demo@127.0.0.1:1/demo bun run dev"` (Windows: `cross-env`? ดูว่า scripts อื่นทำอย่างไร ห้าม hardcode secret — URL นี้เป็น dummy ไม่มี server ฟัง)
+- Modify: `package.json` เพิ่ม script `demo:memory` ผ่าน launcher script (ตั้ง env ในโค้ด ไม่ใช้ไฟล์ `.env.demo` เพราะ pre-commit hook ห้าม) — `DEMO_MODE=memory`, `MEDIA_STORAGE=none`, `DATABASE_URL` เป็น dummy ที่ไม่มี server ฟัง (ดู Task 1) ห้าม hardcode secret
 - Create: `server/src/modules/demo-memory/memory/memory-kernel.test.ts` (receipts lock/find/create, audit record/list)
 
 **Dependencies:** ไม่มี
