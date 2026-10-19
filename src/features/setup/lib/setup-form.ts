@@ -23,3 +23,11 @@ export function promptPayChangesFor(text: string): { promptpayMode: 'static'; pr
   const target = text.trim()
   return target === '' ? null : { promptpayMode: 'static', promptpayTarget: target }
 }
+
+/**
+ * The setup code is Latin letters and digits, so Thai in that field means the keyboard is still on the Thai layout:
+ * the same keys typed there give a different, always wrong, code.
+ */
+export function looksLikeThaiKeyboard(text: string): boolean {
+  return /[\u0E00-\u0E7F]/.test(text)
+}
