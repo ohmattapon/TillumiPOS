@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
-# Not supported yet: Linux has not been tested (Windows is the supported platform, see docs/install.md).
+# Linux and macOS: neither has been tested on a real machine yet (Windows is the tested platform, see docs/install.md).
 # Saves the whole database to backups/easypos-<date>-<time>.sql.gz. Safe to run while the shop is open.
 #   scripts/backup.sh [folder]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# Podman runs rootful (see install.sh): sudo unless already root, so a root crontab works unchanged.
-# POS_COMPOSE replaces the command altogether; the tests use it to stand in for Podman.
-compose() {
-  if [ -n "${POS_COMPOSE:-}" ]; then "$POS_COMPOSE" "$@"
-  elif [ "$(id -u)" -eq 0 ]; then podman compose "$@"
-  else sudo podman compose "$@"; fi
-}
+. scripts/podman-compose.sh
+prepare_podman || exit 1
 
 DIR="${1:-backups}"
 mkdir -p "$DIR"
@@ -19,12 +14,12 @@ FILE="$DIR/easypos-$(date +%Y%m%d-%H%M%S).sql.gz"
 
 # --clean --if-exists: the file can be loaded over a database that already has the tables.
 compose -f docker-compose.yml exec -T db pg_dump -U pos -d pos --clean --if-exists --no-owner \
-  | gzip > "$FILE" || { rm -f "$FILE"; echo "The backup failed: is the database running? (sudo podman compose ps)" >&2; exit 1; }
+  | gzip > "$FILE" || { rm -f "$FILE"; echo "The backup failed: is the database running? ($(compose_hint) ps)" >&2; exit 1; }
 
 # A dump that is only the gzip header means pg_dump failed.
 if [ "$(wc -c < "$FILE")" -lt 200 ]; then
   rm -f "$FILE"
-  echo "The backup failed: is the database running? (sudo podman compose ps)" >&2
+  echo "The backup failed: is the database running? ($(compose_hint) ps)" >&2
   exit 1
 fi
 # pg_dump ends every complete dump with this line. A dump cut off by a failure (a full disk, a dropped connection)
