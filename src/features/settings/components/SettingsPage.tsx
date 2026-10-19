@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { createMoney, type Locale } from '@/lib/money'
 import { settingsQuery, useUpdateSettings } from '../api'
+import { ConnectDevicesPanel } from './ConnectDevicesPanel'
 import { withTablesSwitch } from '../lib/feature-switches'
 import { canSavePromptPay, normalizePromptPayTarget } from '../lib/promptpay'
 import { currencyNameIn, timeZoneOptions } from '../lib/shop-options'
@@ -360,6 +361,11 @@ export function SettingsPage() {
         {settings.isPending && <SkeletonPanel rows={6} className="mx-auto max-w-3xl" />}
         {/* Keyed by the stored values, so the form starts again from what was saved. */}
         {settings.data && <SettingsForm key={JSON.stringify(settings.data)} settings={settings.data} />}
+        {settings.data && (
+          <div className="mx-auto mt-6 max-w-3xl">
+            <ConnectDevicesPanel />
+          </div>
+        )}
       </div>
     </>
   )
