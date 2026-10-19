@@ -184,3 +184,4 @@ TillumiPOS คือ POS แบบโอเพนซอร์สที่ติ�
 | `docs/superpowers/roadmap.md` | ลำดับงานและสถานะ |
 | `docs/superpowers/specs/*` | เอกสารออกแบบของแต่ละเรื่อง |
 | `docs/superpowers/plans/*` | แผนลงมือทำ |
+| `docs/demo-mode.md` | โหมดสาธิต: รันทั้งแอปโดยไม่ใช้ฐานข้อมูล (`bun run demo:memory` ข้อมูลรีเซ็ตเมื่อรีสตาร์ท ห้ามใช้กับข้อมูลจริง) |
