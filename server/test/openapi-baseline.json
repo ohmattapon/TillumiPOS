@@ -29884,6 +29884,76 @@
         ]
       }
     },
+    "/api/v1/update/apply": {
+      "post": {
+        "operationId": "postApiV1UpdateApply",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "staged": {
+                      "type": "boolean"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "staged",
+                    "version"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "โหลดรุ่นใหม่มาตรวจและเตรียมไว้ให้สคริปต์ติดตั้ง (เจ้าของร้าน)",
+        "tags": [
+          "Update"
+        ]
+      }
+    },
+    "/api/v1/update/status": {
+      "get": {
+        "operationId": "getApiV1UpdateStatus",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "currentVersion": {
+                      "type": "string"
+                    },
+                    "latestVersion": {
+                      "type": "string"
+                    },
+                    "updateAvailable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "currentVersion",
+                    "latestVersion",
+                    "updateAvailable"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "รุ่นที่ใช้อยู่เทียบกับรุ่นล่าสุด",
+        "tags": [
+          "Update"
+        ]
+      }
+    },
     "/api/v1/users/": {
       "get": {
         "operationId": "getApiV1Users",
