@@ -21,3 +21,5 @@ heema/
 # Native Windows installer (Task 3): build payloads and setup .exe output stay out of git
 installer/output/
 installer/payload/
+# Auto-update staging (Task 4): POST /update/apply parks verified packages here in dev
+updates/
