@@ -1,8 +1,10 @@
 const th = {
   title: 'ตั้งค่าร้านครั้งแรก',
   subtitle: 'สร้างบัญชีเจ้าของร้านและตั้งชื่อร้าน',
-  codeNote: 'รหัสตั้งค่าแสดงอยู่ใน log ของระบบ: รัน "docker compose logs app" แล้วมองหา SETUP CODE',
+  codeNote: 'ตัวติดตั้งพิมพ์รหัสตั้งค่าให้ตอนติดตั้งเสร็จ ถ้าหาไม่เจอ เปิด PowerShell หรือ Terminal ในโฟลเดอร์ที่ติดตั้งระบบ แล้วรัน "podman compose logs app" และมองหา SETUP CODE',
   setupCode: 'รหัสตั้งค่า',
+  codeHint: 'เป็นตัวอักษรอังกฤษกับตัวเลข (ตัวพิมพ์เล็กหรือใหญ่ก็ได้)',
+  codeKeyboard: 'มีตัวอักษรไทยในช่องนี้ ให้สลับแป้นพิมพ์เป็นภาษาอังกฤษ (Win+Space หรือ Alt+Shift) แล้วพิมพ์ใหม่',
   shopName: 'ชื่อร้าน',
   username: 'ชื่อผู้ใช้ของเจ้าของ',
   displayName: 'ชื่อที่แสดง',
@@ -32,8 +34,10 @@ const th = {
 const en = {
   title: 'First-time setup',
   subtitle: 'Create the owner account and name the shop',
-  codeNote: 'The setup code is in the system log: run "docker compose logs app" and look for SETUP CODE',
+  codeNote: 'The installer prints the setup code when it finishes. If you cannot find it, open PowerShell or Terminal in the folder where the system is installed, run "podman compose logs app" and look for SETUP CODE',
   setupCode: 'Setup code',
+  codeHint: 'English letters and digits (upper or lower case)',
+  codeKeyboard: 'There are Thai characters in this field. Switch the keyboard to English (Win+Space or Alt+Shift) and type it again.',
   shopName: 'Shop name',
   username: 'Owner username',
   displayName: 'Display name',

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { ShopType } from '@pos/api/shop-settings'
 import { useCompleteSetup } from '../api'
-import { isPromptPayAnswerValid, isSetupFormFilled, promptPayChangesFor } from '../lib/setup-form'
+import { isPromptPayAnswerValid, isSetupFormFilled, looksLikeThaiKeyboard, promptPayChangesFor } from '../lib/setup-form'
 import { ShopTypeChoice } from './ShopTypeChoice'
 
 /** Shown instead of the login page while nobody has an account: makes the owner and names the shop. */
@@ -43,7 +43,7 @@ export function SetupPage() {
   const field = (
     key: keyof typeof form,
     label: string,
-    options: { type?: string; autoFocus?: boolean; hint?: string } = {},
+    options: { type?: string; autoFocus?: boolean; hint?: string; code?: boolean; invalidHint?: string } = {},
   ) => (
     <div className="space-y-2">
       <Label htmlFor={`setup-${key}`}>{label}</Label>
@@ -55,9 +55,18 @@ export function SetupPage() {
         onChange={set(key)}
         autoFocus={options.autoFocus}
         autoComplete={key === 'password' || key === 'confirm' ? 'new-password' : 'off'}
+        // The code is read off the screen and typed by hand: no suggestions, no capital-letter guessing.
+        {...(options.code ? { autoCapitalize: 'characters', autoCorrect: 'off', spellCheck: false, lang: 'en' } : {})}
+        aria-invalid={options.invalidHint ? true : undefined}
         required
       />
-      {options.hint && <p className="text-xs text-muted-foreground">{options.hint}</p>}
+      {options.invalidHint ? (
+        <p role="alert" className="text-xs text-destructive">
+          {options.invalidHint}
+        </p>
+      ) : (
+        options.hint && <p className="text-xs text-muted-foreground">{options.hint}</p>
+      )}
     </div>
   )
 
@@ -74,7 +83,12 @@ export function SetupPage() {
         <CardContent>
           <form onSubmit={submit} className="space-y-4">
             <p className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">{t('codeNote')}</p>
-            {field('setupCode', t('setupCode'), { autoFocus: true })}
+            {field('setupCode', t('setupCode'), {
+              autoFocus: true,
+              code: true,
+              hint: t('codeHint'),
+              invalidHint: looksLikeThaiKeyboard(form.setupCode) ? t('codeKeyboard') : undefined,
+            })}
             {field('shopName', t('shopName'))}
             <ShopTypeChoice value={shopType} onChange={setShopType} />
             <div className="space-y-2">
