@@ -33,22 +33,22 @@ Parallel-first: spawn a packaging worker for Task 2, while runtime work remains 
 
 Files: installer/windows/{runtime,worker,launcher,network,enable-wsl}.ps1 and runtime.tests.ps1.
 REQUIRED SUB-SKILL: test-driven-development.
-- [ ] RED: tests for .env preservation, portable RNG, manifest tampering, update backup failure, version written only after health.
-- [ ] GREEN: worker accepts -Action Start|Backup -ProgramDirectory and -ShopDirectory. Launcher accepts -AutoStart, defaults ProgramDirectory to its own folder and ShopDirectory to LOCALAPPDATA/TillumiPOS/shop. Payload lives at program/payload/{manifest.json,app-image.tar,docker-compose.yml,scripts/*}. Manifest fields: version (numeric x.y.z), image (localhost/tillumipos:x.y.z), sha256 (archive), composeSha256 (compose).
-- [ ] GUI: background process, Thai status/error/retry/logs/open/backup, local-only setup code; WSL/reboot prompt; scoped LAN elevation.
-- [ ] Verify: powershell -NoProfile -File installer/windows/runtime.tests.ps1; parse every new ps1.
+- [x] RED: tests for .env preservation, portable RNG, manifest tampering, update backup failure, version written only after health. Added pending-release identity/downgrade and inherited-engine isolation regressions.
+- [x] GREEN: worker accepts -Action Start|Backup|Stop -ProgramDirectory and -ShopDirectory. Launcher accepts -AutoStart, defaults ProgramDirectory to its own folder and ShopDirectory to LOCALAPPDATA/TillumiPOS/shop. Payload lives at program/payload/{manifest.json,app-image.tar,docker-compose.yml,scripts/*}. Manifest fields: version (numeric x.y.z), image (localhost/tillumipos:x.y.z), sha256 (archive), composeSha256 (compose).
+- [x] GUI: background process, Thai status/error/retry/logs/open/backup/stop, local-only setup code; WSL/reboot prompt; scoped LAN elevation.
+- [x] Verify: powershell -NoProfile -File installer/windows/runtime.tests.ps1; parse every new ps1.
 
 ## Task 2: packaging
 
 Files: installer/windows/TillumiPOS.iss, scripts/build-windows-installer.ps1, .github/workflows/windows-installer.yml, packaging tests.
 REQUIRED SUB-SKILL: test-driven-development (configuration-only compiler checks for Inno/YAML).
-- [ ] Test compose conversion removes app build, adds prebuilt image and preserves all other configuration; reject invalid version/archive inputs.
-- [ ] Builder accepts -Version x.y.z, -ImageArchive path, -OutputDirectory, -IsccPath. Generate staging in output; copy explicit allowlist only; create manifest hashes; compile installer. Prebuilt archive must contain localhost/tillumipos:x.y.z.
-- [ ] Inno: default LOCALAPPDATA/TillumiPOS/program, PrivilegesRequired=lowest, x64 Windows 11, shortcuts/Run key; preserve sibling shop directory; close launcher/worker safely before replacement or abort; never erase data on uninstall.
-- [ ] Workflow: manually dispatched version, build/save image on Linux with Podman, Windows package compile, upload artifact (never publish a release).
+- [x] Test compose conversion removes app build, adds prebuilt image and preserves all other configuration; reject invalid version/archive inputs.
+- [x] Builder accepts -Version x.y.z, -ImageArchive path, -OutputDirectory, -IsccPath. Generate staging in output; copy explicit allowlist only; create manifest hashes; compile installer. Prebuilt archive must contain localhost/tillumipos:x.y.z.
+- [x] Inno: default LOCALAPPDATA/TillumiPOS/program, PrivilegesRequired=lowest, x64 Windows 11, shortcuts/Run key; preserve sibling shop directory; refuse replacement while launcher/worker busy; stop dedicated shop only after uninstall confirmation; never erase data on uninstall.
+- [x] Workflow: manually dispatched version, build/save image on Linux with Podman, Windows package compile, upload artifact (never publish a release).
 
 ## Task 3: verification
 
-- [ ] Compile real setup and inspect contents, execute safe isolated worker tests and image health smoke with disposable database/port/project only.
-- [ ] Run bun run typecheck, bun run test and repo-secrets tests with disposable PostgreSQL, never current shop.
-- [ ] Update docs/install.md and record evidence, release gaps, artifact path and recovery instructions. Review diff, commit via gitcz only. No push needed.
+- [x] Compile real setup and inspect allowlisted staging, execute safe isolated worker tests and image health smoke with disposable database/port/project only.
+- [x] Run bun run typecheck, bun run test and repo-secrets tests with disposable PostgreSQL, never current shop. Full Linux suite: API1836 pass/11 platform skips, web493 pass; Windows-specific installer tests run separately.
+- [x] Update docs/install.md and record evidence, release gaps, artifact path and recovery instructions. Review diff, commit via gitcz only. No push needed.

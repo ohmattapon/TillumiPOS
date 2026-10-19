@@ -1,0 +1,75 @@
+name: Windows installer artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Numeric installer version (x.y.z)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  app-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate version
+        env:
+          APP_VERSION: ${{ inputs.version }}
+        run: |
+          [[ "$APP_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || exit 1
+          IFS=. read -r major minor patch <<< "$APP_VERSION"
+          for part in "$major" "$minor" "$patch"; do
+            [[ ${#part} -le 5 ]] && (( part <= 65535 )) || exit 1
+          done
+      - name: Build precompiled app image
+        env:
+          APP_VERSION: ${{ inputs.version }}
+        run: |
+          podman build --platform linux/amd64 -t "localhost/tillumipos:$APP_VERSION" .
+          podman save --format docker-archive -o app-image.tar "localhost/tillumipos:$APP_VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer-app-image
+          path: app-image.tar
+          retention-days: 1
+  installer:
+    needs: app-image
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-installer-app-image
+          path: image
+      - name: Test packaging and runtime
+        shell: powershell
+        run: |
+          & ./installer/windows/packaging.tests.ps1
+          & ./installer/windows/runtime.tests.ps1
+      - name: Prepare portable Inno Setup 6 compiler
+        shell: powershell
+        run: |
+          $setup = Join-Path $env:RUNNER_TEMP 'innosetup-6.5.4.exe'
+          $compiler = Join-Path $env:RUNNER_TEMP 'inno-compiler'
+          Invoke-WebRequest 'https://github.com/jrsoftware/issrc/releases/download/is-6_5_4/innosetup-6.5.4.exe' -OutFile $setup
+          $signature = Get-AuthenticodeSignature $setup
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Pyrsys B.V.,') {
+            throw 'Inno Setup publisher signature validation failed'
+          }
+          $process = Start-Process $setup -ArgumentList @('/PORTABLE=1', '/CURRENTUSER', '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', ('/DIR="' + $compiler + '"')) -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Portable compiler extraction failed' }
+      - name: Compile installer
+        shell: powershell
+        env:
+          APP_VERSION: ${{ inputs.version }}
+        run: ./scripts/build-windows-installer.ps1 -Version $env:APP_VERSION -ImageArchive ./image/app-image.tar -OutputDirectory ./dist-installer -IsccPath (Join-Path $env:RUNNER_TEMP 'inno-compiler/ISCC.exe')
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TillumiPOS-Windows-Setup
+          path: dist-installer/TillumiPOS-Setup-*.exe
+          if-no-files-found: error
+          retention-days: 14
