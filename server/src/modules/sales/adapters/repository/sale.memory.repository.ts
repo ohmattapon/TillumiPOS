@@ -158,4 +158,23 @@ export class MemorySaleRepository implements ISaleRepository {
       .sort((a, b) => b.id - a.id)
       .map((row) => new SaleEntity(row))
   }
+
+  /**
+   * Every sale created in [fromMs, toMs), every branch when branchId is null,
+   * oldest first. Not part of the port: the sales-report twin in this module
+   * reads through here so sales never grows a report-scoped query for one
+   * consumer. Bounds are epoch milliseconds, like the drizzle twin's SQL
+   * bounds, so the twin stays free of date construction.
+   */
+  async findForReport(period: { fromMs: number; toMs: number; branchId: number | null }): Promise<SaleEntity[]> {
+    return [...this.rows.values()]
+      .filter(
+        (row) =>
+          (period.branchId === null || row.branchId === period.branchId) &&
+          row.createdAt.getTime() >= period.fromMs &&
+          row.createdAt.getTime() < period.toMs,
+      )
+      .sort((a, b) => a.id - b.id)
+      .map((row) => new SaleEntity(row))
+  }
 }
