@@ -11,10 +11,12 @@ import { SetOwnPinUseCase } from './set-own-pin.usecase'
 import { ListSwitchableUsersUseCase } from './list-switchable-users.usecase'
 import { SwitchUserUseCase } from './switch-user.usecase'
 import { mockPinGuard } from '../../../../__tests__/mocks'
+import { mockLoginAttemptGuard } from '../../../../__tests__/mocks'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainError } from '../../../../domains/errors/domain-error'
 
 let repo: ReturnType<typeof mockUserRepository>
+let guard: ReturnType<typeof mockLoginAttemptGuard>
 
 beforeEach(() => {
   repo = mockUserRepository()
@@ -25,8 +27,9 @@ describe('LoginUseCase', () => {
   const rejection = { code: 'UNAUTHORIZED', message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' }
 
   beforeEach(() => {
+    guard = mockLoginAttemptGuard()
     repo.findCredentialsByUsername.mockResolvedValue({ user: makeUser({ id: 3 }), passwordHash: 'hashed:secret' })
-    useCase = new LoginUseCase(repo, mockPasswordHasher(), auditMock())
+    useCase = new LoginUseCase(repo, mockPasswordHasher(), auditMock(), guard)
   })
 
   test('returns the user for the right password, looking the name up in lower case', async () => {
@@ -53,7 +56,7 @@ describe('LoginUseCase', () => {
 
   test('a failed attempt is recorded without a user id, never with the password, and with a bounded name', async () => {
     const audit = auditMock()
-    const loginWith = new LoginUseCase(repo, mockPasswordHasher(), audit)
+    const loginWith = new LoginUseCase(repo, mockPasswordHasher(), audit, mockLoginAttemptGuard())
     await expect(loginWith.execute({ username: 'x'.repeat(5_000), password: 'topsecret-password' })).rejects.toBeInstanceOf(
       DomainUnauthorizedError,
     )
@@ -68,23 +71,56 @@ describe('LoginUseCase', () => {
   test('a failure to write the audit entry does not change the answer to the caller', async () => {
     const audit = auditMock()
     audit.record.mockRejectedValue(new Error('database down'))
-    const loginWith = new LoginUseCase(repo, mockPasswordHasher(), audit)
+    const loginWith = new LoginUseCase(repo, mockPasswordHasher(), audit, mockLoginAttemptGuard())
     await expect(loginWith.execute({ username: 'somchai', password: 'wrong' })).rejects.toMatchObject(rejection)
   })
 
   test('a successful login writes nothing to the audit log', async () => {
     const audit = auditMock()
-    await new LoginUseCase(repo, mockPasswordHasher(), audit).execute({ username: 'somchai', password: 'secret' })
+    await new LoginUseCase(repo, mockPasswordHasher(), audit, mockLoginAttemptGuard()).execute({ username: 'somchai', password: 'secret' })
     expect(audit.record).not.toHaveBeenCalled()
   })
 
-  test.each([[{ username: '', password: 'x' }], [{ username: 'x', password: '' }], [{ username: 'x' }], [null]])(
+  test.each([[{ username: '', password: 'x' }], [{ username: 'x', password: '' }], [{ username: 'x' }], [null], [{ username: 'x', password: 'x'.repeat(73) }]])(
     'rejects malformed input %p without a lookup',
     async (input) => {
       await expect(useCase.execute(input)).rejects.toBeInstanceOf(ZodError)
       expect(repo.findCredentialsByUsername).not.toHaveBeenCalled()
     },
   )
+
+  test('after five wrong passwords the sixth try is LOGIN_LOCKED without checking the hash', async () => {
+    const hasher = mockPasswordHasher()
+    const loginWith = new LoginUseCase(repo, hasher, auditMock(), mockLoginAttemptGuard())
+    for (let i = 0; i < 5; i++)
+      await expect(loginWith.execute({ username: 'somchai', password: 'wrong' })).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
+    hasher.verify.mockClear()
+
+    const attempt = loginWith.execute({ username: 'somchai', password: 'secret' })
+
+    await expect(attempt).rejects.toBeInstanceOf(DomainConflictError)
+    await expect(attempt).rejects.toMatchObject({ code: 'LOGIN_LOCKED' })
+    expect(hasher.verify).not.toHaveBeenCalled()
+  })
+
+  test('a right password clears the count so the next wrong one is only unauthorized', async () => {
+    const loginWith = new LoginUseCase(repo, mockPasswordHasher(), auditMock(), mockLoginAttemptGuard())
+    for (let i = 0; i < 4; i++)
+      await expect(loginWith.execute({ username: 'somchai', password: 'wrong' })).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
+
+    expect((await loginWith.execute({ username: 'somchai', password: 'secret' })).id).toBe(3)
+    await expect(loginWith.execute({ username: 'somchai', password: 'wrong' })).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
+  })
+
+  test('an unknown user counts no attempt and never locks', async () => {
+    const hasher = mockPasswordHasher()
+    const loginWith = new LoginUseCase(repo, hasher, auditMock(), mockLoginAttemptGuard())
+    repo.findCredentialsByUsername.mockResolvedValue(null)
+
+    for (let i = 0; i < 6; i++)
+      await expect(loginWith.execute({ username: 'nobody', password: 'wrong' })).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
+    expect(hasher.verify).not.toHaveBeenCalled()
+  })
 })
 
 describe('AuthorizeSessionUseCase', () => {
