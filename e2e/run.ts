@@ -11,6 +11,7 @@ import { mkdir, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { chromium, type Browser, type Page } from 'playwright-core'
+import { createCustomerDisplayRequestGuard } from './customer-display-requests'
 
 const DB_ADMIN = 'postgres://pos:pos@localhost:5433/postgres'
 const DB_NAME = 'pos_e2e'
@@ -310,16 +311,12 @@ async function main() {
       try {
         const bare = await stranger.newPage()
         bare.setDefaultTimeout(15_000)
-        const apiCalls: string[] = []
-        bare.on('request', (request) => {
-          if (new URL(request.url()).pathname.startsWith('/api/')) apiCalls.push(request.url())
-        })
+        const requests = createCustomerDisplayRequestGuard()
+        bare.on('request', (request) => requests.record(request.url()))
         await bare.goto(`${WEB}/customer`)
         await bare.getByText('ยินดีต้อนรับ').waitFor()
-        // The screen may ask for its own session, and for the slides, which are public pictures with no prices.
-        const allowed = ['/api/v1/customer-display/sessions', '/api/v1/display-slides']
-        const unexpected = apiCalls.filter((url) => !allowed.some((path) => new URL(url).pathname.startsWith(path)))
-        if (unexpected.length > 0) throw new Error(`The customer screen called the API: ${unexpected[0]}`)
+        // The screen can open its session/stream and fetch public slides, without asking for till data.
+        requests.assertPublicOnly()
       } finally {
         await stranger.close()
       }
