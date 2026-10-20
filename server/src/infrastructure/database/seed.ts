@@ -9,6 +9,7 @@ import { CreateUserUseCase } from '../../modules/users/applications/usecases/cre
 import { branches } from './schema/branches'
 import { users } from './schema/users'
 import { client, db } from '../../libs/db'
+import { requireSeedOwnerPassword } from '../../libs/seed-owner-password'
 
 const [existing] = await db.select({ total: count() }).from(users)
 if (existing!.total > 0) {
@@ -16,8 +17,7 @@ if (existing!.total > 0) {
 } else {
   // There is deliberately no default password: seeding an owner must be an explicit
   // choice, never something an installer forgets to change.
-  const password = Bun.env.SEED_OWNER_PASSWORD
-  if (!password) throw new Error('Refusing to seed without SEED_OWNER_PASSWORD: choose an owner password explicitly')
+  const password = requireSeedOwnerPassword(Bun.env.SEED_OWNER_PASSWORD)
   // The migration that introduced branches created this one, so every database has it.
   const [main] = await db.select({ id: branches.id }).from(branches).where(eq(branches.code, 'MAIN'))
   const branchId = main!.id
