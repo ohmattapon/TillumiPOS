@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { emptyScope, scopeEntries, scopeOf, scopeToBody, toggleId } from './promotion-scope'
+import { emptyScope, isGone, scopeEntries, scopeOf, scopeToBody, toggleId } from './promotion-scope'
 
 describe('the scope a promotion is sent with', () => {
   test('ids are sorted without repeats', () => {
@@ -32,4 +32,13 @@ test('a chosen id that is switched off or gone stays listed with what is wrong, 
 
 test('a chosen id still loading is not called missing', () => {
   expect(scopeEntries([4], new Map(), new Set([4]))).toEqual([{ id: 4, name: null, status: 'loading' }])
+})
+
+describe('a product that is gone', () => {
+  test('is the one the API answers 404 for', () => {
+    expect(isGone(Object.assign(new Error('x'), { status: 404 }))).toBe(true)
+    expect(isGone(Object.assign(new Error('x'), { status: 500 }))).toBe(false)
+    expect(isGone(new Error('network'))).toBe(false)
+    expect(isGone(null)).toBe(false)
+  })
 })
