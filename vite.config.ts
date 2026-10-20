@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'node:url'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 
 // The API the dev server proxies to. The browser tests point it at their own throwaway API.
 const apiTarget = process.env.API_TARGET ?? 'http://localhost:3000'
@@ -9,11 +9,20 @@ const apiTarget = process.env.API_TARGET ?? 'http://localhost:3000'
 const server = (path: string) => fileURLToPath(new URL(`./server/src/${path}`, import.meta.url))
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  // One .env for the whole repo, at the root. Only VITE_-prefixed names reach the browser.
-  envDir: '.',
-  resolve: {
+export default defineConfig(({ mode }) => {
+  const demoStatic = mode === 'demo-static'
+  // The showcase has no server and MSW answers every fetch in the browser, so in this
+  // mode nothing is proxied anywhere (a stray proxy target would either leak into a
+  // developer API on :3000 or answer 502s). The one request MSW cannot catch is the
+  // customer display's EventSource (not fetch), which gets a quiet stub stream below.
+  const target = demoStatic ? undefined : apiTarget
+  const plugins: Plugin[] = [react(), tailwindcss()].flat()
+  if (demoStatic) plugins.push(demoCustomerStream())
+  return {
+    plugins,
+    // One .env for the whole repo, at the root. Only VITE_-prefixed names reach the browser.
+    envDir: '.',
+    resolve: {
     // The web shares the server's pure domain code and its Eden types. These were the exports of the old @pos/api
     // package; keep them in step with "paths" in tsconfig.app.json.
     alias: [
@@ -35,6 +44,32 @@ export default defineConfig({
     // Listen on the LAN so tablets and other tills can open the app.
     host: true,
     // Same-origin proxy keeps the session cookie first-party, so no CORS setup is needed.
-    proxy: { '/api': apiTarget, '/openapi': apiTarget, '/media': apiTarget },
+    ...(target ? { proxy: { '/api': target, '/openapi': target, '/media': target } } : {}),
   },
+  }
 })
+
+/**
+ * Demo-static only: the customer display's stream. MSW cannot see EventSource, so the dev
+ * server answers it directly with a quiet open stream that keeps showing the demo pairing
+ * code. Sales still travel over the browser channel; pairing accepts any code.
+ */
+function demoCustomerStream(): Plugin {
+  return {
+    name: 'demo-static-customer-stream',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/api/v1/customer-display/stream', (_req, res) => {
+        res.writeHead(200, {
+          'content-type': 'text/event-stream',
+          'cache-control': 'no-cache',
+          connection: 'keep-alive',
+        })
+        const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString()
+        res.write(`event: waiting\ndata: ${JSON.stringify({ code: '123456', expiresAt })}\n\n`)
+        const ping = setInterval(() => res.write(': ping\n\n'), 15_000)
+        res.on('close', () => clearInterval(ping))
+      })
+    },
+  }
+}
