@@ -5,7 +5,9 @@ import { mockRegisterRepository, mockUnitOfWork } from '../../../../__tests__/mo
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
-import { CreateRegisterUseCase, ListRegistersUseCase, UpdateRegisterUseCase } from './register.usecases'
+import { CreateRegisterUseCase } from './create-register.usecase'
+import { ListRegistersUseCase } from './list-registers.usecase'
+import { UpdateRegisterUseCase } from './update-register.usecase'
 
 describe('ListRegistersUseCase', () => {
   test('lists the registers of the branch it is given', async () => {
