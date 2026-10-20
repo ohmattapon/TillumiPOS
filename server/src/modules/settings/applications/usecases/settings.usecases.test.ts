@@ -1,10 +1,12 @@
 import { mockAuditLog as auditMock, mockUnitOfWork as auditUnitOfWork } from '../../../../__tests__/mocks'
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
-import { mockShopSettingsRepository, mockShiftSettingsGuard, mockUnitOfWork } from '../../../../__tests__/mocks'
+import { mockIdGenerator, mockMediaStorage, mockShopSettingsRepository, mockShiftSettingsGuard, mockUnitOfWork } from '../../../../__tests__/mocks'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DEFAULT_SHOP_SETTINGS, ShopSettingsEntity } from '../../../../domains/shop-settings.domain'
 import { GetShopSettingsUseCase } from './get-shop-settings.usecase'
+import { RemoveShopLogoUseCase } from './remove-shop-logo.usecase'
+import { SetShopLogoUseCase } from './set-shop-logo.usecase'
 import { UpdateShopSettingsUseCase } from './update-shop-settings.usecase'
 
 let repo: ReturnType<typeof mockShopSettingsRepository>
@@ -178,5 +180,78 @@ describe('UpdateShopSettingsUseCase', () => {
       code: 'INVALID_SHOP_SETTINGS',
     })
     expect(repo.save).not.toHaveBeenCalled()
+  })
+})
+
+describe('the receipt logo', () => {
+  const actor = { id: 1, displayName: 'ผู้ทดสอบ' }
+  const png = new Blob([new Uint8Array(8)], { type: 'image/png' })
+  const withLogo = new ShopSettingsEntity({ ...DEFAULT_SHOP_SETTINGS, logoKey: 'logo/old.png' })
+
+  const setup = (stored: ShopSettingsEntity) => {
+    const settings = mockShopSettingsRepository()
+    settings.getForUpdate.mockResolvedValue(stored)
+    settings.save.mockImplementation(async (value) => value)
+    settings.get.mockResolvedValue(stored)
+    const media = mockMediaStorage()
+    const audit = auditMock()
+    return { settings, media, audit, set: new SetShopLogoUseCase(settings, media, mockUnitOfWork(), audit, mockIdGenerator()), remove: new RemoveShopLogoUseCase(settings, media, mockUnitOfWork(), audit) }
+  }
+
+  test('setting a logo stores the picture under a logo key, saves the key, audits it and drops the old picture', async () => {
+    const { settings, media, audit, set } = setup(withLogo)
+
+    await set.execute(png, actor)
+
+    const key = media.put.mock.calls[0]![0]
+    expect(key).toBe('logo/id-1.png')
+    expect(settings.save.mock.calls[0]![0].logoKey).toBe(key)
+    expect(media.delete).toHaveBeenCalledWith('logo/old.png')
+    expect(audit.record.mock.calls[0]![2]).toMatchObject({ action: 'settings.logo_set', before: { hasLogo: true }, after: { hasLogo: true } })
+  })
+
+  test('a file that is not JPEG, PNG or WebP is refused before anything is stored', async () => {
+    const { settings, media, set } = setup(current)
+
+    await expect(set.execute(new Blob(['x'], { type: 'image/gif' }), actor)).rejects.toMatchObject({ code: 'INVALID_FILE_TYPE' })
+    expect(media.put).not.toHaveBeenCalled()
+    expect(settings.save).not.toHaveBeenCalled()
+  })
+
+  test('when saving fails the new picture is removed and the old logo stays', async () => {
+    const { settings, media, set } = setup(withLogo)
+    settings.save.mockRejectedValue(new Error('database down'))
+
+    await expect(set.execute(png, actor)).rejects.toThrow('database down')
+
+    expect(media.delete).toHaveBeenCalledWith(media.put.mock.calls[0]![0])
+    expect(media.delete).not.toHaveBeenCalledWith('logo/old.png')
+  })
+
+  test('a failed cleanup of the old picture does not fail the request', async () => {
+    const { media, set } = setup(withLogo)
+    media.delete.mockRejectedValue(new Error('storage down'))
+
+    await expect(set.execute(png, actor)).resolves.toBeDefined()
+  })
+
+  test('removing the logo clears the key, audits it and drops the picture', async () => {
+    const { settings, media, audit, remove } = setup(withLogo)
+
+    await remove.execute(actor)
+
+    expect(settings.save.mock.calls[0]![0].logoKey).toBeNull()
+    expect(media.delete).toHaveBeenCalledWith('logo/old.png')
+    expect(audit.record.mock.calls[0]![2]).toMatchObject({ action: 'settings.logo_removed', before: { hasLogo: true }, after: { hasLogo: false } })
+  })
+
+  test('removing a logo that is not there changes and audits nothing', async () => {
+    const { settings, media, audit, remove } = setup(current)
+
+    await remove.execute(actor)
+
+    expect(settings.save).not.toHaveBeenCalled()
+    expect(media.delete).not.toHaveBeenCalled()
+    expect(audit.record).not.toHaveBeenCalled()
   })
 })

@@ -1,15 +1,15 @@
 import i18n from 'i18next'
 
-const MAX_EDGE = 800
+const PHOTO_MAX_EDGE = 800
 const QUALITY = 0.85
 
 /**
- * Downscales a photo to at most 800 px on its longest edge and re-encodes it as WebP,
+ * Downscales a picture to at most `maxEdge` px (800 by default) on its longest edge and re-encodes it as WebP,
  * so a multi-megabyte phone photo becomes a few dozen kilobytes before upload.
  */
-export async function prepareImage(file: File): Promise<File> {
+export async function prepareImage(file: File, maxEdge = PHOTO_MAX_EDGE): Promise<File> {
   const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
-  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height))
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(bitmap.width * scale)
   canvas.height = Math.round(bitmap.height * scale)

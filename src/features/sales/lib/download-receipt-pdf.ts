@@ -12,6 +12,8 @@ export async function downloadReceiptPdf(
   const canvas = await html2canvas(element, {
     backgroundColor: '#ffffff',
     logging: false,
+    // The shop logo may come from the image Worker, a different origin; it is drawn only if that answers with CORS.
+    useCORS: true,
     scale: 3,
     onclone: (clonedDocument, clonedElement) => {
       // html2canvas also parses the cloned page background, even though only

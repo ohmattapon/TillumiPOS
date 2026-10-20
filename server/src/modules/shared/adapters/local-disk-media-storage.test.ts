@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { contentTypeOf, isMediaKey, LocalDiskMediaStorage, MAX_IMAGE_BYTES } from './local-disk-media-storage'
+import { contentTypeOf, isLogoMediaKey, isMediaKey, LocalDiskMediaStorage, logoContentTypeOf, MAX_IMAGE_BYTES } from './local-disk-media-storage'
 
 let directory: string
 let storage: LocalDiskMediaStorage
@@ -98,5 +98,24 @@ describe('media keys', () => {
       error.mockRestore()
     }
     expect(await readdir(directory)).toEqual(['not-a-folder'])
+  })
+})
+
+describe('the shop logo key', () => {
+  test('is logo/<id>.<ext>, stored and typed like the other images', async () => {
+    await storage.put('logo/3f2c9a1e-7b4d.png', png(12))
+
+    expect(Bun.file(join(directory, 'logo', '3f2c9a1e-7b4d.png')).size).toBe(12)
+    expect(logoContentTypeOf('logo/3f2c9a1e-7b4d.webp')).toBe('image/webp')
+    expect(storage.urlFor('logo/3f2c9a1e-7b4d.png')).toBe('/media/logo/3f2c9a1e-7b4d.png')
+  })
+
+  test('never lets a key climb out of the folder or take another shape', async () => {
+    for (const key of ['logo/../x.png', 'logo/a/b.png', 'logo/a.gif', '../logo/a.png']) {
+      expect(isLogoMediaKey(key)).toBe(false)
+      expect(logoContentTypeOf(key)).toBeNull()
+    }
+    await expect(storage.put('logo/a/b.png', png())).rejects.toMatchObject({ code: 'MEDIA_UNAVAILABLE' })
+    expect(contentTypeOf('logo/a.png')).toBeNull()
   })
 })

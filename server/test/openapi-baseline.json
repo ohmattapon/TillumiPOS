@@ -28815,6 +28815,13 @@
                       ],
                       "type": "string"
                     },
+                    "logoUrl": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "modifiersEnabled": {
                       "type": "boolean"
                     },
@@ -28949,7 +28956,8 @@
                     "receiptPrinterIp",
                     "receiptPrinterPort",
                     "receiptPrinterEnabled",
-                    "cashDrawerEnabled"
+                    "cashDrawerEnabled",
+                    "logoUrl"
                   ],
                   "type": "object"
                 }
@@ -29456,6 +29464,13 @@
                       ],
                       "type": "string"
                     },
+                    "logoUrl": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "modifiersEnabled": {
                       "type": "boolean"
                     },
@@ -29590,7 +29605,8 @@
                     "receiptPrinterIp",
                     "receiptPrinterPort",
                     "receiptPrinterEnabled",
-                    "cashDrawerEnabled"
+                    "cashDrawerEnabled",
+                    "logoUrl"
                   ],
                   "type": "object"
                 }
@@ -29600,6 +29616,464 @@
           }
         },
         "summary": "แก้ไขการตั้งค่าร้าน (มีผลกับบิลใหม่เท่านั้น)",
+        "tags": [
+          "Settings"
+        ]
+      }
+    },
+    "/api/v1/settings/logo": {
+      "delete": {
+        "operationId": "deleteApiV1SettingsLogo",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "address": {
+                      "maxLength": 300,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "cashDrawerEnabled": {
+                      "type": "boolean"
+                    },
+                    "currency": {
+                      "maxLength": 3,
+                      "minLength": 3,
+                      "type": "string"
+                    },
+                    "homeView": {
+                      "enum": [
+                        "till",
+                        "tables"
+                      ],
+                      "type": "string"
+                    },
+                    "locale": {
+                      "enum": [
+                        "th",
+                        "en"
+                      ],
+                      "type": "string"
+                    },
+                    "logoUrl": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "modifiersEnabled": {
+                      "type": "boolean"
+                    },
+                    "phone": {
+                      "maxLength": 30,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "promptpayMode": {
+                      "enum": [
+                        "bank",
+                        "static"
+                      ],
+                      "type": "string"
+                    },
+                    "promptpayTarget": {
+                      "maxLength": 13,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "receiptFooter": {
+                      "maxLength": 200,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "receiptPaperMm": {
+                      "enum": [
+                        58,
+                        80
+                      ],
+                      "type": "string"
+                    },
+                    "receiptPrinterEnabled": {
+                      "type": "boolean"
+                    },
+                    "receiptPrinterIp": {
+                      "maxLength": 45,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "receiptPrinterPort": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "maximum": 65535,
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "maximum": 65535,
+                      "minimum": 1
+                    },
+                    "shopName": {
+                      "maxLength": 100,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "tablesEnabled": {
+                      "type": "boolean"
+                    },
+                    "taxId": {
+                      "maxLength": 20,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "timeZone": {
+                      "maxLength": 64,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "vatMode": {
+                      "enum": [
+                        "inclusive",
+                        "exclusive",
+                        "none"
+                      ],
+                      "type": "string"
+                    },
+                    "vatRateBp": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "maximum": 10000,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      ],
+                      "maximum": 10000,
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "shopName",
+                    "taxId",
+                    "address",
+                    "phone",
+                    "currency",
+                    "vatMode",
+                    "vatRateBp",
+                    "timeZone",
+                    "locale",
+                    "receiptPaperMm",
+                    "receiptFooter",
+                    "homeView",
+                    "tablesEnabled",
+                    "modifiersEnabled",
+                    "promptpayMode",
+                    "promptpayTarget",
+                    "receiptPrinterIp",
+                    "receiptPrinterPort",
+                    "receiptPrinterEnabled",
+                    "cashDrawerEnabled",
+                    "logoUrl"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ลบโลโก้ใบเสร็จ",
+        "tags": [
+          "Settings"
+        ]
+      },
+      "put": {
+        "operationId": "putApiV1SettingsLogo",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "default": "File",
+                    "extension": [
+                      "image/jpeg",
+                      "image/png",
+                      "image/webp"
+                    ],
+                    "format": "binary",
+                    "maxSize": "2m",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "default": "File",
+                    "extension": [
+                      "image/jpeg",
+                      "image/png",
+                      "image/webp"
+                    ],
+                    "format": "binary",
+                    "maxSize": "2m",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "default": "File",
+                    "extension": [
+                      "image/jpeg",
+                      "image/png",
+                      "image/webp"
+                    ],
+                    "format": "binary",
+                    "maxSize": "2m",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "address": {
+                      "maxLength": 300,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "cashDrawerEnabled": {
+                      "type": "boolean"
+                    },
+                    "currency": {
+                      "maxLength": 3,
+                      "minLength": 3,
+                      "type": "string"
+                    },
+                    "homeView": {
+                      "enum": [
+                        "till",
+                        "tables"
+                      ],
+                      "type": "string"
+                    },
+                    "locale": {
+                      "enum": [
+                        "th",
+                        "en"
+                      ],
+                      "type": "string"
+                    },
+                    "logoUrl": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "modifiersEnabled": {
+                      "type": "boolean"
+                    },
+                    "phone": {
+                      "maxLength": 30,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "promptpayMode": {
+                      "enum": [
+                        "bank",
+                        "static"
+                      ],
+                      "type": "string"
+                    },
+                    "promptpayTarget": {
+                      "maxLength": 13,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "receiptFooter": {
+                      "maxLength": 200,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "receiptPaperMm": {
+                      "enum": [
+                        58,
+                        80
+                      ],
+                      "type": "string"
+                    },
+                    "receiptPrinterEnabled": {
+                      "type": "boolean"
+                    },
+                    "receiptPrinterIp": {
+                      "maxLength": 45,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "receiptPrinterPort": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "maximum": 65535,
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "maximum": 65535,
+                      "minimum": 1
+                    },
+                    "shopName": {
+                      "maxLength": 100,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "tablesEnabled": {
+                      "type": "boolean"
+                    },
+                    "taxId": {
+                      "maxLength": 20,
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "timeZone": {
+                      "maxLength": 64,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "vatMode": {
+                      "enum": [
+                        "inclusive",
+                        "exclusive",
+                        "none"
+                      ],
+                      "type": "string"
+                    },
+                    "vatRateBp": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "maximum": 10000,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      ],
+                      "maximum": 10000,
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "shopName",
+                    "taxId",
+                    "address",
+                    "phone",
+                    "currency",
+                    "vatMode",
+                    "vatRateBp",
+                    "timeZone",
+                    "locale",
+                    "receiptPaperMm",
+                    "receiptFooter",
+                    "homeView",
+                    "tablesEnabled",
+                    "modifiersEnabled",
+                    "promptpayMode",
+                    "promptpayTarget",
+                    "receiptPrinterIp",
+                    "receiptPrinterPort",
+                    "receiptPrinterEnabled",
+                    "cashDrawerEnabled",
+                    "logoUrl"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "อัปโหลดโลโก้ใบเสร็จ (JPEG, PNG, WebP ไม่เกิน 2 MB) แทนโลโก้เดิม",
         "tags": [
           "Settings"
         ]

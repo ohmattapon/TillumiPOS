@@ -163,6 +163,12 @@ export const mockQrPaymentGateway = (): Mocked<IQrPaymentGateway> => ({
 
 export const mockClock = (now: Date) => ({ now: mock(() => now) })
 
+/** Hands out id-1, id-2, ... so a test knows the key an upload will get. */
+export const mockIdGenerator = () => {
+  let next = 0
+  return { newId: mock(() => `id-${++next}`) }
+}
+
 export const mockQrPaymentClaims = (): Mocked<IQrPaymentClaims> => ({
   isRequired: mock<IQrPaymentClaims['isRequired']>(async () => false),
   assertClaimable: mock<IQrPaymentClaims['assertClaimable']>(async () => {}),

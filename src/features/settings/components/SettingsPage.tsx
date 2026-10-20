@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { createMoney, type Locale } from '@/lib/money'
 import { settingsQuery, useUpdateSettings } from '../api'
 import { ConnectDevicesPanel } from './ConnectDevicesPanel'
+import { ReceiptLogoField } from './ReceiptLogoField'
 import { withTablesSwitch } from '../lib/feature-switches'
 import { canSavePromptPay, normalizePromptPayTarget } from '../lib/promptpay'
 import { currencyNameIn, timeZoneOptions } from '../lib/shop-options'
@@ -110,7 +111,9 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     isPrinterPortValid &&
     (!form.receiptPrinterEnabled || printerIp !== '') &&
     (!form.cashDrawerEnabled || form.receiptPrinterEnabled)
-  const changes: ShopSettings = {
+  // The logo has its own upload and remove buttons, so it is neither compared nor sent with the form.
+  const { logoUrl: _logoUrl, ...persisted } = settings
+  const changes: Omit<ShopSettings, 'logoUrl'> = {
     shopName: form.shopName.trim(),
     taxId: form.taxId.trim() || null,
     address: form.address.trim() || null,
@@ -132,7 +135,7 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     promptpayMode: form.promptpayMode,
     promptpayTarget: normalizePromptPayTarget(form.promptpayTarget),
   }
-  const isDirty = JSON.stringify(changes) !== JSON.stringify(settings)
+  const isDirty = JSON.stringify(changes) !== JSON.stringify(persisted)
   const canSave = isDirty && isRateValid && isPromptPayValid && isPrinterValid && changes.shopName !== '' && !save.isPending
 
   const submit = (event: FormEvent) => {
@@ -325,6 +328,7 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
       </Section>
 
       <Section title={t('receipt.title')}>
+        <ReceiptLogoField />
         <Field label={t('receipt.paper')} hint={t('receipt.paperHint')}>
           <Select
             value={String(form.receiptPaperMm)}

@@ -32,6 +32,7 @@ const columns = {
   receiptPrinterPort: shopSettings.receiptPrinterPort,
   receiptPrinterEnabled: shopSettings.receiptPrinterEnabled,
   cashDrawerEnabled: shopSettings.cashDrawerEnabled,
+  logoKey: shopSettings.logoKey,
 }
 
 @injectable()

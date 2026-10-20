@@ -37,6 +37,8 @@ export const shopSettings = pgTable(
     receiptPrinterEnabled: boolean().notNull().default(false),
     // The drawer kicks through the printer, so it needs the printer on.
     cashDrawerEnabled: boolean().notNull().default(false),
+    // Storage key of the logo printed at the top of receipts; null means no logo.
+    logoKey: text(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [check('shop_settings_single_row', sql`${table.id} = 1`)],
