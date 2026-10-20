@@ -179,15 +179,15 @@ export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfi
                     </span>
                     {confirmingId === payment.id ? (
                       <span className="flex gap-2">
-                        <Button type="button" variant="outline" className="h-10" onClick={() => setConfirmingId(null)}>
+                        <Button type="button" variant="outline" className="h-11" onClick={() => setConfirmingId(null)}>
                           {tc('cancel')}
                         </Button>
-                        <Button type="button" className="h-10" disabled={isSubmitting || qr.isCancelling} onClick={() => payWithArrivedMoney(payment.id)}>
+                        <Button type="button" className="h-11" disabled={isSubmitting || qr.isCancelling} onClick={() => payWithArrivedMoney(payment.id)}>
                           {t('payment.qr.arrivedConfirm')}
                         </Button>
                       </span>
                     ) : (
-                      <Button type="button" variant="outline" className="h-10" disabled={isSubmitting || qr.isCancelling} onClick={() => setConfirmingId(payment.id)}>
+                      <Button type="button" variant="outline" className="h-11" disabled={isSubmitting || qr.isCancelling} onClick={() => setConfirmingId(payment.id)}>
                         {t('payment.qr.arrivedUse')}
                       </Button>
                     )}
