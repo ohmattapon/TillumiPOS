@@ -35,6 +35,7 @@ describe('shop settings', () => {
       receiptPrinterPort: 9100,
       receiptPrinterEnabled: false,
       cashDrawerEnabled: false,
+      logoUrl: null,
     })
   })
 

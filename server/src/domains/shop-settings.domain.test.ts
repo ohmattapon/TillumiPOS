@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { DomainError } from './errors/domain-error'
 import {
+  buildLogoKey,
   DEFAULT_SHOP_SETTINGS,
   SHOP_TYPES,
   ShopSettingsEntity,
@@ -34,7 +35,23 @@ describe('ShopSettingsEntity', () => {
       receiptPrinterPort: 9100,
       receiptPrinterEnabled: false,
       cashDrawerEnabled: false,
+      logoKey: null,
     })
+  })
+
+  test('a logo key has the shape the upload makes, or the shop has no logo', () => {
+    expect(settings({ logoKey: 'logo/3f2c9a1e-7b4d-4c1a-9e2f-0a1b2c3d4e5f.webp' }).logoKey).toBe('logo/3f2c9a1e-7b4d-4c1a-9e2f-0a1b2c3d4e5f.webp')
+    for (const logoKey of ['logo/../../etc/passwd.png', 'products/1/a.png', 'logo/a.gif', 'logo/.png', '/logo/a.png'])
+      expect(() => settings({ logoKey })).toThrow(DomainError)
+  })
+
+  test('a built logo key is one the entity accepts', () => {
+    expect(settings({ logoKey: buildLogoKey('3f2c9a1e-7b4d', 'webp') }).logoKey).toBe('logo/3f2c9a1e-7b4d.webp')
+  })
+
+  test('a shop saved before logos existed has no logo', () => {
+    const { logoKey: _logoKey, ...old } = DEFAULT_SHOP_SETTINGS
+    expect(new ShopSettingsEntity(old as ShopSettingsProps).logoKey).toBeNull()
   })
 
   test.each<[string, Partial<ShopSettingsProps>]>([

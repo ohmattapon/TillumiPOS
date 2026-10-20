@@ -110,7 +110,9 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     isPrinterPortValid &&
     (!form.receiptPrinterEnabled || printerIp !== '') &&
     (!form.cashDrawerEnabled || form.receiptPrinterEnabled)
-  const changes: ShopSettings = {
+  // The logo has its own upload and remove buttons, so it is neither compared nor sent with the form.
+  const { logoUrl: _logoUrl, ...persisted } = settings
+  const changes: Omit<ShopSettings, 'logoUrl'> = {
     shopName: form.shopName.trim(),
     taxId: form.taxId.trim() || null,
     address: form.address.trim() || null,
@@ -132,7 +134,7 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     promptpayMode: form.promptpayMode,
     promptpayTarget: normalizePromptPayTarget(form.promptpayTarget),
   }
-  const isDirty = JSON.stringify(changes) !== JSON.stringify(settings)
+  const isDirty = JSON.stringify(changes) !== JSON.stringify(persisted)
   const canSave = isDirty && isRateValid && isPromptPayValid && isPrinterValid && changes.shopName !== '' && !save.isPending
 
   const submit = (event: FormEvent) => {

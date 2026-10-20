@@ -232,6 +232,13 @@
       "when": 1792386717710,
       "tag": "0032_printer_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792500954221,
+      "tag": "0033_shop_logo",
+      "breakpoints": true
     }
   ]
 }

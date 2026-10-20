@@ -26,6 +26,12 @@ export function isPrinterHost(value: string): boolean {
   return value.length >= 1 && value.length <= 45 && /^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$/.test(value)
 }
 
+/** The one shape a stored logo key has: `logo/<uuid>.<ext>`. The upload use case produces it; nothing else is accepted. */
+export const isLogoKey = (value: string) => /^logo\/[A-Za-z0-9-]{1,64}\.(jpg|png|webp)$/.test(value)
+
+/** The storage key of a new logo: a fresh id per upload lets browsers cache the picture forever. */
+export const buildLogoKey = (id: string, extension: string) => `logo/${id}.${extension}`
+
 /** The kinds of shop first-run setup asks about. Only the features they turn on are stored, not the type. */
 export const SHOP_TYPES = ['cafe', 'restaurant', 'retail', 'other'] as const
 export type ShopType = (typeof SHOP_TYPES)[number]
@@ -84,6 +90,8 @@ export interface ShopSettingsProps {
   receiptPrinterEnabled: boolean
   /** Kick the drawer through the printer after printing. Needs the printer on. */
   cashDrawerEnabled: boolean
+  /** Storage key of the logo printed at the top of receipts; null means no logo. Changed only by the logo commands. */
+  logoKey: string | null
 }
 
 /** What a shop that has never been configured runs with. */
@@ -108,6 +116,7 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettingsProps = {
   receiptPrinterPort: 9100,
   receiptPrinterEnabled: false,
   cashDrawerEnabled: false,
+  logoKey: null,
 }
 
 export type ShopSettingsChanges = Partial<ShopSettingsProps>
@@ -145,6 +154,7 @@ export class ShopSettingsEntity {
   public readonly receiptPrinterPort: number
   public readonly receiptPrinterEnabled: boolean
   public readonly cashDrawerEnabled: boolean
+  public readonly logoKey: string | null
 
   constructor(props: ShopSettingsProps) {
     if (props.shopName.length < 1 || props.shopName.length > 100) throw invalid('ชื่อร้านต้องยาว 1 ถึง 100 ตัวอักษร')
@@ -177,6 +187,9 @@ export class ShopSettingsEntity {
       throw invalid('เปิดพิมพ์ผ่านแลนต้องกรอก IP เครื่องพิมพ์ก่อน')
     if (props.cashDrawerEnabled && !props.receiptPrinterEnabled)
       throw invalid('เปิดลิ้นชักต้องเปิดพิมพ์ผ่านแลนก่อน เพราะลิ้นชักเตะผ่านเครื่องพิมพ์')
+    // A shop saved before logos existed has no value at all, which means no logo.
+    const logoKey = props.logoKey ?? null
+    if (logoKey !== null && !isLogoKey(logoKey)) throw invalid('คีย์โลโก้ไม่ถูกต้อง')
 
     this.shopName = props.shopName
     this.taxId = props.taxId
@@ -198,6 +211,7 @@ export class ShopSettingsEntity {
     this.receiptPrinterPort = props.receiptPrinterPort
     this.receiptPrinterEnabled = props.receiptPrinterEnabled
     this.cashDrawerEnabled = props.cashDrawerEnabled
+    this.logoKey = logoKey
   }
 
   /**
@@ -236,6 +250,7 @@ export class ShopSettingsEntity {
       receiptPrinterPort: this.receiptPrinterPort,
       receiptPrinterEnabled: this.receiptPrinterEnabled,
       cashDrawerEnabled: this.cashDrawerEnabled,
+      logoKey: this.logoKey,
     }
   }
 }

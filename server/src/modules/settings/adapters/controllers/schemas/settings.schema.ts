@@ -27,8 +27,10 @@ const fields = {
 }
 
 export const settingsSchemas = {
-  settings: t.Object(fields),
+  // The storage key stays internal; the response carries a ready-to-use URL instead.
+  settings: t.Object({ ...fields, logoUrl: t.Nullable(t.String()) }),
   update: t.Partial(t.Object(fields)),
+  logo: t.Object({ file: t.File({ type: ['image/jpeg', 'image/png', 'image/webp'], maxSize: '2m' }) }),
 }
 
 export type SettingsResponse = typeof settingsSchemas.settings.static

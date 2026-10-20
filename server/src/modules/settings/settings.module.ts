@@ -6,6 +6,8 @@ import { CachedShopSettingsRepository } from './adapters/repository/shop-setting
 import { ShopPrinterSettings } from './adapters/repository/printer-settings.adapter'
 import { shopSettingsRepositoryToken } from './applications/ports/shop-settings.repository'
 import { GetShopSettingsUseCase } from './applications/usecases/get-shop-settings.usecase'
+import { RemoveShopLogoUseCase } from './applications/usecases/remove-shop-logo.usecase'
+import { SetShopLogoUseCase } from './applications/usecases/set-shop-logo.usecase'
 import { UpdateShopSettingsUseCase } from './applications/usecases/update-shop-settings.usecase'
 
 container.register(shopSettingsRepositoryToken, { useClass: CachedShopSettingsRepository })
@@ -13,4 +15,6 @@ container.register(printerSettingsToken, { useClass: ShopPrinterSettings })
 container.register(quoteShopRulesToken, { useToken: shopSettingsRepositoryToken })
 container.registerSingleton(GetShopSettingsUseCase)
 container.registerSingleton(UpdateShopSettingsUseCase)
+container.registerSingleton(SetShopLogoUseCase)
+container.registerSingleton(RemoveShopLogoUseCase)
 container.registerSingleton(SettingsElysiaController)
