@@ -2,7 +2,7 @@ import type { Product } from '@pos/api/types'
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { modifierKeys } from '@/features/modifiers'
 import { api, apiV2, unwrap } from '@/lib/api'
-import { prepareImage } from './lib/image'
+import { prepareImage } from '@/lib/prepare-image'
 
 export const productKeys = {
   /** Prefix of every product query: invalidate this after anything that changes products or stock. */

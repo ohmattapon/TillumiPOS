@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { prepareImage } from './image'
+import { prepareImage } from './prepare-image'
 
 const globals = globalThis as { createImageBitmap?: unknown; document?: unknown }
 const native = { createImageBitmap: globals.createImageBitmap, document: globals.document }
@@ -35,6 +35,14 @@ describe('prepareImage', () => {
     expect([seen.type, seen.quality]).toEqual(['image/webp', 0.85])
     expect(seen.closed).toBe(true)
     expect([file.name, file.type]).toEqual(['image.webp', 'image/webp'])
+  })
+
+  test('a smaller longest edge can be asked for', async () => {
+    const seen = stubBrowser({ width: 1000, height: 500 }, new Blob(['webp'], { type: 'image/webp' }))
+
+    await prepareImage(new File(['png'], 'logo.png', { type: 'image/png' }), 400)
+
+    expect(seen.canvas).toEqual({ width: 400, height: 200 })
   })
 
   test('a small image is not enlarged', async () => {
