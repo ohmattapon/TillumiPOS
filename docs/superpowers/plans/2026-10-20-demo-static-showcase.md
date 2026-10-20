@@ -9,7 +9,7 @@
 - ไม่รัน server อะไรทั้งนั้น (databaseless + apiless) — ต่างจาก demo-memory mode (server หน่วยความจำ) ที่ทำไว้ก่อน ของเดิมเก็บไว้ไม่ลบ แต่ docs จะชี้วิธีนี้เป็นทางโชว์หลัก
 - เน้น "ดูหน้าตา": อ่านข้อมูลได้ทุกจอ กดบันทึกแล้วตอบสำเร็จแบบสมมติ (ไม่ต้องคงอยู่ข้ามรีเฟรชก็ได้ แต่ห้ามค้าง/เอ๋อ)
 
-**Architecture:** Mock Service Worker (msw v2) ดัก fetch ในเบราว์เซอร์ ตอบ fixture แทน API จริง — ไม่แตะโค้ดแอปเลยยกเว้นจุดสตาร์ท worker ใน `main.tsx` หลัง flag `import.meta.env.DEMO_STATIC` (รันด้วย `vite --mode demo-static` หรือเสิร์ฟ `dist/` ที่ build ด้วยโหมดนั้น) + `msw init public/` ครั้งเดียว รูปใช้ไฟล์ local ใน `public/demo/` (ห้าม URL นอก งานโชว์ต้องรอดแบบ offline)
+**Architecture:** Mock Service Worker (msw v2) ดัก fetch ในเบราว์เซอร์ ตอบ fixture แทน API จริง — ไม่แตะโค้ดแอปเลยยกเว้นจุดสตาร์ท worker ใน `main.tsx` หลังเช็ค `import.meta.env.MODE === 'demo-static'` (รันด้วย `vite --mode demo-static` หรือเสิร์ฟ `dist/` ที่ build ด้วยโหมดนั้น; ตั้งใจไม่ใช้ไฟล์ `.env.*` เพิ่ม เพราะ pre-commit hook ห้าม commit ไฟล์ชื่อนั้น) + `msw init public/` ครั้งเดียว รูปใช้ไฟล์ local ใน `public/demo/` (ห้าม URL นอก งานโชว์ต้องรอดแบบ offline)
 
 **Tech Stack:** msw v2 (browser),ที่มีอยู่เดิมทั้งหมด (React Query/Eden ไม่รู้ว่าโดนดัก), fixtures TypeScript
 
@@ -27,7 +27,7 @@
 
 ## Review Focus
 
-1. **ห้ามรั่วไป production:** worker สตาร์ทเฉพาะเมื่อ flag เปิดเท่านั้น (เช็ค builtins ว่า `import.meta.env.DEMO_STATIC` ไม่มีทางเป็น true ใน build ปกติ) + ไม่มี URL mock หลุดไปโดน API จริง
+1. **ห้ามรั่วไป production:** worker สตาร์ทเฉพาะเมื่อ `MODE === 'demo-static'` เท่านั้น (MODE มาจาก `--mode` flag ไม่มีทางเป็นค่านี้ใน build/dev ปกติ) + ไม่มี URL mock หลุดไปโดน API จริง
 2. **ทุกจอต้องไม่อยู่ในสถานะ loading/error ค้าง:** ทุก query ที่ UI เรียกต้องมี handler (ไล่จาก `unwrap(api` ทั้ง 101 จุด), skeleton → data จริง, error มี retry
 3. **mutations ต้องตอบสำเร็จเสมอ:** ขาย/void/บันทึกทุกอย่างตอบ 200 ที่ type ถูก + toast ปกติ ห้ามมีปุ่มกดแล้วเงียบ
 4. **offline ได้:** ไม่มี fetch/รูป/ฟอนต์จากข้างนอก (ฟอนต์ใช้ของระบบ)
@@ -40,11 +40,11 @@
 - `demo/worker.ts` — setupWorker + start เงื่อนไข + ป้าย DEMO (banner มุมจอว่าโหมดโชว์ ข้อมูลไม่จริง)
 - `src/main.tsx` — เพิ่มสตาร์ท worker 3 บรรทัดหลัง flag (ไฟล์เดียวใน src/ ที่แตะ)
 - `public/mockServiceWorker.js` — สร้างด้วย `msw init` (commit ได้ เป็นไฟล์ของ lib)
-- `.env.demo-static` + script `"demo:static": "vite --mode demo-static"` (+ preview path)
+- script `"demo:static": "vite --mode demo-static"` (+ preview path; ไม่ใช้ไฟล์ `.env.*` เพิ่ม)
 
 ## Task 1 — โครง + auth/settings/catalog อ่านได้อย่างเดียวก่อน
 
-**Files:** `demo/` skeleton (`worker.ts`, `db.ts`, `handlers.ts` ว่าง), `main.tsx` hook, `public/mockServiceWorker.js`, `.env.demo-static`, script, fixtures: settings (รวม printer ปิด), owner me, categories/products/modifiers (~40 สินค้าไทย), members
+**Files:** `demo/` skeleton (`worker.ts`, `db.ts`, `handlers.ts` ว่าง), `main.tsx` hook, `public/mockServiceWorker.js`, script, fixtures: settings (รวม printer ปิด), owner me, categories/products/modifiers (~40 สินค้าไทย), members
 **Dependencies:** ไม่มี (`bun add -D msw` ก่อน)
 **Race risks:** ชื่อไฟล์/พอร์ตชนของเดิม — ใช้ `demo/` ใหม่ทั้งหมด ไม่แตะ `src/` ยกเว้น main.tsx
 **Verification:** `bun run demo:static` → เปิดหน้า login (admin/อะไรก็ได้ผ่าน) → เห็นสินค้า/ตั้งค่า, typecheck, test:web, lint; ตรวจว่า build ปกติ (`bun run build`) ไม่มี worker ติดไป (grep `mockServiceWorker` ใน dist ต้องว่าง)

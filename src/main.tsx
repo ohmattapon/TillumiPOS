@@ -10,6 +10,10 @@ import { TooltipProvider } from './components/ui/tooltip'
 import { queryClient } from './lib/query-client'
 import { ThemeProvider } from './app/theme'
 
+if (import.meta.env.MODE === 'demo-static') {
+  void import('../demo/worker').then((module) => module.startDemoWorker())
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

@@ -38,6 +38,7 @@
     "coverage:web": "bun test ./src --coverage",
     "openapi:check": "cd server && bun --env-file=.env.test test/openapi-snapshot.ts check",
     "demo:memory": "bun scripts/demo-memory.ts",
+    "demo:static": "vite --mode demo-static",
     "hooks:install": "lefthook install"
   },
   "dependencies": {
@@ -82,6 +83,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "drizzle-kit": "^0.31.11",
     "lefthook": "^2.2.2",
+    "msw": "^2",
     "oxlint": "^1.81.0",
     "playwright-core": "^1.64.0",
     "tailwindcss": "^4.3.3",
