@@ -1,7 +1,9 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productKeys } from '@/features/products'
 import { saleKeys } from '@/features/sales'
+import { memberKeys } from '@/features/members'
 import { withHeldQuote } from '@/features/promotions'
+import { shiftKeys } from '@/features/shifts'
 import type { Sale } from '@pos/api/types'
 import { api, apiV2, unwrap } from '@/lib/api'
 import type { PaymentInput } from '@/lib/money'
@@ -44,7 +46,7 @@ export function useCheckout() {
       Promise.all([
         queryClient.invalidateQueries({ queryKey: productKeys.all }),
         queryClient.invalidateQueries({ queryKey: saleKeys.all }),
-        queryClient.invalidateQueries({ queryKey: ['members'] }),
+        queryClient.invalidateQueries({ queryKey: memberKeys.all }),
       ]),
   })
 }
@@ -109,7 +111,7 @@ export function useCreateQrPayment() {
       )
     },
     // A lost answer leaves a request to resolve on the shift page: make it show up there at once.
-    onError: () => queryClient.invalidateQueries({ queryKey: ['shifts'] }),
+    onError: () => queryClient.invalidateQueries({ queryKey: shiftKeys.all }),
   })
 }
 
