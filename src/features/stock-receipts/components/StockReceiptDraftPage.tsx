@@ -11,9 +11,9 @@ import { Label } from '@/components/ui/label'
 import { meQuery } from '@/features/auth'
 import { productQuery, productsQuery } from '@/features/products'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
-import { ApiError } from '@/lib/api'
 import { useReceiveStock } from '../api'
 import { ReceiptDraftStore } from '../lib/draft'
+import { invalidProductIds, isDefinitiveRejection } from '../lib/submit-error'
 import { ReceiptDetail } from './ReceiptDetail'
 import { ReceiptQuantityInput } from './ReceiptQuantityInput'
 import { newIdempotencyKey } from '@/lib/idempotency-key'
@@ -81,14 +81,12 @@ function Draft({ actorId }: { actorId: number }) {
       catch { setBlocked(true) }
     } catch (error) {
       try {
-        // Only a definitive application rejection is safe to edit. Auth and transport outcomes
-        // might arrive after a prior successful attempt, so retain its exact request.
-        if (error instanceof ApiError && error.status >= 400 && error.status < 500 && ['STOCK_RECEIPT_INVALID_ITEMS', 'VALIDATION', 'IDEMPOTENCY_KEY_REQUIRED'].includes(error.code)) store.reject()
+        if (isDefinitiveRejection(error)) store.reject()
         else store.uncertain()
         setDraft(store.value)
         setMessage(error instanceof Error ? error.message : t('failed'))
-        if (error instanceof ApiError && error.code === 'STOCK_RECEIPT_INVALID_ITEMS')
-          setInvalidIds(String(error.params?.productIds ?? '').split(',').map(Number))
+        const invalid = invalidProductIds(error)
+        if (invalid) setInvalidIds(invalid)
       } catch { setBlocked(true) }
     }
   }

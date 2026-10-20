@@ -9,16 +9,14 @@ import { Field, FieldLabel } from '@/components/ui/field'
 import { categoriesQuery } from '@/features/categories'
 import { ProductImage, productQuery, productsQuery } from '@/features/products'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
-import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import { scopeEntries, toggleId, type ScopeSelection } from '../lib/promotion-scope'
+import { isGone, scopeEntries, toggleId, type ScopeSelection } from '../lib/promotion-scope'
 
 const SEARCH_LIMIT = 20
 const MAX_RETRIES = 3
 
 /** A product that is gone answers 404 at once; asking again would only keep it "loading". */
-const retryUnlessGone = (failures: number, error: Error) =>
-  !(error instanceof ApiError && error.status === 404) && failures < MAX_RETRIES
+const retryUnlessGone = (failures: number, error: Error) => !isGone(error) && failures < MAX_RETRIES
 
 const thumbnail = (imageUrl: string | null | undefined) => <ProductImage src={imageUrl ?? null} alt="" className="size-8 rounded-md" />
 
@@ -31,7 +29,7 @@ export function PromotionScopePicker({ value, onChange }: { value: ScopeSelectio
   const results = useQuery(productsQuery({ q: term, limit: SEARCH_LIMIT, offset: 0 }))
   // The chosen products are read one by one, so a chosen product that no search shows still has its name.
   const chosen = useQueries({ queries: value.productIds.map((id) => ({ ...productQuery(id), retry: retryUnlessGone })) })
-  const failed = chosen.filter((result) => result.error && !(result.error instanceof ApiError && result.error.status === 404))
+  const failed = chosen.filter((result) => result.error && !isGone(result.error))
 
   const knownProducts = new Map(chosen.flatMap((result) => (result.data ? [[result.data.id, result.data] as const] : [])))
   const loadingProducts = new Set(value.productIds.filter((_, index) => chosen[index]?.isPending))
