@@ -38,9 +38,13 @@ export class TcpPrinterGateway implements IPrinterGateway {
       const done = (finish: () => void) => {
         if (settled) return
         settled = true
+        clearTimeout(timer)
         socket.destroy()
         finish()
       }
+      // Our own timer, not just the socket's: socket-level timeouts are unreliable on some
+      // platforms (a stalled flush never trips them), and an unanswered send must always resolve.
+      const timer = setTimeout(() => done(() => reject(connected ? timedOut('unknown') : timedOut(null))), timeoutMs)
 
       socket.setTimeout(timeoutMs)
       // A stall before connecting sent nothing; a stall after may have printed already.
@@ -66,9 +70,12 @@ export class TcpPrinterGateway implements IPrinterGateway {
       const done = (finish: () => void) => {
         if (settled) return
         settled = true
+        clearTimeout(timer)
         socket.destroy()
         finish()
       }
+      // Own timer for the same reason as sendRaw: never hang past timeoutMs on any platform.
+      const timer = setTimeout(() => done(() => reject(timedOut(null))), timeoutMs)
 
       socket.setTimeout(timeoutMs)
       socket.on('timeout', () => done(() => reject(timedOut(null))))
