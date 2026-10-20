@@ -1,6 +1,6 @@
 import type { ShopSettings } from '@pos/api/types'
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, unwrap } from '@/lib/api'
+import { api, apiV2, unwrap } from '@/lib/api'
 
 export const settingsKeys = {
   all: ['settings'] as const,
@@ -11,6 +11,13 @@ export const settingsQuery = queryOptions({
   queryKey: settingsKeys.all,
   queryFn: () => unwrap(api.settings.get()),
   staleTime: 5 * 60_000,
+})
+
+/** Whether this shop has a place to keep pictures (product photos, the receipt logo): uploads are hidden when it has not. */
+export const imageStorageQuery = queryOptions({
+  queryKey: ['capabilities', 'image-storage'] as const,
+  queryFn: async () => (await unwrap(apiV2.capabilities.get())).imageStorage,
+  staleTime: Infinity,
 })
 
 export type SettingsChanges = Partial<ShopSettings>

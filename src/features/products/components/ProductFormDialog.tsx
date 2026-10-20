@@ -15,7 +15,8 @@ import { ProductImage } from './ProductImage'
 import { modifierGroupsQuery } from '@/features/modifiers'
 import { useCan } from '@/features/auth'
 import { useFeatures, useFormat, useSettings } from '@/features/settings'
-import { imageStorageQuery, productsQuery, useSaveProduct } from '../api'
+import { imageStorageQuery } from '@/features/settings'
+import { productsQuery, useSaveProduct } from '../api'
 import { CAFE_SKU_PREFIX, CAFE_SKU_SCAN_LIMIT, nextCafeSku } from '../lib/cafe-sku'
 
 // Radix Select cannot use an empty string as an item value.
