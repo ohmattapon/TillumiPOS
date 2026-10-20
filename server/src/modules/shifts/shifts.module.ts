@@ -2,7 +2,7 @@ import { container } from 'tsyringe'
 import { TOKENS } from '../tokens'
 import { DrizzleRegisterRepository } from './adapters/repository/register.drizzle.repository'
 import { DrizzleShiftRepository } from './adapters/repository/shift.drizzle.repository'
-import { DrizzleShiftLedgerAdapter } from './adapters/repository/shift-ledger.drizzle.adapter'
+import { ShiftLedger } from './applications/services/shift-ledger'
 import { DrizzleShiftSettingsGuard } from './adapters/repository/shift-settings-guard.drizzle.adapter'
 import { RegisterElysiaController } from './adapters/controllers/register.controller'
 import { ShiftElysiaController } from './adapters/controllers/shift.controller'
@@ -27,7 +27,7 @@ import {
 
 container.register(registerRepositoryToken, { useClass: DrizzleRegisterRepository })
 container.register(shiftRepositoryToken, { useClass: DrizzleShiftRepository })
-container.register(TOKENS.ShiftLedger, { useClass: DrizzleShiftLedgerAdapter })
+container.register(TOKENS.ShiftLedger, { useClass: ShiftLedger })
 container.register(shiftSettingsGuardToken, { useClass: DrizzleShiftSettingsGuard })
 container.register(shiftSummaryRepositoryToken, { useClass: DrizzleShiftSummaryRepository })
 container.registerSingleton(GetShiftSummaryUseCase)

@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { sql } from 'drizzle-orm'
 import { db } from '../../libs/db'
 import { runInTransaction } from '../../libs/transaction-context'
-import { DrizzleShiftLedgerAdapter } from '../../modules/shifts/adapters/repository/shift-ledger.drizzle.adapter'
+import { DrizzleShiftRepository } from '../../modules/shifts/adapters/repository/shift.drizzle.repository'
+import { ShiftLedger } from '../../modules/shifts/applications/services/shift-ledger'
 import { ok, resetDatabase, seedProduct, signIn } from '../../../test/harness'
 
 const previousMode = Bun.env.CHECKOUT_MODE
@@ -29,7 +30,7 @@ describe('a sale refunded from two shifts at once', () => {
     const sale = ok(await owner.apiV2.sales.post({
       shiftId: shiftA.id, items: [{ productId: tea.id, quantity: 1 }], payments: [{ method: 'cash', amountSatang: 1000 }],
     }, idempotency()))
-    const ledger = new DrizzleShiftLedgerAdapter()
+    const ledger = new ShiftLedger(new DrizzleShiftRepository())
     const refund = (shiftId: number) => ({
       shiftId, branchId: 1, saleId: sale.id, actorId: owner.user.id, actorName: 'owner', amountSatang: 1000, reason: 'คืนเงิน', createdAt: new Date(),
     })
