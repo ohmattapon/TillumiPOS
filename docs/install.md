@@ -211,4 +211,4 @@ git pull --ff-only origin main
 
 ## ใบอนุญาต
 
-AGPL-3.0 ดูไฟล์ `LICENSE`
+Apache-2.0 ดูไฟล์ `LICENSE` และ `NOTICE`
