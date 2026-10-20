@@ -458,7 +458,7 @@ The repo is one package (`package.json` at the root holds the API and the web), 
 - `workers/media`: a Cloudflare Worker that stores product images in R2
 - `workers/cloud`: a Cloudflare Worker that runs the Docker image (API and web) in one Cloudflare Container, see `docs/cloudflare.md`
 - `Dockerfile`, `docker-compose.yml`, `docker-compose.dev.yml`, `Caddyfile`, `docker/entrypoint.sh`, `scripts/`: the install kit for shops (the guide for installers is `docs/install.md`), per the section "Installation and first-run setup"
-- `LICENSE`: AGPL-3.0
+- `LICENSE` and `NOTICE`: Apache-2.0
 - `DESIGN.md`: the design system of the web pages (colors, typography, components and interaction rules). Read it before changing or adding a screen.
 - `docs/superpowers`: `roadmap.md`, design documents in `specs/` and implementation plans in `plans/`
 
