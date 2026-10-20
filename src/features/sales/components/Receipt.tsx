@@ -25,6 +25,7 @@ export function Receipt({ sale, elementRef }: { sale: Sale; elementRef?: Ref<HTM
   return (
     <div ref={elementRef} data-receipt-paper={shop.receiptPaperMm} className="space-y-2 font-mono text-sm tabular-nums">
       <div className="text-center">
+        {shop.logoUrl && <img src={shop.logoUrl} alt="" className="mx-auto mb-1 max-h-20 max-w-[70%] object-contain" />}
         <p className="text-base font-bold">{heading.shopName}</p>
         {heading.branchName && <p>{heading.branchName}</p>}
         {heading.address && <p>{heading.address}</p>}

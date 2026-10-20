@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { createMoney, type Locale } from '@/lib/money'
 import { settingsQuery, useUpdateSettings } from '../api'
 import { ConnectDevicesPanel } from './ConnectDevicesPanel'
+import { ReceiptLogoField } from './ReceiptLogoField'
 import { withTablesSwitch } from '../lib/feature-switches'
 import { canSavePromptPay, normalizePromptPayTarget } from '../lib/promptpay'
 import { currencyNameIn, timeZoneOptions } from '../lib/shop-options'
@@ -327,6 +328,7 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
       </Section>
 
       <Section title={t('receipt.title')}>
+        <ReceiptLogoField />
         <Field label={t('receipt.paper')} hint={t('receipt.paperHint')}>
           <Select
             value={String(form.receiptPaperMm)}
