@@ -1,7 +1,7 @@
 {
   "name": "pos",
   "private": true,
-  "license": "AGPL-3.0-only",
+  "license": "Apache-2.0",
   "type": "module",
   "workspaces": [
     "workers/*"
@@ -23,13 +23,14 @@
     "db:seed:demo": "bun --env-file=.env server/src/infrastructure/database/seed-demo.ts",
     "db:seed:catalog": "bun --env-file=.env server/src/infrastructure/database/seed-demo-catalog.run.ts",
     "db:studio": "bun --env-file=.env drizzle-kit studio",
-    "e2e": "bun e2e/run.ts",
+    "e2e": "bun run test:e2e-support && bun e2e/run.ts",
     "e2e:stock-receipts": "bun e2e/stock-receipts.ts",
     "screenshots": "bun e2e/shots.ts",
     "scb:inquiry": "bun --env-file=.env server/scripts/scb-inquiry.ts",
     "typecheck": "tsc -b && tsc -p server && bun run --filter '*' typecheck",
     "lint": "oxlint src e2e vite.config.ts",
-    "test": "bun run test:api && bun run test:web",
+    "test": "bun run test:api && bun run test:web && bun run test:e2e-support",
+    "test:e2e-support": "bun test ./e2e/customer-display-requests.test.ts",
     "test:api": "cd server && bun --env-file=.env.test test",
     "test:unit": "cd server && bun --env-file=.env.test test src/domains src/libs src/modules",
     "test:web": "bun test ./src",

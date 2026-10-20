@@ -52,6 +52,7 @@ export function useVoidSale(id: number) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: saleKeys.all })
+      // A string, not memberKeys: members already imports sales, so importing it here would be a cycle.
       queryClient.invalidateQueries({ queryKey: ['members'] })
       // Voiding returns the stock.
       queryClient.invalidateQueries({ queryKey: productKeys.all })

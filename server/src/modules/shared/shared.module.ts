@@ -8,6 +8,7 @@ import { EnvCheckoutPolicy } from './adapters/env-checkout-policy'
 import { DrizzleCommandReceiptsRepository } from './adapters/drizzle-command-receipts.repository'
 import { commandReceiptsToken } from './ports/command-receipts.port'
 import { CommandIdempotency } from './applications/command-idempotency'
+import { GetCapabilitiesUseCase } from './applications/get-capabilities.usecase'
 import { env } from '../../libs/env'
 import { resolveCacheConfig } from '../../libs/cache-config'
 import { RedisReadCache } from './adapters/redis-read-cache'
@@ -22,5 +23,6 @@ container.register(TOKENS.Clock, { useClass: SystemClock })
 container.register(TOKENS.CheckoutPolicy, { useClass: EnvCheckoutPolicy })
 container.register(commandReceiptsToken, { useClass: DrizzleCommandReceiptsRepository })
 container.register(TOKENS.Idempotency, { useClass: CommandIdempotency })
+container.registerSingleton(GetCapabilitiesUseCase)
 container.registerInstance(readCacheToken, new RedisReadCache(resolveCacheConfig(env.databaseUrl)))
 container.registerSingleton(repositoryReadCacheToken, RepositoryReadCache)

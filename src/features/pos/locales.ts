@@ -152,7 +152,8 @@ const th = {
     },
   },
   receipt: {
-    saved: 'บันทึกการขายแล้ว · เงินทอน',
+    saved: 'บันทึกการขายแล้ว',
+    change: 'เงินทอน',
     next: 'ขายรายการต่อไป',
   },
   note: {
@@ -315,7 +316,8 @@ const en = {
     },
   },
   receipt: {
-    saved: 'Sale recorded · change',
+    saved: 'Sale recorded',
+    change: 'Change due',
     next: 'Next sale',
   },
   note: {

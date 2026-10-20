@@ -3,12 +3,11 @@ import { inject, injectable } from 'tsyringe'
 import type { QrPaymentEntity } from '../../../../domains/qr-payment.domain'
 import { idParams } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
-import { qrPaymentGatewayToken } from '../../applications/ports/qr-payment-gateway.port'
-import type { IQrPaymentGateway } from '../../applications/ports/qr-payment-gateway.port'
+import { GetQrConfigUseCase } from '../../applications/usecases/get-qr-config.usecase'
 import { CancelQrPaymentUseCase } from '../../applications/usecases/cancel-qr-payment.usecase'
 import { ConfirmScbCallbackUseCase } from '../../applications/usecases/confirm-scb-callback.usecase'
 import { CreateQrPaymentUseCase } from '../../applications/usecases/create-qr-payment.usecase'
-import { GetQrPaymentUseCase } from '../../applications/usecases/get-qr-payment.usecase'
+import { RefreshQrPaymentUseCase } from '../../applications/usecases/refresh-qr-payment.usecase'
 import { qrPaymentSchemas, type QrPaymentResponse } from './schemas/qr-payment.schema'
 
 // The QR payload is shown once, in the answer that created it, and is not part of the stored view.
@@ -31,16 +30,16 @@ function toResponse(payment: QrPaymentEntity): QrPaymentResponse {
 export class QrPaymentElysiaController {
   constructor(
     @inject(CreateQrPaymentUseCase) private readonly createQrPayment: CreateQrPaymentUseCase,
-    @inject(GetQrPaymentUseCase) private readonly getQrPayment: GetQrPaymentUseCase,
+    @inject(RefreshQrPaymentUseCase) private readonly refreshQrPayment: RefreshQrPaymentUseCase,
     @inject(CancelQrPaymentUseCase) private readonly cancelQrPayment: CancelQrPaymentUseCase,
     @inject(ConfirmScbCallbackUseCase) private readonly confirmScbCallback: ConfirmScbCallbackUseCase,
-    @inject(qrPaymentGatewayToken) private readonly gateway: IQrPaymentGateway,
+    @inject(GetQrConfigUseCase) private readonly getQrConfig: GetQrConfigUseCase,
   ) {}
 
   getRoutes() {
     return new Elysia({ name: 'payments.qr', prefix: '/payments/qr', detail: { tags: ['Payments'] } })
       .use(auth)
-      .get('/config', () => ({ enabled: this.gateway.isEnabled() }), {
+      .get('/config', () => this.getQrConfig.execute(), {
         auth: true,
         response: qrPaymentSchemas.config,
         detail: { summary: 'ร้านนี้ตั้งค่ารับชำระด้วย QR แล้วหรือยัง' },
@@ -63,7 +62,7 @@ export class QrPaymentElysiaController {
       )
       .get(
         '/:id',
-        async ({ params, branch }) => toResponse(await this.getQrPayment.execute(params.id, (await branch()).id)),
+        async ({ params, branch }) => toResponse(await this.refreshQrPayment.execute(params.id, (await branch()).id)),
         {
           auth: true,
           params: idParams,

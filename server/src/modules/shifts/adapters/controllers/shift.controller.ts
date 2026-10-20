@@ -2,15 +2,13 @@ import { Elysia } from 'elysia'
 import { inject, injectable } from 'tsyringe'
 import { idempotencyHeaders, idParams, page } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
-import {
-  CancelShiftClosingUseCase,
-  CloseShiftUseCase,
-  GetShiftUseCase,
-  ListShiftCashEntriesUseCase,
-  ListShiftsUseCase,
-  RecordCashMovementUseCase,
-  StartShiftClosingUseCase,
-} from '../../applications/usecases/shift-lifecycle.usecases'
+import { CancelShiftClosingUseCase } from '../../applications/usecases/cancel-shift-closing.usecase'
+import { CloseShiftUseCase } from '../../applications/usecases/close-shift.usecase'
+import { GetShiftUseCase } from '../../applications/usecases/get-shift.usecase'
+import { ListShiftCashEntriesUseCase } from '../../applications/usecases/list-shift-cash-entries.usecase'
+import { ListShiftsUseCase } from '../../applications/usecases/list-shifts.usecase'
+import { RecordCashMovementUseCase } from '../../applications/usecases/record-cash-movement.usecase'
+import { StartShiftClosingUseCase } from '../../applications/usecases/start-shift-closing.usecase'
 import { GetShiftSummaryUseCase } from '../../applications/usecases/get-shift-summary.usecase'
 import { OpenShiftUseCase } from '../../applications/usecases/open-shift.usecase'
 import { shiftHttpSchemas } from './schemas/shift.schema'

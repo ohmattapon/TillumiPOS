@@ -1,5 +1,6 @@
 import { and, count, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
+import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { ShiftCashEntryEntity } from '../../../../domains/shift-cash-entry.domain'
 import { ShiftEntity } from '../../../../domains/shift.domain'
@@ -7,6 +8,7 @@ import { MAX_AMOUNT_SATANG } from '../../../../domains/sale.domain'
 import { shiftCashEntries } from '../../../../infrastructure/database/schema/shift-cash-entries'
 import { shifts } from '../../../../infrastructure/database/schema/shifts'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
+import { isUniqueViolation, violatedConstraint } from '../../../../libs/pg-error'
 import { currentExecutor } from '../../../../libs/transaction-context'
 import type { IShiftRepository, ShiftListQuery } from '../../applications/ports/shift.repository'
 
@@ -118,8 +120,20 @@ export class DrizzleShiftRepository implements IShiftRepository {
 
   async addCashEntry(entry: ShiftCashEntryEntity) {
     const { id: _id, createdAt: _createdAt, ...values } = entry.toSnapshot()
-    const [row] = await currentExecutor().insert(shiftCashEntries).values(values).returning(cashEntryColumns)
-    return new ShiftCashEntryEntity(row!)
+    try {
+      const [row] = await currentExecutor().insert(shiftCashEntries).values(values).returning(cashEntryColumns)
+      return new ShiftCashEntryEntity(row!)
+    } catch (error) {
+      if (isUniqueViolation(error) && violatedConstraint(error) === 'shift_cash_entries_one_refund_per_sale')
+        throw new DomainConflictError('บิลนี้มีรายการคืนเงินสดแล้ว', 'SALE_ALREADY_REFUNDED')
+      throw error
+    }
+  }
+
+  async hasCashRefund(saleId: number) {
+    const [row] = await currentExecutor().select({ id: shiftCashEntries.id }).from(shiftCashEntries)
+      .where(and(eq(shiftCashEntries.saleId, saleId), eq(shiftCashEntries.kind, 'cash_refund'))).limit(1)
+    return row !== undefined
   }
 
   async listCashEntries(shiftId: number, limit: number, offset: number) {

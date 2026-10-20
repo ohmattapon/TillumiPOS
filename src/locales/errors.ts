@@ -99,6 +99,7 @@ export const errors = {
     PIN_INVALID: 'Wrong PIN',
     PIN_LOCKED: 'Too many wrong PINs. Try again in 15 minutes',
     PIN_NOT_SET: 'This person has no PIN',
+    LOGIN_LOCKED: 'Too many wrong passwords. Try again in 15 minutes',
     INVALID_PIN: 'A PIN is 4 to 6 digits',
     PRINTER_DISABLED: 'LAN printing is off. Turn it on in shop settings.',
     PRINTER_UNREACHABLE: 'The printer could not be reached. Check that it is on and on the same network.',
