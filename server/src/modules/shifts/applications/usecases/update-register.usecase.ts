@@ -6,25 +6,7 @@ import { TOKENS } from '../../../tokens'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import { registerRepositoryToken } from '../ports/register.repository'
 import type { IRegisterRepository } from '../ports/register.repository'
-import { createRegisterSchema, updateRegisterSchema } from '../schemas/shift-schemas'
-
-/** Query. */
-@injectable()
-export class ListRegistersUseCase {
-  constructor(@inject(registerRepositoryToken) private readonly registers: IRegisterRepository) {}
-  execute(branchId: number) { return this.registers.findAll(branchId) }
-}
-
-/** Command. */
-@injectable()
-export class CreateRegisterUseCase {
-  constructor(@inject(registerRepositoryToken) private readonly registers: IRegisterRepository) {}
-
-  async execute(input: unknown, branchId: number) {
-    const dto = createRegisterSchema.parse(input)
-    return this.registers.create(new RegisterEntity({ id: 0, branchId, code: dto.code, name: dto.name, isActive: true }))
-  }
-}
+import { updateRegisterSchema } from '../schemas/shift-schemas'
 
 /** Command. */
 @injectable()

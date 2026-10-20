@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { makeShift } from '../../../../__tests__/factories'
 import { mockShiftRepository } from '../../../../__tests__/mocks'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
-import { GetShiftUseCase } from './shift-lifecycle.usecases'
+import { GetShiftUseCase } from './get-shift.usecase'
 
 describe('GetShiftUseCase', () => {
   test('returns the shift of the branch it is asked in', async () => {
