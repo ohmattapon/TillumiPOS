@@ -219,7 +219,7 @@ export class RecordCashMovementUseCase {
       async () => {
       const shift = await this.shifts.findByIdForUpdate(shiftId, branchId)
       if (!shift) throw new DomainNotFoundError('ไม่พบกะ', 'SHIFT_NOT_FOUND')
-      if (shift.status !== 'open') throw new DomainConflictError('บันทึกเงินสดได้เฉพาะกะที่เปิดอยู่', 'SHIFT_NOT_OPEN')
+      shift.assertOpen()
       const deltas = await this.shifts.cashDeltas(shiftId)
       const entry = new ShiftCashEntryEntity({
         id: 0,

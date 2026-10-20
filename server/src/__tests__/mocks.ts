@@ -212,6 +212,7 @@ export const mockShiftRepository = (): Mocked<IShiftRepository> => ({
   update: mock<IShiftRepository['update']>(),
   cashDeltas: mock<IShiftRepository['cashDeltas']>(),
   addCashEntry: mock<IShiftRepository['addCashEntry']>(),
+  hasCashRefund: mock<IShiftRepository['hasCashRefund']>(),
   listCashEntries: mock<IShiftRepository['listCashEntries']>(),
 })
 

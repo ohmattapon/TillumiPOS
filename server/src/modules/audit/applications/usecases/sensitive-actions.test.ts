@@ -202,7 +202,7 @@ test('cash refund is audited exactly once on idempotent replay and never on reje
   expect(log.record).not.toHaveBeenCalled()
 })
 const closingShift = () => new ShiftEntity({ id: 1, branchId: 1, registerId: 1, status: 'closing', openedAt: now, openedById: 2, openedByName: 'ผู้ขาย', openingCashSatang: 100, openingNote: null, currency: 'THB', timeZone: 'Asia/Bangkok', closingRevision: 1, closingStartedAt: now, closingStartedById: 2, closingStartedByName: 'ผู้เริ่มนับ', closingExpectedCashSatang: 100, closedAt: null, closedById: null, closedByName: null, countedCashSatang: null, cashDifferenceSatang: null, differenceReason: null })
-const shiftRepository = (): IShiftRepository => ({ create: mock(), findById: mock(), findByIdForUpdate: mock(async () => closingShift()), findCurrentByRegister: mock(), list: mock(), update: mock(async p => p), cashDeltas: mock(async () => []), addCashEntry: mock(), listCashEntries: mock() })
+const shiftRepository = (): IShiftRepository => ({ create: mock(), findById: mock(), findByIdForUpdate: mock(async () => closingShift()), findCurrentByRegister: mock(), list: mock(), update: mock(async p => p), cashDeltas: mock(async () => []), addCashEntry: mock(), hasCashRefund: mock(), listCashEntries: mock() })
 const summaries = (): IShiftSummaryRepository => ({ cashTotals: mock(), freeze: mock(), discard: mock(async () => { }), findFrozen: mock() })
 for (const operation of ['close', 'cancel'] as const) test(`custom shifts.override permits ${operation} and is audited only when taking over another counter`, async () => {
   const log = mockAuditLog(), repo = shiftRepository(), policy = mockCheckoutPolicy()

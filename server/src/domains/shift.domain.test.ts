@@ -75,4 +75,17 @@ describe('ShiftEntity', () => {
     expect(() => opened({ openingCashSatang: 0 }).expectedCashSatang([{ amountSatang: -1 }])).toThrow('เงินสดในลิ้นชักไม่พอ')
     expect(() => opened().expectedCashSatang([{ amountSatang: 2_147_483_647 }])).toThrow('ยอดเงินเกิน')
   })
+
+  test('only an open shift takes cash movements', () => {
+    expect(() => opened().assertOpen()).not.toThrow()
+    const closing = opened().startClosing(8, 'สมหญิง', new Date('2026-10-13T02:00:00Z'), 10000)
+    expect(() => closing.assertOpen()).toThrow(expect.objectContaining({ code: 'SHIFT_NOT_OPEN' }))
+    expect(() => opened({ status: 'closed' }).assertOpen()).toThrow(expect.objectContaining({ code: 'SHIFT_NOT_OPEN' }))
+  })
+
+  test('a refund must be covered by the cash left after the other movements', () => {
+    const shift = opened({ openingCashSatang: 1000 })
+    expect(() => shift.assertCashCoversRefund([{ amountSatang: 500 }], 1500)).not.toThrow()
+    expect(() => shift.assertCashCoversRefund([{ amountSatang: 500 }], 1501)).toThrow(expect.objectContaining({ code: 'SHIFT_CASH_INSUFFICIENT' }))
+  })
 })
