@@ -8,7 +8,7 @@ import { CancelQrPaymentUseCase } from '../../applications/usecases/cancel-qr-pa
 import { CreateQrPaymentV2UseCase } from '../../applications/usecases/create-qr-payment-v2.usecase'
 import { DismissQrPaymentUseCase } from '../../applications/usecases/dismiss-qr-payment.usecase'
 import { FindOrderQrHoldUseCase } from '../../applications/usecases/find-order-qr-hold.usecase'
-import { GetQrPaymentUseCase } from '../../applications/usecases/get-qr-payment.usecase'
+import { RefreshQrPaymentUseCase } from '../../applications/usecases/refresh-qr-payment.usecase'
 import { ListUnclaimedQrPaymentsUseCase } from '../../applications/usecases/list-unclaimed-qr-payments.usecase'
 import { ListUnresolvedQrAttemptsUseCase } from '../../applications/usecases/list-unresolved-qr-attempts.usecase'
 import { ReadQrPaymentUseCase } from '../../applications/usecases/read-qr-payment.usecase'
@@ -64,7 +64,7 @@ export class QrPaymentV2ElysiaController {
   constructor(
     @inject(CreateQrPaymentV2UseCase) private readonly create: CreateQrPaymentV2UseCase,
     @inject(ReadQrPaymentUseCase) private readonly read: ReadQrPaymentUseCase,
-    @inject(GetQrPaymentUseCase) private readonly refresh: GetQrPaymentUseCase,
+    @inject(RefreshQrPaymentUseCase) private readonly refresh: RefreshQrPaymentUseCase,
     @inject(FindOrderQrHoldUseCase) private readonly findHold: FindOrderQrHoldUseCase,
     @inject(CancelQrPaymentUseCase) private readonly cancel: CancelQrPaymentUseCase,
     @inject(ListUnclaimedQrPaymentsUseCase) private readonly listUnclaimed: ListUnclaimedQrPaymentsUseCase,

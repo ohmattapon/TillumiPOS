@@ -17,7 +17,7 @@ import { MIN_CHECK_INTERVAL_MS, QrPaymentRefresher } from '../services/qr-paymen
 import { CancelQrPaymentUseCase } from './cancel-qr-payment.usecase'
 import { ConfirmScbCallbackUseCase } from './confirm-scb-callback.usecase'
 import { CreateQrPaymentUseCase, QR_VALID_FOR_MS } from './create-qr-payment.usecase'
-import { GetQrPaymentUseCase } from './get-qr-payment.usecase'
+import { RefreshQrPaymentUseCase } from './refresh-qr-payment.usecase'
 import { DismissQrPaymentUseCase } from './dismiss-qr-payment.usecase'
 
 const now = new Date('2026-10-13T06:01:00Z')
@@ -175,18 +175,18 @@ describe('QrPaymentRefresher', () => {
   })
 })
 
-describe('GetQrPaymentUseCase', () => {
+describe('RefreshQrPaymentUseCase', () => {
   test('refreshes a payment of the branch', async () => {
     repo.findByIdForUpdate.mockResolvedValue(makeQrPayment({ branchId: 1 }))
     gateway.findPayment.mockResolvedValue(found)
 
-    const payment = await new GetQrPaymentUseCase(repo, refresher, mockUnitOfWork()).execute(1, 1)
+    const payment = await new RefreshQrPaymentUseCase(repo, refresher, mockUnitOfWork()).execute(1, 1)
 
     expect(payment.status).toBe('paid')
   })
 
   test("another branch's payment and an unknown one are both not found", async () => {
-    const useCase = new GetQrPaymentUseCase(repo, refresher, mockUnitOfWork())
+    const useCase = new RefreshQrPaymentUseCase(repo, refresher, mockUnitOfWork())
     repo.findByIdForUpdate.mockResolvedValueOnce(makeQrPayment({ branchId: 2 })).mockResolvedValueOnce(null)
 
     await expect(useCase.execute(1, 1)).rejects.toMatchObject({ code: 'QR_PAYMENT_NOT_FOUND' })

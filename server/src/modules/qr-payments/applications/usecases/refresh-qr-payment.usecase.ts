@@ -7,11 +7,13 @@ import type { IQrPaymentRepository } from '../ports/qr-payment.repository'
 import { QrPaymentRefresher } from '../services/qr-payment-refresher'
 
 /**
- * Query in intent, command in effect: reading a pending payment asks the bank and records
- * the answer, so the first read after the money arrives is the one that marks it paid.
+ * Command: asks the bank about a pending payment and records the answer, so the first refresh after the
+ * money arrives is the one that marks it paid. v2 exposes it as `POST .../refresh`. The v1
+ * `GET /payments/qr/{id}` also calls it and stays a GET only because v1 cannot change; new code must
+ * not read through it.
  */
 @injectable()
-export class GetQrPaymentUseCase {
+export class RefreshQrPaymentUseCase {
   constructor(
     @inject(qrPaymentRepositoryToken) private readonly payments: IQrPaymentRepository,
     @inject(QrPaymentRefresher) private readonly refresher: QrPaymentRefresher,
