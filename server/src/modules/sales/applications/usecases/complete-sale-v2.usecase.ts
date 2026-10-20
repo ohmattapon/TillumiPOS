@@ -7,6 +7,10 @@ import type { ISaleCheckout } from '../ports/sale-checkout.port'
 import { completeSaleV2Schema } from '../schemas/sale-schemas'
 import { restoreSaleSnapshot } from '../sale-snapshot'
 
+/**
+ * Command: records a sale inside a shift, deducts stock and issues the receipt number, all or nothing.
+ * The idempotency key makes a retried request answer with the first sale instead of charging twice.
+ */
 @injectable()
 export class CompleteSaleV2UseCase {
   constructor(
