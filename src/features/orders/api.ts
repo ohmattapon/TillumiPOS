@@ -2,6 +2,7 @@ import type { Order } from '@pos/api/types'
 import { queryOptions, useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productKeys } from '@/features/products'
 import { saleKeys } from '@/features/sales'
+import { memberKeys } from '@/features/members'
 import { withHeldQuote } from '@/features/promotions'
 import { tableKeys } from '@/features/tables'
 import { api, apiV2, unwrap } from '@/lib/api'
@@ -158,7 +159,7 @@ export function usePayOrder() {
         queryClient.invalidateQueries({ queryKey: orderKeys.all }),
         queryClient.invalidateQueries({ queryKey: productKeys.all }),
         queryClient.invalidateQueries({ queryKey: saleKeys.all }),
-        queryClient.invalidateQueries({ queryKey: ['members'] }),
+        queryClient.invalidateQueries({ queryKey: memberKeys.all }),
         queryClient.invalidateQueries({ queryKey: tableKeys.all }),
       ]),
   })
