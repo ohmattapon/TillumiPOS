@@ -21,6 +21,7 @@ import { QrPaymentRefresher } from './applications/services/qr-payment-refresher
 import { CancelQrPaymentUseCase } from './applications/usecases/cancel-qr-payment.usecase'
 import { ConfirmScbCallbackUseCase } from './applications/usecases/confirm-scb-callback.usecase'
 import { CreateQrPaymentUseCase } from './applications/usecases/create-qr-payment.usecase'
+import { GetQrConfigUseCase } from './applications/usecases/get-qr-config.usecase'
 import { RefreshQrPaymentUseCase } from './applications/usecases/refresh-qr-payment.usecase'
 
 container.register(qrPaymentRepositoryToken, { useClass: DrizzleQrPaymentRepository })
@@ -30,6 +31,7 @@ container.register(qrPaymentClaimsToken, { useClass: QrPaymentClaims })
 container.registerSingleton(QrPaymentRefresher)
 container.registerSingleton(CreateQrPaymentUseCase)
 container.registerSingleton(RefreshQrPaymentUseCase)
+container.registerSingleton(GetQrConfigUseCase)
 container.registerSingleton(CancelQrPaymentUseCase)
 container.registerSingleton(ConfirmScbCallbackUseCase)
 container.register(qrAttemptRepositoryToken, { useClass: DrizzleQrAttemptRepository })
