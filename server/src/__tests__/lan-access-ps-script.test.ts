@@ -101,7 +101,8 @@ suite('lan-address.ps1', () => {
 
     const bytes = new Uint8Array(await Bun.file(script).arrayBuffer())
     expect(bytes.every((byte) => byte < 128)).toBe(true)
-  })
+  // A cold pwsh process can take over five seconds on a shared CI runner.
+  }, 20_000)
 
   test('finds the rules that forward a port to this computer, and only those', () => {
     const netsh = [
