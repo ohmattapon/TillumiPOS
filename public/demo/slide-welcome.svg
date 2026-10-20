@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400">
+  <rect width="1200" height="400" fill="#3E2723"/>
+  <circle cx="1020" cy="80" r="150" fill="#4E342E"/>
+  <circle cx="120" cy="340" r="110" fill="#4E342E"/>
+  <text x="600" y="170" text-anchor="middle" font-size="72" font-weight="bold" fill="#FFF8E1" font-family="sans-serif">ร้านกาแฟบ้านสวน</text>
+  <text x="600" y="240" text-anchor="middle" font-size="40" fill="#D7CCC8" font-family="sans-serif">ยินดีต้อนรับ — เมนูสดใหม่ทุกวัน</text>
+  <rect x="500" y="280" width="200" height="56" rx="28" fill="#FB8C00"/>
+  <text x="600" y="317" text-anchor="middle" font-size="32" font-weight="bold" fill="#3E2723" font-family="sans-serif">เปิด 07:00–18:00</text>
+</svg>

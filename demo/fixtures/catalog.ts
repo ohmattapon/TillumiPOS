@@ -93,6 +93,11 @@ export const products: Product[] = [
   product(43, 'RT-04', 'แก้วเก็บความเย็น', 6, 'normal', 45000, 22000, true, 6, '885000000004'),
 ]
 
+// A few showcase pictures (local files under public/demo/) so the menu is not all grey boxes.
+products.find((item) => item.id === 8)!.imageUrl = '/demo/product-espresso.svg'
+products.find((item) => item.id === 19)!.imageUrl = '/demo/product-matcha.svg'
+products.find((item) => item.id === 31)!.imageUrl = '/demo/product-croissant.svg'
+
 const hotDrinkIds = [1, 2, 3, 4, 5, 6]
 const icedDrinkIds = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 25, 26, 27, 28]
 

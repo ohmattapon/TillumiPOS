@@ -46,7 +46,7 @@ const ownerUser: User = {
   roleId: 1,
   branchId: 1,
   isActive: true,
-  hasPin: false,
+  hasPin: true,
 }
 
 // Any credentials sign in as this owner; the role alone grants every permission.
@@ -55,8 +55,11 @@ export const me: DemoMe = { ...ownerUser, roleName: 'เจ้าของร้
 export const loginUser: User = { ...ownerUser }
 
 export const switchUsers = {
-  items: [{ id: 1, displayName: 'เจ้าของร้าน' }],
-  total: 1,
+  items: [
+    { id: 1, displayName: 'เจ้าของร้าน' },
+    { id: 2, displayName: 'พนักงานขาย' },
+  ],
+  total: 2,
 }
 
 function member(id: number, code: string, name: string, phone: string, isActive: boolean): Member {

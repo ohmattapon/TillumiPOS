@@ -1,20 +1,27 @@
 import { HttpResponse, http, type JsonBodyType, type RequestHandler } from 'msw'
-import type { Order } from '@pos/api/types'
+import type { Order, ShopSettings } from '@pos/api/types'
 import type { PromotionResponse } from '../server/src/modules/promotions/adapters/controllers/schemas/promotion.schema'
 import type { QrPaymentResponse } from '../server/src/modules/qr-payments/adapters/controllers/schemas/qr-payment.schema'
 import type { QuoteResponse } from '../server/src/modules/quotes/adapters/controllers/schemas/quote.schema'
 import type { shiftHttpSchemas } from '../server/src/modules/shifts/adapters/controllers/schemas/shift.schema'
+import type { UserResponse } from '../server/src/modules/users/adapters/controllers/schemas/user.schema'
 import { demoDb } from './db'
 import {
+  appliedCafeMenu,
   branch,
+  buildMovement,
   buildOrder,
   buildQuote,
+  buildReceipt,
+  buildReportBranches,
+  buildReportOverview,
+  buildReportProducts,
   buildSale,
-  loginUser,
   priceLine,
+  productImages,
+  slideImages,
   summarizeSales,
   summarizeShift,
-  switchUsers,
   type BillLineInput,
   type BillPaymentInput,
   type DemoShift,
@@ -119,8 +126,143 @@ interface QuoteBody {
   orderId?: number
 }
 
+interface SwitchBody {
+  userId: number
+  pin: string
+}
+
+interface OwnPinBody {
+  currentPassword: string
+  pin: string | null
+}
+
+interface SetupBody {
+  setupCode: string
+  shopName: string
+  branchName?: string
+  username: string
+  displayName: string
+  password: string
+  shopType?: string
+}
+
+interface BranchBody {
+  code?: string
+  name?: string
+  address?: string | null
+  phone?: string | null
+  isActive?: boolean
+}
+
+interface CategoryBody {
+  name?: string
+  sortOrder?: number
+  isActive?: boolean
+}
+
+interface ModifierGroupBody {
+  name?: string
+  required?: boolean
+  maxSelections?: number
+  sortOrder?: number
+  isActive?: boolean
+}
+
+interface ModifierOptionBody {
+  name?: string
+  priceSatang?: number
+  costSatang?: number
+  sortOrder?: number
+  isActive?: boolean
+  isDefault?: boolean
+}
+
+interface ProductBody {
+  productType?: 'normal' | 'cafe'
+  sku?: string
+  name?: string
+  barcode?: string | null
+  categoryId?: number | null
+  priceSatang?: number
+  costSatang?: number
+  trackStock?: boolean
+  isActive?: boolean
+}
+
+interface ReceiveBody {
+  productId: number
+  quantity: number
+  note?: string
+}
+
+interface AdjustBody {
+  productId: number
+  countedQty: number
+  note?: string
+}
+
+interface BatchReceiptBody {
+  items: { productId: number; quantity: number }[]
+  note?: string
+}
+
+interface RoleBody {
+  name?: string
+  permissions?: string[]
+}
+
+interface UserCreateBody {
+  username: string
+  password: string
+  displayName: string
+  role?: 'owner' | 'cashier'
+  roleId?: number
+  branchId?: number
+}
+
+interface UserChangesBody {
+  displayName?: string
+  role?: 'owner' | 'cashier'
+  roleId?: number
+  branchId?: number
+  isActive?: boolean
+  password?: string
+}
+
+interface PinBody {
+  pin: string | null
+}
+
+interface SlideBody {
+  sortOrder?: number
+  isActive?: boolean
+}
+
+interface PairBody {
+  code: string
+  registerId?: number | null
+}
+
+interface CafeMenuBody {
+  itemKeys: string[]
+}
+
 async function readBody<T>(request: Request): Promise<T> {
   return (await request.json()) as T
+}
+
+/** An Eden file upload arrives as multipart; the showcase keeps a local picture, never the bytes. */
+async function readUploadedFile(request: Request): Promise<File | null> {
+  const contentType = request.headers.get('content-type') ?? ''
+  if (!contentType.includes('multipart/form-data')) return null
+  const form = await request.formData()
+  const file = form.get('file')
+  return file instanceof File ? file : null
+}
+
+/** The next local showcase picture, round-robin, so uploads always show something. */
+function nextDemoImage(pool: string[]): string {
+  return pool[demoDb.nextImageIdx++ % pool.length]!
 }
 
 // --- shared builders ---------------------------------------------------------
@@ -149,12 +291,14 @@ async function sell(request: Request, shiftId?: number): Promise<Response> {
     createdAt: new Date(),
   })
   demoDb.appendSale(sale)
+  demoDb.audit({ action: 'sale.complete', entityType: 'sale', entityId: String(sale.id), summary: `ขายบิล ${sale.receiptNo}` })
   return ok(shiftId === undefined ? sale : { ...sale, shiftId })
 }
 
 function voidSale(id: number, reason: string, shiftId?: number): Response {
   const sale = demoDb.markSaleVoided(id, reason)
   if (!sale) return notFound('SALE_NOT_FOUND', 'ไม่พบบิลนี้')
+  demoDb.audit({ action: 'sale.void', entityType: 'sale', entityId: String(sale.id), summary: `ยกเลิกบิล ${sale.receiptNo}`, reason })
   return ok(shiftId === undefined ? sale : { ...sale, shiftId: shiftId ?? 1 })
 }
 
@@ -176,6 +320,7 @@ async function payOrder(id: number, request: Request, shiftId?: number): Promise
   })
   demoDb.appendSale(sale)
   demoDb.upsertOrder({ ...order, status: 'paid', saleId: sale.id, updatedAt: new Date() })
+  demoDb.audit({ action: 'order.pay', entityType: 'order', entityId: String(order.id), summary: `รับชำระออเดอร์ #${order.id} เป็นบิล ${sale.receiptNo}` })
   return ok(shiftId === undefined ? sale : { ...sale, shiftId })
 }
 
@@ -230,22 +375,71 @@ function shiftSummaryFor(shift: DemoShift): DemoShiftSummary {
 
 const auth = [
   http.post('/api/v1/auth/login', () => {
-    demoDb.session.signedIn = true
-    return ok(loginUser)
+    const user = demoDb.switchTo(1)
+    if (!user) return notFound('USER_NOT_FOUND', 'ไม่พบผู้ใช้นี้')
+    demoDb.audit({ action: 'auth.login', entityType: 'user', entityId: '1', summary: 'เข้าสู่ระบบ (โหมดโชว์)' })
+    return ok(user)
   }),
   http.post('/api/v1/auth/logout', () => {
     demoDb.session.signedIn = false
     return ok({ ok: true })
   }),
   http.get('/api/v1/auth/me', () => (demoDb.session.signedIn ? ok(demoDb.me) : signedOut())),
-  http.get('/api/v1/auth/switch-users', () => ok(switchUsers)),
+  http.get('/api/v1/auth/switch-users', () => {
+    const items = demoDb.switchableUsers()
+    return ok({ items, total: items.length })
+  }),
+  http.post('/api/v1/auth/switch', async ({ request }) => {
+    const body = await readBody<SwitchBody>(request)
+    const verdict = demoDb.checkPin(body.userId, body.pin)
+    if (verdict === 'no-pin') return problem(400, 'Bad Request', 'PIN_NOT_SET', 'ผู้ใช้นี้ยังไม่ได้ตั้ง PIN')
+    if (verdict === 'invalid') return problem(400, 'Bad Request', 'PIN_INVALID', 'PIN ไม่ถูกต้อง')
+    const user = demoDb.switchTo(body.userId)
+    if (!user) return notFound('USER_NOT_FOUND', 'ไม่พบผู้ใช้นี้')
+    demoDb.audit({ action: 'auth.switch', entityType: 'user', entityId: String(user.id), summary: `สลับผู้ขายเป็น${user.displayName}` })
+    return ok(user)
+  }),
+  http.put('/api/v1/auth/me/pin', async ({ request }) => {
+    const body = await readBody<OwnPinBody>(request)
+    const meUser = demoDb.findUser(demoDb.sessionUserId)
+    if (!meUser) return signedOut()
+    meUser.hasPin = body.pin !== null
+    demoDb.me = { ...demoDb.me, hasPin: meUser.hasPin }
+    demoDb.audit({ action: body.pin === null ? 'user.pin_cleared' : 'user.pin_set', entityType: 'user', entityId: String(meUser.id), summary: 'ตั้ง PIN ของตนเอง' })
+    return ok(demoDb.me)
+  }),
 ]
 
 const boot = [
   http.get('/api/v1/setup', () => ok({ needsSetup: false })),
+  http.post('/api/v1/setup', async ({ request }) => {
+    const body = await readBody<SetupBody>(request)
+    demoDb.session.signedIn = true
+    demoDb.sessionUserId = 1
+    if (body.shopName) demoDb.settings.shopName = body.shopName
+    const owner: UserResponse = { id: 1, username: body.username || 'owner', displayName: body.displayName || 'เจ้าของร้าน', role: 'owner', roleId: 1, branchId: 1, isActive: true, hasPin: true }
+    demoDb.audit({ action: 'shop.setup', entityType: 'settings', entityId: 'shop', summary: 'ตั้งค่าร้านครั้งแรก (โหมดโชว์)' })
+    return ok(owner)
+  }),
   http.get('/api/v1/settings', () => ok(demoDb.settings)),
+  http.patch('/api/v1/settings', async ({ request }) => {
+    const changes = await readBody<Partial<ShopSettings>>(request)
+    Object.assign(demoDb.settings, changes)
+    demoDb.audit({ action: 'settings.update', entityType: 'settings', entityId: 'shop', summary: 'แก้ไขการตั้งค่าร้าน' })
+    return ok(demoDb.settings)
+  }),
   http.get('/api/v1/branches', () => page([branch])),
-  http.get('/api/v2/capabilities', () => ok({ checkoutMode: 'shifts', imageStorage: 'disabled' })),
+  // The shop runs on one branch: creating another is refused, and MAIN cannot be closed.
+  http.post('/api/v1/branches', () => problem(409, 'Conflict', 'SINGLE_BRANCH_ONLY', 'ระบบใช้ได้สาขาเดียว')),
+  http.patch('/api/v1/branches/:id', async ({ params, request }) => {
+    if (Number(params.id) !== branch.id) return notFound('BRANCH_NOT_FOUND', 'ไม่พบสาขา')
+    const changes = await readBody<BranchBody>(request)
+    if (changes.isActive === false) return problem(409, 'Conflict', 'MAIN_BRANCH_REQUIRED', 'ปิดสาขาหลักไม่ได้')
+    Object.assign(branch, { name: changes.name ?? branch.name, address: changes.address ?? branch.address, phone: changes.phone ?? branch.phone })
+    demoDb.audit({ action: 'branch.update', entityType: 'branch', entityId: String(branch.id), summary: 'แก้ไขสาขาหลัก' })
+    return ok(branch)
+  }),
+  http.get('/api/v2/capabilities', () => ok({ checkoutMode: 'shifts', imageStorage: 'enabled' })),
 ]
 
 const catalog = [
@@ -307,13 +501,136 @@ const catalog = [
       openTotalSatang: 0,
     }
     demoDb.tables.push(created)
+    demoDb.audit({ action: 'table.create', entityType: 'table', entityId: String(id), summary: `เพิ่มโต๊ะ ${created.name}` })
     return ok(created)
   }),
   http.patch('/api/v1/catalog/tables/:id', async ({ params, request }) => {
     const table = demoDb.findTable(Number(params.id))
     if (!table) return notFound('TABLE_NOT_FOUND', 'ไม่พบโต๊ะนี้')
     Object.assign(table, await readBody<TableBody>(request))
+    demoDb.audit({ action: 'table.update', entityType: 'table', entityId: String(table.id), summary: `แก้ไขโต๊ะ ${table.name}` })
     return ok(table)
+  }),
+  http.post('/api/v1/catalog/categories', async ({ request }) => {
+    const body = await readBody<CategoryBody>(request)
+    const id = demoDb.nextCategoryId++
+    const created = { id, name: body.name ?? 'หมวดใหม่', sortOrder: body.sortOrder ?? id, isActive: true }
+    demoDb.categories.push(created)
+    demoDb.audit({ action: 'category.create', entityType: 'category', entityId: String(id), summary: `เพิ่มหมวด ${created.name}` })
+    return ok(created)
+  }),
+  http.patch('/api/v1/catalog/categories/:id', async ({ params, request }) => {
+    const category = demoDb.categories.find((item) => item.id === Number(params.id))
+    if (!category) return notFound('CATEGORY_NOT_FOUND', 'ไม่พบหมวดนี้')
+    Object.assign(category, await readBody<CategoryBody>(request))
+    demoDb.audit({ action: 'category.update', entityType: 'category', entityId: String(category.id), summary: `แก้ไขหมวด ${category.name}` })
+    return ok(category)
+  }),
+  http.post('/api/v1/catalog/modifier-groups', async ({ request }) => {
+    const body = await readBody<ModifierGroupBody>(request)
+    const id = demoDb.nextGroupId++
+    const created = {
+      id,
+      name: body.name ?? 'กลุ่มตัวเลือก',
+      required: body.required ?? false,
+      maxSelections: body.maxSelections ?? 1,
+      sortOrder: body.sortOrder ?? id,
+      isActive: true,
+      options: [],
+      productIds: [],
+    }
+    demoDb.modifierGroups.push(created)
+    demoDb.audit({ action: 'modifier-group.create', entityType: 'modifier-group', entityId: String(id), summary: `เพิ่มกลุ่มตัวเลือก ${created.name}` })
+    return ok(created)
+  }),
+  http.patch('/api/v1/catalog/modifier-groups/:id', async ({ params, request }) => {
+    const group = demoDb.modifierGroups.find((item) => item.id === Number(params.id))
+    if (!group) return notFound('MODIFIER_GROUP_NOT_FOUND', 'ไม่พบกลุ่มตัวเลือกนี้')
+    Object.assign(group, await readBody<ModifierGroupBody>(request))
+    demoDb.audit({ action: 'modifier-group.update', entityType: 'modifier-group', entityId: String(group.id), summary: `แก้ไขกลุ่มตัวเลือก ${group.name}` })
+    return ok(group)
+  }),
+  http.post('/api/v1/catalog/modifier-groups/:id/options', async ({ params, request }) => {
+    const group = demoDb.modifierGroups.find((item) => item.id === Number(params.id))
+    if (!group) return notFound('MODIFIER_GROUP_NOT_FOUND', 'ไม่พบกลุ่มตัวเลือกนี้')
+    const body = await readBody<ModifierOptionBody>(request)
+    const id = demoDb.nextOptionId++
+    const created = {
+      id,
+      groupId: group.id,
+      name: body.name ?? 'ตัวเลือก',
+      priceSatang: body.priceSatang ?? 0,
+      costSatang: body.costSatang ?? 0,
+      sortOrder: body.sortOrder ?? group.options.length + 1,
+      isActive: true,
+      isDefault: body.isDefault ?? false,
+    }
+    group.options.push(created)
+    demoDb.audit({ action: 'modifier-option.create', entityType: 'modifier-option', entityId: String(id), summary: `เพิ่มตัวเลือก ${created.name}` })
+    return ok(created)
+  }),
+  http.patch('/api/v1/catalog/modifier-options/:id', async ({ params, request }) => {
+    const option = demoDb.modifierGroups.flatMap((group) => group.options).find((item) => item.id === Number(params.id))
+    if (!option) return notFound('MODIFIER_OPTION_NOT_FOUND', 'ไม่พบตัวเลือกนี้')
+    Object.assign(option, await readBody<ModifierOptionBody>(request))
+    demoDb.audit({ action: 'modifier-option.update', entityType: 'modifier-option', entityId: String(option.id), summary: `แก้ไขตัวเลือก ${option.name}` })
+    return ok(option)
+  }),
+  http.put('/api/v1/catalog/products/:id/modifier-groups', async ({ params, request }) => {
+    const product = demoDb.findProduct(Number(params.id))
+    if (!product) return notFound('PRODUCT_NOT_FOUND', 'ไม่พบสินค้านี้')
+    const groupIds = (await readBody<{ groupIds: number[] }>(request)).groupIds
+    for (const group of demoDb.modifierGroups) {
+      group.productIds = group.productIds.filter((id) => id !== product.id)
+      if (groupIds.includes(group.id)) group.productIds.push(product.id)
+    }
+    return ok({ groupIds })
+  }),
+  http.post('/api/v1/catalog/products', async ({ request }) => {
+    const body = await readBody<ProductBody>(request)
+    const id = demoDb.nextProductId++
+    const created = {
+      id,
+      sku: body.sku ?? `SKU-${id}`,
+      barcode: body.barcode ?? null,
+      name: body.name ?? 'สินค้าใหม่',
+      categoryId: body.categoryId ?? null,
+      productType: body.productType ?? ('normal' as const),
+      priceSatang: body.priceSatang ?? 0,
+      costSatang: body.costSatang ?? 0,
+      trackStock: body.trackStock ?? false,
+      isActive: true,
+      stockQty: 0,
+      imageUrl: null as string | null,
+    }
+    demoDb.products.unshift(created)
+    demoDb.audit({ action: 'product.create', entityType: 'product', entityId: String(id), summary: `เพิ่มสินค้า ${created.name}` })
+    return ok(created)
+  }),
+  http.patch('/api/v1/catalog/products/:id', async ({ params, request }) => {
+    const product = demoDb.findProduct(Number(params.id))
+    if (!product) return notFound('PRODUCT_NOT_FOUND', 'ไม่พบสินค้านี้')
+    // Stock moves through inventory only; a stray stockQty in the body is ignored like the server ignores it.
+    const { ...changes } = await readBody<ProductBody & { stockQty?: number }>(request)
+    delete changes.stockQty
+    Object.assign(product, changes)
+    demoDb.audit({ action: 'product.update', entityType: 'product', entityId: String(product.id), summary: `แก้ไขสินค้า ${product.name}` })
+    return ok(product)
+  }),
+  http.put('/api/v1/catalog/products/:id/image', async ({ params, request }) => {
+    const product = demoDb.findProduct(Number(params.id))
+    if (!product) return notFound('PRODUCT_NOT_FOUND', 'ไม่พบสินค้านี้')
+    await readUploadedFile(request)
+    product.imageUrl = nextDemoImage(productImages)
+    demoDb.audit({ action: 'product.image', entityType: 'product', entityId: String(product.id), summary: `อัปโหลดรูป ${product.name}` })
+    return ok(product)
+  }),
+  http.delete('/api/v1/catalog/products/:id/image', ({ params }) => {
+    const product = demoDb.findProduct(Number(params.id))
+    if (!product) return notFound('PRODUCT_NOT_FOUND', 'ไม่พบสินค้านี้')
+    product.imageUrl = null
+    demoDb.audit({ action: 'product.image', entityType: 'product', entityId: String(product.id), summary: `ลบรูป ${product.name}` })
+    return ok(product)
   }),
 ]
 
@@ -336,6 +653,7 @@ const members = [
     const now = new Date()
     const created = { id, code: `M-${String(id).padStart(4, '0')}`, name: body.name, phone: body.phone, isActive: true, createdAt: now, updatedAt: now }
     demoDb.members.unshift(created)
+    demoDb.audit({ action: 'member.create', entityType: 'member', entityId: String(id), summary: `สมัครสมาชิก${created.name}` })
     return ok(created)
   }),
   http.get('/api/v1/members/:id', ({ params }) => {
@@ -346,6 +664,7 @@ const members = [
     const member = demoDb.findMember(Number(params.id))
     if (!member) return notFound('MEMBER_NOT_FOUND', 'ไม่พบสมาชิกนี้')
     Object.assign(member, { ...(await readBody<MemberWriteBody>(request)), updatedAt: new Date() })
+    demoDb.audit({ action: 'member.update', entityType: 'member', entityId: String(member.id), summary: `แก้ไขสมาชิก${member.name}` })
     return ok(member)
   }),
   http.get('/api/v1/members/:id/sales', ({ params }) => {
@@ -389,6 +708,7 @@ const promotions = [
       updatedAt: now,
     }
     demoDb.promotions.unshift(created)
+    demoDb.audit({ action: 'promotion.create', entityType: 'promotion', entityId: String(created.id), summary: `สร้างโปรโมชัน ${created.name}` })
     return ok(created)
   }),
   http.get('/api/v1/promotions/:id', ({ params }) => {
@@ -399,6 +719,7 @@ const promotions = [
     const promotion = demoDb.findPromotion(Number(params.id))
     if (!promotion) return notFound('PROMOTION_NOT_FOUND', 'ไม่พบโปรโมชันนี้')
     Object.assign(promotion, { ...(await readBody<PromotionWriteBody>(request)), updatedAt: new Date() })
+    demoDb.audit({ action: 'promotion.update', entityType: 'promotion', entityId: String(promotion.id), summary: `แก้ไขโปรโมชัน ${promotion.name}` })
     return ok(promotion)
   }),
   http.post('/api/v1/quotes', async ({ request }) => {
@@ -470,6 +791,7 @@ const orders = [
     }, demoDb.nextLineId)
     demoDb.nextLineId = built.nextLineId
     demoDb.upsertOrder(built.order)
+    demoDb.audit({ action: 'order.open', entityType: 'order', entityId: String(built.order.id), summary: `เปิดออเดอร์ #${built.order.id}` })
     return ok(built.order)
   }),
   http.get('/api/v1/orders/:id', ({ params }) => {
@@ -591,6 +913,7 @@ const orders = [
     if (!order || order.status !== 'open') return notFound('ORDER_NOT_FOUND', 'ไม่พบออเดอร์ที่ยังเปิดอยู่')
     const updated: Order = { ...order, status: 'cancelled', cancelReason: (await readBody<{ reason: string }>(request)).reason, updatedAt: new Date() }
     demoDb.upsertOrder(updated)
+    demoDb.audit({ action: 'order.cancel', entityType: 'order', entityId: String(order.id), summary: `ยกเลิกออเดอร์ #${order.id}` })
     return ok(updated)
   }),
   http.post('/api/v1/orders/:id/pay', ({ params, request }) => payOrder(Number(params.id), request)),
@@ -613,12 +936,14 @@ const shifts = [
     const body = await readBody<{ code: string; name: string }>(request)
     const created = { id: demoDb.nextRegisterId++, branchId: 1, code: body.code, name: body.name, isActive: true }
     demoDb.registers.push(created)
+    demoDb.audit({ action: 'register.create', entityType: 'register', entityId: String(created.id), summary: `เพิ่มจุดขาย ${created.name}` })
     return ok(created)
   }),
   http.patch('/api/v2/registers/:id', async ({ params, request }) => {
     const register = demoDb.findRegister(Number(params.id))
     if (!register) return notFound('REGISTER_NOT_FOUND', 'ไม่พบจุดขายนี้')
     Object.assign(register, await readBody<{ name?: string; isActive?: boolean }>(request))
+    demoDb.audit({ action: 'register.update', entityType: 'register', entityId: String(register.id), summary: `แก้ไขจุดขาย ${register.name}` })
     return ok(register)
   }),
   http.get('/api/v2/registers/:id/current-shift', ({ params }) => {
@@ -665,6 +990,7 @@ const shifts = [
       differenceReason: null,
     }
     demoDb.shifts.unshift(created)
+    demoDb.audit({ action: 'shift.open', entityType: 'shift', entityId: String(created.id), summary: `เปิดกะจุดขาย #${created.registerId}` })
     return ok(created)
   }),
   http.get('/api/v2/shifts/:id', ({ params }) => {
@@ -695,6 +1021,7 @@ const shifts = [
       createdAt: new Date(),
     }
     demoDb.cashEntries.unshift(created)
+    demoDb.audit({ action: 'shift.cash', entityType: 'shift', entityId: String(shiftId), summary: `${body.kind === 'cash_in' ? 'นำเงินเข้า' : 'นำเงินออก'} ${body.amountSatang / 100} บาท` })
     return ok(created)
   }),
   http.post('/api/v2/shifts/:id/start-closing', ({ params }) => {
@@ -706,6 +1033,7 @@ const shifts = [
     shift.closingStartedById = 1
     shift.closingStartedByName = 'เจ้าของร้าน'
     shift.closingExpectedCashSatang = shiftSummaryFor(shift).summary.expectedCashSatang
+    demoDb.audit({ action: 'shift.start_closing', entityType: 'shift', entityId: String(shift.id), summary: `เริ่มนับเงินปิดกะ #${shift.id}` })
     return ok(shift)
   }),
   http.post('/api/v2/shifts/:id/cancel-closing', ({ params }) => {
@@ -729,6 +1057,7 @@ const shifts = [
     shift.countedCashSatang = body.countedCashSatang
     shift.cashDifferenceSatang = body.countedCashSatang - expected
     shift.differenceReason = body.reason ?? null
+    demoDb.audit({ action: 'shift.close', entityType: 'shift', entityId: String(shift.id), summary: `ปิดกะ #${shift.id}` })
     return ok(shift)
   }),
   http.post('/api/v2/sales', ({ request }) => sell(request, 1)),
@@ -752,6 +1081,7 @@ const shifts = [
       reason: body.reason,
       createdAt: new Date(),
     }
+    demoDb.audit({ action: 'sale.refund', entityType: 'sale', entityId: String(sale.id), summary: `คืนเงินบิล #${sale.id}`, reason: body.reason })
     return ok(refund)
   }),
   http.post('/api/v2/orders/:id/pay', ({ params, request }) => payOrder(Number(params.id), request, 1)),
@@ -782,8 +1112,276 @@ const shifts = [
   http.post('/api/v2/payments/qr/:id/cancel', ({ params }) => ok({ ...cannedQrV2(Number(params.id)), status: 'cancelled' as const })),
   http.post('/api/v2/payments/qr/:id/dismiss', async ({ params, request }) => {
     const body = await readBody<{ reason: string }>(request)
+    demoDb.audit({ action: 'qr.dismiss', entityType: 'qr-payment', entityId: String(params.id), summary: 'ตัดยอด QR ที่ธนาคารยืนยันแล้ว', reason: body.reason })
     return ok({ ...cannedQrV2(Number(params.id)), status: 'cancelled' as const, dismissedAt: new Date(), dismissReason: body.reason })
   }),
 ]
 
-export const handlers: RequestHandler[] = [...auth, ...boot, ...catalog, ...members, ...promotions, ...sales, ...orders, ...qrLegacy, ...shifts]
+const stock = [
+  http.get('/api/v1/inventory/movements', ({ request }) => {
+    const query = new URL(request.url).searchParams
+    const productId = query.get('productId')
+    let items = demoDb.movements
+    if (productId !== null) items = items.filter((entry) => entry.productId === Number(productId))
+    const total = items.length
+    const limit = query.get('limit')
+    if (limit !== null) items = items.slice(Number(query.get('offset') ?? 0), Number(query.get('offset') ?? 0) + Number(limit))
+    return ok({ items, total })
+  }),
+  http.post('/api/v1/inventory/receive', async ({ request }) => {
+    const body = await readBody<ReceiveBody>(request)
+    const product = demoDb.findProduct(body.productId)
+    if (!product) return notFound('PRODUCT_NOT_FOUND', 'ไม่พบสินค้านี้')
+    if (product.trackStock) product.stockQty += body.quantity
+    const movement = buildMovement(demoDb.nextMovementId++, {
+      productId: product.id, type: 'receive', quantity: body.quantity, balanceAfter: product.stockQty, note: body.note,
+    }, demoDb.actor())
+    demoDb.movements.unshift(movement)
+    demoDb.audit({ action: 'inventory.receive', entityType: 'product', entityId: String(product.id), summary: `รับ${product.name} ${body.quantity} ชิ้น` })
+    return ok(movement)
+  }),
+  http.post('/api/v1/inventory/adjust', async ({ request }) => {
+    const body = await readBody<AdjustBody>(request)
+    const product = demoDb.findProduct(body.productId)
+    if (!product) return notFound('PRODUCT_NOT_FOUND', 'ไม่พบสินค้านี้')
+    const quantity = product.trackStock ? body.countedQty - product.stockQty : 0
+    if (product.trackStock) product.stockQty = body.countedQty
+    const movement = buildMovement(demoDb.nextMovementId++, {
+      productId: product.id, type: 'adjust', quantity, balanceAfter: product.stockQty, note: body.note,
+    }, demoDb.actor())
+    demoDb.movements.unshift(movement)
+    demoDb.audit({ action: 'inventory.adjust', entityType: 'product', entityId: String(product.id), summary: `นับสต็อก${product.name} ได้ ${body.countedQty} ชิ้น` })
+    return ok(movement)
+  }),
+  http.get('/api/v1/inventory/receipts', ({ request }) => {
+    const query = new URL(request.url).searchParams
+    const items = demoDb.receipts
+    const total = items.length
+    const limit = query.get('limit')
+    const offset = Number(query.get('offset') ?? 0)
+    return ok({ items: limit === null ? items : items.slice(offset, offset + Number(limit)), total })
+  }),
+  http.post('/api/v1/inventory/receipts', async ({ request }) => {
+    const body = await readBody<BatchReceiptBody>(request)
+    if (!body.items || body.items.length === 0) return problem(400, 'Bad Request', 'RECEIPT_EMPTY', 'ใบรับต้องมีอย่างน้อย 1 รายการ')
+    const { receipt, balances } = buildReceipt(demoDb.nextReceiptId++, demoDb.products, body.items, body.note, demoDb.actor())
+    for (const [productId, balanceAfter] of balances) {
+      const product = demoDb.findProduct(productId)
+      if (product?.trackStock) product.stockQty = balanceAfter
+    }
+    demoDb.receipts.unshift(receipt)
+    demoDb.audit({ action: 'inventory.receipt', entityType: 'receipt', entityId: String(receipt.id), summary: `รับสินค้า ${receipt.items.length} รายการ` })
+    return ok(receipt)
+  }),
+  http.get('/api/v1/inventory/receipts/:id', ({ params }) => {
+    const found = demoDb.findReceipt(Number(params.id))
+    return found ? ok(found) : notFound('RECEIPT_NOT_FOUND', 'ไม่พบใบรับนี้')
+  }),
+]
+
+const reports = [
+  http.get('/api/v1/sales/reports', ({ request }) => {
+    const query = new URL(request.url).searchParams
+    const from = query.get('from') ?? new Date().toISOString().slice(0, 10)
+    const to = query.get('to') ?? from
+    const scope = query.get('scope') === 'all' ? 'all' : 'branch'
+    return ok(buildReportOverview(demoDb.reportDeps(), demoDb.sales, { from, to, timeZone: demoDb.settings.timeZone, scope }))
+  }),
+  http.get('/api/v1/sales/reports/products', ({ request }) => {
+    const query = new URL(request.url).searchParams
+    const from = query.get('from') ?? new Date().toISOString().slice(0, 10)
+    const to = query.get('to') ?? from
+    const items = buildReportProducts(demoDb.sales, { from, to })
+    const total = items.length
+    const offset = Number(query.get('offset') ?? 0)
+    const limit = query.get('limit')
+    return ok({ items: limit === null ? items : items.slice(offset, offset + Number(limit)), total })
+  }),
+  http.get('/api/v1/sales/reports/branches', ({ request }) => {
+    const query = new URL(request.url).searchParams
+    const from = query.get('from') ?? new Date().toISOString().slice(0, 10)
+    const to = query.get('to') ?? from
+    const items = buildReportBranches(demoDb.reportDeps(), demoDb.sales, { from, to, branchId: branch.id, branchName: branch.name })
+    return ok({ items, total: items.length })
+  }),
+]
+
+const roles = [
+  http.get('/api/v1/roles', ({ request }) => {
+    const query = new URL(request.url).searchParams
+    const items = demoDb.roles.map((role) => ({ ...role, userCount: demoDb.roleUserCount(role.id) }))
+    const total = items.length
+    const offset = Number(query.get('offset') ?? 0)
+    const limit = query.get('limit')
+    return ok({ items: limit === null ? items : items.slice(offset, offset + Number(limit)), total })
+  }),
+  http.post('/api/v1/roles', async ({ request }) => {
+    const body = await readBody<RoleBody>(request)
+    const created = { id: demoDb.nextRoleId++, name: body.name ?? 'บทบาทใหม่', permissions: body.permissions ?? [], systemKey: null as null, userCount: 0 }
+    demoDb.roles.push(created)
+    demoDb.audit({ action: 'role.create', entityType: 'role', entityId: String(created.id), summary: `สร้างบทบาท ${created.name}` })
+    return ok(created)
+  }),
+  http.patch('/api/v1/roles/:id', async ({ params, request }) => {
+    const role = demoDb.findRole(Number(params.id))
+    if (!role) return notFound('ROLE_NOT_FOUND', 'ไม่พบบทบาท')
+    const changes = await readBody<RoleBody>(request)
+    if (changes.name !== undefined) role.name = changes.name
+    if (changes.permissions !== undefined) role.permissions = changes.permissions
+    role.userCount = demoDb.roleUserCount(role.id)
+    demoDb.audit({ action: 'role.update', entityType: 'role', entityId: String(role.id), summary: `แก้ไขบทบาท ${role.name}` })
+    return ok({ ...role })
+  }),
+  http.delete('/api/v1/roles/:id', ({ params }) => {
+    const role = demoDb.findRole(Number(params.id))
+    if (!role) return notFound('ROLE_NOT_FOUND', 'ไม่พบบทบาท')
+    if (role.systemKey !== null) return problem(409, 'Conflict', 'ROLE_PROTECTED', 'บทบาทของระบบลบไม่ได้')
+    if (demoDb.roleUserCount(role.id) > 0) return problem(409, 'Conflict', 'ROLE_IN_USE', 'มีผู้ใช้ถือบทบาทนี้อยู่')
+    demoDb.roles = demoDb.roles.filter((item) => item.id !== role.id)
+    demoDb.audit({ action: 'role.delete', entityType: 'role', entityId: String(role.id), summary: `ลบบทบาท ${role.name}` })
+    return ok({ ok: true })
+  }),
+]
+
+const users = [
+  http.get('/api/v1/users', () => {
+    const items = demoDb.users
+    return ok({ items, total: items.length })
+  }),
+  http.post('/api/v1/users', async ({ request }) => {
+    const body = await readBody<UserCreateBody>(request)
+    if (demoDb.users.some((user) => user.username === body.username))
+      return problem(409, 'Conflict', 'USERNAME_TAKEN', 'ชื่อผู้ใช้นี้มีแล้ว')
+    const roleId = body.roleId ?? (body.role === 'owner' ? 1 : 2)
+    const created: UserResponse = {
+      id: demoDb.nextUserId++,
+      username: body.username,
+      displayName: body.displayName,
+      role: roleId === 1 ? 'owner' : 'cashier',
+      roleId,
+      branchId: body.branchId ?? 1,
+      isActive: true,
+      hasPin: false,
+    }
+    demoDb.users.push(created)
+    demoDb.audit({ action: 'user.create', entityType: 'user', entityId: String(created.id), summary: `เพิ่มผู้ใช้ ${created.displayName}` })
+    return ok(created)
+  }),
+  http.patch('/api/v1/users/:id', async ({ params, request }) => {
+    const user = demoDb.findUser(Number(params.id))
+    if (!user) return notFound('USER_NOT_FOUND', 'ไม่พบผู้ใช้')
+    const changes = await readBody<UserChangesBody>(request)
+    const nextRole: 'owner' | 'cashier' = changes.roleId === 1 || changes.role === 'owner' ? 'owner'
+      : changes.roleId !== undefined || changes.role !== undefined ? 'cashier' : user.role
+    const nextActive = changes.isActive ?? user.isActive
+    // The shop must keep at least one active owner, like the server enforces.
+    if (user.role === 'owner' && (nextRole !== 'owner' || !nextActive) && demoDb.activeOwnersExcept(user.id).length === 0)
+      return problem(409, 'Conflict', 'LAST_OWNER', 'ต้องมีเจ้าของร้านที่ใช้งานได้อย่างน้อย 1 คน')
+    if (changes.displayName !== undefined) user.displayName = changes.displayName
+    if (changes.roleId !== undefined) user.roleId = changes.roleId
+    user.role = nextRole
+    if (changes.branchId !== undefined) user.branchId = changes.branchId
+    user.isActive = nextActive
+    demoDb.audit({ action: 'user.update', entityType: 'user', entityId: String(user.id), summary: `แก้ไขผู้ใช้ ${user.displayName}` })
+    return ok({ ...user })
+  }),
+  http.put('/api/v1/users/:id/pin', async ({ params, request }) => {
+    const user = demoDb.findUser(Number(params.id))
+    if (!user) return notFound('USER_NOT_FOUND', 'ไม่พบผู้ใช้')
+    const actor = demoDb.findUser(demoDb.sessionUserId)
+    if (user.role === 'owner' && actor?.role !== 'owner')
+      return problem(403, 'Forbidden', 'OWNER_PIN_SELF_ONLY', 'PIN ของเจ้าของร้านตั้งได้เฉพาะเจ้าของเอง')
+    user.hasPin = (await readBody<PinBody>(request)).pin !== null
+    demoDb.audit({ action: user.hasPin ? 'user.pin_set' : 'user.pin_cleared', entityType: 'user', entityId: String(user.id), summary: `ตั้ง PIN ของ${user.displayName}` })
+    return ok({ ...user })
+  }),
+]
+
+const audit = [
+  http.get('/api/v1/audit-logs', ({ request }) => {
+    const query = new URL(request.url).searchParams
+    const action = query.get('action')
+    const entityType = query.get('entityType')
+    const entityId = query.get('entityId')
+    const actorId = query.get('actorId')
+    const from = query.get('from')
+    const to = query.get('to')
+    const items = demoDb.auditLogs.filter((entry) => {
+      if (action !== null && entry.action !== action) return false
+      if (entityType !== null && entry.entityType !== entityType) return false
+      if (entityId !== null && entry.entityId !== entityId) return false
+      if (actorId !== null && entry.actorId !== Number(actorId)) return false
+      if (from !== null && entry.at < new Date(`${from}T00:00:00+07:00`)) return false
+      if (to !== null && entry.at >= new Date(`${to}T00:00:00+07:00`)) return false
+      return true
+    })
+    const total = items.length
+    const offset = Number(query.get('offset') ?? 0)
+    const limit = query.get('limit')
+    return ok({ items: limit === null ? items : items.slice(offset, offset + Number(limit)), total })
+  }),
+]
+
+const displays = [
+  // The customer's screen asks for a pairing code; the sale itself still travels over the
+  // browser channel, and the SSE stream is left to bypass (EventSource is not fetch).
+  http.post('/api/v1/customer-display/sessions', () => {
+    const now = new Date()
+    return ok({ token: 'demo-display-token', code: '123456', expiresAt: new Date(now.getTime() + 10 * 60_000) })
+  }),
+  http.get('/api/v1/customer-display/pair', () => ok({ displays: demoDb.pairedDisplays })),
+  http.post('/api/v1/customer-display/pair', async ({ request }) => {
+    await readBody<PairBody>(request)
+    demoDb.pairedDisplays = 1
+    return ok({ displays: 1 })
+  }),
+  http.delete('/api/v1/customer-display/pair', () => {
+    demoDb.pairedDisplays = 0
+    return ok({ displays: 0 })
+  }),
+  http.put('/api/v1/customer-display/state', () => ok({ displays: demoDb.pairedDisplays })),
+  http.get('/api/v1/display-slides', () => {
+    const items = demoDb.slides.filter((slide) => slide.isActive).sort((a, b) => a.sortOrder - b.sortOrder)
+    return ok({ items, total: items.length })
+  }),
+  http.get('/api/v1/display-slides/all', () => {
+    const items = [...demoDb.slides].sort((a, b) => a.sortOrder - b.sortOrder)
+    return ok({ items, total: items.length })
+  }),
+  http.post('/api/v1/display-slides', async ({ request }) => {
+    await readUploadedFile(request)
+    const created = {
+      id: demoDb.nextSlideId++,
+      imageUrl: nextDemoImage(slideImages),
+      sortOrder: demoDb.slides.reduce((max, slide) => Math.max(max, slide.sortOrder), 0) + 1,
+      isActive: true,
+    }
+    demoDb.slides.push(created)
+    demoDb.audit({ action: 'slide.upload', entityType: 'slide', entityId: String(created.id), summary: 'อัปโหลดรูปสไลด์จอลูกค้า' })
+    return ok(created)
+  }),
+  http.patch('/api/v1/display-slides/:id', async ({ params, request }) => {
+    const slide = demoDb.findSlide(Number(params.id))
+    if (!slide) return notFound('SLIDE_NOT_FOUND', 'ไม่พบสไลด์นี้')
+    Object.assign(slide, await readBody<SlideBody>(request))
+    return ok({ ...slide })
+  }),
+  http.delete('/api/v1/display-slides/:id', ({ params }) => {
+    const slide = demoDb.findSlide(Number(params.id))
+    if (!slide) return notFound('SLIDE_NOT_FOUND', 'ไม่พบสไลด์นี้')
+    demoDb.slides = demoDb.slides.filter((item) => item.id !== slide.id)
+    demoDb.audit({ action: 'slide.delete', entityType: 'slide', entityId: String(slide.id), summary: 'ลบรูปสไลด์จอลูกค้า' })
+    return ok({ ok: true })
+  }),
+]
+
+const cafeMenu = [
+  http.post('/api/v1/cafe-menu', async ({ request }) => {
+    const body = await readBody<CafeMenuBody>(request)
+    return ok(appliedCafeMenu(body.itemKeys ?? []))
+  }),
+]
+
+// `reports` stays ahead of `sales`: MSW matches in order, and `/sales/reports`
+// would otherwise be caught by `/sales/:id`.
+export const handlers: RequestHandler[] = [...auth, ...boot, ...catalog, ...members, ...promotions, ...reports, ...sales, ...orders, ...qrLegacy, ...shifts, ...stock, ...roles, ...users, ...audit, ...displays, ...cafeMenu]

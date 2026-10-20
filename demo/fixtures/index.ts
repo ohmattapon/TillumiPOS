@@ -32,3 +32,24 @@ export {
   type DemoCashEntry,
   type DemoShiftSummary,
 } from './documents'
+export {
+  appliedCafeMenu,
+  auditSeed,
+  buildAuditRecord,
+  buildMovement,
+  buildReceipt,
+  productImages,
+  slideImages,
+  slidesSeed,
+  type AuditActor,
+  type AuditInput,
+  type DemoAuditRecord,
+  type ReceiptLineInput,
+} from './ops'
+export {
+  buildReportBranches,
+  buildReportOverview,
+  buildReportProducts,
+  type ReportDeps,
+} from './reports'
+export { CASHIER_PERMISSIONS, DEMO_PINS, demoRoles, demoUsers, meFor, type DemoRole } from './users'

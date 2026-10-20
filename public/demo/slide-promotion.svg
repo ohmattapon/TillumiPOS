@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400">
+  <rect width="1200" height="400" fill="#0F766E"/>
+  <circle cx="150" cy="70" r="120" fill="#115E59"/>
+  <circle cx="1080" cy="350" r="140" fill="#115E59"/>
+  <text x="600" y="160" text-anchor="middle" font-size="68" font-weight="bold" fill="#FFFFFF" font-family="sans-serif">ลด 10% บิล 100 บาทขึ้นไป</text>
+  <text x="600" y="230" text-anchor="middle" font-size="38" fill="#CCFBF1" font-family="sans-serif">สมาชิก ลดเพิ่ม 20 บาท — สมัครฟรีที่เคาน์เตอร์</text>
+  <rect x="470" y="270" width="260" height="56" rx="28" fill="#FFFFFF"/>
+  <text x="600" y="307" text-anchor="middle" font-size="32" font-weight="bold" fill="#0F766E" font-family="sans-serif">เฉพาะเดือนนี้</text>
+</svg>
