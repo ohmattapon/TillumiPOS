@@ -79,3 +79,6 @@ bun run demo:static
 `cd workers/cloud && bun run deploy` (ดู `docs/cloudflare.md`)
 
 ลองในเครื่อง: `bun run build:demo` แล้ว `cd workers/cloud && bunx wrangler dev -c wrangler.demo.jsonc`
+
+ตอน build โหมดนี้จะสร้างไฟล์ `api/v1/customer-display/stream` กับ `_headers` ให้ด้วย เพื่อให้จอลูกค้าได้สตรีมตัวอย่างเหมือนตอนรัน dev
+(ถ้าไม่มี host แบบ static จะตอบ `index.html` แทน แล้วจอลูกค้าจะขอ session ใหม่ซ้ำไม่หยุด)

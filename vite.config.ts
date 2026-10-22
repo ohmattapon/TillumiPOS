@@ -49,26 +49,46 @@ export default defineConfig(({ mode }) => {
   }
 })
 
+const DEMO_STREAM_PATH = '/api/v1/customer-display/stream'
+
+/** The one event the demo stream sends: a pairing code that never gets used (sales travel over the browser channel). */
+function demoWaitingEvent(expiresAt: string): string {
+  return `event: waiting\ndata: ${JSON.stringify({ code: '123456', expiresAt })}\n\n`
+}
+
 /**
  * Demo-static only: the customer display's stream. MSW cannot see EventSource, so the dev
  * server answers it directly with a quiet open stream that keeps showing the demo pairing
  * code. Sales still travel over the browser channel; pairing accepts any code.
+ *
+ * A built showcase has no dev server either, so the build emits the same event as a static
+ * file plus a `_headers` rule that makes it an event stream. Without it a static host answers
+ * the path with index.html, the browser closes the EventSource for good and the display asks
+ * for a new session in a tight loop. The file ends at once, so the browser reconnects every
+ * few seconds, which is as quiet as the dev stream needs to be.
  */
 function demoCustomerStream(): Plugin {
   return {
     name: 'demo-static-customer-stream',
-    apply: 'serve',
     configureServer(server) {
-      server.middlewares.use('/api/v1/customer-display/stream', (_req, res) => {
+      server.middlewares.use(DEMO_STREAM_PATH, (_req, res) => {
         res.writeHead(200, {
           'content-type': 'text/event-stream',
           'cache-control': 'no-cache',
           connection: 'keep-alive',
         })
         const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString()
-        res.write(`event: waiting\ndata: ${JSON.stringify({ code: '123456', expiresAt })}\n\n`)
+        res.write(demoWaitingEvent(expiresAt))
         const ping = setInterval(() => res.write(': ping\n\n'), 15_000)
         res.on('close', () => clearInterval(ping))
+      })
+    },
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: DEMO_STREAM_PATH.slice(1), source: demoWaitingEvent('2099-01-01T00:00:00.000Z') })
+      this.emitFile({
+        type: 'asset',
+        fileName: '_headers',
+        source: `${DEMO_STREAM_PATH}\n  Content-Type: text/event-stream\n  Cache-Control: no-cache\n`,
       })
     },
   }
