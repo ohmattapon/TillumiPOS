@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "deploy": "wrangler deploy",
+    "deploy:demo": "bun run --cwd ../.. build:demo && wrangler deploy -c wrangler.demo.jsonc",
     "types": "wrangler types",
     "typecheck": "wrangler types && tsc --noEmit"
   },

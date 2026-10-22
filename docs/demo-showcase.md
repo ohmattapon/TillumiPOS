@@ -62,3 +62,20 @@ bun run demo:static
   `downloadReportWorkbook` revoke object URL หลัง 1 วินาที ไฟล์อาจโหลดไม่ทัน
   บนเครื่องช้า/เน็ตช้า ถ้าจะแก้ให้ revoke หลัง `link.click()` นานกว่านี้
   หรือเมื่อ download เสร็จ
+
+## Deploy ขึ้น Cloudflare (ไม่ต้องมีฐานข้อมูล)
+
+โหมดนี้เป็นไฟล์เว็บล้วน จึง deploy เป็น Worker แบบ static assets ได้เลย ไม่มี container ไม่มี secret
+ไม่ต้องใช้แผน Workers Paid (config อยู่ใน `workers/cloud/wrangler.demo.jsonc`)
+
+ที่ Workers Builds ของ project `tillumipos` (Settings → Build):
+
+- Build command: เว้นว่าง (deploy command build ให้เอง)
+- Deploy command: `cd workers/cloud && bun run deploy:demo`
+- ไม่ต้องตั้ง secret `DATABASE_URL`, `JWT_SECRET`, `MEDIA_URL`, `MEDIA_TOKEN`
+
+ใช้ชื่อ Worker `tillumipos` เหมือน `wrangler.jsonc` ของระบบจริง เพื่อให้ project เดิมใช้ได้โดยเปลี่ยนแค่ deploy command
+อย่า deploy โหมดนี้ทับ Worker ที่รันข้อมูลร้านจริง: ถ้าจะกลับไปใช้ระบบจริง ให้เปลี่ยน deploy command กลับเป็น
+`cd workers/cloud && bun run deploy` (ดู `docs/cloudflare.md`)
+
+ลองในเครื่อง: `bun run build:demo` แล้ว `cd workers/cloud && bunx wrangler dev -c wrangler.demo.jsonc`

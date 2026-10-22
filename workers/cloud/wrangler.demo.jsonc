@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // The no-database showcase (docs/demo-showcase.md): only the built web files, no container and no secrets.
+  // Same Worker name as wrangler.jsonc so the Workers Builds project can deploy either one.
+  "name": "tillumipos",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "../../dist",
+    // Every path is a page of the app; its API is answered in the browser by MSW (mockServiceWorker.js).
+    "not_found_handling": "single-page-application"
+  },
+  "observability": { "enabled": true }
+}
