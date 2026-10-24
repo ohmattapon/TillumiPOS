@@ -120,6 +120,7 @@ describe('CreateProductUseCase', () => {
       stockQty: 0,
       isActive: true,
       imageKey: null,
+      packs: [],
     })
   })
 

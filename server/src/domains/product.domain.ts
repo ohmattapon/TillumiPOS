@@ -1,5 +1,6 @@
 import { DomainConflictError } from './errors/domain-conflict.error'
 import { DomainError } from './errors/domain-error'
+import { assertValidPack, MAX_PACKS_PER_PRODUCT, type ProductPack } from './product-pack'
 
 export const PRODUCT_TYPES = ['normal', 'cafe'] as const
 export type ProductType = (typeof PRODUCT_TYPES)[number]
@@ -21,12 +22,14 @@ export interface ProductEntityProps {
   isActive: boolean
   /** Object key in media storage; changes only through the image use cases. */
   imageKey: string | null
+  /** Boxes or cases sold under their own barcode; absent means none. */
+  packs?: ProductPack[]
 }
 
 export type ProductChanges = Partial<
   Pick<
     ProductEntityProps,
-    'sku' | 'barcode' | 'name' | 'categoryId' | 'productType' | 'priceSatang' | 'costSatang' | 'trackStock' | 'isActive'
+    'sku' | 'barcode' | 'name' | 'categoryId' | 'productType' | 'priceSatang' | 'costSatang' | 'trackStock' | 'isActive' | 'packs'
   >
 >
 
@@ -47,6 +50,7 @@ export class ProductEntity {
   public readonly stockQty: number
   public readonly isActive: boolean
   public readonly imageKey: string | null
+  public readonly packs: readonly ProductPack[]
 
   constructor(props: ProductEntityProps) {
     if (!isLength(props.sku, 1, 64)) throw invalid('รหัสสินค้าต้องยาว 1 ถึง 64 ตัวอักษร')
@@ -56,6 +60,22 @@ export class ProductEntity {
     if (!isMoney(props.priceSatang) || !isMoney(props.costSatang))
       throw invalid('ราคาและต้นทุนต้องเป็นจำนวนเต็มสตางค์ที่ไม่ติดลบ')
     if (!Number.isInteger(props.stockQty)) throw invalid('จำนวนสต็อกต้องเป็นจำนวนเต็ม')
+
+    const packs = props.packs ?? []
+    if (packs.length > MAX_PACKS_PER_PRODUCT) throw invalid(`สินค้าหนึ่งรายการมีแพ็คได้ไม่เกิน ${MAX_PACKS_PER_PRODUCT} แบบ`)
+    const taken = new Set<string>(props.barcode === null ? [] : [props.barcode])
+    const storedIds = new Set<number>()
+    for (const pack of packs) {
+      assertValidPack(pack)
+      // 0 marks a pack not stored yet; a stored id twice would make the repository write one row twice.
+      if (pack.id !== 0) {
+        if (storedIds.has(pack.id)) throw invalid('มีแพ็คเดียวกันซ้ำในรายการ')
+        storedIds.add(pack.id)
+      }
+      if (taken.has(pack.barcode))
+        throw new DomainConflictError(`บาร์โค้ด ${pack.barcode} ถูกใช้แล้ว`, 'BARCODE_TAKEN', { barcode: pack.barcode })
+      taken.add(pack.barcode)
+    }
 
     this.id = props.id
     this.sku = props.sku
@@ -69,6 +89,7 @@ export class ProductEntity {
     this.stockQty = props.stockQty
     this.isActive = props.isActive
     this.imageKey = props.imageKey
+    this.packs = packs.map((pack) => ({ ...pack }))
   }
 
   /**
@@ -95,6 +116,20 @@ export class ProductEntity {
       })
   }
 
+  findPack(packId: number): ProductPack | undefined {
+    return this.packs.find((pack) => pack.id === packId)
+  }
+
+  /** The pack to sell, or an error when it is missing or switched off (or the product is). */
+  packForSale(packId: number): ProductPack {
+    this.assertActive()
+    const pack = this.findPack(packId)
+    if (!pack) throw new DomainError('ไม่พบแพ็คสินค้านี้', 'PACK_NOT_FOUND', { packId })
+    if (!pack.isActive)
+      throw new DomainConflictError(`แพ็ค ${pack.barcode} ปิดการขายแล้ว`, 'PACK_INACTIVE', { barcode: pack.barcode })
+    return pack
+  }
+
   toSnapshot(): ProductEntityProps {
     return {
       id: this.id,
@@ -109,6 +144,7 @@ export class ProductEntity {
       stockQty: this.stockQty,
       isActive: this.isActive,
       imageKey: this.imageKey,
+      packs: this.packs.map((pack) => ({ ...pack })),
     }
   }
 }
