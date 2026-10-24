@@ -20,11 +20,16 @@ export function StockDialog({ product, mode, onClose }: Props) {
   const { t } = useTranslation('products')
   const { t: tc } = useTranslation()
   const [quantity, setQuantity] = useState('')
+  const [packId, setPackId] = useState<number | undefined>(undefined)
   const [note, setNote] = useState('')
 
+  // A pack only matters when stock arrives; a count is always of single pieces.
+  const packs = mode === 'receive' ? product.packs : []
+  const pack = packs.find((candidate) => candidate.id === packId)
   const value = /^\d+$/.test(quantity.trim()) ? Number(quantity) : null
+  const pieces = value === null ? null : value * (pack?.size ?? 1)
   const isValid = value !== null && (mode === 'receive' ? value >= 1 : value !== product.stockQty)
-  const balanceAfter = value === null ? null : mode === 'receive' ? product.stockQty + value : value
+  const balanceAfter = pieces === null ? null : mode === 'receive' ? product.stockQty + pieces : value
 
   const save = useChangeStock()
 
@@ -34,7 +39,7 @@ export function StockDialog({ product, mode, onClose }: Props) {
     const trimmedNote = note.trim() || undefined
     const change: StockChange =
       mode === 'receive'
-        ? { mode, productId: product.id, quantity: value, note: trimmedNote }
+        ? { mode, productId: product.id, quantity: value, packId, note: trimmedNote }
         : { mode, productId: product.id, countedQty: value, note: trimmedNote }
     save.mutate(change, {
       onSuccess: (movement) => {
@@ -55,6 +60,24 @@ export function StockDialog({ product, mode, onClose }: Props) {
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-4">
+          {packs.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="stock-unit">{t('stock.unit')}</Label>
+              <select
+                id="stock-unit"
+                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                value={packId ?? ''}
+                onChange={(event) => setPackId(event.target.value === '' ? undefined : Number(event.target.value))}
+              >
+                <option value="">{t('stock.unitPiece')}</option>
+                {packs.map((candidate) => (
+                  <option key={candidate.id} value={candidate.id}>
+                    {t('stock.unitPack', { barcode: candidate.barcode, size: candidate.size })}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="stock-quantity">{t(`stock.${mode}Label`)}</Label>
             <Input
@@ -67,7 +90,11 @@ export function StockDialog({ product, mode, onClose }: Props) {
               required
             />
             <p className="text-xs text-muted-foreground">
-              {balanceAfter === null ? t('stock.enterWhole') : t('stock.after', { count: balanceAfter })}
+              {pieces === null
+                ? t('stock.enterWhole')
+                : pack
+                  ? `${t('stock.pieces', { count: pieces })} · ${t('stock.after', { count: balanceAfter })}`
+                  : t('stock.after', { count: balanceAfter })}
             </p>
           </div>
           <div className="space-y-2">
