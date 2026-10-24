@@ -29,11 +29,11 @@ test('versioned product list keys bypass pre-type snapshots and round-trip both 
   expect(cached.items.map(product => product.productType)).toEqual(['normal', 'cafe'])
   expect(cached.total).toBe(2)
   expect(source.findAll).toHaveBeenCalledTimes(1)
-  expect(stored.has(`v2:${cacheKey(query)}`)).toBe(true)
+  expect(stored.has(`v3:${cacheKey(query)}`)).toBe(true)
   const filteredQuery = { branchId: 1, productType: 'cafe' as const }
   await repository.findAll(filteredQuery)
   expect(source.findAll).toHaveBeenCalledTimes(2)
-  expect(stored.has(`v2:${cacheKey(filteredQuery)}`)).toBe(true)
+  expect(stored.has(`v3:${cacheKey(filteredQuery)}`)).toBe(true)
 })
 
 test('classification updates still invalidate the products group', async () => {
