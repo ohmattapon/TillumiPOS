@@ -16,7 +16,6 @@ export interface KbankConfig {
   keyPath?: string
   /** Sandbox exercise headers (`x-test-mode`, `env-id`) are sent only when set. */
   testMode: boolean
-  envId?: string
 }
 
 // Example values copied from .env.example must not count as configuration.
@@ -39,7 +38,6 @@ export function readKbankConfig(): KbankConfig | null {
 
   const certPath = Bun.env.KBANK_CERT_PATH
   const keyPath = Bun.env.KBANK_KEY_PATH
-  const envId = Bun.env.KBANK_ENV_ID
   return {
     baseUrl: (isSet(Bun.env.KBANK_API_BASE_URL) ? Bun.env.KBANK_API_BASE_URL : KBANK_SANDBOX_URL).replace(/\/+$/, ''),
     consumerId: consumerId.trim(),
@@ -50,6 +48,5 @@ export function readKbankConfig(): KbankConfig | null {
     ...(isSet(certPath) && { certPath: certPath.trim() }),
     ...(isSet(keyPath) && { keyPath: keyPath.trim() }),
     testMode: Bun.env.KBANK_TEST_MODE === 'true',
-    ...(isSet(envId) && { envId: envId.trim() }),
   }
 }

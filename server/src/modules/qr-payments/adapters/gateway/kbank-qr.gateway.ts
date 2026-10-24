@@ -1,6 +1,7 @@
 import http from 'node:http'
 import https from 'node:https'
 import { readFileSync } from 'node:fs'
+import QRCode from 'qrcode'
 import { inject, injectable } from 'tsyringe'
 import { DomainExternalServiceError } from '../../../../domains/errors/domain-external-service.error'
 import type { QrPaymentConfirmation } from '../../../../domains/qr-payment.domain'
@@ -14,6 +15,13 @@ const TIMEOUT_MS = 8000
 const QR_TYPE_THAI_QR = 3
 /** Success marker of KBank's envelope, seen on the create-QR example. */
 const STATUS_SUCCESS = '00'
+/**
+ * Sandbox exercise ids: each operation answers only to its own. Sent only when
+ * test mode is on; production ignores these headers.
+ */
+const SANDBOX_TOKEN_ID = 'OAUTH2'
+const SANDBOX_CREATE_ID = 'QR002'
+const SANDBOX_INQUIRY_ID = 'QR004'
 /** Renewed this long before it really expires, so a token never dies mid-request. */
 const TOKEN_SAFETY_MS = 60_000
 
@@ -67,7 +75,7 @@ export class KbankQrGateway implements IQrPaymentGateway {
 
     let answer: KbankResponse
     try {
-      answer = await this.call(config, '/v1/qrpayment/request', {
+      answer = await this.call(config, '/v1/qrpayment/request', SANDBOX_CREATE_ID, {
         qrType: QR_TYPE_THAI_QR,
         txnCurrencyCode: 'THB',
         merchantId: config.merchantId,
@@ -89,13 +97,14 @@ export class KbankQrGateway implements IQrPaymentGateway {
     if (httpStatus >= 500) throw unavailable(typeof body.errorDesc === 'string' ? body.errorDesc : undefined, 'unknown')
     if (httpStatus !== 200 || body.statusCode !== STATUS_SUCCESS || typeof body.qrCode !== 'string' || !body.qrCode)
       throw unavailable(typeof body.errorDesc === 'string' ? body.errorDesc : undefined)
-    // KBank answers the EMV payload only; there is no image to pass through.
-    return { qrRawData: body.qrCode, qrImage: '' }
+    // KBank answers the EMV payload only, so the adapter renders the picture the till
+    // shows from it; SCB's bank sent one ready-made.
+    return { qrRawData: body.qrCode, qrImage: await QRCode.toDataURL(body.qrCode) }
   }
 
   async findPayment({ reference, amountSatang }: { reference: string; amountSatang: number; since: Date }) {
     const config = this.config()
-    const { httpStatus, body } = await this.call(config, '/v1/qrpayment/v4/inquiry', {
+    const { httpStatus, body } = await this.call(config, '/v1/qrpayment/v4/inquiry', SANDBOX_INQUIRY_ID, {
       partnerId: config.partnerId,
       partnerSecret: config.partnerSecret,
       merchantId: config.merchantId,
@@ -136,13 +145,13 @@ export class KbankQrGateway implements IQrPaymentGateway {
   }
 
   /** One call to KBank. A rejected token is replaced and the call repeated once. */
-  private async call(config: KbankConfig, path: string, payload: unknown, retried = false): Promise<KbankResponse> {
+  private async call(config: KbankConfig, path: string, envId: string, payload: unknown, retried = false): Promise<KbankResponse> {
     const token = await this.accessToken(config)
-    const response = await this.send(config, path, payload, token)
+    const response = await this.send(config, path, payload, token, 'application/json', envId)
 
     if (response.httpStatus === 401 && !retried) {
       this.token = null
-      return this.call(config, path, payload, true)
+      return this.call(config, path, envId, payload, true)
     }
     return response
   }
@@ -164,6 +173,7 @@ export class KbankQrGateway implements IQrPaymentGateway {
       new URLSearchParams({ grant_type: 'client_credentials' }).toString(),
       `Basic ${Buffer.from(`${config.consumerId}:${config.consumerSecret}`).toString('base64')}`,
       'application/x-www-form-urlencoded',
+      SANDBOX_TOKEN_ID,
     )
     const data = body as { accessToken?: string; access_token?: string; expiresIn?: number; expires_in?: number }
     const accessToken = data?.accessToken ?? data?.access_token
@@ -181,7 +191,7 @@ export class KbankQrGateway implements IQrPaymentGateway {
    * cannot ride on fetch; without configured files it is a plain request, which is what the
    * fake bank speaks in tests. The message never carries the request, which holds the secret.
    */
-  private send(config: KbankConfig, path: string, payload: string | unknown, token: string, contentType = 'application/json'): Promise<KbankResponse> {
+  private send(config: KbankConfig, path: string, payload: string | unknown, token: string, contentType = 'application/json', envId?: string): Promise<KbankResponse> {
     const body = typeof payload === 'string' ? payload : JSON.stringify(payload)
     return new Promise((resolve, reject) => {
       const url = config.baseUrl + path
@@ -194,7 +204,7 @@ export class KbankQrGateway implements IQrPaymentGateway {
             'content-type': contentType,
             authorization: token.startsWith('Basic ') ? token : `Bearer ${token}`,
             ...(config.testMode && { 'x-test-mode': 'true' }),
-            ...(config.envId && { 'env-id': config.envId }),
+            ...(config.testMode && envId && { 'env-id': envId }),
           },
           ...(config.certPath && { cert: readFileSync(config.certPath) }),
           ...(config.keyPath && { key: readFileSync(config.keyPath) }),
