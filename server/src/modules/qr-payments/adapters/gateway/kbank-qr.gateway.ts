@@ -1,6 +1,7 @@
 import http from 'node:http'
 import https from 'node:https'
 import { readFileSync } from 'node:fs'
+import QRCode from 'qrcode'
 import { inject, injectable } from 'tsyringe'
 import { DomainExternalServiceError } from '../../../../domains/errors/domain-external-service.error'
 import type { QrPaymentConfirmation } from '../../../../domains/qr-payment.domain'
@@ -96,8 +97,9 @@ export class KbankQrGateway implements IQrPaymentGateway {
     if (httpStatus >= 500) throw unavailable(typeof body.errorDesc === 'string' ? body.errorDesc : undefined, 'unknown')
     if (httpStatus !== 200 || body.statusCode !== STATUS_SUCCESS || typeof body.qrCode !== 'string' || !body.qrCode)
       throw unavailable(typeof body.errorDesc === 'string' ? body.errorDesc : undefined)
-    // KBank answers the EMV payload only; there is no image to pass through.
-    return { qrRawData: body.qrCode, qrImage: '' }
+    // KBank answers the EMV payload only, so the adapter renders the picture the till
+    // shows from it; SCB's bank sent one ready-made.
+    return { qrRawData: body.qrCode, qrImage: await QRCode.toDataURL(body.qrCode) }
   }
 
   async findPayment({ reference, amountSatang }: { reference: string; amountSatang: number; since: Date }) {

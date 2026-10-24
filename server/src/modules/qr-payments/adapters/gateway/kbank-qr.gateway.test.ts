@@ -25,12 +25,13 @@ const find = (reference: string, amountSatang = 5000) =>
   gateway().findPayment({ reference, amountSatang, since: new Date('2026-10-13T06:00:00Z') })
 
 describe('KbankQrGateway.createQr', () => {
-  test('returns the EMV payload the bank answered, with no image', async () => {
+  test('returns the EMV payload the bank answered, with a rendered picture', async () => {
     const reference = 'QRTESTCREATE01'
 
     const qr = await gateway().createQr({ reference, amountSatang: 5000, branchCode: 'MAIN' })
 
-    expect(qr).toEqual({ qrRawData: `00020101021230TEST${reference}`, qrImage: '' })
+    expect(qr.qrRawData).toBe(`00020101021230TEST${reference}`)
+    expect(qr.qrImage.startsWith('data:image/png;base64,')).toBe(true)
   })
 
   test('a lost answer whose QR the bank really made is reported as unknown, not as a plain failure', async () => {
