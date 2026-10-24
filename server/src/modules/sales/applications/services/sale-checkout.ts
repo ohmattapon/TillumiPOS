@@ -36,6 +36,7 @@ const toQuoteLine = (line: CheckoutLine): QuoteRequestLine => ({
   productId: line.productId,
   optionIds: line.options ? line.options.map((option) => option.optionId) : [...(line.optionIds ?? [])],
   quantity: line.quantity,
+  packId: line.packId ?? null,
 })
 
 @injectable()
@@ -101,14 +102,16 @@ export class SaleCheckout implements ISaleCheckout {
       options: LineOption[]
       quantity: number
       quotedUnitPriceSatang: number | undefined
-      /** The pack sold, if the line is packs; a quote never carries one. */
+      /** The pack sold, if the line is packs; a quote pins the pack id for lookup only. */
       packId: number | undefined
+      /** A quote's pinned size and price: sold as pinned even when the pack changed since. */
+      pinnedPack: { size: number; unitPriceSatang: number } | undefined
     }
     const wanted = new Map<string, WantedLine>()
     if (quote) {
       // The quote has the options and the price of every line; nothing is resolved or priced again.
       for (const line of quote.lines) {
-        const key = `${line.productId}:${lineKey(line.options)}`
+        const key = `${line.productId}:${lineKey(line.options)}:${line.packId ?? ''}`
         const existing = wanted.get(key)
         if (existing) existing.quantity += line.quantity
         else
@@ -117,8 +120,11 @@ export class SaleCheckout implements ISaleCheckout {
             options: [...line.options],
             quantity: line.quantity,
             quotedUnitPriceSatang: line.unitPriceSatang,
-            // A quote never carries a pack; packs are a direct-sale choice.
-            packId: undefined,
+            // The pinned pack id is for lookup only: the size and price below always win.
+            packId: line.packId ?? undefined,
+            pinnedPack: line.packId === null
+              ? undefined
+              : { size: line.packSize, unitPriceSatang: line.unitPriceSatang },
           })
       }
     } else {
@@ -134,7 +140,7 @@ export class SaleCheckout implements ISaleCheckout {
         const existing = wanted.get(key)
         if (existing) existing.quantity += line.quantity
         else
-          wanted.set(key, { productId: line.productId, options, quantity: line.quantity, quotedUnitPriceSatang: line.unitPriceSatang, packId: line.packId })
+          wanted.set(key, { productId: line.productId, options, quantity: line.quantity, quotedUnitPriceSatang: line.unitPriceSatang, packId: line.packId, pinnedPack: undefined })
       }
     }
 
@@ -151,7 +157,7 @@ export class SaleCheckout implements ISaleCheckout {
     const productsById = new Map(locked.map((product) => [product.id, product]))
     // Checked product by product in cart order, so the first product with a problem is the one reported.
     // A pack line moves its pieces, so its pack is resolved from the locked product and demand is in pieces.
-    const packByKey = new Map<string, { id: number; size: number; unitPriceSatang: number }>()
+    const packByKey = new Map<string, { id: number | null; size: number; unitPriceSatang: number }>()
     const linesByProduct = new Map<number, { key: string; line: WantedLine }[]>()
     for (const [key, line] of wanted) {
       const group = linesByProduct.get(line.productId) ?? []
@@ -163,6 +169,18 @@ export class SaleCheckout implements ISaleCheckout {
       if (!product) throw new DomainError('ไม่พบสินค้ารหัส ' + productId, 'PRODUCT_NOT_FOUND', { productId })
       let demand = 0
       for (const { key, line } of group) {
+        // A pinned pack sells at its pinned size and price whatever the pack became since: disabled and
+        // deleted packs still sell, and a deleted one keeps no id (the sale item must not point at it).
+        if (line.pinnedPack) {
+          const pack = line.packId === undefined ? undefined : product.findPack(line.packId)
+          packByKey.set(key, {
+            id: pack ? (line.packId ?? null) : null,
+            size: line.pinnedPack.size,
+            unitPriceSatang: line.pinnedPack.unitPriceSatang,
+          })
+          demand += line.quantity * line.pinnedPack.size
+          continue
+        }
         const pack = line.packId === undefined ? undefined : product.packForSale(line.packId)
         if (pack) packByKey.set(key, { id: pack.id, size: pack.size, unitPriceSatang: packUnitPriceSatang(product.priceSatang, pack) })
         demand += line.quantity * (pack?.size ?? 1)

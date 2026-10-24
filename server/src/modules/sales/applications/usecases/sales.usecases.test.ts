@@ -17,6 +17,7 @@ import {
 } from '../../../../__tests__/mocks'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
+import { PriceQuoteEntity } from '../../../../domains/price-quote.domain'
 import type { IClock } from '../../../shared/ports/clock.port'
 import { DEFAULT_SHOP_SETTINGS, ShopSettingsEntity } from '../../../../domains/shop-settings.domain'
 import { SaleCheckout } from '../services/sale-checkout'
@@ -692,6 +693,61 @@ describe('SaleCheckout with options', () => {
       [1, 2],
       [0, 1],
     ])
+  })
+})
+
+describe('SaleCheckout with a pinned pack', () => {
+  const now = new Date('2026-10-15T03:00:00Z')
+  const sodaPack = { id: 5, barcode: 'SODA6', size: 6, priceSatang: 10000, isActive: true }
+  const packQuote = () =>
+    new PriceQuoteEntity({
+      ...PriceQuoteEntity.price(
+        {
+          branchId: 1, memberId: null, member: null, orderId: null,
+          lines: [{ productId: 3, productName: 'โซดา', sku: 'SODA', unitPriceSatang: 10000, quantity: 2, options: [], packId: 5, packSize: 6 }],
+          promotion: null, vatMode: 'inclusive', vatRateBp: 700, createdById: 7,
+        },
+        now,
+      ),
+      id: 9, status: 'open', qrReference: null, saleId: null, createdAt: now,
+    })
+  const sodaWith = (packs: { id: number; barcode: string; size: number; priceSatang: number | null; isActive: boolean }[]) =>
+    makeProduct({ id: 3, name: 'โซดา', sku: 'SODA', priceSatang: 2000, costSatang: 1200, stockQty: 30, packs })
+  let quotes: ReturnType<typeof mockQuoteClaims>
+  let checkout: SaleCheckout
+  const branch = { id: 1, code: 'MAIN' }
+
+  beforeEach(() => {
+    sales.nextReceiptNo.mockResolvedValue('MAIN-20261013-00001')
+    sales.create.mockImplementation(async (sale, receiptNo) =>
+      makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
+    )
+    quotes = mockQuoteClaims()
+    quotes.lockForCheckout.mockResolvedValue(packQuote())
+    checkout = new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), quotes)
+  })
+
+  test('a pinned pack sells at its pinned price after the pack was switched off', async () => {
+    products.findManyForUpdate.mockResolvedValue([sodaWith([{ ...sodaPack, isActive: false }])])
+
+    const sale = await checkout.checkout({
+      lines: [{ productId: 3, quantity: 2, packId: 5 }],
+      quoteId: 9, discountSatang: 0, payments: cash(20000), cashier, branch,
+    })
+
+    expect(sale.items[0]).toMatchObject({ packId: 5, packSize: 6, unitPriceSatang: 10000, quantity: 2, options: [] })
+    expect(ledger.record).toHaveBeenCalledWith(expect.objectContaining({ type: 'sale', quantity: -12 }))
+  })
+
+  test('a pinned pack sells even when the pack is gone', async () => {
+    products.findManyForUpdate.mockResolvedValue([sodaWith([])])
+
+    const sale = await checkout.checkout({
+      lines: [{ productId: 3, quantity: 2, packId: 5 }],
+      quoteId: 9, discountSatang: 0, payments: cash(20000), cashier, branch,
+    })
+
+    expect(sale.items[0]).toMatchObject({ packId: null, packSize: 6, unitPriceSatang: 10000, quantity: 2 })
   })
 })
 

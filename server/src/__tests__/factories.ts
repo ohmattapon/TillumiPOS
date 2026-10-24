@@ -194,7 +194,7 @@ export const makePriceQuote = (overrides: Partial<PriceQuoteProps> = {}) =>
     memberId: null,
     member: null,
     orderId: null,
-    lines: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 1000, quantity: 3, options: [] }],
+    lines: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 1000, quantity: 3, options: [], packId: null, packSize: 1 }],
     promotion: null,
     vatMode: 'inclusive',
     vatRateBp: 700,

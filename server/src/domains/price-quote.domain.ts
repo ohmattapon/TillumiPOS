@@ -18,6 +18,9 @@ export interface QuoteLine {
   unitPriceSatang: number
   quantity: number
   options: LineOption[]
+  /** The pack sold, or null for pieces. The size and price are pinned: a later edit of the pack keeps this line. */
+  packId: number | null
+  packSize: number
 }
 
 /** What a sale asks for, in the terms a quote can be compared with. */
@@ -25,6 +28,8 @@ export interface QuoteRequestLine {
   productId: number
   optionIds: readonly number[]
   quantity: number
+  /** The pack asked for, or null for pieces. A pack never matches pieces. */
+  packId: number | null
 }
 
 export interface QuoteRequest {
@@ -73,14 +78,14 @@ const mismatch = () =>
   new DomainConflictError('รายการ สมาชิก หรือสาขาไม่ตรงกับราคาที่ตรึงไว้ กรุณาขอราคาใหม่', 'QUOTE_MISMATCH')
 const expired = () => new DomainConflictError('ราคาที่ตรึงไว้หมดอายุแล้ว กรุณาขอราคาใหม่', 'QUOTE_EXPIRED')
 
-const keyOf = (productId: number, optionIds: readonly number[]) =>
-  `${productId}:${lineKey(optionIds.map((optionId) => ({ optionId })))}`
+const keyOf = (productId: number, optionIds: readonly number[], packId: number | null) =>
+  `${productId}:${lineKey(optionIds.map((optionId) => ({ optionId })))}:${packId ?? 0}`
 
 /** Quantity per line of a cart, with repeated lines added together. */
-function quantities(lines: readonly { productId: number; optionIds: readonly number[]; quantity: number }[]) {
+function quantities(lines: readonly { productId: number; optionIds: readonly number[]; quantity: number; packId: number | null }[]) {
   const byKey = new Map<string, number>()
   for (const line of lines) {
-    const key = keyOf(line.productId, line.optionIds)
+    const key = keyOf(line.productId, line.optionIds, line.packId)
     byKey.set(key, (byKey.get(key) ?? 0) + line.quantity)
   }
   return byKey
@@ -124,7 +129,13 @@ export class PriceQuoteEntity {
     this.memberId = props.memberId
     this.member = props.member ? Object.freeze({ ...props.member }) : null
     this.orderId = props.orderId
-    this.lines = props.lines.map((line) => ({ ...line, options: line.options.map((option) => ({ ...option })) }))
+    this.lines = props.lines.map((line) => ({
+      ...line,
+      // Rows stored before packs carry neither field; they read as pieces.
+      packId: line.packId ?? null,
+      packSize: line.packSize ?? 1,
+      options: line.options.map((option) => ({ ...option })),
+    }))
     this.promotion = props.promotion ? Object.freeze({ ...props.promotion }) : null
     this.vatMode = props.vatMode
     this.vatRateBp = props.vatRateBp
