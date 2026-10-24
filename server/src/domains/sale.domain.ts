@@ -3,6 +3,7 @@ import { DomainError } from './errors/domain-error'
 import type { LineOption } from './modifier.domain'
 import { calculateTotals, type VatMode } from './pricing'
 import type { ProductEntity } from './product.domain'
+import { assertPackHasNoOptions, packUnitCostSatang } from './product-pack'
 
 export const PAYMENT_METHODS = ['cash', 'promptpay', 'card'] as const
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
@@ -21,6 +22,10 @@ export interface SaleItem {
   unitCostSatang: number
   quantity: number
   lineTotalSatang: number
+  /** The pack sold, when the line is packs: its id, or null when the pack record is gone. */
+  packId: number | null
+  /** Pieces in one pack; 1 on a piece line. */
+  packSize: number
   /** The options chosen, as they were. Their price and cost are already in the unit price and cost. */
   options: LineOption[]
 }
@@ -120,7 +125,13 @@ export interface SaleEntityProps extends NewSale {
 export interface CompleteSaleInput {
   member?: SaleMember | null
   promotion?: SalePromotion | null
-  lines: { product: ProductEntity; quantity: number; options?: readonly LineOption[] }[]
+  lines: {
+    product: ProductEntity
+    quantity: number
+    options?: readonly LineOption[]
+    /** The pack sold: quantity counts packs, options must be empty. Undefined sells pieces. */
+    pack?: { id: number | null; size: number; unitPriceSatang: number }
+  }[]
   discountSatang: number
   payments: SalePayment[]
   vatMode: VatMode
@@ -206,8 +217,9 @@ export class SaleEntity {
     this.voidedAt = props.voidedAt
     this.voidReason = props.voidReason
     this.createdAt = props.createdAt
-    // `?? []`: a sale restored from a snapshot stored before options were kept has none on its lines.
-    this.items = props.items.map((item) => ({ ...item, options: item.options ?? [] }))
+    // `??` fallbacks: a sale restored from a snapshot stored before packs or options were kept
+    // has none of them on its lines; every older line was pieces.
+    this.items = props.items.map((item) => ({ ...item, packId: item.packId ?? null, packSize: item.packSize ?? 1, options: item.options ?? [] }))
     this.payments = props.payments
   }
 
@@ -225,7 +237,23 @@ export class SaleEntity {
     if (payments.some((payment) => !isWholeAmount(payment.amountSatang) || payment.amountSatang < 1))
       throw new DomainError('ยอดชำระแต่ละรายการต้องเป็นจำนวนเต็มสตางค์ตั้งแต่ 1 ขึ้นไป', 'INVALID_PAYMENT')
 
-    const items: SaleItem[] = lines.map(({ product, quantity, options = [] }) => {
+    const items: SaleItem[] = lines.map(({ product, quantity, options = [], pack }) => {
+      // A pack line is priced by the pack: the size times pieces leave through stock, never options.
+      if (pack !== undefined) {
+        assertPackHasNoOptions(true, options.length)
+        return {
+          productId: product.id,
+          productName: product.name,
+          sku: product.sku,
+          unitPriceSatang: pack.unitPriceSatang,
+          unitCostSatang: packUnitCostSatang(product.costSatang, pack.size),
+          quantity,
+          lineTotalSatang: pack.unitPriceSatang * quantity,
+          packId: pack.id,
+          packSize: pack.size,
+          options: [],
+        }
+      }
       const unitPriceSatang = product.priceSatang + sum(options.map((option) => option.priceSatang))
       return {
         productId: product.id,
@@ -235,6 +263,8 @@ export class SaleEntity {
         unitCostSatang: product.costSatang + sum(options.map((option) => option.costSatang)),
         quantity,
         lineTotalSatang: unitPriceSatang * quantity,
+        packId: null,
+        packSize: 1,
         options: [...options],
       }
     })

@@ -6,6 +6,7 @@ import { DomainConflictError } from '../../../../domains/errors/domain-conflict.
 import { lineKey, type LineOption } from '../../../../domains/modifier.domain'
 import type { PriceQuoteEntity, QuoteRequestLine } from '../../../../domains/price-quote.domain'
 import { SaleEntity, type SaleMember } from '../../../../domains/sale.domain'
+import { assertPackHasNoOptions, packUnitPriceSatang } from '../../../../domains/product-pack'
 import { stockLedgerToken } from '../../../inventory/applications/ports/stock-ledger.port'
 import { lineOptionsResolverToken } from '../../../modifiers/applications/ports/line-options-resolver.port'
 import type { ILineOptionsResolver } from '../../../modifiers/applications/ports/line-options-resolver.port'
@@ -100,6 +101,8 @@ export class SaleCheckout implements ISaleCheckout {
       options: LineOption[]
       quantity: number
       quotedUnitPriceSatang: number | undefined
+      /** The pack sold, if the line is packs; a quote never carries one. */
+      packId: number | undefined
     }
     const wanted = new Map<string, WantedLine>()
     if (quote) {
@@ -114,19 +117,24 @@ export class SaleCheckout implements ISaleCheckout {
             options: [...line.options],
             quantity: line.quantity,
             quotedUnitPriceSatang: line.unitPriceSatang,
+            // A quote never carries a pack; packs are a direct-sale choice.
+            packId: undefined,
           })
       }
     } else {
       for (const line of requested) {
+        // A pack line is packs, never options: the bank of options stays shut when a pack is named.
+        assertPackHasNoOptions(line.packId !== undefined, (line.options?.length ?? 0) + (line.optionIds?.length ?? 0))
         // An order has already resolved its options and quoted a price; a one-step sale is resolved here.
         const options = line.options
           ? [...line.options]
           : (await this.lineOptions.resolve(line.productId, line.optionIds ?? [])).options
-        const key = `${line.productId}:${lineKey(options)}`
+        // The same pack repeated is merged; pieces and packs of one product never are.
+        const key = `${line.productId}:${lineKey(options)}:${line.packId ?? ''}`
         const existing = wanted.get(key)
         if (existing) existing.quantity += line.quantity
         else
-          wanted.set(key, { productId: line.productId, options, quantity: line.quantity, quotedUnitPriceSatang: line.unitPriceSatang })
+          wanted.set(key, { productId: line.productId, options, quantity: line.quantity, quotedUnitPriceSatang: line.unitPriceSatang, packId: line.packId })
       }
     }
 
@@ -141,21 +149,38 @@ export class SaleCheckout implements ISaleCheckout {
     // Locked until the sale commits, so two tills cannot sell the same last unit.
     const locked = await this.products.findManyForUpdate([...quantities.keys()], branch.id)
     const productsById = new Map(locked.map((product) => [product.id, product]))
-    for (const [productId, quantity] of quantities) {
+    // Checked product by product in cart order, so the first product with a problem is the one reported.
+    // A pack line moves its pieces, so its pack is resolved from the locked product and demand is in pieces.
+    const packByKey = new Map<string, { id: number; size: number; unitPriceSatang: number }>()
+    const linesByProduct = new Map<number, { key: string; line: WantedLine }[]>()
+    for (const [key, line] of wanted) {
+      const group = linesByProduct.get(line.productId) ?? []
+      group.push({ key, line })
+      linesByProduct.set(line.productId, group)
+    }
+    for (const [productId, group] of linesByProduct) {
       const product = productsById.get(productId)
       if (!product) throw new DomainError('ไม่พบสินค้ารหัส ' + productId, 'PRODUCT_NOT_FOUND', { productId })
-      product.assertSellable(quantity)
+      let demand = 0
+      for (const { key, line } of group) {
+        const pack = line.packId === undefined ? undefined : product.packForSale(line.packId)
+        if (pack) packByKey.set(key, { id: pack.id, size: pack.size, unitPriceSatang: packUnitPriceSatang(product.priceSatang, pack) })
+        demand += line.quantity * (pack?.size ?? 1)
+      }
+      product.assertSellable(demand)
     }
 
-    const lines = [...wanted.values()].map((line) => {
+    const lines = [...wanted.entries()].map(([key, line]) => {
       const product = productsById.get(line.productId)!
-      if (line.quotedUnitPriceSatang === undefined) return { product, quantity: line.quantity, options: line.options }
+      const pack = packByKey.get(key)
+      if (line.quotedUnitPriceSatang === undefined) return { product, quantity: line.quantity, options: line.options, pack }
       // The quote includes the options and the entity adds them back, so the product carries the base price.
       const optionsPrice = line.options.reduce((total, option) => total + option.priceSatang, 0)
       return {
         product: product.with({ priceSatang: line.quotedUnitPriceSatang - optionsPrice }),
         quantity: line.quantity,
         options: line.options,
+        pack,
       }
     })
 
@@ -195,7 +220,8 @@ export class SaleCheckout implements ISaleCheckout {
         branchId: branch.id,
         productId: item.productId,
         type: 'sale',
-        quantity: -item.quantity,
+        // A pack line moves its pieces.
+        quantity: -item.quantity * item.packSize,
         reference: sale.receiptNo,
         userId: cashier.id,
       })

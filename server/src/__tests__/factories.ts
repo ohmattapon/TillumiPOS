@@ -155,6 +155,8 @@ export const makeSale = (overrides: Partial<SaleEntityProps> = {}) =>
         unitCostSatang: 600,
         quantity: 3,
         lineTotalSatang: 3000,
+        packId: null,
+        packSize: 1,
         options: [],
       },
     ],
