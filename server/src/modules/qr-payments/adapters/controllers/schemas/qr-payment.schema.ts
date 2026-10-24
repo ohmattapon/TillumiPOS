@@ -33,6 +33,14 @@ export const qrPaymentSchemas = {
     resDesc: t.String(),
     transactionId: t.String(),
   }),
+  // KBank posts many fields; only the reference is read, and the rest is deliberately not trusted.
+  // The acknowledgement shape is assumed from the QR API vocabulary (statusCode '00' means
+  // success); confirm it against the portal webhook docs before registering the URL with KBank.
+  kbankConfirmation: t.Object({ partnerTxnUid: t.Optional(t.String()) }, { additionalProperties: true }),
+  kbankAcknowledgement: t.Object({
+    statusCode: t.String(),
+    partnerTxnUid: t.String(),
+  }),
 }
 
 export type QrPaymentResponse = typeof qrPaymentSchemas.payment.static
