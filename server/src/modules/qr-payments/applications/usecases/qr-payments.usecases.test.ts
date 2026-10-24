@@ -16,7 +16,6 @@ import { DomainExternalServiceError } from '../../../../domains/errors/domain-ex
 import { QrPaymentClaims } from '../services/qr-payment-claims'
 import { MIN_CHECK_INTERVAL_MS, QrPaymentRefresher } from '../services/qr-payment-refresher'
 import { CancelQrPaymentUseCase } from './cancel-qr-payment.usecase'
-import { ConfirmScbCallbackUseCase } from './confirm-scb-callback.usecase'
 import { CreateQrPaymentUseCase, QR_VALID_FOR_MS } from './create-qr-payment.usecase'
 import { RefreshQrPaymentUseCase } from './refresh-qr-payment.usecase'
 import { DismissQrPaymentUseCase } from './dismiss-qr-payment.usecase'
@@ -233,38 +232,6 @@ describe('CancelQrPaymentUseCase', () => {
     await expect(new CancelQrPaymentUseCase(repo, refresher, mockUnitOfWork(), quotes).execute(1, 1)).rejects.toThrow()
 
     expect(quotes.releaseByReference).not.toHaveBeenCalled()
-  })
-})
-
-describe('ConfirmScbCallbackUseCase', () => {
-  let useCase: ConfirmScbCallbackUseCase
-
-  beforeEach(() => {
-    useCase = new ConfirmScbCallbackUseCase(repo, refresher, mockUnitOfWork())
-  })
-
-  test('uses the reference only to know what to check, and checks with the bank regardless of the throttle', async () => {
-    repo.findByReferenceForUpdate.mockResolvedValue(makeQrPayment({ lastCheckedAt: new Date(now.getTime() - 1) }))
-    gateway.findPayment.mockResolvedValue(null)
-
-    const answer = await useCase.execute({
-      billPaymentRef1: 'QR0123456789ABCD',
-      transactionId: 'FORGED',
-      amount: '0.01',
-    })
-
-    expect(answer).toEqual({ transactionId: 'FORGED' })
-    expect(gateway.findPayment).toHaveBeenCalledTimes(1)
-    // The claim in the body changed nothing: the saved payment is still pending.
-    expect(repo.save.mock.calls[0]![0].status).toBe('pending')
-  })
-
-  test('an unknown reference, or none at all, is acknowledged without checking anything', async () => {
-    repo.findByReferenceForUpdate.mockResolvedValue(null)
-
-    expect(await useCase.execute({ billPaymentRef1: 'NOPE' })).toEqual({ transactionId: '' })
-    expect(await useCase.execute({})).toEqual({ transactionId: '' })
-    expect(gateway.findPayment).not.toHaveBeenCalled()
   })
 })
 

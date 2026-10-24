@@ -204,7 +204,7 @@ function start(): FakeKbank {
   }
 }
 
-// Shared across every test file in the run, like the fake SCB and media servers.
+// Shared across every test file in the run, like the media server.
 const shared = globalThis as typeof globalThis & { __posFakeKbank?: FakeKbank }
 
 export const fakeKbank: FakeKbank = (shared.__posFakeKbank ??= start())

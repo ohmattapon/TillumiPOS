@@ -50,7 +50,7 @@ describe('the repository', () => {
 
   test('.env.example holds placeholders only', async () => {
     const text = await Bun.file(`${root}/.env.example`).text()
-    const keys = ['SCB_API_KEY', 'SCB_API_SECRET', 'SCB_BILLER_ID', 'JWT_SECRET', 'MEDIA_TOKEN', 'POSTGRES_PASSWORD']
+    const keys = ['KBANK_CONSUMER_ID', 'KBANK_CONSUMER_SECRET', 'KBANK_PARTNER_SECRET', 'JWT_SECRET', 'MEDIA_TOKEN', 'POSTGRES_PASSWORD']
 
     for (const key of keys) {
       const line = text.split('\n').find((candidate) => candidate.startsWith(`${key}=`))

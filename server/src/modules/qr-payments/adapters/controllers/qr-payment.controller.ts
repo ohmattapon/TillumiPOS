@@ -5,7 +5,6 @@ import { idParams } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import { GetQrConfigUseCase } from '../../applications/usecases/get-qr-config.usecase'
 import { CancelQrPaymentUseCase } from '../../applications/usecases/cancel-qr-payment.usecase'
-import { ConfirmScbCallbackUseCase } from '../../applications/usecases/confirm-scb-callback.usecase'
 import { ConfirmKbankCallbackUseCase } from '../../applications/usecases/confirm-kbank-callback.usecase'
 import { CreateQrPaymentUseCase } from '../../applications/usecases/create-qr-payment.usecase'
 import { RefreshQrPaymentUseCase } from '../../applications/usecases/refresh-qr-payment.usecase'
@@ -33,7 +32,6 @@ export class QrPaymentElysiaController {
     @inject(CreateQrPaymentUseCase) private readonly createQrPayment: CreateQrPaymentUseCase,
     @inject(RefreshQrPaymentUseCase) private readonly refreshQrPayment: RefreshQrPaymentUseCase,
     @inject(CancelQrPaymentUseCase) private readonly cancelQrPayment: CancelQrPaymentUseCase,
-    @inject(ConfirmScbCallbackUseCase) private readonly confirmScbCallback: ConfirmScbCallbackUseCase,
     @inject(ConfirmKbankCallbackUseCase) private readonly confirmKbankCallback: ConfirmKbankCallbackUseCase,
     @inject(GetQrConfigUseCase) private readonly getQrConfig: GetQrConfigUseCase,
   ) {}
@@ -80,21 +78,6 @@ export class QrPaymentElysiaController {
           params: idParams,
           response: qrPaymentSchemas.payment,
           detail: { summary: 'เลิกรอการชำระ (ทำไม่ได้ถ้าลูกค้าจ่ายแล้ว)' },
-        },
-      )
-      .post(
-        '/scb/confirmation',
-        async ({ body }) => {
-          const { transactionId } = await this.confirmScbCallback.execute(body)
-          // The exact acknowledgement SCB expects; anything else makes it resend.
-          return { resCode: '00', resDesc: 'success', transactionId }
-        },
-        {
-          body: qrPaymentSchemas.scbConfirmation,
-          response: qrPaymentSchemas.scbAcknowledgement,
-          detail: {
-            summary: 'ที่รับแจ้งการชำระจาก SCB (ไม่ต้องล็อกอิน) ใช้เป็นสัญญาณให้ตรวจกับ SCB เท่านั้น',
-          },
         },
       )
       .post(
