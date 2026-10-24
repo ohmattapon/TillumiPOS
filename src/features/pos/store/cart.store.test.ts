@@ -130,6 +130,28 @@ describe('cart store with options', () => {
   })
 })
 
+describe('cart store with packs', () => {
+  test('a pack is a line of its own, next to the pieces of the same product', () => {
+    cart().add(7, [], 5)
+    cart().add(7)
+    cart().add(7, [], 5)
+
+    expect(cart().lines.map((line) => [line.key, line.quantity])).toEqual([
+      ['7::p5', 2],
+      ['7:', 1],
+    ])
+  })
+
+  test('the key names the pack, so its quantity is set alone', () => {
+    cart().add(7, [], 5)
+    cart().add(7)
+
+    cart().setQuantity('7::p5', 3)
+
+    expect(cart().lines.map((line) => line.quantity)).toEqual([3, 1])
+  })
+})
+
  describe('cart membership', () => {
   test('selects only an identity and clears it for the next customer', () => {
     cart().setMember(12)

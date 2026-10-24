@@ -178,6 +178,71 @@ describe('priceCart: VAT', () => {
   })
 })
 
+describe('a pack on a line', () => {
+  const caseOfTea = product({
+    id: 1,
+    priceSatang: 2500,
+    stockQty: 30,
+    packs: [{ id: 5, barcode: 'CASE-1', size: 12, priceSatang: 27_000, isActive: true }],
+  })
+
+  test('a pack is charged its own price, not the piece price twelve times', () => {
+    const cart = priceCart(
+      [{ key: '1::p5', productId: 1, optionIds: [], quantity: 1, packId: 5 }],
+      catalogue(caseOfTea),
+      '',
+      inclusive,
+    )
+
+    expect(cart.lines[0]).toMatchObject({ unitPriceSatang: 27_000, lineTotalSatang: 27_000, packId: 5, packSize: 12 })
+  })
+
+  test('a pack without a price of its own costs its size times the piece price', () => {
+    const cart = priceCart(
+      [{ key: '1::p5', productId: 1, optionIds: [], quantity: 2, packId: 5 }],
+      catalogue({ ...caseOfTea, packs: [{ ...caseOfTea.packs[0], priceSatang: null }] }),
+      '',
+      inclusive,
+    )
+
+    expect(cart.lines[0]).toMatchObject({ unitPriceSatang: 30_000, lineTotalSatang: 60_000 })
+  })
+
+  test('a pack counts its pieces against the stock, which the pieces line also asks for', () => {
+    const cart = priceCart(
+      [
+        { key: '1::p5', productId: 1, optionIds: [], quantity: 1, packId: 5 },
+        { key: '1:', productId: 1, optionIds: [], quantity: 20 },
+      ],
+      catalogue(caseOfTea),
+      '',
+      inclusive,
+    )
+
+    expect(cart.lines.map((line) => line.exceedsStock)).toEqual([true, true])
+    expect(cart.canPay).toBe(false)
+  })
+
+  test('selling exactly the stock in packs is allowed', () => {
+    const cart = priceCart([{ key: '1::p5', productId: 1, optionIds: [], quantity: 2, packId: 5 }], catalogue(caseOfTea), '', inclusive)
+
+    expect(cart.lines[0]).toMatchObject({ exceedsStock: false, stockQty: 30 })
+    expect(cart.canPay).toBe(true)
+  })
+
+  test('a pack the product no longer offers blocks payment instead of silently charging pieces', () => {
+    const cart = priceCart(
+      [{ key: '1::p5', productId: 1, optionIds: [], quantity: 1, packId: 5 }],
+      catalogue({ ...caseOfTea, packs: [] }),
+      '',
+      inclusive,
+    )
+
+    expect(cart.lines[0]).toMatchObject({ packId: 5, unavailable: true })
+    expect(cart.canPay).toBe(false)
+  })
+})
+
 describe('priceOrder', () => {
   const item = (overrides: Partial<Order['items'][number]> = {}): Order['items'][number] => ({
     lineId: 1,
