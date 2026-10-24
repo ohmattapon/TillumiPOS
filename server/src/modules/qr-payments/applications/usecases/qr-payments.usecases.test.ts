@@ -4,6 +4,7 @@ import { ZodError } from 'zod'
 import { makeQrPayment } from '../../../../__tests__/factories'
 import {
   mockClock,
+  mockIdGenerator,
   mockQrPaymentGateway,
   mockQrPaymentRepository,
   mockQuoteClaims,
@@ -42,7 +43,7 @@ describe('CreateQrPaymentUseCase', () => {
   beforeEach(() => {
     gateway.createQr.mockResolvedValue({ qrRawData: 'RAW', qrImage: 'IMG' })
     repo.create.mockImplementation(async (payment) => makeQrPayment({ ...payment, id: 3 }))
-    useCase = new CreateQrPaymentUseCase(gateway, repo, mockClock(now), quotes, mockUnitOfWork())
+    useCase = new CreateQrPaymentUseCase(gateway, repo, mockClock(now), quotes, mockUnitOfWork(), mockIdGenerator())
   })
 
   test('a QR made from a quote holds the quote for the reference it gives the bank', async () => {
@@ -78,7 +79,7 @@ describe('CreateQrPaymentUseCase', () => {
     const { payment, qrImage } = await useCase.execute({ amountSatang: 5000 }, actor)
 
     expect(gateway.createQr).toHaveBeenCalledWith({
-      reference: expect.stringMatching(/^QR[A-Z0-9]{13}$/),
+      reference: 'QRID1',
       amountSatang: 5000,
       branchCode: 'MAIN',
     })

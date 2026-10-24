@@ -2,7 +2,9 @@ import { inject, injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainExternalServiceError } from '../../../../domains/errors/domain-external-service.error'
 import type { QrAttemptEntity } from '../../../../domains/qr-attempt.domain'
+import { buildQrReference } from '../../../../domains/qr-payment.domain'
 import type { IClock } from '../../../shared/ports/clock.port'
+import type { IIdGenerator } from '../../../shared/ports/id-generator.port'
 import type { ICheckoutPolicy } from '../../../shared/ports/checkout-policy.port'
 import type { IShiftLedger } from '../../../shared/ports/shift-ledger.port'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
@@ -41,6 +43,7 @@ export class CreateQrPaymentV2UseCase {
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
     @inject(TOKENS.Clock) private readonly clock: IClock,
     @inject(quoteClaimsToken) private readonly quotes: IQuoteClaims,
+    @inject(TOKENS.IdGenerator) private readonly ids: IIdGenerator,
   ) {}
 
   async execute(
@@ -63,8 +66,8 @@ export class CreateQrPaymentV2UseCase {
       const prior = await this.attempts.findByKey(actor.id, key)
       if (prior) return { prior }
 
-      // Reference 1: 15 characters of A-Z and 0-9, unique, and unguessable (KBank takes at most 15).
-      const reference = 'QR' + crypto.randomUUID().replaceAll('-', '').slice(0, 13).toUpperCase()
+      // Reference 1: every QR reference in the system is built by one function (KBank takes at most 15).
+      const reference = buildQrReference(this.ids.newId())
       // The quote is held under the same shift lock, so counting the shift cannot start between the two.
       if (dto.quoteId !== undefined)
         await this.quotes.reserveForQr(dto.quoteId, { branchId: branch.id, reference, amountSatang: dto.amountSatang })
