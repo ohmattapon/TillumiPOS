@@ -11,6 +11,7 @@
     "dev:api": "bun --env-file=.env --watch server/src/index.ts",
     "dev:web": "vite",
     "dev:media": "bun run --filter @pos/media dev",
+    "dev:fake-kbank": "bun server/test/kbank-dev.ts",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "deploy:media": "bun run --filter @pos/media deploy",
