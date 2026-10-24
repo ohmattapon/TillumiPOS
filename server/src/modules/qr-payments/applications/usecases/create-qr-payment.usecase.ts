@@ -29,8 +29,8 @@ export class CreateQrPaymentUseCase {
     if (!this.gateway.isEnabled())
       throw new DomainConflictError('ร้านนี้ยังไม่ได้ตั้งค่าการรับชำระด้วย QR', 'QR_NOT_CONFIGURED')
 
-    // Reference 1: 16 characters of A-Z and 0-9, unique, and unguessable.
-    const reference = 'QR' + crypto.randomUUID().replaceAll('-', '').slice(0, 14).toUpperCase()
+    // Reference 1: 15 characters of A-Z and 0-9, unique, and unguessable (KBank takes at most 15).
+    const reference = 'QR' + crypto.randomUUID().replaceAll('-', '').slice(0, 13).toUpperCase()
     // A QR made from a pinned price holds that quote first, so the price cannot move while the customer pays.
     if (dto.quoteId !== undefined) {
       const quoteId = dto.quoteId

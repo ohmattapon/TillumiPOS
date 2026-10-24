@@ -78,7 +78,7 @@ describe('CreateQrPaymentUseCase', () => {
     const { payment, qrImage } = await useCase.execute({ amountSatang: 5000 }, actor)
 
     expect(gateway.createQr).toHaveBeenCalledWith({
-      reference: expect.stringMatching(/^QR[A-Z0-9]{14}$/),
+      reference: expect.stringMatching(/^QR[A-Z0-9]{13}$/),
       amountSatang: 5000,
       branchCode: 'MAIN',
     })

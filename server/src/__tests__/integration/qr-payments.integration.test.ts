@@ -81,7 +81,7 @@ describe('creating a QR', () => {
       qrRawData: expect.stringContaining(qr.reference),
       qrImage: expect.any(String),
     })
-    expect(qr.reference).toMatch(/^QR[A-Z0-9]{14}$/)
+    expect(qr.reference).toMatch(/^QR[A-Z0-9]{13}$/)
     expect(new Date(qr.expiresAt).getTime()).toBeGreaterThan(Date.now() + 9 * 60_000)
 
     expect(fakeScb.created.get(qr.reference)).toEqual({

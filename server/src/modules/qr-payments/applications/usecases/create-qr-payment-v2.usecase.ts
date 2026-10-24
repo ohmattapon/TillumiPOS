@@ -63,8 +63,8 @@ export class CreateQrPaymentV2UseCase {
       const prior = await this.attempts.findByKey(actor.id, key)
       if (prior) return { prior }
 
-      // Reference 1: 16 characters of A-Z and 0-9, unique, and unguessable.
-      const reference = 'QR' + crypto.randomUUID().replaceAll('-', '').slice(0, 14).toUpperCase()
+      // Reference 1: 15 characters of A-Z and 0-9, unique, and unguessable (KBank takes at most 15).
+      const reference = 'QR' + crypto.randomUUID().replaceAll('-', '').slice(0, 13).toUpperCase()
       // The quote is held under the same shift lock, so counting the shift cannot start between the two.
       if (dto.quoteId !== undefined)
         await this.quotes.reserveForQr(dto.quoteId, { branchId: branch.id, reference, amountSatang: dto.amountSatang })
