@@ -7,7 +7,7 @@ import type { QrPaymentConfirmation } from '../../../../domains/qr-payment.domai
 import { readKbankConfig, type KbankConfig } from '../../../../libs/kbank-config'
 import type { IClock } from '../../../shared/ports/clock.port'
 import { TOKENS } from '../../../tokens'
-import type { IQrPaymentGateway, QrCode } from '../../applications/ports/qr-payment-gateway.port'
+import type { IQrPaymentGateway } from '../../applications/ports/qr-payment-gateway.port'
 
 const TIMEOUT_MS = 8000
 /** Thai QR (PromptPay): the qrType of the create-QR request. */
