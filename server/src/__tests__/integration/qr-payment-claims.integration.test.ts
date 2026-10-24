@@ -2,25 +2,25 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { eq } from 'drizzle-orm'
 import { qrPayments } from '../../infrastructure/database/schema/qr-payments'
 import { db } from '../../libs/db'
-import { fakeScb, SCB_ENV_KEYS } from '../../../test/scb-server'
+import { fakeKbank, KBANK_ENV_KEYS } from '../../../test/kbank-server'
 import { ok, resetDatabase, seedProduct, signIn, type Session } from '../../../test/harness'
 
 let owner: Session
 
 beforeEach(async () => {
   await resetDatabase()
-  fakeScb.reset()
-  fakeScb.enableIn(Bun.env)
+  fakeKbank.reset()
+  fakeKbank.enableIn(Bun.env)
   owner = await signIn('owner')
 })
 
 afterEach(() => {
-  for (const name of SCB_ENV_KEYS) delete Bun.env[name]
+  for (const name of KBANK_ENV_KEYS) delete Bun.env[name]
 })
 
 async function paidQr(amountSatang: number) {
   const qr = ok(await owner.api.payments.qr.post({ amountSatang }))
-  fakeScb.pay(qr.reference)
+  fakeKbank.pay(qr.reference)
   await db.update(qrPayments).set({ lastCheckedAt: null }).where(eq(qrPayments.id, qr.id))
   return ok(await owner.api.payments.qr({ id: qr.id }).get())
 }

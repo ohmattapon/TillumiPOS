@@ -3,32 +3,32 @@ import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import { TOKENS } from '../../../tokens'
 import { qrPaymentRepositoryToken } from '../ports/qr-payment.repository'
 import type { IQrPaymentRepository } from '../ports/qr-payment.repository'
-import { scbConfirmationSchema } from '../schemas/qr-payment-schemas'
+import { kbankConfirmationSchema } from '../schemas/qr-payment-schemas'
 import { QrPaymentRefresher } from '../services/qr-payment-refresher'
 
 /**
- * Command: SCB says a payment arrived. SCB signs nothing, so the body is only a hint of which QR to
- * check: the payment is marked paid only if SCB's own inquiry, an authenticated call from here,
+ * Command: KBank says a payment arrived. KBank signs nothing, so the body is only a hint of which QR
+ * to check: the payment is marked paid only if KBank's own inquiry, an authenticated call from here,
  * confirms it. A forged callback therefore changes nothing.
  */
 @injectable()
-export class ConfirmScbCallbackUseCase {
+export class ConfirmKbankCallbackUseCase {
   constructor(
     @inject(qrPaymentRepositoryToken) private readonly payments: IQrPaymentRepository,
     @inject(QrPaymentRefresher) private readonly refresher: QrPaymentRefresher,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
   ) {}
 
-  /** Returns the transaction id to echo back. Unknown references are acknowledged too, so SCB stops retrying. */
-  async execute(input: unknown): Promise<{ transactionId: string }> {
-    const body = scbConfirmationSchema.parse(input)
+  /** Returns the reference to echo back. Unknown references are acknowledged too, so KBank stops retrying. */
+  async execute(input: unknown): Promise<{ partnerTxnUid: string }> {
+    const body = kbankConfirmationSchema.parse(input)
 
-    if (body.billPaymentRef1)
+    if (body.partnerTxnUid)
       await this.unitOfWork.run(async () => {
-        const payment = await this.payments.findByReferenceForUpdate(body.billPaymentRef1!)
+        const payment = await this.payments.findByReferenceForUpdate(body.partnerTxnUid!)
         if (payment) await this.refresher.refresh(payment, { force: true })
       })
 
-    return { transactionId: body.transactionId ?? '' }
+    return { partnerTxnUid: body.partnerTxnUid ?? '' }
   }
 }

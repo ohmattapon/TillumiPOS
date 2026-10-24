@@ -575,7 +575,7 @@ for (let back = DAYS - 1; back >= 0; back--) {
                 status: 'paid' as const,
                 qrRawData: '00020101021230670016A000000677010112011501055600123456102' + String(between(100000, 999999)),
                 expiresAt: new Date(draft.time + 9 * MINUTE),
-                bankTransactionId: `SCB${between(100000000, 999999999)}`,
+                bankTransactionId: `KBANK${between(100000000, 999999999)}`,
                 payerName: pick(payerNames),
                 paidAt: new Date(draft.time - MINUTE),
                 lastCheckedAt: new Date(draft.time - MINUTE),

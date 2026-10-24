@@ -7,7 +7,7 @@ import type { QrPaymentConfirmation } from '../../../../domains/qr-payment.domai
 import { readKbankConfig, type KbankConfig } from '../../../../libs/kbank-config'
 import type { IClock } from '../../../shared/ports/clock.port'
 import { TOKENS } from '../../../tokens'
-import type { IQrPaymentGateway, QrCode } from '../../applications/ports/qr-payment-gateway.port'
+import type { IQrPaymentGateway } from '../../applications/ports/qr-payment-gateway.port'
 
 const TIMEOUT_MS = 8000
 /** Thai QR (PromptPay): the qrType of the create-QR request. */
@@ -17,12 +17,10 @@ const STATUS_SUCCESS = '00'
 /** Renewed this long before it really expires, so a token never dies mid-request. */
 const TOKEN_SAFETY_MS = 60_000
 
-// --- INQUIRY RESPONSE (ASSUMED) ------------------------------------------------
-// The portal documents the inquiry request but shows no response example, so the field names
-// below are the author's best reading of KBank's naming (create-QR answers `statusCode`,
-// `partnerTxnUid`, `qrCode` at the top level). Correct them against the first real sandbox
-// answer; the fake bank in server/test/kbank-server.ts mirrors exactly this shape.
-const PAID_STATUSES = new Set(['S', 'SUCCESS', 'SETTLED', 'PAID'])
+// --- INQUIRY RESPONSE ----------------------------------------------------------
+// Shapes confirmed against the sandbox: every answer carries `statusCode`, `txnStatus`
+// (REQUESTED | PAID | CANCELLED | VOIDED), `txnAmount` ("120.00") and `txnNo` (always null),
+// with no payment timestamp. Only PAID means money arrived.
 
 interface KbankEnvelope {
   statusCode?: string
@@ -115,17 +113,18 @@ export class KbankQrGateway implements IQrPaymentGateway {
     if (httpStatus !== 200 || body.statusCode !== STATUS_SUCCESS) throw unavailable(typeof body.errorDesc === 'string' ? body.errorDesc : undefined)
 
     if (body.partnerTxnUid !== reference && body.origPartnerTxnUid !== reference) return null
-    const status = String(body.txnStatus ?? body.status ?? '')
-    if (!PAID_STATUSES.has(status.toUpperCase())) return null
-    if (body.txnAmount === undefined && body.amount === undefined) return null
-    const paidAmount = body.txnAmount ?? body.amount
-    if (paidAmount === undefined || toSatang(paidAmount as string | number) !== amountSatang) return null
-    const transactionId = body.txnId ?? body.transactionId
-    const paidAtRaw = body.txnDateTime ?? body.transDt
+    // REQUESTED (still waiting), CANCELLED and VOIDED (money returned) mean nothing to record.
+    if (String(body.txnStatus ?? '').toUpperCase() !== 'PAID') return null
+    const paidAmount = body.txnAmount
+    if ((typeof paidAmount !== 'string' && typeof paidAmount !== 'number') || toSatang(paidAmount) !== amountSatang)
+      return null
+    // The bank sends no transaction number and no payment time, so the inquiry's own reference
+    // identifies the money and the inquiry time stands in for when it arrived.
+    const transactionId = body.txnNo ?? body.partnerTxnUid
     return {
       transactionId: typeof transactionId === 'string' && transactionId ? transactionId : reference,
       amountSatang,
-      paidAt: typeof paidAtRaw === 'string' || typeof paidAtRaw === 'number' ? new Date(paidAtRaw) : this.clock.now(),
+      paidAt: this.clock.now(),
       payerName: typeof body.payerName === 'string' ? body.payerName : null,
     } satisfies QrPaymentConfirmation
   }

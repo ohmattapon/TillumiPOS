@@ -44,7 +44,11 @@ describe('KbankQrGateway.createQr', () => {
 })
 
 describe('KbankQrGateway.findPayment', () => {
-  test("the bank's 'does not exist' answer (404) means not paid yet, not a failure", async () => {
+  test("a uid the bank never made (404) means not paid yet, not a failure", async () => {
+    expect(await find('QRNEVER00000001')).toBeNull()
+  })
+
+  test('a QR nobody paid is REQUESTED, which also means not paid', async () => {
     const reference = await qr()
 
     expect(await find(reference)).toBeNull()
@@ -52,14 +56,27 @@ describe('KbankQrGateway.findPayment', () => {
 
   test('returns what the bank reported once the customer has paid', async () => {
     const reference = await qr()
-    fakeKbank.pay(reference, { payerName: 'สมหญิง', at: new Date('2026-10-13T06:00:30Z') })
+    fakeKbank.pay(reference, { payerName: 'สมหญิง' })
 
+    // The bank sends no transaction number and no payment time: the inquiry's own reference
+    // identifies the money and the inquiry time stands in for when it arrived. It names no
+    // payer either, so payerName stays null until a webhook carries one.
     expect(await find(reference)).toEqual({
-      transactionId: 'FAKE-TXN-1',
+      transactionId: reference,
       amountSatang: 5000,
-      paidAt: new Date('2026-10-13T06:00:30Z'),
-      payerName: 'สมหญิง',
+      paidAt: now,
+      payerName: null,
     })
+  })
+
+  test.each([
+    ['cancelled', (reference: string) => fakeKbank.cancel(reference)],
+    ['voided', (reference: string) => fakeKbank.void(reference)],
+  ])('a %s QR holds no money to record', async (_, settle) => {
+    const reference = await qr()
+    settle(reference)
+
+    expect(await find(reference)).toBeNull()
   })
 
   test('ignores a payment of another amount', async () => {

@@ -4,7 +4,7 @@ import { priceQuotes } from '../../infrastructure/database/schema/price-quotes'
 import { qrPayments } from '../../infrastructure/database/schema/qr-payments'
 import { shiftQrAttempts } from '../../infrastructure/database/schema/shift-qr-attempts'
 import { db } from '../../libs/db'
-import { fakeScb, SCB_ENV_KEYS } from '../../../test/scb-server'
+import { fakeKbank, KBANK_ENV_KEYS } from '../../../test/kbank-server'
 import { ok, resetDatabase, seedProduct, signIn } from '../../../test/harness'
 
 const previousMode = Bun.env.CHECKOUT_MODE
@@ -16,8 +16,8 @@ let shiftId: number
 beforeEach(async () => {
   Bun.env.CHECKOUT_MODE = 'shifts'
   await resetDatabase()
-  fakeScb.reset()
-  fakeScb.enableIn(Bun.env)
+  fakeKbank.reset()
+  fakeKbank.enableIn(Bun.env)
   owner = await signIn('owner')
   cashier = await signIn('cashier')
   const registerId = ok(await owner.apiV2.registers.get()).items[0]!.id
@@ -25,7 +25,7 @@ beforeEach(async () => {
 })
 
 afterEach(() => {
-  for (const name of SCB_ENV_KEYS) delete Bun.env[name]
+  for (const name of KBANK_ENV_KEYS) delete Bun.env[name]
   if (previousMode === undefined) delete Bun.env.CHECKOUT_MODE
   else Bun.env.CHECKOUT_MODE = previousMode
 })
@@ -42,7 +42,7 @@ async function shop() {
 }
 
 async function customerPays(payment: { id: number; reference: string }) {
-  fakeScb.pay(payment.reference)
+  fakeKbank.pay(payment.reference)
   await db.update(qrPayments).set({ lastCheckedAt: null }).where(eq(qrPayments.id, payment.id))
   return ok(await cashier.apiV2.payments.qr({ id: payment.id }).refresh.post())
 }
@@ -66,7 +66,7 @@ describe('a QR asked for in a shift from a quote', () => {
 
   test('a bank that refuses gives the quote back', async () => {
     const { quote } = await shop()
-    Bun.env.SCB_BILLER_ID = '999999999999999'
+    Bun.env.KBANK_MERCHANT_ID = 'wrong-merchant'
     const refused = await cashier.apiV2.payments.qr.post({ amountSatang: 4500, shiftId, quoteId: quote.id }, key())
     expect(refused.status).toBe(502)
     expect(await statusOf(quote.id)).toBe('open')
@@ -91,7 +91,7 @@ describe('a QR asked for in a shift from a quote', () => {
 
     expect(refused.status).toBe(409)
     expect(refused.error?.value).toMatchObject({ code: 'QUOTE_EXPIRED' })
-    expect(fakeScb.created.size).toBe(0)
+    expect(fakeKbank.created.size).toBe(0)
     expect(await db.select().from(shiftQrAttempts)).toEqual([])
   })
 })

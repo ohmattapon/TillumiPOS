@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { fakeScb, SCB_ENV_KEYS } from '../../../test/scb-server'
+import { fakeKbank, KBANK_ENV_KEYS } from '../../../test/kbank-server'
 import { ok, resetDatabase, seedProduct, signIn, type Session } from '../../../test/harness'
 
 const previousMode = Bun.env.CHECKOUT_MODE
@@ -8,14 +8,14 @@ let cashier: Session
 
 beforeEach(async () => {
   await resetDatabase()
-  fakeScb.reset()
-  fakeScb.enableIn(Bun.env)
+  fakeKbank.reset()
+  fakeKbank.enableIn(Bun.env)
   owner = await signIn('owner')
   cashier = await signIn('cashier')
 })
 
 afterEach(() => {
-  for (const name of SCB_ENV_KEYS) delete Bun.env[name]
+  for (const name of KBANK_ENV_KEYS) delete Bun.env[name]
   if (previousMode === undefined) delete Bun.env.CHECKOUT_MODE
   else Bun.env.CHECKOUT_MODE = previousMode
 })
