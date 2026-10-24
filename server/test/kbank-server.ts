@@ -210,4 +210,4 @@ const shared = globalThis as typeof globalThis & { __posFakeKbank?: FakeKbank }
 export const fakeKbank: FakeKbank = (shared.__posFakeKbank ??= start())
 
 /** Keys that switch KBank QR payment on; tests that turn it on must turn it off again. */
-export const KBANK_ENV_KEYS = ['KBANK_CONSUMER_ID', 'KBANK_CONSUMER_SECRET', 'KBANK_MERCHANT_ID', 'KBANK_PARTNER_ID', 'KBANK_PARTNER_SECRET', 'KBANK_API_BASE_URL', 'KBANK_CERT_PATH', 'KBANK_KEY_PATH', 'KBANK_TEST_MODE', 'KBANK_ENV_ID'] as const
+export const KBANK_ENV_KEYS = ['KBANK_CONSUMER_ID', 'KBANK_CONSUMER_SECRET', 'KBANK_MERCHANT_ID', 'KBANK_PARTNER_ID', 'KBANK_PARTNER_SECRET', 'KBANK_API_BASE_URL', 'KBANK_CERT_PATH', 'KBANK_KEY_PATH', 'KBANK_TEST_MODE'] as const
