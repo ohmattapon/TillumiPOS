@@ -1,7 +1,7 @@
 import { inject, injectable } from 'tsyringe'
 import { requirePermission, type Actor } from '../../../../domains/authorization'
 import { buildAuditEntry } from '../../../../domains/audit-entry.vo'
-import { invalidReceiptItems, normalizeReceiptItems, POSTGRES_INT_MAX, type StockReceipt } from '../../../../domains/stock-receipt.domain'
+import { invalidReceiptItems, normalizeReceiptItems, packReceiptNote, POSTGRES_INT_MAX, receiptPieces, type StockReceipt } from '../../../../domains/stock-receipt.domain'
 import { auditLogToken, type IAuditLog } from '../../../audit/applications/ports/audit-log.port'
 import { stockLedgerToken, type IStockLedger } from '../../../inventory/applications/ports/stock-ledger.port'
 import { productRepositoryToken, type IProductRepository } from '../../../products/applications/ports/product.repository'
@@ -32,17 +32,30 @@ export class ReceiveStockBatchUseCase {
       async () => {
         const products = await this.products.findManyForUpdate(items.map(item => item.productId), branchId)
         const byId = new Map(products.map(product => [product.id, product]))
-        const invalid = items.filter(item => {
+        // Packs resolve only for products that exist, so an unknown product is still reported alongside the rest.
+        const lines = items.map(item => {
           const product = byId.get(item.productId)
-          return !product || !product.trackStock || product.stockQty + item.quantity > POSTGRES_INT_MAX
+          if (!product || item.packId === undefined) return { productId: item.productId, quantity: item.quantity, note: canonical.note }
+          const pack = product.packForReceipt(item.packId)
+          return {
+            productId: item.productId,
+            quantity: receiptPieces(item.quantity, pack.size, item.productId),
+            note: packReceiptNote(canonical.note, item.quantity, pack),
+          }
         })
-        if (invalid.length) throw invalidReceiptItems(invalid.map(item => item.productId))
+        const piecesByProduct = new Map<number, number>()
+        for (const line of lines) piecesByProduct.set(line.productId, (piecesByProduct.get(line.productId) ?? 0) + line.quantity)
+        const invalid = [...piecesByProduct].filter(([productId, pieces]) => {
+          const product = byId.get(productId)
+          return !product || !product.trackStock || product.stockQty + pieces > POSTGRES_INT_MAX
+        })
+        if (invalid.length) throw invalidReceiptItems(invalid.map(([productId]) => productId))
         const receipt = await this.receipts.create({ branchId, receivedById: actor.id, receivedByName: actor.displayName, note: canonical.note })
-        for (const item of items) {
-          const product = byId.get(item.productId)!
-          const movement = await this.ledger.record({ ...item, branchId, type: 'receive', userId: actor.id, note: canonical.note, receiptId: receipt.id })
-          if (!movement) throw invalidReceiptItems([item.productId])
-          receipt.items.push({ ...item, sku: product.sku, name: product.name, balanceAfter: movement.balanceAfter })
+        for (const line of lines) {
+          const product = byId.get(line.productId)!
+          const movement = await this.ledger.record({ ...line, branchId, type: 'receive', userId: actor.id, receiptId: receipt.id })
+          if (!movement) throw invalidReceiptItems([line.productId])
+          receipt.items.push({ productId: line.productId, quantity: line.quantity, sku: product.sku, name: product.name, balanceAfter: movement.balanceAfter })
         }
         await this.receipts.appendItems(receipt.id, receipt.items)
         await this.audit.record({ id: actor.id, name: actor.displayName }, branchId, buildAuditEntry({

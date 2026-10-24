@@ -10,6 +10,7 @@ import { TOKENS } from '../../../tokens'
 import { stockLedgerToken } from '../ports/stock-ledger.port'
 import type { IStockLedger } from '../ports/stock-ledger.port'
 import { receiveStockSchema } from '../schemas/inventory-schemas'
+import { packReceiptNote, receiptPieces } from '../../../../domains/stock-receipt.domain'
 
 /** Command. */
 @injectable()
@@ -30,12 +31,16 @@ export class ReceiveStockUseCase {
       if (!product) throw new DomainNotFoundError('ไม่พบสินค้า')
       if (!product.trackStock) throw new DomainError('สินค้านี้ไม่ได้ตั้งให้นับสต็อก', 'STOCK_NOT_TRACKED')
 
+      const pack = dto.packId === undefined ? null : product.packForReceipt(dto.packId)
+      const quantity = pack ? receiptPieces(dto.quantity, pack.size, dto.productId) : dto.quantity
+      const note = pack ? packReceiptNote(dto.note ?? null, dto.quantity, pack) : dto.note ?? null
+
       const movement = await this.ledger.record({
         branchId,
         productId: dto.productId,
         type: 'receive',
-        quantity: dto.quantity,
-        note: dto.note ?? null,
+        quantity,
+        note,
         userId: actor.id,
       })
       await this.audit.record({ id: actor.id, name: actor.displayName }, branchId, buildAuditEntry({
@@ -44,8 +49,8 @@ export class ReceiveStockUseCase {
         entityId: String(dto.productId),
         summary: 'รับสินค้าเข้าสต็อก',
         before: { qty: product.stockQty },
-        after: { qty: product.stockQty + dto.quantity },
-        reason: dto.note,
+        after: { qty: product.stockQty + quantity },
+        reason: note,
       }))
       return movement!
     })

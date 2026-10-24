@@ -120,6 +120,16 @@ export class ProductEntity {
     return this.packs.find((pack) => pack.id === packId)
   }
 
+  /**
+   * The pack a delivery arrived in. Unlike `packForSale` it ignores whether the pack or the
+   * product is switched off, because stock still has to be counted in whatever it came in.
+   */
+  packForReceipt(packId: number): ProductPack {
+    const pack = this.findPack(packId)
+    if (!pack) throw new DomainError('ไม่พบแพ็คสินค้านี้', 'PACK_NOT_FOUND', { packId })
+    return pack
+  }
+
   /** The pack to sell, or an error when it is missing or switched off (or the product is). */
   packForSale(packId: number): ProductPack {
     this.assertActive()
