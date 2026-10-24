@@ -26,6 +26,8 @@ const QR_PAYLOAD = /^[\x20-\x7e]+$/
 export interface DisplayLine {
   name: string
   options: string[]
+  /** The pack this line was sold as, in the shop's language, when it is not a single piece. */
+  packLabel?: string
   quantity: number
   lineTotalSatang: number
 }
@@ -89,11 +91,13 @@ const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/
 
 function parseLine(raw: unknown): DisplayLine | null {
   if (!isRecord(raw)) return null
-  const { name, options, quantity, lineTotalSatang } = raw
+  const { name, options, packLabel, quantity, lineTotalSatang } = raw
   if (!isText(name) || !Array.isArray(options) || options.length > MAX_OPTIONS) return null
   if (!options.every((option) => isText(option))) return null
+  if (packLabel !== undefined && !isText(packLabel, 40)) return null
   if (!isWhole(quantity) || quantity < 1 || !isWhole(lineTotalSatang)) return null
-  return { name, options: options as string[], quantity, lineTotalSatang }
+  const line: DisplayLine = { name, options: options as string[], quantity, lineTotalSatang }
+  return packLabel === undefined ? line : { ...line, packLabel }
 }
 
 function parseLines(raw: unknown): DisplayLine[] | null {

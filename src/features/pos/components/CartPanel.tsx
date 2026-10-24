@@ -123,12 +123,13 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
           <li className="px-4 py-16 text-center text-sm text-muted-foreground">{t('cart.empty')}</li>
         )}
         {cart.lines.map((line) => {
-          const { lineKey, lineId, name, unitPriceSatang, stockQty, quantity, lineTotalSatang, exceedsStock, options, unavailable } = line
+          const { lineKey, lineId, name, unitPriceSatang, stockQty, quantity, lineTotalSatang, exceedsStock, options, unavailable, packSize } = line
           return (
           <li key={lineKey} className="space-y-2 px-4 py-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 space-y-1">
                 <p className="text-base leading-snug font-medium">{name}</p>
+                {packSize > 1 && <p className="text-xs text-muted-foreground">{t('cart.pack', { size: packSize })}</p>}
               </div>
               <p className="shrink-0 text-sm font-semibold tabular-nums">{money.plain(lineTotalSatang)}</p>
             </div>
