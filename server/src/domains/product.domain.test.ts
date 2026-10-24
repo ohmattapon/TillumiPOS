@@ -243,5 +243,13 @@ describe('ProductEntity', () => {
       expect(() => packed.packForSale(999)).toThrow(expect.objectContaining({ code: 'PACK_NOT_FOUND' }))
       expect(() => packed.packForSale(9)).toThrow(expect.objectContaining({ code: 'PACK_INACTIVE' }))
     })
+
+    test('packForReceipt takes any pack of the product, whatever its selling state', () => {
+      const packed = product({ isActive: false, packs: [pack6, { ...pack24, isActive: false }] })
+
+      expect(packed.packForReceipt(7)).toEqual(pack6)
+      expect(packed.packForReceipt(9)).toEqual({ ...pack24, isActive: false })
+      expect(() => packed.packForReceipt(999)).toThrow(expect.objectContaining({ code: 'PACK_NOT_FOUND' }))
+    })
   })
 })
