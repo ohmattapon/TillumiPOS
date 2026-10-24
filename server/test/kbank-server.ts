@@ -1,10 +1,8 @@
-/** A payment the fake bank has received. */
+/** What the fake bank knows about a QR: a payment once it has one. */
 interface FakePayment {
-  transactionId: string
-  reference: string
   amount: string
-  paidAt: Date
   payerName: string
+  status: 'PAID' | 'CANCELLED' | 'VOIDED'
 }
 
 interface RecordedRequest {
@@ -21,10 +19,13 @@ export interface FakeKbank {
   credentials: { consumerId: string; consumerSecret: string; merchantId: string; partnerId: string; partnerSecret: string }
   requests: RecordedRequest[]
   /** QRs created through it, by partner transaction id. */
-  created: Map<string, { amount: string; txnId: string }>
+  created: Map<string, { amount: string; reference1: string }>
   tokensIssued: number
   /** A customer paying: the bank now knows the payment, as it does after a real scan. */
-  pay(reference: string, options?: { amountSatang?: number; payerName?: string; at?: Date }): void
+  pay(reference: string, options?: { amountSatang?: number; payerName?: string }): void
+  /** The shop cancelling an unpaid QR, or voiding a paid one to return the money. */
+  cancel(reference: string): void
+  void(reference: string): void
   /** Makes every access token already handed out invalid, as when they expire. */
   revokeTokens(): void
   /** While set, every request answers with this HTTP status. */
@@ -48,13 +49,12 @@ function start(): FakeKbank {
     partnerSecret: 'test-partner-secret',
   }
   const requests: RecordedRequest[] = []
-  const created = new Map<string, { amount: string; txnId: string }>()
+  const created = new Map<string, { amount: string; reference1: string }>()
   const payments = new Map<string, FakePayment>()
   const validTokens = new Set<string>()
   let failing: number | null = null
   let lostAnswer: { made: boolean } | null = null
   let tokensIssued = 0
-  let transactionCounter = 0
 
   const server = Bun.serve({
     port: 0,
@@ -96,12 +96,11 @@ function start(): FakeKbank {
         if (lostAnswer) {
           const { made } = lostAnswer
           lostAnswer = null
-          if (made) created.set(uid, { amount: String(sent!.txnAmount), txnId: `FAKE-TXN-${++transactionCounter}` })
+          if (made) created.set(uid, { amount: String(sent!.txnAmount), reference1: String(sent!.reference1 ?? 'null') })
           return Response.json({ statusCode: '04', errorCode: '04', errorDesc: 'Gateway timeout' }, { status: 504 })
         }
 
-        const txnId = `FAKE-TXN-${++transactionCounter}`
-        created.set(uid, { amount: String(sent!.txnAmount), txnId })
+        created.set(uid, { amount: String(sent!.txnAmount), reference1: String(sent!.reference1 ?? 'null') })
         return Response.json({
           partnerTxnUid: uid,
           partnerId: credentials.partnerId,
@@ -118,22 +117,33 @@ function start(): FakeKbank {
         const sent = body as Record<string, string> | null
         if (sent?.partnerId !== credentials.partnerId || sent?.partnerSecret !== credentials.partnerSecret || sent?.merchantId !== credentials.merchantId)
           return Response.json({ statusCode: '01', errorCode: '01', errorDesc: 'Invalid parameter' }, { status: 400 })
-        // What the real bank answers when no payment is known for the reference.
-        const payment = payments.get(sent?.partnerTxnUid ?? '')
-        if (!payment)
+        // A uid the bank never made is not found. A QR it made but nobody paid is REQUESTED,
+        // mirroring the real answers: only a payment moves the status.
+        const uid = sent?.partnerTxnUid ?? ''
+        const qr = created.get(uid)
+        if (!qr)
           return Response.json({ statusCode: '404', errorCode: '404', errorDesc: 'Transaction not found' }, { status: 404 })
+        const payment = payments.get(uid)
 
         return Response.json({
+          partnerTxnUid: uid,
+          partnerId: credentials.partnerId,
           statusCode: '00',
-          errorCode: '00',
-          errorDesc: 'Success',
-          partnerTxnUid: payment.reference,
-          origPartnerTxnUid: payment.transactionId,
-          txnId: payment.transactionId,
-          txnStatus: 'S',
-          txnAmount: payment.amount,
-          txnDateTime: payment.paidAt.toISOString(),
-          payerName: payment.payerName,
+          errorCode: null,
+          errorDesc: null,
+          txnStatus: payment?.status ?? 'REQUESTED',
+          txnNo: null,
+          loyaltyId: null,
+          ...((payment?.status === 'PAID' || payment?.status === 'VOIDED') && { channel: 'kplus' }),
+          merchantId: credentials.merchantId,
+          terminalId: '09000107',
+          qrType: '3',
+          txnAmount: payment?.amount ?? qr.amount,
+          txnCurrencyCode: 'THB',
+          reference1: qr.reference1,
+          reference2: 'null',
+          reference3: 'null',
+          reference4: 'null',
         })
       }
 
@@ -149,17 +159,21 @@ function start(): FakeKbank {
     get tokensIssued() {
       return tokensIssued
     },
-    pay(reference, { amountSatang, payerName = 'ลูกค้าทดสอบ', at = new Date() } = {}) {
+    pay(reference, { amountSatang, payerName = 'ลูกค้าทดสอบ' } = {}) {
       const qr = created.get(reference)
       const amount = amountSatang !== undefined ? (amountSatang / 100).toFixed(2) : qr?.amount
       if (!amount) throw new Error(`The fake bank never created a QR for ${reference}`)
-      payments.set(reference, {
-        transactionId: qr?.txnId ?? `FAKE-TX-${++transactionCounter}`,
-        reference,
-        amount,
-        paidAt: at,
-        payerName,
-      })
+      payments.set(reference, { amount, payerName, status: 'PAID' })
+    },
+    cancel(reference) {
+      if (!created.has(reference)) throw new Error(`The fake bank never created a QR for ${reference}`)
+      const prior = payments.get(reference)
+      payments.set(reference, { amount: prior?.amount ?? created.get(reference)!.amount, payerName: prior?.payerName ?? 'ลูกค้าทดสอบ', status: 'CANCELLED' })
+    },
+    void(reference) {
+      if (!created.has(reference)) throw new Error(`The fake bank never created a QR for ${reference}`)
+      const prior = payments.get(reference)
+      payments.set(reference, { amount: prior?.amount ?? created.get(reference)!.amount, payerName: prior?.payerName ?? 'ลูกค้าทดสอบ', status: 'VOIDED' })
     },
     revokeTokens() {
       validTokens.clear()
@@ -186,7 +200,6 @@ function start(): FakeKbank {
       failing = null
       lostAnswer = null
       tokensIssued = 0
-      transactionCounter = 0
     },
   }
 }
