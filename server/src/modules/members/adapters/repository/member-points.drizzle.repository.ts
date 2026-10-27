@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, inArray, sql, sum } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
@@ -49,7 +49,7 @@ export class DrizzleMemberPointsLedger implements ICheckoutPoints, IQuotePoints 
         createdById: entry.actorId,
       })
     } catch (error) {
-      // The unique indexes on (sale, kind) and (quote, kind) are what make a retried command safe.
+      // The unique index on (sale, kind) is what makes a retried command safe.
       if (isUniqueViolation(error))
         throw new DomainConflictError('บันทึกแต้มของรายการนี้ไปแล้ว', 'POINTS_ALREADY_RECORDED')
       throw error
@@ -72,16 +72,16 @@ export class DrizzleMemberPointsLedger implements ICheckoutPoints, IQuotePoints 
 
   async findQuoteRedemption(quoteId: number): Promise<number | null> {
     const [row] = await currentExecutor()
-      .select({ points: memberPointMovements.points })
+      .select({ points: sum(memberPointMovements.points) })
       .from(memberPointMovements)
       .where(
         and(
           eq(memberPointMovements.quoteId, quoteId),
-          eq(memberPointMovements.kind, 'redeem'),
+          inArray(memberPointMovements.kind, ['redeem', 'void_redeem']),
         ),
       )
-      .limit(1)
-    // A redeem row is stored negative; the caller asks for the amount it took.
-    return row ? -row.points : null
+    // Redeem rows are stored negative and a return is positive, so what is still held is what they leave.
+    const held = -(Number(row?.points ?? 0))
+    return held > 0 ? held : null
   }
 }

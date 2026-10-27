@@ -853,6 +853,8 @@ describe('SaleCheckout with a pinned pack', () => {
       pointsRedeemed: number
       pointsDiscountSatang: number
       pointsRule: { earnSatang: number; redeemSatang: number; minRedeem: number } | null
+      status: 'open' | 'reserved'
+      qrReference: string | null
     }> = {},
   ) =>
     new PriceQuoteEntity({
@@ -912,6 +914,24 @@ describe('SaleCheckout with a pinned pack', () => {
 
     // 200 baht at the quote's 10 baht a point is 20 points, not the 4 the shop's new rule would give.
     expect(sale.toSnapshot()).toMatchObject({ pointsEarned: 20 })
+  })
+
+  test('a QR-reserved redemption sells without checking the balance again', async () => {
+    settings.get.mockResolvedValue(new ShopSettingsEntity({ ...DEFAULT_SHOP_SETTINGS, pointsEnabled: true }))
+    quotes.lockForCheckout.mockResolvedValue(
+      pointsQuote({ pointsRedeemed: 20, pointsDiscountSatang: 2000, status: 'reserved', qrReference: 'QRABC' }),
+    )
+    // The QR took the points when it was made, so the member holds only 5 now and the sale still goes through.
+    points.findQuoteRedemption.mockResolvedValue(20)
+    points.balanceOf.mockResolvedValue(5)
+    products.findManyForUpdate.mockResolvedValue([sodaWith([])])
+
+    const sale = await checkout.checkout({
+      lines: [{ productId: 3, quantity: 2 }], quoteId: 9, discountSatang: 0, payments: cash(20000), cashier, branch,
+    })
+
+    expect(sale.toSnapshot()).toMatchObject({ pointsRedeemed: 20, pointsDiscountSatang: 2000 })
+    expect(points.record).not.toHaveBeenCalledWith(expect.objectContaining({ kind: 'redeem' }))
   })
 })
 

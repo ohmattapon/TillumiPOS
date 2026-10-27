@@ -106,10 +106,13 @@ export class SaleCheckout implements ISaleCheckout {
     // lock checks nothing, so a member who was switched off since the price was pinned still pays.
     if (member && quote && (quote.pointsRedeemed > 0 || shop.pointsEnabled))
       await this.members.findByIdForUpdate(member.id)
-    // A quote that a QR reserved already took its points when it was reserved; only an open one takes them here.
+    // A QR reserved by the quote already took its points when the QR was made. A quote that was never
+    // reserved, or one whose QR was released, still holds nothing, so the sale takes them now.
     const redeemPoints = quote ? quote.pointsRedeemed : 0
+    const pointsHeld = quote && redeemPoints > 0 ? await this.points.findQuoteRedemption(quote.id) : null
+    const takingPoints = member !== null && redeemPoints > 0 && pointsHeld === null
     const balanceBefore = member ? await this.points.balanceOf(member.id) : 0
-    if (member && quote && quote.status === 'open' && redeemPoints > 0 && balanceBefore < redeemPoints)
+    if (takingPoints && balanceBefore < redeemPoints)
       throw new DomainConflictError('แต้มคงเหลือไม่พอ', 'POINTS_NOT_ENOUGH')
 
     // Lines are the product with its options: the same choice repeated is merged, a Map keeps the order
@@ -249,8 +252,6 @@ export class SaleCheckout implements ISaleCheckout {
     }
     // Points are earned on what was paid, and only while the shop still uses them.
     const earned = member !== null && shop.pointsEnabled ? pointsEarned(priced.totalSatang, pointsRule) : 0
-    // A quote reserved by a QR already took its points at reservation, so the balance has moved already.
-    const takingPoints = quote !== null && quote.status === 'open' && redeemPoints > 0
     const pointsDiscount = quote ? quote.pointsDiscountSatang : 0
 
     // Taken only after every rule has passed; it still rolls back with the sale if a later step fails.

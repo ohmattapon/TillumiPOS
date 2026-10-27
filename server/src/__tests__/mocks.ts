@@ -345,6 +345,7 @@ export const mockQuotePoints = (): Mocked<IQuotePoints> => ({
   balanceOf: mock<IQuotePoints['balanceOf']>(async () => 0),
   lockMember: mock<IQuotePoints['lockMember']>(async () => {}),
   record: mock<IQuotePoints['record']>(async () => ({ balanceAfter: 0 })),
+  findQuoteRedemption: mock<IQuotePoints['findQuoteRedemption']>(async () => null),
 })
 
 export const mockPromotionCatalog = (): Mocked<IPromotionCatalog> => ({

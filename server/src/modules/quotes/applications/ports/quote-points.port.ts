@@ -19,6 +19,8 @@ export interface IQuotePoints {
   /** Locks the member row, so the balance cannot change between the check and the movement. */
   lockMember(memberId: number): Promise<void>
   record(entry: QuotePointEntry): Promise<{ balanceAfter: number }>
+  /** The points this quote is holding right now, or null when it holds none. */
+  findQuoteRedemption(quoteId: number): Promise<number | null>
 }
 
 const quotePointsTokenSymbol: unique symbol = Symbol('IQuotePoints')

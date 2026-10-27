@@ -36,13 +36,11 @@ export const memberPointMovements = pgTable(
   },
   (table) => [
     index('member_point_movements_member_idx').on(table.memberId, table.createdAt),
-    // A sale earns once and a sale returns its points once; the same for a quote's redemption.
+    // A sale earns once and returns its points once. A quote is not constrained: a QR that the bank
+    // refused hands the points back, and making the QR again takes them a second time.
     uniqueIndex('member_point_movements_sale_kind_unique')
       .on(table.saleId, table.kind)
       .where(sql`${table.saleId} is not null`),
-    uniqueIndex('member_point_movements_quote_kind_unique')
-      .on(table.quoteId, table.kind)
-      .where(sql`${table.quoteId} is not null`),
     check('member_point_movements_points_nonzero', sql`${table.points} <> 0`),
     check(
       'member_point_movements_source',
