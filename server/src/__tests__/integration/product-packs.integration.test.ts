@@ -75,8 +75,9 @@ async function seedStockedPack(session: Session, packSize: number, priceSatang: 
 
   await update(new ProductEntity({ ...entity.toSnapshot(), packs: [pack(barcode, packSize, priceSatang)] }))
   const saved = (await repository.findById(tea.id, branchId))!
+  const [savedPack] = saved.toSnapshot().packs ?? []
 
-  return { tea, saved: saved.toSnapshot().packs[0]! }
+  return { tea, saved: savedPack! }
 }
 
 describe('a pack sold in a shift', () => {
