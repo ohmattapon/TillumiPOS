@@ -12,6 +12,7 @@ export const createQuoteSchema = z
     lines: z.array(line).min(1).max(100).optional(),
     memberId: z.number().int().positive().nullable().optional(),
     orderId: z.number().int().positive().optional(),
+    redeemPoints: z.number().int().min(0).optional(),
   })
   .refine((value) => (value.orderId !== undefined) !== (value.lines !== undefined), {
     message: 'ต้องระบุรายการสินค้า (lines) หรือออเดอร์ (orderId) อย่างใดอย่างหนึ่ง',

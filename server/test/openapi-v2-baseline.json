@@ -745,6 +745,62 @@
                       },
                       "type": "array"
                     },
+                    "pointsBalanceAfter": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "pointsDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsEarned": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsRedeemed": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "promotion": {
                       "nullable": true,
                       "properties": {
@@ -990,6 +1046,10 @@
                     "voidedAt",
                     "voidReason",
                     "createdAt",
+                    "pointsEarned",
+                    "pointsRedeemed",
+                    "pointsDiscountSatang",
+                    "pointsBalanceAfter",
                     "shiftId",
                     "items",
                     "payments"
@@ -4617,6 +4677,62 @@
                       },
                       "type": "array"
                     },
+                    "pointsBalanceAfter": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "pointsDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsEarned": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsRedeemed": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "promotion": {
                       "nullable": true,
                       "properties": {
@@ -4862,6 +4978,10 @@
                     "voidedAt",
                     "voidReason",
                     "createdAt",
+                    "pointsEarned",
+                    "pointsRedeemed",
+                    "pointsDiscountSatang",
+                    "pointsBalanceAfter",
                     "shiftId",
                     "items",
                     "payments"
@@ -5481,6 +5601,62 @@
                       },
                       "type": "array"
                     },
+                    "pointsBalanceAfter": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "pointsDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsEarned": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsRedeemed": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "promotion": {
                       "nullable": true,
                       "properties": {
@@ -5726,6 +5902,10 @@
                     "voidedAt",
                     "voidReason",
                     "createdAt",
+                    "pointsEarned",
+                    "pointsRedeemed",
+                    "pointsDiscountSatang",
+                    "pointsBalanceAfter",
                     "shiftId",
                     "items",
                     "payments"

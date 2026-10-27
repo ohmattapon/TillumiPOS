@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 import { makeProduct, makePriceQuote } from '../../../../__tests__/factories'
 import {
   mockClock, mockLineOptionsResolver, mockMemberRepository, mockOrderQuoteSource, mockPriceQuoteRepository,
-  mockPromotionCatalog, mockQuoteProducts, mockShopSettingsRepository, mockUnitOfWork,
+  mockPromotionCatalog, mockQuotePoints, mockQuoteProducts, mockShopSettingsRepository, mockUnitOfWork,
 } from '../../../../__tests__/mocks'
 import { MemberEntity } from '../../../../domains/member.domain'
 import { PriceQuoteEntity } from '../../../../domains/price-quote.domain'
@@ -25,6 +25,12 @@ const promotion = (overrides: Partial<ConstructorParameters<typeof PromotionEnti
   })
 const member = (isActive = true) =>
   new MemberEntity({ id: 8, name: 'ลูกค้าประจำ', phone: '0812345678', isActive, createdAt: now, updatedAt: now })
+/** A shop that gives one point per 25 baht paid and pays 1 baht back for each point, from 10 points up. */
+const pointsShop = () =>
+  new ShopSettingsEntity({
+    ...DEFAULT_SHOP_SETTINGS,
+    pointsEnabled: true, pointsEarnSatang: 2500, pointsRedeemSatang: 100, pointsMinRedeem: 10,
+  })
 
 let products: ReturnType<typeof mockQuoteProducts>
 let lineOptions: ReturnType<typeof mockLineOptionsResolver>
@@ -33,6 +39,7 @@ let members: ReturnType<typeof mockMemberRepository>
 let catalog: ReturnType<typeof mockPromotionCatalog>
 let orders: ReturnType<typeof mockOrderQuoteSource>
 let quotes: ReturnType<typeof mockPriceQuoteRepository>
+let points: ReturnType<typeof mockQuotePoints>
 let create: CreateQuoteUseCase
 
 beforeEach(() => {
@@ -43,12 +50,13 @@ beforeEach(() => {
   catalog = mockPromotionCatalog()
   orders = mockOrderQuoteSource()
   quotes = mockPriceQuoteRepository()
+  points = mockQuotePoints()
   settings.get.mockResolvedValue(new ShopSettingsEntity(DEFAULT_SHOP_SETTINGS))
   products.findById.mockImplementation(async (id) => makeProduct({ id, name: `สินค้า ${id}`, sku: `S${id}`, priceSatang: 2500, stockQty: 10 }))
   quotes.create.mockImplementation(async (priced) =>
     new PriceQuoteEntity({ ...priced, id: 5, status: 'open', qrReference: null, saleId: null, createdAt: now }),
   )
-  create = new CreateQuoteUseCase(products, lineOptions, settings, members, catalog, orders, quotes, mockClock(now))
+  create = new CreateQuoteUseCase(products, lineOptions, settings, members, catalog, orders, quotes, mockClock(now), points)
 })
 
 describe('CreateQuoteUseCase', () => {
@@ -96,6 +104,53 @@ describe('CreateQuoteUseCase', () => {
     await expect(create.execute({ lines: [{ productId: 3, quantity: 2, packId: 5 }] }, actor, branch))
       .rejects.toMatchObject({ code: 'INSUFFICIENT_STOCK' })
     expect(quotes.create).not.toHaveBeenCalled()
+  })
+
+  test('a quote pins the points it redeemed and lowers the total by what they are worth', async () => {
+    settings.get.mockResolvedValue(pointsShop())
+    members.findById.mockResolvedValue(member())
+    points.balanceOf.mockResolvedValue(50)
+
+    const quote = await create.execute(
+      { memberId: 8, lines: [{ productId: 1, quantity: 2 }], redeemPoints: 20 },
+      actor,
+      branch,
+    )
+
+    expect(points.balanceOf).toHaveBeenCalledWith(8)
+    expect(quote.toSnapshot()).toMatchObject({
+      subtotalSatang: 5000, discountSatang: 2000, totalSatang: 3000,
+      pointsRedeemed: 20, pointsDiscountSatang: 2000, pointsRule: { earnSatang: 2500, redeemSatang: 100, minRedeem: 10 },
+    })
+  })
+
+  test('redeeming more than the cart can pay for is POINTS_REDEEM_INVALID', async () => {
+    settings.get.mockResolvedValue(pointsShop())
+    members.findById.mockResolvedValue(member())
+    points.balanceOf.mockResolvedValue(500)
+
+    // 25 baht is 25 points at 1 baht each, so 26 is over the payable amount.
+    await expect(create.execute({ memberId: 8, lines: [{ productId: 1, quantity: 1 }], redeemPoints: 26 }, actor, branch))
+      .rejects.toMatchObject({ code: 'POINTS_REDEEM_INVALID' })
+    expect(quotes.create).not.toHaveBeenCalled()
+  })
+
+  test('redeeming while the shop has points switched off is POINTS_DISABLED', async () => {
+    members.findById.mockResolvedValue(member())
+    points.balanceOf.mockResolvedValue(50)
+
+    await expect(create.execute({ memberId: 8, lines: [{ productId: 1, quantity: 2 }], redeemPoints: 10 }, actor, branch))
+      .rejects.toMatchObject({ code: 'POINTS_DISABLED' })
+    expect(quotes.create).not.toHaveBeenCalled()
+  })
+
+  test('redeeming without a member is MEMBER_REQUIRED', async () => {
+    settings.get.mockResolvedValue(pointsShop())
+    points.balanceOf.mockResolvedValue(50)
+
+    await expect(create.execute({ lines: [{ productId: 1, quantity: 2 }], redeemPoints: 10 }, actor, branch))
+      .rejects.toMatchObject({ code: 'MEMBER_REQUIRED' })
+    expect(points.balanceOf).not.toHaveBeenCalled()
   })
 
   test('chooses the promotion that gives the most and prices with it', async () => {

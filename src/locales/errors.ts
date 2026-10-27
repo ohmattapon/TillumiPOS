@@ -110,5 +110,9 @@ export const errors = {
     OWNER_PIN_SELF_ONLY: "Only the owner can set the owner's PIN",
     OWN_PIN_USE_ACCOUNT: 'Set your own PIN from the account menu, with your current password',
     INVALID_PASSWORD: 'The current password is not correct',
+    MEMBER_REQUIRED: 'Choose a member before using points',
+    POINTS_DISABLED: 'This shop does not use member points yet',
+    POINTS_NOT_ENOUGH: 'The member has {{balance}} points, which is not enough',
+    POINTS_REDEEM_INVALID: 'Redeem between {{min}} and {{max}} points',
   },
 }

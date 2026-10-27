@@ -17,6 +17,8 @@ export function toQuoteResponse(quote: PriceQuoteEntity): QuoteResponse {
     subtotalSatang: snapshot.subtotalSatang,
     promotion: snapshot.promotion,
     discountSatang: snapshot.discountSatang,
+    pointsRedeemed: snapshot.pointsRedeemed ?? 0,
+    pointsDiscountSatang: snapshot.pointsDiscountSatang ?? 0,
     vatMode: snapshot.vatMode,
     vatRateBp: snapshot.vatRateBp,
     vatSatang: snapshot.vatSatang,

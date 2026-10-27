@@ -171,7 +171,9 @@ export class PriceQuoteEntity {
 
     const subtotalSatang = sum(input.lines.map((line) => line.unitPriceSatang * line.quantity))
     if (subtotalSatang > MAX_AMOUNT_SATANG) throw tooLarge()
-    const discountSatang = input.promotion?.discountSatang ?? 0
+    // The promotion (or typed) discount and the points discount stack: points are paid with,
+    // not a second discount, so both come off the subtotal before the VAT is worked out.
+    const discountSatang = (input.promotion?.discountSatang ?? 0) + (input.pointsDiscountSatang ?? 0)
     if (discountSatang > subtotalSatang) throw new DomainError('ส่วนลดมากกว่ายอดรวมสินค้า', 'DISCOUNT_TOO_LARGE')
     const { vatSatang, totalSatang } = calculateTotals({
       subtotalSatang, discountSatang, vatMode: input.vatMode, vatRateBp: input.vatRateBp,

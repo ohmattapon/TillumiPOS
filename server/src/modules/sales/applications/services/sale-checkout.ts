@@ -1,9 +1,11 @@
 import { inject, injectable } from 'tsyringe'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import { checkoutMembersToken, type ICheckoutMembers } from '../ports/checkout-members.port'
+import { checkoutPointsToken, type ICheckoutPoints } from '../ports/checkout-points.port'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { lineKey, type LineOption } from '../../../../domains/modifier.domain'
+import { pointsEarned, type PointsRule } from '../../../../domains/member-points'
 import type { PriceQuoteEntity, QuoteRequestLine } from '../../../../domains/price-quote.domain'
 import { SaleEntity, type SaleMember } from '../../../../domains/sale.domain'
 import { assertPackHasNoOptions, packUnitPriceSatang } from '../../../../domains/product-pack'
@@ -51,6 +53,7 @@ export class SaleCheckout implements ISaleCheckout {
     @inject(TOKENS.ShiftLedger) private readonly shiftLedger: IShiftLedger,
     @inject(lineOptionsResolverToken) private readonly lineOptions: ILineOptionsResolver,
     @inject(checkoutMembersToken) private readonly members: ICheckoutMembers,
+    @inject(checkoutPointsToken) private readonly points: ICheckoutPoints,
     @inject(quoteClaimsToken) private readonly quotes: IQuoteClaims,
   ) {}
 
@@ -81,6 +84,9 @@ export class SaleCheckout implements ISaleCheckout {
       claimed = await this.claimQrPayments(payments, branch.id, null)
     }
 
+    // Read inside the caller's unit of work, so the sale is priced with the settings in force when it is recorded.
+    const shop = await this.settings.get()
+
     // Member lock precedes product locks, and the caller has already locked an order if present.
     // A quote carries its member: they were checked when the price was pinned, and the money may already
     // be paid, so a member who was switched off since does not stop the sale.
@@ -94,6 +100,17 @@ export class SaleCheckout implements ISaleCheckout {
       selectedMember?.assertActive()
       member = selectedMember ? { id: selectedMember.id, code: selectedMember.code, name: selectedMember.name } : null
     }
+
+    // Points are read under the member row, so the balance cannot move between the check and the ledger.
+    // A quote names its member without locking them, so take the lock here when points are in play; the
+    // lock checks nothing, so a member who was switched off since the price was pinned still pays.
+    if (member && quote && (quote.pointsRedeemed > 0 || shop.pointsEnabled))
+      await this.members.findByIdForUpdate(member.id)
+    // A quote that a QR reserved already took its points when it was reserved; only an open one takes them here.
+    const redeemPoints = quote ? quote.pointsRedeemed : 0
+    const balanceBefore = member ? await this.points.balanceOf(member.id) : 0
+    if (member && quote && quote.status === 'open' && redeemPoints > 0 && balanceBefore < redeemPoints)
+      throw new DomainConflictError('แต้มคงเหลือไม่พอ', 'POINTS_NOT_ENOUGH')
 
     // Lines are the product with its options: the same choice repeated is merged, a Map keeps the order
     // they were added, and the first quoted price of a line wins.
@@ -143,9 +160,6 @@ export class SaleCheckout implements ISaleCheckout {
           wanted.set(key, { productId: line.productId, options, quantity: line.quantity, quotedUnitPriceSatang: line.unitPriceSatang, packId: line.packId, pinnedPack: undefined })
       }
     }
-
-    // Read inside the caller's unit of work, so the sale is priced with the settings in force when it is recorded.
-    const shop = await this.settings.get()
 
     // Stock is the product's, whichever options the lines have, so it is checked for the total.
     const quantities = new Map<number, number>()
@@ -227,8 +241,56 @@ export class SaleCheckout implements ISaleCheckout {
     if (quote && priced.totalSatang !== quote.totalSatang)
       throw new DomainConflictError('ยอดไม่ตรงกับราคาที่ตรึงไว้ กรุณาขอราคาใหม่', 'QUOTE_MISMATCH')
 
+    // The quote pinned the rule it was priced under, and that rule wins over one the shop changed since.
+    const pointsRule: PointsRule = quote?.pointsRule ?? {
+      earnSatang: shop.pointsEarnSatang,
+      redeemSatang: shop.pointsRedeemSatang,
+      minRedeem: shop.pointsMinRedeem,
+    }
+    // Points are earned on what was paid, and only while the shop still uses them.
+    const earned = member !== null && shop.pointsEnabled ? pointsEarned(priced.totalSatang, pointsRule) : 0
+    // A quote reserved by a QR already took its points at reservation, so the balance has moved already.
+    const takingPoints = quote !== null && quote.status === 'open' && redeemPoints > 0
+    const pointsDiscount = quote ? quote.pointsDiscountSatang : 0
+
     // Taken only after every rule has passed; it still rolls back with the sale if a later step fails.
-    const sale = await this.sales.create(priced, await this.sales.nextReceiptNo(branch))
+    const sale = await this.sales.create(
+      {
+        ...priced,
+        pointsEarned: earned,
+        pointsRedeemed: redeemPoints,
+        pointsDiscountSatang: pointsDiscount,
+        // The rule is only worth keeping when it moved something.
+        pointsRule: earned > 0 || redeemPoints > 0 ? pointsRule : null,
+        // The member row is locked above, so what is left is arithmetic rather than another read.
+        pointsBalanceAfter: member
+          ? balanceBefore - (takingPoints ? redeemPoints : 0) + earned
+          : null,
+      },
+      await this.sales.nextReceiptNo(branch),
+    )
+
+    // The ledger moves inside the sale's unit of work, so a sale that fails leaves no points behind.
+    if (member && takingPoints)
+      await this.points.record({
+        memberId: member.id,
+        kind: 'redeem',
+        points: -redeemPoints,
+        saleId: sale.id,
+        quoteId: quote!.id,
+        reason: null,
+        actorId: cashier.id,
+      })
+    if (member && earned > 0)
+      await this.points.record({
+        memberId: member.id,
+        kind: 'earn',
+        points: earned,
+        saleId: sale.id,
+        quoteId: null,
+        reason: null,
+        actorId: cashier.id,
+      })
 
     for (const { id } of claimed ?? []) await this.qrPayments.consume(id, sale.id)
     if (quote) await this.quotes.consume(quote, sale.id)

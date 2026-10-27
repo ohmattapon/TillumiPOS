@@ -1,5 +1,5 @@
 import { mockAuditLog as auditMock, mockUnitOfWork as auditUnitOfWork } from '../../../../__tests__/mocks'
-import { mockMemberRepository, mockQuoteClaims } from '../../../../__tests__/mocks'
+import { mockCheckoutPoints, mockMemberRepository, mockQuoteClaims } from '../../../../__tests__/mocks'
 import { beforeEach, describe, expect, mock, test } from 'bun:test'
 import { ZodError } from 'zod'
 import { makeBranch, makeProduct, makeSale, makeStockMovement } from '../../../../__tests__/factories'
@@ -17,6 +17,7 @@ import {
 } from '../../../../__tests__/mocks'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
+import { MemberEntity } from '../../../../domains/member.domain'
 import { PriceQuoteEntity } from '../../../../domains/price-quote.domain'
 import type { IClock } from '../../../shared/ports/clock.port'
 import { DEFAULT_SHOP_SETTINGS, ShopSettingsEntity } from '../../../../domains/shop-settings.domain'
@@ -85,7 +86,7 @@ describe('CompleteSaleUseCase', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork, receiptStore())
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockCheckoutPoints(), mockQuoteClaims()), unitOfWork, receiptStore())
   })
 
   const sell = (overrides: Record<string, unknown> = {}) =>
@@ -355,7 +356,7 @@ describe('QR payments in a sale', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork, receiptStore())
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockCheckoutPoints(), mockQuoteClaims()), unitOfWork, receiptStore())
   })
 
   test('a promptpay payment backed by a QR is checked for this branch and amount, then used by the sale', async () => {
@@ -645,7 +646,7 @@ describe('CompleteSaleUseCase with an idempotency key', () => {
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
     useCase = new CompleteSaleUseCase(
-      new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims()),
+      new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockCheckoutPoints(), mockQuoteClaims()),
       unitOfWork,
       receiptStore(),
     )
@@ -709,7 +710,7 @@ describe('SaleCheckout with options', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    checkout = new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims())
+    checkout = new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockCheckoutPoints(), mockQuoteClaims())
   })
 
   test('a one-step line with option ids is resolved and sold at product plus options', async () => {
@@ -803,6 +804,8 @@ describe('SaleCheckout with a pinned pack', () => {
   const sodaWith = (packs: { id: number; barcode: string; size: number; priceSatang: number | null; isActive: boolean }[]) =>
     makeProduct({ id: 3, name: 'โซดา', sku: 'SODA', priceSatang: 2000, costSatang: 1200, stockQty: 30, packs })
   let quotes: ReturnType<typeof mockQuoteClaims>
+  let points: ReturnType<typeof mockCheckoutPoints>
+  let members: ReturnType<typeof mockMemberRepository>
   let checkout: SaleCheckout
   const branch = { id: 1, code: 'MAIN' }
 
@@ -812,8 +815,10 @@ describe('SaleCheckout with a pinned pack', () => {
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
     quotes = mockQuoteClaims()
+    points = mockCheckoutPoints()
+    members = mockMemberRepository()
     quotes.lockForCheckout.mockResolvedValue(packQuote())
-    checkout = new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), quotes)
+    checkout = new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, members, points, quotes)
   })
 
   test('a pinned pack sells at its pinned price after the pack was switched off', async () => {
@@ -837,6 +842,76 @@ describe('SaleCheckout with a pinned pack', () => {
     })
 
     expect(sale.items[0]).toMatchObject({ packId: null, packSize: 6, unitPriceSatang: 10000, quantity: 2 })
+  })
+
+  const regular = () =>
+    new MemberEntity({ id: 8, name: 'ลูกค้าประจำ', phone: '0812345678', isActive: true, createdAt: now, updatedAt: now })
+
+  /** Two sodas at 20 baht each, pinned with the points and the rule the cart was priced under. */
+  const pointsQuote = (
+    overrides: Partial<{
+      pointsRedeemed: number
+      pointsDiscountSatang: number
+      pointsRule: { earnSatang: number; redeemSatang: number; minRedeem: number } | null
+    }> = {},
+  ) =>
+    new PriceQuoteEntity({
+      ...PriceQuoteEntity.price(
+        {
+          branchId: 1, memberId: 8, member: { id: 8, code: 'M8', name: 'ลูกค้าประจำ' }, orderId: null,
+          lines: [{ productId: 3, productName: 'โซดา', sku: 'SODA', unitPriceSatang: 10000, quantity: 2, options: [], packId: null, packSize: 1 }],
+          promotion: null, vatMode: 'inclusive', vatRateBp: 700, createdById: 7,
+        },
+        now,
+      ),
+      id: 9, status: 'open', qrReference: null, saleId: null, createdAt: now,
+      ...overrides,
+    })
+
+  test('a sale with a member earns one point for every 25 baht paid', async () => {
+    settings.get.mockResolvedValue(new ShopSettingsEntity({ ...DEFAULT_SHOP_SETTINGS, pointsEnabled: true }))
+    members.findByIdForUpdate.mockResolvedValue(regular())
+    products.findManyForUpdate.mockResolvedValue([sodaWith([])])
+
+    const sale = await checkout.checkout({
+      lines: [{ productId: 3, quantity: 2 }], memberId: 8, discountSatang: 0, payments: cash(4000), cashier, branch,
+    })
+
+    // 40 baht paid at 25 baht a point is one point, and the member held none.
+    expect(points.record).toHaveBeenCalledWith(
+      expect.objectContaining({ memberId: 8, kind: 'earn', points: 1, saleId: 15 }),
+    )
+    expect(sale.toSnapshot()).toMatchObject({ pointsEarned: 1, pointsRedeemed: 0, pointsBalanceAfter: 1 })
+  })
+
+  test('paying an open quote after the points were spent is POINTS_NOT_ENOUGH', async () => {
+    settings.get.mockResolvedValue(new ShopSettingsEntity({ ...DEFAULT_SHOP_SETTINGS, pointsEnabled: true }))
+    quotes.lockForCheckout.mockResolvedValue(pointsQuote({ pointsRedeemed: 20, pointsDiscountSatang: 2000 }))
+    points.balanceOf.mockResolvedValue(5)
+
+    await expect(
+      checkout.checkout({
+        lines: [{ productId: 3, quantity: 2 }], quoteId: 9, discountSatang: 0, payments: cash(1000), cashier, branch,
+      }),
+    ).rejects.toMatchObject({ code: 'POINTS_NOT_ENOUGH' })
+    expect(sales.create).not.toHaveBeenCalled()
+  })
+
+  test('the rule a quote pinned wins over the shop rule that changed since', async () => {
+    settings.get.mockResolvedValue(
+      new ShopSettingsEntity({ ...DEFAULT_SHOP_SETTINGS, pointsEnabled: true, pointsEarnSatang: 5000 }),
+    )
+    quotes.lockForCheckout.mockResolvedValue(
+      pointsQuote({ pointsRule: { earnSatang: 1000, redeemSatang: 100, minRedeem: 10 } }),
+    )
+    products.findManyForUpdate.mockResolvedValue([sodaWith([])])
+
+    const sale = await checkout.checkout({
+      lines: [{ productId: 3, quantity: 2 }], quoteId: 9, discountSatang: 0, payments: cash(20000), cashier, branch,
+    })
+
+    // 200 baht at the quote's 10 baht a point is 20 points, not the 4 the shop's new rule would give.
+    expect(sale.toSnapshot()).toMatchObject({ pointsEarned: 20 })
   })
 })
 
