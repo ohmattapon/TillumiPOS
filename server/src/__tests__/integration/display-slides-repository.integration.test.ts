@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { container } from 'tsyringe'
-import { resetDatabase } from '../../../../../test/harness'
-import { SlideEntity } from '../../../../domains/slide.domain'
-import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
-import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
-import { type ISlideRepository, slideRepositoryToken } from '../../applications/ports/slide.repository'
+import { resetDatabase } from '../../../test/harness'
+import { SlideEntity } from '../../domains/slide.domain'
+import { DomainConflictError } from '../../domains/errors/domain-conflict.error'
+import { DomainNotFoundError } from '../../domains/errors/domain-not-found.error'
+import { type ISlideRepository, slideRepositoryToken } from '../../modules/display-slides/applications/ports/slide.repository'
 
 const slide = (overrides: Partial<{ imageKey: string; sortOrder: number; isActive: boolean }> = {}) =>
   new SlideEntity({
