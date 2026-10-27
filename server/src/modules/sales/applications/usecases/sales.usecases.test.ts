@@ -35,7 +35,7 @@ const cashier = { id: 7, displayName: 'สมชาย' }
 const cash = (amountSatang: number) => [{ method: 'cash' as const, amountSatang }]
 
 /** An in-memory receipt store, so a repeated key in one test replays what that test already recorded. */
-const idempotencyStore = () => {
+const receiptStore = () => {
   const prior = new Map<string, { requestHash: string; result: unknown }>()
 
   return new CommandIdempotency({
@@ -85,7 +85,7 @@ describe('CompleteSaleUseCase', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork, idempotencyStore())
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork, receiptStore())
   })
 
   const sell = (overrides: Record<string, unknown> = {}) =>
@@ -355,7 +355,7 @@ describe('QR payments in a sale', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork, idempotencyStore())
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork, receiptStore())
   })
 
   test('a promptpay payment backed by a QR is checked for this branch and amount, then used by the sale', async () => {
@@ -647,7 +647,7 @@ describe('CompleteSaleUseCase with an idempotency key', () => {
     useCase = new CompleteSaleUseCase(
       new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims()),
       unitOfWork,
-      idempotencyStore(),
+      receiptStore(),
     )
   })
 
@@ -679,17 +679,6 @@ describe('CompleteSaleUseCase with an idempotency key', () => {
 })
 
 describe('CompleteSaleV2UseCase', () => {
-  const receiptStore = () => {
-    const prior = new Map<string, { requestHash: string; result: unknown }>()
-    return new CommandIdempotency({
-      lock: mock(async () => {}),
-      find: mock(async (scope) => prior.get(scope.key) ?? null),
-      create: mock<ICommandReceipts['create']>(async (scope, requestHash, result) => {
-        prior.set(scope.key, { requestHash, result })
-      }),
-    })
-  }
-
   test('passes the pack of each line to the checkout', async () => {
     const checkout = mockSaleCheckout()
     checkout.checkout.mockResolvedValue(makeSale())
