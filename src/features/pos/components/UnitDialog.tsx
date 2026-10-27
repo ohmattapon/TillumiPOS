@@ -1,7 +1,6 @@
 import type { Product } from '@pos/api/types'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useFormat } from '@/features/settings'
 import { cn } from '@/lib/utils'
 import { unitChoices } from '../lib/units'
@@ -18,7 +17,6 @@ interface Props {
  */
 export function UnitDialog({ product, onPick, onCancel }: Props) {
   const { t } = useTranslation('pos')
-  const { t: tc } = useTranslation()
   const { money } = useFormat()
   const choices = unitChoices(product)
 
@@ -59,12 +57,6 @@ export function UnitDialog({ product, onPick, onCancel }: Props) {
             )
           })}
         </div>
-
-        <DialogFooter sticky>
-          <Button type="button" variant="outline" className="h-11" onClick={onCancel}>
-            {tc('cancel')}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
