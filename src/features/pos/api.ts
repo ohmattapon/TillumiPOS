@@ -39,7 +39,12 @@ export function useCheckout() {
           )
           return sale as unknown as Sale
         }
-        return unwrap(api.sales.post({ items, discountSatang: discount, payments: [payment], memberId, quoteId: pinned }))
+        return unwrap(
+          api.sales.post(
+            { items, discountSatang: discount, payments: [payment], memberId, quoteId: pinned },
+            ...(idempotencyKey === undefined ? [] : [withIdempotencyKey(idempotencyKey)]),
+          ),
+        )
       }),
     // Stock changed on success, and a failure usually means our cached stock or prices are stale.
     onSettled: () =>

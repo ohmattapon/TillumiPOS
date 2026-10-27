@@ -14,6 +14,22 @@ const cash = (amountSatang: number) => [{ method: 'cash' as const, amountSatang 
 const stockOf = async (id: number) => ok(await owner.api.catalog.products({ id }).get()).stockQty
 const allSales = async () => ok(await owner.api.sales.get({ query: {} })).items
 
+describe('a repeated v1 checkout', () => {
+  test('the same Idempotency-Key on v1 makes one sale', async () => {
+    const tea = await seedProduct(owner, { name: 'Tea', priceSatang: 2500, stock: 10 })
+    const key = crypto.randomUUID()
+    const body = { items: [{ productId: tea.id, quantity: 2 }], payments: cash(5000) }
+
+    const first = ok(await cashier.api.sales.post(body, { headers: { 'idempotency-key': key } }))
+    const second = ok(await cashier.api.sales.post(body, { headers: { 'idempotency-key': key } }))
+
+    expect(second.id).toBe(first.id)
+    expect(second.receiptNo).toBe(first.receiptNo)
+    expect(await stockOf(tea.id)).toBe(8)
+    expect(await allSales()).toHaveLength(1)
+  })
+})
+
 describe('completing a sale', () => {
   test('computes totals, VAT and change, deducts stock and records the movements', async () => {
     const tea = await seedProduct(owner, { name: 'Tea', priceSatang: 2500, stock: 10 })
