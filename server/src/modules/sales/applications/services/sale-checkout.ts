@@ -1,6 +1,6 @@
 import { inject, injectable } from 'tsyringe'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
-import { memberRepositoryToken, type IMemberRepository } from '../../../members/applications/ports/member.repository'
+import { checkoutMembersToken, type ICheckoutMembers } from '../ports/checkout-members.port'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { lineKey, type LineOption } from '../../../../domains/modifier.domain'
@@ -50,7 +50,7 @@ export class SaleCheckout implements ISaleCheckout {
     @inject(TOKENS.CheckoutPolicy) private readonly checkoutPolicy: ICheckoutPolicy,
     @inject(TOKENS.ShiftLedger) private readonly shiftLedger: IShiftLedger,
     @inject(lineOptionsResolverToken) private readonly lineOptions: ILineOptionsResolver,
-    @inject(memberRepositoryToken) private readonly members: IMemberRepository,
+    @inject(checkoutMembersToken) private readonly members: ICheckoutMembers,
     @inject(quoteClaimsToken) private readonly quotes: IQuoteClaims,
   ) {}
 
