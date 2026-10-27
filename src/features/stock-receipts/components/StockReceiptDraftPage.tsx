@@ -125,7 +125,21 @@ function Draft({ actorId }: { actorId: number }) {
           <DataTable rows={rows} rowKey={(row) => row.productId} empty={t('noItems')} columns={[
             { id: 'name', header: t('product'), priority: 'primary', cell: (row) => <div><span>{row.product?.name ?? t('missing', { id: row.productId })}</span>{invalidIds.includes(row.productId) && <p className="text-destructive">{t('invalid')}</p>}{row.error && <p role="alert" className="text-destructive">{row.error.message}<Button variant="outline" className="h-11" onClick={() => void details[rows.indexOf(row)]?.refetch()}>{t('retry')}</Button></p>}</div> },
             { id: 'sku', header: t('sku'), priority: 'secondary', cell: (row) => row.product?.sku },
-            { id: 'qty', header: t('qty'), priority: 'secondary', cell: (row) => <ReceiptQuantityInput quantity={row.quantity} label={t('quantity', { name: row.product?.name ?? t('missing', { id: row.productId }) })} disabled={!editable} onQuantity={(quantity) => change((journal) => journal.quantity(row.productId, quantity))} onInvalid={(invalid) => setUnfinishedQuantities((ids) => invalid ? [...new Set([...ids, row.productId])] : ids.filter((id) => id !== row.productId))} /> },
+            { id: 'unit', header: t('unit'), priority: 'secondary', cell: (row) => {
+              const packs = row.product?.packs ?? []
+              if (packs.length === 0) return t('unitPiece')
+              return <select className="h-11 w-44 rounded-md border bg-background px-3 text-sm" aria-label={t('unitFor', { name: row.product?.name ?? t('missing', { id: row.productId }) })} value={row.packId ?? ''} disabled={!editable} onChange={(event) => { const packId = event.target.value === '' ? undefined : Number(event.target.value); change((journal) => journal.unit(row.productId, packId)) }}>
+                <option value="">{t('unitPiece')}</option>
+                {packs.map((pack) => <option key={pack.id} value={pack.id}>{t('unitPack', { barcode: pack.barcode, size: pack.size })}</option>)}
+              </select>
+            } },
+            { id: 'qty', header: t('qty'), priority: 'secondary', cell: (row) => {
+              const pack = row.product?.packs.find((candidate) => candidate.id === row.packId)
+              return <div className="space-y-1">
+                <ReceiptQuantityInput quantity={row.quantity} label={pack ? t('quantityPack', { name: row.product?.name ?? t('missing', { id: row.productId }), size: pack.size }) : t('quantity', { name: row.product?.name ?? t('missing', { id: row.productId }) })} disabled={!editable} onQuantity={(quantity) => change((journal) => journal.quantity(row.productId, quantity))} onInvalid={(invalid) => setUnfinishedQuantities((ids) => invalid ? [...new Set([...ids, row.productId])] : ids.filter((id) => id !== row.productId))} />
+                {pack && <p className="text-xs text-muted-foreground">{t('pieces', { count: row.quantity * pack.size })}</p>}
+              </div>
+            } },
           ]} actions={(row) => <Button variant="ghost" className="h-11" disabled={!editable} aria-label={t('remove', { name: row.product?.name ?? t('missing', { id: row.productId }) })} onClick={() => change((journal) => journal.remove(row.productId))}>{t('removeAction')}</Button>} />
           <div className="space-y-2 border-t p-4"><Label htmlFor="receipt-note">{t('note')}</Label><textarea id="receipt-note" className="min-h-22 w-full rounded-md border bg-background p-3 text-sm" maxLength={500} value={draft.note} disabled={!editable} onChange={(event) => { const note = event.target.value; change((journal) => journal.edit({ note })) }} /></div>
         </Panel>

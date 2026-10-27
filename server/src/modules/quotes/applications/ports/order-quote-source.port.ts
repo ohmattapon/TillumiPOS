@@ -11,6 +11,9 @@ export interface QuotedOrder {
     unitPriceSatang: number
     quantity: number
     options: LineOption[]
+    /** Orders carry no packs: always pieces. */
+    packId: null
+    packSize: 1
   }[]
 }
 

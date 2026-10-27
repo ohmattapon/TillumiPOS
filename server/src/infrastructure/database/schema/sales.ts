@@ -1,8 +1,9 @@
-import { date, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core'
+import { check, date, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 import { createdAt, id } from '../columns'
 import { branches } from './branches'
 import type { StoredLineOption } from './modifiers'
-import { products } from './products'
+import { productPacks, products } from './products'
 import { vatMode } from './shop-settings'
 import { users } from './users'
 import { shifts } from './shifts'
@@ -90,8 +91,16 @@ export const saleItems = pgTable(
     lineTotalSatang: integer().notNull(),
     // The options chosen, as they were when sold. Their price and cost are already in the unit price and cost.
     options: jsonb().$type<StoredLineOption[]>().notNull().default([]),
+    // The pack sold on this line, if any; no cascade, so a sold pack cannot be deleted.
+    packId: integer().references(() => productPacks.id),
+    // Units of the product in one of this line's quantity; 1 for a single unit.
+    packSize: integer().notNull().default(1),
   },
-  (table) => [index().on(table.saleId), index().on(table.productId)],
+  (table) => [
+    index().on(table.saleId),
+    index().on(table.productId),
+    check('sale_items_pack_size_positive', sql`${table.packSize} >= 1`),
+  ],
 )
 
 export const payments = pgTable(

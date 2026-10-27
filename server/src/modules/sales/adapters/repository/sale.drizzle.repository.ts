@@ -44,6 +44,8 @@ const itemColumns = {
   unitCostSatang: saleItems.unitCostSatang,
   quantity: saleItems.quantity,
   lineTotalSatang: saleItems.lineTotalSatang,
+  packId: saleItems.packId,
+  packSize: saleItems.packSize,
   options: saleItems.options,
 }
 

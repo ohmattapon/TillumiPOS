@@ -88,6 +88,24 @@ describe('durable receipt draft', () => {
 
     expect(draft.value.items).toEqual([{ productId: 6, quantity: 1 }])
   })
+  it('receives a line in the pack it arrived in', () => {
+    const env = setup(), draft = env.open()
+    draft.add(5)
+    draft.unit(5, 9)
+    draft.quantity(5, 2)
+
+    expect(draft.begin().input.items).toEqual([{ productId: 5, quantity: 2, packId: 9 }])
+  })
+  it('switches a line back to single pieces without leaving a pack behind', () => {
+    const env = setup(), draft = env.open()
+    draft.add(5)
+    draft.unit(5, 9)
+    draft.unit(5, undefined)
+
+    const [item] = draft.value.items
+    expect(item).toEqual({ productId: 5, quantity: 1 })
+    expect(Object.keys(item!)).not.toContain('packId')
+  })
   it('sends the products in id order, whatever order they were added in', () => {
     const env = setup(), draft = env.open()
     draft.add(9); draft.add(2)

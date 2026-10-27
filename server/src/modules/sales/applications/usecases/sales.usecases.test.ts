@@ -17,6 +17,7 @@ import {
 } from '../../../../__tests__/mocks'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
+import { PriceQuoteEntity } from '../../../../domains/price-quote.domain'
 import type { IClock } from '../../../shared/ports/clock.port'
 import { DEFAULT_SHOP_SETTINGS, ShopSettingsEntity } from '../../../../domains/shop-settings.domain'
 import { SaleCheckout } from '../services/sale-checkout'
@@ -172,6 +173,56 @@ describe('CompleteSaleUseCase', () => {
       { branchId: 1, productId: 1, type: 'sale', quantity: -2, reference: 'MAIN-20261013-00042', userId: 7 },
       { branchId: 1, productId: 2, type: 'sale', quantity: -1, reference: 'MAIN-20261013-00042', userId: 7 },
     ])
+  })
+
+  test('sells a pack at the pack price and deducts its pieces from stock', async () => {
+    const soda = makeProduct({
+      id: 3,
+      name: 'โซดา',
+      sku: 'SODA',
+      priceSatang: 2000,
+      costSatang: 1200,
+      stockQty: 30,
+      packs: [{ id: 5, barcode: 'SODA6', size: 6, priceSatang: 10000, isActive: true }],
+    })
+    products.findManyForUpdate.mockResolvedValue([soda])
+
+    const sale = await sell({ items: [{ productId: 3, quantity: 2, packId: 5 }], discountSatang: 0, payments: cash(25000) })
+
+    expect(sale.items).toEqual([
+      {
+        productId: 3,
+        productName: 'โซดา',
+        sku: 'SODA',
+        unitPriceSatang: 10000,
+        unitCostSatang: 7200,
+        quantity: 2,
+        lineTotalSatang: 20000,
+        options: [],
+        packId: 5,
+        packSize: 6,
+      },
+    ])
+    expect(ledger.record.mock.calls.map(([movement]) => movement)).toEqual([
+      { branchId: 1, productId: 3, type: 'sale', quantity: -12, reference: 'MAIN-20261013-00042', userId: 7 },
+    ])
+  })
+
+  test('a pack and options on one line are refused, storing nothing', async () => {
+    const soda = makeProduct({
+      id: 3,
+      name: 'โซดา',
+      sku: 'SODA',
+      priceSatang: 2000,
+      stockQty: 30,
+      packs: [{ id: 5, barcode: 'SODA6', size: 6, priceSatang: null, isActive: true }],
+    })
+    products.findManyForUpdate.mockResolvedValue([soda])
+
+    await expect(
+      sell({ items: [{ productId: 3, quantity: 1, packId: 5, options: [11] }], discountSatang: 0, payments: cash(25000) }),
+    ).rejects.toMatchObject({ code: 'PACK_WITH_OPTIONS' })
+    expect(sales.create).not.toHaveBeenCalled()
   })
 
   test('merges repeated lines for one product, keeping first-seen order', async () => {
@@ -373,8 +424,8 @@ describe('VoidSaleUseCase', () => {
     makeSale({
       id: 15,
       items: [
-        { productId: 5, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 1000, unitCostSatang: 600, quantity: 1, lineTotalSatang: 1000, options: [] },
-        { productId: 2, productName: 'ชา', sku: 'TEA', unitPriceSatang: 1000, unitCostSatang: 600, quantity: 2, lineTotalSatang: 2000, options: [] },
+        { productId: 5, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 1000, unitCostSatang: 600, quantity: 1, lineTotalSatang: 1000, packId: null, packSize: 1, options: [] },
+        { productId: 2, productName: 'ชา', sku: 'TEA', unitPriceSatang: 1000, unitCostSatang: 600, quantity: 2, lineTotalSatang: 2000, packId: null, packSize: 1, options: [] },
       ],
     })
 
@@ -398,6 +449,23 @@ describe('VoidSaleUseCase', () => {
     expect(ledger.record.mock.calls.map(([movement]) => movement)).toEqual([
       { branchId: 1, productId: 2, type: 'void', quantity: 2, reference: 'MAIN-20261013-00001', note: 'คิดเงินผิด', userId: 9 },
       { branchId: 1, productId: 5, type: 'void', quantity: 1, reference: 'MAIN-20261013-00001', note: 'คิดเงินผิด', userId: 9 },
+    ])
+  })
+
+  test('a pack line returns the pieces it held to stock', async () => {
+    sales.findByIdForUpdate.mockResolvedValue(
+      makeSale({
+        id: 15,
+        items: [
+          { productId: 5, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 10000, unitCostSatang: 3600, quantity: 2, lineTotalSatang: 20000, options: [], packId: 5, packSize: 6 },
+        ],
+      }),
+    )
+
+    await useCase.execute(15, { reason: 'คิดเงินผิด' }, { ...{ id: 9, role: 'owner' }, displayName: 'ผู้ทดสอบ' }, 1)
+
+    expect(ledger.record.mock.calls.map(([movement]) => movement)).toEqual([
+      { branchId: 1, productId: 5, type: 'void', quantity: 12, reference: 'MAIN-20261013-00001', note: 'คิดเงินผิด', userId: 9 },
     ])
   })
 
@@ -625,6 +693,61 @@ describe('SaleCheckout with options', () => {
       [1, 2],
       [0, 1],
     ])
+  })
+})
+
+describe('SaleCheckout with a pinned pack', () => {
+  const now = new Date('2026-10-15T03:00:00Z')
+  const sodaPack = { id: 5, barcode: 'SODA6', size: 6, priceSatang: 10000, isActive: true }
+  const packQuote = () =>
+    new PriceQuoteEntity({
+      ...PriceQuoteEntity.price(
+        {
+          branchId: 1, memberId: null, member: null, orderId: null,
+          lines: [{ productId: 3, productName: 'โซดา', sku: 'SODA', unitPriceSatang: 10000, quantity: 2, options: [], packId: 5, packSize: 6 }],
+          promotion: null, vatMode: 'inclusive', vatRateBp: 700, createdById: 7,
+        },
+        now,
+      ),
+      id: 9, status: 'open', qrReference: null, saleId: null, createdAt: now,
+    })
+  const sodaWith = (packs: { id: number; barcode: string; size: number; priceSatang: number | null; isActive: boolean }[]) =>
+    makeProduct({ id: 3, name: 'โซดา', sku: 'SODA', priceSatang: 2000, costSatang: 1200, stockQty: 30, packs })
+  let quotes: ReturnType<typeof mockQuoteClaims>
+  let checkout: SaleCheckout
+  const branch = { id: 1, code: 'MAIN' }
+
+  beforeEach(() => {
+    sales.nextReceiptNo.mockResolvedValue('MAIN-20261013-00001')
+    sales.create.mockImplementation(async (sale, receiptNo) =>
+      makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
+    )
+    quotes = mockQuoteClaims()
+    quotes.lockForCheckout.mockResolvedValue(packQuote())
+    checkout = new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), quotes)
+  })
+
+  test('a pinned pack sells at its pinned price after the pack was switched off', async () => {
+    products.findManyForUpdate.mockResolvedValue([sodaWith([{ ...sodaPack, isActive: false }])])
+
+    const sale = await checkout.checkout({
+      lines: [{ productId: 3, quantity: 2, packId: 5 }],
+      quoteId: 9, discountSatang: 0, payments: cash(20000), cashier, branch,
+    })
+
+    expect(sale.items[0]).toMatchObject({ packId: 5, packSize: 6, unitPriceSatang: 10000, quantity: 2, options: [] })
+    expect(ledger.record).toHaveBeenCalledWith(expect.objectContaining({ type: 'sale', quantity: -12 }))
+  })
+
+  test('a pinned pack sells even when the pack is gone', async () => {
+    products.findManyForUpdate.mockResolvedValue([sodaWith([])])
+
+    const sale = await checkout.checkout({
+      lines: [{ productId: 3, quantity: 2, packId: 5 }],
+      quoteId: 9, discountSatang: 0, payments: cash(20000), cashier, branch,
+    })
+
+    expect(sale.items[0]).toMatchObject({ packId: null, packSize: 6, unitPriceSatang: 10000, quantity: 2 })
   })
 })
 

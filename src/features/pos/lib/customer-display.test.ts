@@ -12,6 +12,8 @@ const line = (overrides: Partial<PricedLine> = {}): PricedLine => ({
   lineTotalSatang: 7000,
   options: [{ name: 'หวานน้อย', priceSatang: 0 }],
   optionIds: [3],
+  packId: null,
+  packSize: 1,
   exceedsStock: false,
   stockQty: 50,
   unavailable: false,
@@ -38,6 +40,7 @@ const input = (overrides: Partial<CustomerDisplayInput> = {}): CustomerDisplayIn
   isPaying: false,
   qr: null,
   paidSale: null,
+  packLabel: (size) => `Pack of ${size}`,
   ...overrides,
 })
 
@@ -64,6 +67,15 @@ describe('toDisplayState', () => {
     const state = toDisplayState(input())
     if (state.kind !== 'selling') throw new Error('expected a sale')
     expect(Object.keys(state.lines[0]!).sort()).toEqual(['lineTotalSatang', 'name', 'options', 'quantity'])
+  })
+
+  test('a pack line is worded so it is not read as single pieces', () => {
+    const state = toDisplayState(input({ cart: cart([line({ packId: 5, packSize: 12, quantity: 1 })]) }))
+    if (state.kind !== 'selling') throw new Error('expected a sale')
+    expect(state.lines[0]!.packLabel).toBe('Pack of 12')
+    const pieces = toDisplayState(input())
+    if (pieces.kind !== 'selling') throw new Error('expected a sale')
+    expect(pieces.lines[0]!.packLabel).toBeUndefined()
   })
 
   test('with the payment dialog open it is paying, with the QR the customer can scan', () => {

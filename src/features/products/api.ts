@@ -3,6 +3,7 @@ import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query
 import { modifierKeys } from '@/features/modifiers'
 import { api, unwrap } from '@/lib/api'
 import { prepareImage } from '@/lib/prepare-image'
+import type { PackInput } from './lib/packs'
 
 export const productKeys = {
   /** Prefix of every product query: invalidate this after anything that changes products or stock. */
@@ -45,6 +46,8 @@ export interface ProductInput {
   priceSatang: number
   costSatang: number
   trackStock: boolean
+  /** The packs the product is sold in; undefined leaves the stored packs as they are. */
+  packs?: PackInput[]
 }
 
 export interface SaveProductVariables {
@@ -92,7 +95,7 @@ export function useSetProductActive() {
 }
 
 export type StockChange =
-  | { mode: 'receive'; productId: number; quantity: number; note?: string }
+  | { mode: 'receive'; productId: number; quantity: number; packId?: number; note?: string }
   | { mode: 'adjust'; productId: number; countedQty: number; note?: string }
 
 /** Receives stock or records a stock count. */
@@ -103,7 +106,7 @@ export function useChangeStock() {
     mutationFn: (change: StockChange) =>
       unwrap(
         change.mode === 'receive'
-          ? api.inventory.receive.post({ productId: change.productId, quantity: change.quantity, note: change.note })
+          ? api.inventory.receive.post({ productId: change.productId, quantity: change.quantity, packId: change.packId, note: change.note })
           : api.inventory.adjust.post({ productId: change.productId, countedQty: change.countedQty, note: change.note }),
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: productKeys.all }),

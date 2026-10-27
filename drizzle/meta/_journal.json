@@ -239,6 +239,13 @@
       "when": 1792500954221,
       "tag": "0033_shop_logo",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792841287141,
+      "tag": "0034_robust_virginia_dare",
+      "breakpoints": true
     }
   ]
 }

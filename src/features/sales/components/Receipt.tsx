@@ -42,6 +42,7 @@ export function Receipt({ sale, elementRef }: { sale: Sale; elementRef?: Ref<HTM
       {sale.items.map((item, index) => (
         <div key={`${item.productId}-${index}`}>
           <p>{item.productName}</p>
+          {item.packSize > 1 && <p className="text-xs">{t('receipt.pack', { size: item.packSize })}</p>}
           {item.options.map((option) => (
             <p key={option.optionId} className="pl-3 text-xs">
               + {option.name}

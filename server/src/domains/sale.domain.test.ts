@@ -181,6 +181,8 @@ describe('SaleEntity.complete: lines', () => {
         unitCostSatang: 600,
         quantity: 2,
         lineTotalSatang: 5000,
+        packId: null,
+        packSize: 1,
         options: [],
       },
     ])

@@ -4,6 +4,7 @@ const line = z.object({
   productId: z.number().int().positive(),
   quantity: z.number().int().min(1),
   options: z.array(z.number().int().positive()).max(40).optional(),
+  packId: z.number().int().positive().optional(),
 })
 
 export const createQuoteSchema = z

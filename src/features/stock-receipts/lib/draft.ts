@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-const itemSchema = z.object({ productId: z.number().int().positive(), quantity: z.number().int().positive().max(2147483647) })
+const itemSchema = z.object({ productId: z.number().int().positive(), quantity: z.number().int().positive().max(2147483647), packId: z.number().int().positive().optional() })
 const inputSchema = z.object({ items: z.array(itemSchema).min(1).max(100), note: z.string().max(500).optional() })
 const schema = z.object({
   key: z.uuid(), items: z.array(itemSchema).max(100), note: z.string().max(500),
@@ -49,6 +49,16 @@ export class ReceiptDraftStore {
   }
   quantity(productId: number, quantity: number) {
     this.edit({ items: this.state.items.map((item) => item.productId === productId ? { ...item, quantity } : item) })
+  }
+  /** The unit a line arrived in. Pieces carry no `packId` at all, so a stored line stays exactly as before. */
+  unit(productId: number, packId: number | undefined) {
+    this.edit({
+      items: this.state.items.map((item) => {
+        if (item.productId !== productId) return item
+        const { packId: _replaced, ...pieces } = item
+        return packId === undefined ? pieces : { ...pieces, packId }
+      }),
+    })
   }
   remove(productId: number) { this.edit({ items: this.state.items.filter((item) => item.productId !== productId) }) }
   begin() {

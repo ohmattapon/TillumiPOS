@@ -57,10 +57,13 @@ const saleItem = t.Object({
   productId: t.Integer(),
   productName: t.String(),
   sku: t.String(),
-  // One unit: the product's price plus the options chosen.
+  // One unit: the product's price plus the options chosen, or the pack's price on a pack line.
   unitPriceSatang: t.Integer(),
   quantity: t.Integer(),
   lineTotalSatang: t.Integer(),
+  // The pack sold, if the line is packs; every older line reads as pieces.
+  packId: t.Union([t.Integer(), t.Null()]),
+  packSize: t.Integer(),
   options: t.Array(lineOption),
 })
 
@@ -68,6 +71,8 @@ const itemRequest = t.Object({
   productId: t.Integer(),
   quantity: t.Integer({ minimum: 1 }),
   options: t.Optional(t.Array(t.Integer({ minimum: 1 }), { maxItems: 40 })),
+  // The pack sold; quantity then counts packs.
+  packId: t.Optional(t.Integer({ minimum: 1 })),
 })
 
 const payment = t.Object({ method, amountSatang: satang({ minimum: 1 }) })

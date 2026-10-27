@@ -43,8 +43,8 @@ describe('completing a sale', () => {
     })
     expect(sale.receiptNo).toMatch(/^MAIN-\d{8}-00001$/)
     expect(sale.items).toEqual([
-      { productId: tea.id, productName: 'Tea', sku: tea.sku, unitPriceSatang: 2500, quantity: 2, lineTotalSatang: 5000, options: [] },
-      { productId: cake.id, productName: 'Cake', sku: cake.sku, unitPriceSatang: 5700, quantity: 1, lineTotalSatang: 5700, options: [] },
+      { productId: tea.id, productName: 'Tea', sku: tea.sku, unitPriceSatang: 2500, quantity: 2, lineTotalSatang: 5000, packId: null, packSize: 1, options: [] },
+      { productId: cake.id, productName: 'Cake', sku: cake.sku, unitPriceSatang: 5700, quantity: 1, lineTotalSatang: 5700, packId: null, packSize: 1, options: [] },
     ])
     expect(sale.payments).toEqual(cash(20000))
 

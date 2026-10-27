@@ -13,6 +13,8 @@ export interface CheckoutLine {
   options?: readonly LineOption[]
   /** The ids chosen in a one-step sale; checked and priced by the checkout. */
   optionIds?: readonly number[]
+  /** The pack sold: quantity counts packs and options must be empty. Undefined sells pieces. */
+  packId?: number
 }
 
 export interface CheckoutRequest {

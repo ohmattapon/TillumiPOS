@@ -59,6 +59,7 @@ export class QuoteClaims implements IQuoteClaims {
           productId: item.productId,
           optionIds: item.options.map((option) => option.optionId),
           quantity: item.quantity,
+          packId: item.packId,
         })),
       })
       if (!unchanged)
