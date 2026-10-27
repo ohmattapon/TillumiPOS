@@ -62,6 +62,12 @@ const th = {
     pickUpTo: 'เลือกได้ไม่เกิน {{count}} อย่าง',
     add: 'เพิ่มลงตะกร้า',
   },
+  units: {
+    description: 'เลือกหน่วยที่จะขาย ขายยกเป็นลังได้โดยไม่ต้องยิงบาร์โค้ด',
+    piece: 'ชิ้นเดียว',
+    pack: 'แพ็ค {{size}}',
+    shortOfStock: 'สต็อกเหลือ {{count}} ชิ้น',
+  },
   cart: {
     productUnavailable: 'สินค้าบางรายการปิดการขายแล้ว ล้างตะกร้าแล้วเลือกสินค้าใหม่',
     promotion: 'โปรโมชัน: {{name}}',
@@ -230,6 +236,12 @@ const en = {
     pickOne: 'Pick 1',
     pickUpTo: 'Pick up to {{count}}',
     add: 'Add to cart',
+  },
+  units: {
+    description: 'Choose the unit to sell. A whole pack can be sold by tapping, without scanning its barcode.',
+    piece: 'Single piece',
+    pack: 'Pack of {{size}}',
+    shortOfStock: 'Only {{count}} pieces left',
   },
   cart: {
     productUnavailable: 'Some products are no longer for sale. Clear the cart and choose again.',
