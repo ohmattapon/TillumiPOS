@@ -504,3 +504,14 @@ Run from the root of the repo:
 - The receipt header (shop name, tax id, branch name, address, phone number) is stored on the bill at sale time in `SaleCheckout`. New bills take the address and phone from shop settings and store no branch name. A receipt must be shown from the values on the bill, and current data is used only for old bills whose values are null (see `receiptHeading` in `src/features/sales/lib`).
 - Stock changes only through the `IStockLedger` port of the `inventory` module, and every change must have a movement record with the branch
 - Before saying that work is done, `bun run typecheck` and `bun run test` must pass
+
+## Reporting finished work
+
+When you finish a task that changed code, the final report to the project owner explains the change in brief, in the language the owner writes in. For each change, write a short entry (a few sentences, not a line-by-line walkthrough) with:
+
+- **What changed:** the file or the behavior, linked where possible.
+- **Why this way:** the reason for the approach you chose, such as the rule it follows, the bug it prevents or the constraint it respects.
+- **Not chosen:** the main alternative you considered and why you did not use it. Leave this out when there was no real alternative.
+- **Risk:** anything the change could affect that you did not verify. Leave this out when there is none.
+
+Keep it to what the owner needs to review the change. Do not restate the diff, and do not explain code that you did not change.
