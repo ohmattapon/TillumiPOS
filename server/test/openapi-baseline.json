@@ -19181,19 +19181,16 @@
         ]
       }
     },
-    "/api/v1/payments/qr/scb/confirmation": {
+    "/api/v1/payments/qr/kbank/confirmation": {
       "post": {
-        "operationId": "postApiV1PaymentsQrScbConfirmation",
+        "operationId": "postApiV1PaymentsQrKbankConfirmation",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "additionalProperties": true,
                 "properties": {
-                  "billPaymentRef1": {
-                    "type": "string"
-                  },
-                  "transactionId": {
+                  "partnerTxnUid": {
                     "type": "string"
                   }
                 },
@@ -19204,10 +19201,7 @@
               "schema": {
                 "additionalProperties": true,
                 "properties": {
-                  "billPaymentRef1": {
-                    "type": "string"
-                  },
-                  "transactionId": {
+                  "partnerTxnUid": {
                     "type": "string"
                   }
                 },
@@ -19218,10 +19212,7 @@
               "schema": {
                 "additionalProperties": true,
                 "properties": {
-                  "billPaymentRef1": {
-                    "type": "string"
-                  },
-                  "transactionId": {
+                  "partnerTxnUid": {
                     "type": "string"
                   }
                 },
@@ -19237,20 +19228,16 @@
               "application/json": {
                 "schema": {
                   "properties": {
-                    "resCode": {
+                    "partnerTxnUid": {
                       "type": "string"
                     },
-                    "resDesc": {
-                      "type": "string"
-                    },
-                    "transactionId": {
+                    "statusCode": {
                       "type": "string"
                     }
                   },
                   "required": [
-                    "resCode",
-                    "resDesc",
-                    "transactionId"
+                    "statusCode",
+                    "partnerTxnUid"
                   ],
                   "type": "object"
                 }
@@ -19259,7 +19246,7 @@
             "description": "Response for status 200"
           }
         },
-        "summary": "ที่รับแจ้งการชำระจาก SCB (ไม่ต้องล็อกอิน) ใช้เป็นสัญญาณให้ตรวจกับ SCB เท่านั้น",
+        "summary": "ที่รับแจ้งการชำระจาก KBank (ไม่ต้องล็อกอิน) ใช้เป็นสัญญาณให้ตรวจกับ KBank เท่านั้น",
         "tags": [
           "Payments"
         ]
