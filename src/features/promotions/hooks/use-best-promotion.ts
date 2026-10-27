@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { useSettings } from '@/features/settings'
 import { activePromotionsQuery } from '../api'
+import { promotionRulesOfAll } from '../lib/promotion-rules'
 
 /**
  * The promotion the server will most likely give a cart of this size, worked out with the same rule the
@@ -19,7 +20,14 @@ export function useBestPromotion({ subtotalSatang, hasMember, lines }: { subtota
   }, [])
 
   return useMemo(() => {
-    const best = pickBestPromotion(promotions.data?.items ?? [], { subtotalSatang, hasMember, at: now, timeZone, lines })
+    const best = pickBestPromotion(promotionRulesOfAll(promotions.data?.items ?? []), {
+      subtotalSatang,
+      hasMember,
+      at: now,
+      timeZone,
+      lines,
+      couponCode: null,
+    })
     return best ? { id: best.promotion.id, name: best.promotion.name, discountSatang: best.discountSatang } : null
   }, [promotions.data, subtotalSatang, hasMember, now, timeZone, lines])
 }

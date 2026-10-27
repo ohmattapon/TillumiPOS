@@ -7,7 +7,7 @@ import { GetSaleUseCase } from '../../applications/usecases/get-sale.usecase'
 import { GetSalesSummaryUseCase } from '../../applications/usecases/get-sales-summary.usecase'
 import { ListSalesUseCase } from '../../applications/usecases/list-sales.usecase'
 import { VoidSaleUseCase } from '../../applications/usecases/void-sale.usecase'
-import { toSaleResponse as toResponse } from './sale.presenter'
+import { toSaleHeaderResponse, toSaleResponse as toResponse } from './sale.presenter'
 import { saleSchemas } from './schemas/sale.schema'
 
 @injectable()
@@ -23,7 +23,10 @@ export class SaleElysiaController {
   getRoutes() {
     return new Elysia({ name: 'sales', prefix: '/sales', detail: { tags: ['Sales'] } })
       .use(auth)
-      .get('/', async ({ query, branch }) => this.listSales.execute(query, (await branch()).id), {
+      .get('/', async ({ query, branch }) => {
+        const result = await this.listSales.execute(query, (await branch()).id)
+        return { items: result.items.map(toSaleHeaderResponse), total: result.total }
+      }, {
         auth: true,
         query: saleSchemas.listQuery,
         response: page(saleSchemas.saleHeader),

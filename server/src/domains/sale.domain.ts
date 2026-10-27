@@ -66,10 +66,15 @@ const copyMember = (member?: SaleMember | null): SaleMember | null =>
 export interface SalePromotion {
   id: number
   name: string
-  kind: 'fixed' | 'percent'
+  kind: 'fixed' | 'percent' | 'bundle'
   value: number
   maxDiscountSatang: number | null
   discountSatang: number
+  /** The code the cashier typed; present only when the sale was given by a coupon. */
+  couponCode?: string
+  /** Of a `bundle` sale snapshot: the group sizes it was set up with. */
+  buyQuantity?: number
+  freeQuantity?: number
 }
 
 const copyPromotion = (promotion?: SalePromotion | null): SalePromotion | null =>
@@ -81,6 +86,9 @@ const copyPromotion = (promotion?: SalePromotion | null): SalePromotion | null =
         value: promotion.value,
         maxDiscountSatang: promotion.maxDiscountSatang,
         discountSatang: promotion.discountSatang,
+        ...(promotion.couponCode !== undefined ? { couponCode: promotion.couponCode } : {}),
+        ...(promotion.buyQuantity !== undefined ? { buyQuantity: promotion.buyQuantity } : {}),
+        ...(promotion.freeQuantity !== undefined ? { freeQuantity: promotion.freeQuantity } : {}),
       }
     : null
 

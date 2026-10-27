@@ -34,6 +34,12 @@ export class CreatePromotionUseCase {
         audience: dto.audience ?? 'everyone',
         isActive: dto.isActive ?? true,
         scope: dto.scope ?? null,
+        // The coupon, bundle and limit fields arrive with Task 2's API change; the input is refused before that.
+        couponCode: null,
+        buyQuantity: null,
+        freeQuantity: null,
+        maxUses: null,
+        maxUsesPerMember: null,
         imageKey: null,
         createdAt: now,
         updatedAt: now,

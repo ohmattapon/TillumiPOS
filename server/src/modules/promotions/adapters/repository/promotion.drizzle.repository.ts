@@ -18,13 +18,22 @@ const nameTaken = () => new DomainConflictError('ชื่อโปรโมช�
 const calendarDay = (value: string | Date | null): string | null =>
   value instanceof Date ? value.toISOString().slice(0, 10) : value
 
-/** Rebuilds a promotion from a row, with its dates as the YYYY-MM-DD strings the rules are written in. */
+/**
+ * Rebuilds a promotion from a row, with its dates as the YYYY-MM-DD strings the rules are written in. The
+ * coupon, bundle and limit columns do not exist until Task 2's migration, so they are read as null until
+ * then; once the columns are added there, this spread fills them from the row.
+ */
 const entityOf = ({ productIds, categoryIds, ...row }: typeof promotions.$inferSelect) =>
   new PromotionEntity({
     ...row,
     startsOn: calendarDay(row.startsOn),
     endsOn: calendarDay(row.endsOn),
     scope: productIds === null && categoryIds === null ? null : { productIds: productIds ?? [], categoryIds: categoryIds ?? [] },
+    couponCode: null,
+    buyQuantity: null,
+    freeQuantity: null,
+    maxUses: null,
+    maxUsesPerMember: null,
   })
 
 @injectable()

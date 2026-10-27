@@ -1,4 +1,5 @@
 import type { SaleEntity } from '../../../../domains/sale.domain'
+import type { SaleV2Response } from './schemas/sale.schema'
 
 export function toSaleV2Response(sale: SaleEntity) {
   const { voidedById: _internal, items, payments, ...header } = sale.toSnapshot()
@@ -6,6 +7,9 @@ export function toSaleV2Response(sale: SaleEntity) {
   return {
     ...header,
     shiftId: sale.shiftId,
+    // The response schema widens with Task 2's OpenAPI change, when the migration actually allows storing
+    // a bundle promotion; no such bill can exist before that, but the snapshot type already carries the union.
+    promotion: header.promotion as SaleV2Response['promotion'],
     items: items.map(({ unitCostSatang: _cost, options, ...item }) => ({
       ...item,
       options: options.map(({ costSatang: _optionCost, ...option }) => option),

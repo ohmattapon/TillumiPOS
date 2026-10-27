@@ -12,6 +12,7 @@ const existing = new PromotionEntity({
   id: 1, name: 'ลด 10%', kind: 'percent', value: 1000, maxDiscountSatang: 100, minSubtotalSatang: 0,
   startsOn: null, endsOn: null, weekdays: null, windowStartMinute: null, windowEndMinute: null,
   audience: 'everyone', isActive: true, scope: null, imageKey: null, createdAt: now, updatedAt: now,
+  couponCode: null, buyQuantity: null, freeQuantity: null, maxUses: null, maxUsesPerMember: null,
 })
 
 function setup() {

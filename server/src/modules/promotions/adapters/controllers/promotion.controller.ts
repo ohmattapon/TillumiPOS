@@ -12,7 +12,7 @@ import { RemovePromotionImageUseCase } from '../../applications/usecases/remove-
 import { SetPromotionImageUseCase } from '../../applications/usecases/set-promotion-image.usecase'
 import { UpdatePromotionUseCase } from '../../applications/usecases/update-promotion.usecase'
 import { snapshotOf } from '../promotion.snapshot'
-import { promotionSchemas } from './schemas/promotion.schema'
+import { promotionSchemas, type PromotionResponse } from './schemas/promotion.schema'
 
 @injectable()
 export class PromotionElysiaController {
@@ -30,7 +30,9 @@ export class PromotionElysiaController {
     // The API exposes a ready-to-use image URL; the storage key stays internal.
     const toResponse = (promotion: PromotionEntity) => {
       const { imageKey, ...fields } = snapshotOf(promotion)
-      return { ...fields, imageUrl: imageKey ? this.media.urlFor(imageKey) : null }
+      // The kind union widens with Task 2's OpenAPI change, when the migration actually allows storing a
+      // bundle; no such promotion can be stored before that, but the snapshot type already carries the union.
+      return { ...fields, imageUrl: imageKey ? this.media.urlFor(imageKey) : null } as PromotionResponse
     }
 
     return new Elysia({ name: 'promotions', prefix: '/promotions', detail: { tags: ['Promotions'] } })

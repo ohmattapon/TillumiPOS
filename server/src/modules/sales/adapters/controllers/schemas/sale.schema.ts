@@ -136,5 +136,6 @@ export const saleSchemas = {
 }
 
 export type SaleResponse = typeof saleSchemas.sale.static
+export type SaleV2Response = typeof saleSchemas.saleV2.static
 export type SaleHeaderResponse = typeof saleSchemas.saleHeader.static
 export type SaleSummaryResponse = typeof saleSchemas.summary.static

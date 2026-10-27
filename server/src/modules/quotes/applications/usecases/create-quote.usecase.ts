@@ -71,8 +71,13 @@ export class CreateQuoteUseCase {
       lines: lines.map((line) => ({
         productId: line.productId,
         categoryId: categories.get(line.productId) ?? null,
+        unitPriceSatang: line.unitPriceSatang,
+        quantity: line.quantity,
+        isPack: line.packId !== null,
         lineTotalSatang: line.unitPriceSatang * line.quantity,
       })),
+      // Task 4 wires the typed coupon code into the context.
+      couponCode: null,
     })
 
     return this.quotes.create(
