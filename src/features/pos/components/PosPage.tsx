@@ -172,8 +172,8 @@ export function PosPage() {
     if (cart.orderId !== null) {
       payOrder.mutate(
         {
-          orderId: cart.orderId, discountSatang, quoteId, payment,
-          ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id, idempotencyKey: paymentCommandKey.current } : {}),
+          orderId: cart.orderId, discountSatang, quoteId, payment, idempotencyKey: paymentCommandKey.current,
+          ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id } : {}),
         },
         paid,
       )
@@ -183,9 +183,8 @@ export function PosPage() {
           items: cart.lines.map((line) => ({
             productId: line.productId, quantity: line.quantity, options: line.optionIds, packId: line.packId ?? undefined,
           })),
-          discountSatang, quoteId, memberId: cart.memberId, payment,
+          discountSatang, quoteId, memberId: cart.memberId, payment, idempotencyKey: paymentCommandKey.current,
           ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id } : {}),
-          ...(needsShift ? { idempotencyKey: paymentCommandKey.current } : {}),
         },
         paid,
       )

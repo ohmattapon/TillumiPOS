@@ -1,6 +1,6 @@
 import { mockAuditLog as auditMock, mockUnitOfWork as auditUnitOfWork } from '../../../../__tests__/mocks'
 import { mockMemberRepository, mockQuoteClaims } from '../../../../__tests__/mocks'
-import { beforeEach, describe, expect, test } from 'bun:test'
+import { beforeEach, describe, expect, mock, test } from 'bun:test'
 import { ZodError } from 'zod'
 import { makeBranch, makeProduct, makeSale, makeStockMovement } from '../../../../__tests__/factories'
 import {
@@ -26,9 +26,26 @@ import { GetSaleUseCase } from './get-sale.usecase'
 import { GetSalesSummaryUseCase } from './get-sales-summary.usecase'
 import { ListSalesUseCase } from './list-sales.usecase'
 import { VoidSaleUseCase } from './void-sale.usecase'
+import { CompleteSaleV2UseCase } from './complete-sale-v2.usecase'
+import { CommandIdempotency } from '../../../shared/applications/command-idempotency'
+import type { ICommandReceipts } from '../../../shared/ports/command-receipts.port'
+import { mockSaleCheckout } from '../../../../__tests__/mocks'
 
 const cashier = { id: 7, displayName: 'สมชาย' }
 const cash = (amountSatang: number) => [{ method: 'cash' as const, amountSatang }]
+
+/** An in-memory receipt store, so a repeated key in one test replays what that test already recorded. */
+const receiptStore = () => {
+  const prior = new Map<string, { requestHash: string; result: unknown }>()
+
+  return new CommandIdempotency({
+    lock: mock(async () => {}),
+    find: mock(async (scope) => prior.get(scope.key) ?? null),
+    create: mock<ICommandReceipts['create']>(async (scope, requestHash, result) => {
+      prior.set(scope.key, { requestHash, result })
+    }),
+  })
+}
 
 let sales: ReturnType<typeof mockSaleRepository>
 let products: ReturnType<typeof mockProductRepository>
@@ -68,7 +85,7 @@ describe('CompleteSaleUseCase', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork)
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork, receiptStore())
   })
 
   const sell = (overrides: Record<string, unknown> = {}) =>
@@ -338,7 +355,7 @@ describe('QR payments in a sale', () => {
     sales.create.mockImplementation(async (sale, receiptNo) =>
       makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
     )
-    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork)
+    useCase = new CompleteSaleUseCase(new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims()), unitOfWork, receiptStore())
   })
 
   test('a promptpay payment backed by a QR is checked for this branch and amount, then used by the sale', async () => {
@@ -605,6 +622,78 @@ describe('GetSalesSummaryUseCase', () => {
 
   test('requires both ends of the period', async () => {
     await expect(new GetSalesSummaryUseCase(sales).execute({ from: period.from }, 1)).rejects.toBeInstanceOf(ZodError)
+  })
+})
+
+describe('CompleteSaleUseCase with an idempotency key', () => {
+  const branch = { id: 1, code: 'MAIN' }
+  const tea = makeProduct({ id: 1, name: 'ชา', sku: 'TEA', priceSatang: 2500, stockQty: 10 })
+  let useCase: CompleteSaleUseCase
+
+  const sell = (quantity: number, idempotencyKey?: string) =>
+    useCase.execute(
+      { items: [{ productId: 1, quantity }], payments: cash(quantity * 2500) },
+      cashier,
+      branch,
+      idempotencyKey,
+    )
+
+  beforeEach(() => {
+    products.findManyForUpdate.mockResolvedValue([tea])
+    sales.nextReceiptNo.mockResolvedValue('MAIN-20261013-00042')
+    sales.create.mockImplementation(async (sale, receiptNo) =>
+      makeSale({ ...sale, id: 15, receiptNo, status: 'completed', voidedById: null, voidedAt: null, voidReason: null }),
+    )
+    useCase = new CompleteSaleUseCase(
+      new SaleCheckout(sales, products, ledger, settings, qrPayments, checkoutPolicy, shiftLedger, lineOptions, mockMemberRepository(), mockQuoteClaims()),
+      unitOfWork,
+      receiptStore(),
+    )
+  })
+
+  test('a repeated idempotency key returns the first sale and checks out once', async () => {
+    const key = crypto.randomUUID()
+
+    const first = await sell(1, key)
+    const second = await sell(1, key)
+
+    expect(sales.create).toHaveBeenCalledTimes(1)
+    expect(second.receiptNo).toBe(first.receiptNo)
+  })
+
+  test('without a key every call checks out', async () => {
+    await sell(1)
+    await sell(1)
+
+    expect(sales.create).toHaveBeenCalledTimes(2)
+  })
+
+  test('a key reused with another cart is refused', async () => {
+    const key = crypto.randomUUID()
+    await sell(1, key)
+
+    const error = await sell(2, key).catch((reason) => reason)
+
+    expect(error.code).toBe('IDEMPOTENCY_KEY_REUSED')
+  })
+})
+
+describe('CompleteSaleV2UseCase', () => {
+  test('passes the pack of each line to the checkout', async () => {
+    const checkout = mockSaleCheckout()
+    checkout.checkout.mockResolvedValue(makeSale())
+    const useCase = new CompleteSaleV2UseCase(checkout, mockUnitOfWork(), receiptStore())
+
+    await useCase.execute(
+      { items: [{ productId: 1, quantity: 2, packId: 7 }], payments: cash(5000), shiftId: 3 },
+      cashier,
+      { id: 1, code: 'MAIN' },
+      crypto.randomUUID(),
+    )
+
+    expect(checkout.checkout.mock.calls[0]![0].lines).toEqual([
+      { productId: 1, quantity: 2, optionIds: undefined, packId: 7 },
+    ])
   })
 })
 

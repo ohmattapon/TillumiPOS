@@ -7,6 +7,7 @@ import { promotionLines, useBestPromotion, useProductPromotions } from '@/featur
 import { productQuery } from '@/features/products'
 import { useFormat, useSettings } from '@/features/settings'
 import { priceCart, priceOrder, type PricingOptions } from '../lib/cart'
+import { orderIsGone } from '../lib/order-gone'
 import { useCartStore } from '../store/cart.store'
 
 /**
@@ -48,7 +49,7 @@ export function useCart() {
   ))
 
   // The order was paid or cancelled elsewhere (another till, another tab), or no longer exists.
-  const gone = orderId !== null && (order.isError || (order.data !== undefined && order.data.status !== 'open'))
+  const gone = orderId !== null && orderIsGone({ error: order.error, data: order.data })
   useEffect(() => {
     if (gone) clear()
   }, [gone, clear])
