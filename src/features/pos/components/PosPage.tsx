@@ -90,7 +90,14 @@ export function PosPage() {
       locale: settings.locale,
       currency: settings.currency,
       shopName: settings.shopName,
-      state: toDisplayState({ cart, vatMode: settings.vatMode, isPaying, qr: shownQr, paidSale }),
+      state: toDisplayState({
+        cart,
+        vatMode: settings.vatMode,
+        packLabel: (size) => t('cart.pack', { size }),
+        isPaying,
+        qr: shownQr,
+        paidSale,
+      }),
     },
     { registerId: selectedRegisterId },
   )
@@ -108,7 +115,9 @@ export function PosPage() {
     cart.orderId !== null
       ? { orderId: cart.orderId }
       : {
-          lines: cart.lines.map((line) => ({ productId: line.productId, quantity: line.quantity, options: line.optionIds })),
+          lines: cart.lines.map((line) => ({
+            productId: line.productId, quantity: line.quantity, options: line.optionIds, packId: line.packId ?? undefined,
+          })),
           memberId: cart.memberId,
         }
   // The price is asked again, e.g. after the QR holding it was cancelled. The dialog opens on the method chosen.
@@ -171,7 +180,9 @@ export function PosPage() {
     } else {
       checkout.mutate(
         {
-          items: cart.lines.map((line) => ({ productId: line.productId, quantity: line.quantity, options: line.optionIds })),
+          items: cart.lines.map((line) => ({
+            productId: line.productId, quantity: line.quantity, options: line.optionIds, packId: line.packId ?? undefined,
+          })),
           discountSatang, quoteId, memberId: cart.memberId, payment,
           ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id } : {}),
           ...(needsShift ? { idempotencyKey: paymentCommandKey.current } : {}),

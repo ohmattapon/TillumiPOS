@@ -1,3 +1,4 @@
+import type { ProductPack } from '@pos/api/packs'
 import type { Product } from '@pos/api/types'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
@@ -19,6 +20,7 @@ import { useFormat } from '@/features/settings'
 import { cn } from '@/lib/utils'
 import { hasKeyboard } from '../lib/focus'
 import { offeredGroups } from '../lib/options'
+import { matchScan } from '../lib/scan'
 import { useCartActions } from '../hooks/use-cart-actions'
 import { useCartStore } from '../store/cart.store'
 import { OptionsDialog } from './OptionsDialog'
@@ -77,12 +79,33 @@ export function ProductPicker({ searchRef }: Props) {
     if (hasKeyboard()) searchRef.current?.focus()
   }
 
+  /**
+   * A pack barcode sells the whole pack. An order never carries a pack and a pack line never
+   * carries options, so both are refused here rather than at payment.
+   */
+  const sellPack = (product: Product, pack: ProductPack) => {
+    if (useCartStore.getState().orderId !== null) {
+      toast.error(t('picker.packNotInOrders'))
+      return
+    }
+    if (offeredGroups(modifiers.data ?? [], product.id).length > 0) {
+      toast.error(t('picker.packNeedsOptions'))
+      return
+    }
+    if (product.trackStock && product.stockQty < pack.size) {
+      toast.error(t('picker.packOutOfStock', { size: pack.size }))
+      return
+    }
+    client.setQueryData(productKeys.detail(product.id), product)
+    addToCart(product.id, [], pack.id)
+    if (hasKeyboard()) searchRef.current?.focus()
+  }
+
   // A USB barcode scanner types the code and presses Enter, which lands here.
   const submitSearch = async (event: FormEvent) => {
     event.preventDefault()
     const code = search.trim()
     if (code === '') return
-    const term = code.toLowerCase()
     const orderId = useCartStore.getState().orderId
     // Free the input immediately so a second scan is not erased when the first request finishes.
     setSearch('')
@@ -91,12 +114,12 @@ export function ProductPicker({ searchRef }: Props) {
       const exact = code.length <= 64 ? await client.fetchQuery(productsQuery({ code, limit: 2 })) : { items: [], total: 0 }
       const result = exact.total > 0 ? exact : await client.fetchQuery(productsQuery({ q: code, limit: 2 }))
       if (!mounted.current || useCartStore.getState().orderId !== orderId) return
-      const match = result.items.find((product) => product.barcode === code)
-        ?? (exact.total > 0 ? result.items.find((product) => product.sku.toLowerCase() === term) : undefined)
-        ?? (result.total === 1 ? result.items[0] : undefined)
-      if (!match) toast.error(t('picker.notFound', { term: code }))
-      else if (isOutOfStock(match)) toast.error(t('picker.outOfStock', { name: match.name }))
-      else pick(match)
+      const match = matchScan(code, result)
+      if (match.kind === 'none') toast.error(t('picker.notFound', { term: code }))
+      else if (match.kind === 'inactivePack') toast.error(t('picker.packDisabled', { barcode: match.pack.barcode }))
+      else if (match.kind === 'pack') sellPack(match.product, match.pack)
+      else if (isOutOfStock(match.product)) toast.error(t('picker.outOfStock', { name: match.product.name }))
+      else pick(match.product)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : tc('connectionFailed'))
     }

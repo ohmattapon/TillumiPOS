@@ -1,4 +1,6 @@
 import type { Order, Product } from '@pos/api/types'
+import type { ProductPack } from '@pos/api/packs'
+import { packUnitPriceSatang } from '@pos/api/packs'
 import { calculateTotals, type VatMode } from '@pos/api/pricing'
 import type { CartLine } from '../store/cart.store'
 
@@ -16,6 +18,10 @@ export interface PricedLine {
   options: { name: string; priceSatang: number }[]
   /** The ids of the options chosen; what a sale or an order is sent. */
   optionIds: number[]
+  /** The pack the line sells; null when it sells single pieces. A pack line carries no options. */
+  packId: number | null
+  /** How many pieces one unit of the line holds: the pack's size, or 1. */
+  packSize: number
   /** More than the shop has: the sale would be refused. The stock is the product's, shared by its lines. */
   exceedsStock: boolean
   /** What is on the shelf, for the message shown when the line asks for more. */
@@ -61,10 +67,18 @@ export interface CartOption {
 const exceeds = (product: Product | undefined, quantity: number) =>
   product !== undefined && product.trackStock && quantity > product.stockQty
 
-/** How many of each product the lines ask for in all: stock is shared by a product's lines. */
-function demandByProduct(lines: readonly { productId: number; quantity: number }[]) {
+/** The pack the line sells, when the product still lists it. */
+const packOf = (product: Product | undefined, packId: number | undefined): ProductPack | undefined =>
+  packId === undefined ? undefined : product?.packs.find((pack) => pack.id === packId)
+
+/**
+ * How many pieces of each product the lines ask for in all: stock is counted in pieces, and a
+ * product's lines share it, whether they sell packs or single pieces.
+ */
+function demandByProduct(lines: readonly { productId: number; quantity: number; packSize?: number }[]) {
   const demand = new Map<number, number>()
-  for (const { productId, quantity } of lines) demand.set(productId, (demand.get(productId) ?? 0) + quantity)
+  for (const { productId, quantity, packSize = 1 } of lines)
+    demand.set(productId, (demand.get(productId) ?? 0) + quantity * packSize)
   return demand
 }
 
@@ -81,13 +95,25 @@ export function priceCart(
   options: PricingOptions,
   optionsById: ReadonlyMap<number, CartOption> = new Map(),
 ): PricedCart {
-  const demand = demandByProduct(lines)
+  const demand = demandByProduct(
+    lines.map((line) => ({
+      productId: line.productId,
+      quantity: line.quantity,
+      packSize: packOf(products.get(line.productId), line.packId)?.size ?? 1,
+    })),
+  )
   const priced: PricedLine[] = []
-  for (const { key, productId, optionIds, quantity } of lines) {
+  for (const { key, productId, optionIds, packId, quantity } of lines) {
     const product = products.get(productId)
     if (!product) continue
-    const chosen = optionIds.flatMap((id) => optionsById.get(id) ?? [])
-    const unitPriceSatang = product.priceSatang + chosen.reduce((total, option) => total + option.priceSatang, 0)
+    const pack = packOf(product, packId)
+    // A pack that has been disabled since it was put in the cart cannot be sold any more.
+    const sellable = pack?.isActive === true ? pack : undefined
+    const chosen = sellable ? [] : optionIds.flatMap((id) => optionsById.get(id) ?? [])
+    const optionsSatang = chosen.reduce((total, option) => total + option.priceSatang, 0)
+    const unitPriceSatang = sellable
+      ? packUnitPriceSatang(product.priceSatang, sellable)
+      : product.priceSatang + optionsSatang
     priced.push({
       lineKey: key,
       lineId: null,
@@ -98,9 +124,11 @@ export function priceCart(
       lineTotalSatang: unitPriceSatang * quantity,
       options: chosen.map(({ name, priceSatang }) => ({ name, priceSatang })),
       optionIds: [...optionIds],
+      packId: packId ?? null,
+      packSize: pack?.size ?? 1,
       exceedsStock: exceeds(product, demand.get(productId) ?? quantity),
       stockQty: product.stockQty,
-      unavailable: chosen.length !== optionIds.length,
+      unavailable: packId === undefined ? chosen.length !== optionIds.length : sellable === undefined,
       note: null,
     })
   }
@@ -130,6 +158,9 @@ export function priceOrder(
       lineTotalSatang: item.unitPriceSatang * item.quantity,
       options: item.options.map(({ name, priceSatang }) => ({ name, priceSatang })),
       optionIds: item.options.map((option) => option.optionId),
+      // An order never carries a pack: the till sells packs in the one-step cart only.
+      packId: null,
+      packSize: 1,
       exceedsStock: exceeds(product, demand.get(item.productId) ?? item.quantity),
       stockQty: product?.stockQty ?? 0,
       unavailable: false,

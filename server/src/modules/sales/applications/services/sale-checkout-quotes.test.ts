@@ -13,7 +13,7 @@ const promotion = { id: 4, name: 'ลด 3 บาท', kind: 'fixed' as const, v
 const pinned = (overrides = {}) =>
   makePriceQuote({
     id: 7,
-    lines: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 800, quantity: 3, options: [] }],
+    lines: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 800, quantity: 3, options: [], packId: null, packSize: 1 }],
     subtotalSatang: 2400, discountSatang: 300, promotion, vatSatang: 137, totalSatang: 2100,
     ...overrides,
   })
@@ -71,7 +71,7 @@ describe('SaleCheckout with a pinned price', () => {
   test('hands the quote the cart it was asked for, and uses it up with the sale', async () => {
     await checkout.checkout(request)
 
-    expect(quotes.lockForCheckout).toHaveBeenCalledWith(7, { branchId: 1, memberId: null, orderId: null, lines: [cart] }, [])
+    expect(quotes.lockForCheckout).toHaveBeenCalledWith(7, { branchId: 1, memberId: null, orderId: null, lines: [{ ...cart, packId: null }] }, [])
     expect(quotes.consume).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }), 31)
   })
 
@@ -85,7 +85,7 @@ describe('SaleCheckout with a pinned price', () => {
 
   test("an order's pinned price is held for that order, so it cannot be sold as a cart", async () => {
     await checkout.checkout({ ...request, orderId: 4 })
-    expect(quotes.lockForCheckout).toHaveBeenCalledWith(7, { branchId: 1, memberId: null, orderId: 4, lines: [cart] }, [])
+    expect(quotes.lockForCheckout).toHaveBeenCalledWith(7, { branchId: 1, memberId: null, orderId: 4, lines: [{ ...cart, packId: null }] }, [])
   })
 
   test('still refuses when there is not enough stock, and writes nothing', async () => {

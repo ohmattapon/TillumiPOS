@@ -16,6 +16,7 @@ const valid: ProductEntityProps = {
   stockQty: 5,
   isActive: true,
   imageKey: 'products/1/a.webp',
+  packs: [],
 }
 const product = (overrides: Partial<ProductEntityProps> = {}) => new ProductEntity({ ...valid, ...overrides })
 
@@ -167,6 +168,88 @@ describe('ProductEntity', () => {
 
     test('a product that does not track stock sells in any quantity', () => {
       expect(() => product({ trackStock: false, stockQty: 0 }).assertSellable(999)).not.toThrow()
+    })
+  })
+
+  describe('packs', () => {
+    const pack6 = { id: 7, barcode: '885000000006', size: 6, priceSatang: 8500, isActive: true }
+    const pack24 = { id: 9, barcode: '885000000024', size: 24, priceSatang: null, isActive: true }
+
+    test('defaults to no packs and snapshots them', () => {
+      expect(product().packs).toEqual([])
+      expect(product().toSnapshot().packs).toEqual([])
+    })
+
+    test('holds packs and snapshots copies', () => {
+      const packed = product({ packs: [pack6, pack24] })
+
+      expect(packed.packs).toEqual([pack6, pack24])
+      expect(packed.toSnapshot().packs).toEqual([pack6, pack24])
+      expect(packed.toSnapshot().packs).not.toBe(packed.packs)
+    })
+
+    test('rejects more than 10 packs', () => {
+      const many = Array.from({ length: 11 }, (_, i) => ({ ...pack6, id: 0, barcode: `P${i}` }))
+
+      expect(() => product({ packs: many })).toThrow(expect.objectContaining({ code: 'INVALID_PRODUCT' }))
+    })
+
+    test('rejects a pack that reuses the product barcode', () => {
+      const attempt = () => product({ packs: [{ ...pack6, barcode: '8850000000011' }] })
+
+      expect(attempt).toThrow(DomainConflictError)
+      expect(attempt).toThrow(expect.objectContaining({ code: 'BARCODE_TAKEN' }))
+    })
+
+    test('rejects a pack that reuses another pack barcode', () => {
+      const attempt = () => product({ packs: [pack6, { ...pack24, barcode: pack6.barcode }] })
+
+      expect(attempt).toThrow(expect.objectContaining({ code: 'BARCODE_TAKEN' }))
+    })
+
+    test('rejects a duplicated stored pack id', () => {
+      const attempt = () => product({ packs: [pack6, { ...pack24, id: pack6.id }] })
+
+      expect(attempt).toThrow(expect.objectContaining({ code: 'INVALID_PRODUCT' }))
+    })
+
+    test('rejects an invalid pack through the pack rules', () => {
+      expect(() => product({ packs: [{ ...pack6, size: 1 }] })).toThrow(
+        expect.objectContaining({ code: 'INVALID_PRODUCT' }),
+      )
+    })
+
+    test('with() keeps packs unless they are replaced', () => {
+      const packed = product({ packs: [pack6] })
+
+      expect(packed.with({ name: 'ชื่อใหม่' }).packs).toEqual([pack6])
+      expect(packed.with({ packs: [] }).packs).toEqual([])
+    })
+
+    test('findPack returns the pack or undefined', () => {
+      const packed = product({ packs: [pack6] })
+
+      expect(packed.findPack(7)).toEqual(pack6)
+      expect(packed.findPack(999)).toBeUndefined()
+    })
+
+    test('packForSale refuses an inactive product, a missing pack and an inactive pack', () => {
+      const packed = product({ packs: [pack6, { ...pack24, isActive: false }] })
+
+      expect(packed.packForSale(7)).toEqual(pack6)
+      expect(() => product({ isActive: false, packs: [pack6] }).packForSale(7)).toThrow(
+        expect.objectContaining({ code: 'PRODUCT_INACTIVE' }),
+      )
+      expect(() => packed.packForSale(999)).toThrow(expect.objectContaining({ code: 'PACK_NOT_FOUND' }))
+      expect(() => packed.packForSale(9)).toThrow(expect.objectContaining({ code: 'PACK_INACTIVE' }))
+    })
+
+    test('packForReceipt takes any pack of the product, whatever its selling state', () => {
+      const packed = product({ isActive: false, packs: [pack6, { ...pack24, isActive: false }] })
+
+      expect(packed.packForReceipt(7)).toEqual(pack6)
+      expect(packed.packForReceipt(9)).toEqual({ ...pack24, isActive: false })
+      expect(() => packed.packForReceipt(999)).toThrow(expect.objectContaining({ code: 'PACK_NOT_FOUND' }))
     })
   })
 })

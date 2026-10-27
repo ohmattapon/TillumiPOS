@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from 'bun:test'
+import { beforeEach, describe, expect, test } from 'bun:test'
 import { makeProduct, makeStockMovement } from '../../../../__tests__/factories'
 import { mockAuditLog, mockProductRepository, mockStockLedger, mockStockReceiptRepository, mockUnitOfWork } from '../../../../__tests__/mocks'
 import { CommandIdempotency } from '../../../shared/applications/command-idempotency'
@@ -57,4 +57,35 @@ test('rejects an invalid idempotency key without changing stock', async () => {
 test('receives inactive products when stock tracking is enabled', async () => {
   products.findManyForUpdate.mockResolvedValue([makeProduct({ isActive: false })])
   expect((await command.execute({ items: [{ productId: 1, quantity: 2 }] }, actor, 1, key)).items[0]?.quantity).toBe(2)
+})
+describe('in packs', () => {
+  const casePack = { id: 5, barcode: 'CASE-1', size: 12, priceSatang: null, isActive: true }
+  beforeEach(() => {
+    products.findManyForUpdate.mockResolvedValue([makeProduct({ packs: [casePack] })])
+  })
+  test('counts the pack into pieces and says so in the note', async () => {
+    const result = await command.execute({ items: [{ productId: 1, quantity: 2, packId: 5 }] }, actor, 1, key)
+    expect(result.items).toMatchObject([{ productId: 1, quantity: 24 }])
+    expect(ledger.record).toHaveBeenCalledWith({
+      productId: 1, quantity: 24, branchId: 1, type: 'receive', userId: 1, note: 'รับ 2 ลัง (CASE-1) = 24 ชิ้น', receiptId: 1,
+    })
+  })
+  test('a pack that is switched off can still be received', async () => {
+    products.findManyForUpdate.mockResolvedValue([makeProduct({ packs: [{ ...casePack, isActive: false }] })])
+    expect((await command.execute({ items: [{ productId: 1, quantity: 1, packId: 5 }] }, actor, 1, key)).items[0]?.quantity).toBe(12)
+  })
+  test('keeps a pack line apart from a piece line of the same product', async () => {
+    const result = await command.execute({ items: [{ productId: 1, quantity: 2, packId: 5 }, { productId: 1, quantity: 3 }] }, actor, 1, key)
+    expect(result.items.map(item => item.quantity)).toEqual([3, 24])
+    expect(ledger.record).toHaveBeenCalledTimes(2)
+  })
+  test('a pack the product does not have stops the whole receipt', async () => {
+    expect(command.execute({ items: [{ productId: 1, quantity: 1, packId: 999 }] }, actor, 1, key))
+      .rejects.toMatchObject({ code: 'PACK_NOT_FOUND', params: { packId: 999 } })
+    expect(receipts.create).not.toHaveBeenCalled()
+  })
+  test('rejects a balance overflowing PostgreSQL integer once the packs are counted in pieces', async () => {
+    products.findManyForUpdate.mockResolvedValue([makeProduct({ stockQty: 2147483647, packs: [casePack] })])
+    expect(command.execute({ items: [{ productId: 1, quantity: 1, packId: 5 }] }, actor, 1, key)).rejects.toMatchObject({ code: 'STOCK_RECEIPT_INVALID_ITEMS' })
+  })
 })

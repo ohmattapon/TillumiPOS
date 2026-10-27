@@ -26,7 +26,7 @@ describe('creating a quote', () => {
       promotion: { name: 'ลด 10%', kind: 'percent', value: 1000, discountSatang: 500 },
     })
     expect(quote.lines).toEqual([
-      { productId: tea.id, productName: tea.name, sku: tea.sku, unitPriceSatang: 2500, quantity: 2, options: [] },
+      { productId: tea.id, productName: tea.name, sku: tea.sku, unitPriceSatang: 2500, quantity: 2, options: [], packId: null, packSize: 1 },
     ])
     expect(new Date(quote.expiresAt).getTime()).toBeGreaterThan(Date.now() + 14 * 60_000)
   })
