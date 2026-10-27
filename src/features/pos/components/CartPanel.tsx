@@ -16,6 +16,7 @@ import { OrderQrHold } from './OrderQrHold'
 import { useCartActions } from '../hooks/use-cart-actions'
 import type { PricedLine } from '../lib/cart'
 import { noteToSave } from '../lib/note'
+import { canSaveAsOrder } from '../lib/save-order'
 import { useCartStore } from '../store/cart.store'
 import { CartMember } from './CartMember'
 import { OrderTools } from './OrderTools'
@@ -84,6 +85,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
   const isOrder = cart.orderId !== null
   const tables = useQuery(tablesQuery)
   const tableName = tables.data?.find((table) => table.id === cart.order?.tableId)?.name
+  const hasPackLine = storedLines.length > 0 && !canSaveAsOrder(storedLines)
 
   return (
     <aside
@@ -254,10 +256,13 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
           <span className="text-3xl font-semibold tabular-nums">{money.format(cart.totalSatang)}</span>
         </p>
         {!isOrder && (
-          <Button variant="outline" className="h-11 w-full" disabled={cart.lines.length === 0 || !cart.productsReady} onClick={onSaveOrder}>
-            <ClipboardList />
-            {t('cart.saveOrder')}
-          </Button>
+          <>
+            <Button variant="outline" className="h-11 w-full" disabled={!canSaveAsOrder(storedLines) || !cart.productsReady} onClick={onSaveOrder}>
+              <ClipboardList />
+              {t('cart.saveOrder')}
+            </Button>
+            {hasPackLine && <p className="text-xs text-muted-foreground">{t('cart.saveOrderNoPacks')}</p>}
+          </>
         )}
         <Button className="h-14 w-full gap-3 text-lg" disabled={!cart.canPay || !paymentAvailable} onClick={onPay}>
           {t('cart.pay')}

@@ -94,6 +94,7 @@ const th = {
     total: 'ยอดสุทธิ',
     pay: 'ชำระเงิน',
     saveOrder: 'เก็บเป็นออเดอร์ค้าง',
+    saveOrderNoPacks: 'ตะกร้าที่มีสินค้าแบบแพ็คเก็บเป็นออเดอร์ค้างไม่ได้ ต้องชำระเลย',
     leaveOrder: 'ออกจากออเดอร์',
   },
   orders: {
@@ -269,6 +270,7 @@ const en = {
     total: 'Total',
     pay: 'Pay',
     saveOrder: 'Save as open order',
+    saveOrderNoPacks: 'A cart with a pack cannot be kept as an open order. Pay for it now.',
     leaveOrder: 'Leave order',
   },
   orders: {
