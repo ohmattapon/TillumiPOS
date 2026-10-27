@@ -6,7 +6,7 @@ const statusOf = (error: unknown): number | undefined =>
 
 /** An order the till must leave: the server says it is no longer open, or it does not exist any more. */
 export function orderIsGone(order: { error: unknown; data?: { status: string } }): boolean {
-  if (order.data !== undefined) return order.data.status !== 'open'
+  if (statusOf(order.error) === 404) return true
 
-  return statusOf(order.error) === 404
+  return order.data !== undefined && order.data.status !== 'open'
 }

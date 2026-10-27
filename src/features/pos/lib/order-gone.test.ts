@@ -28,4 +28,8 @@ describe('orderIsGone', () => {
   test('stale data with a failed refetch follows the data', () => {
     expect(orderIsGone({ error: errorWithStatus(500, 'INTERNAL'), data: { status: 'open' } })).toBe(false)
   })
+
+  test('a 404 wins over the stale data of a loaded order', () => {
+    expect(orderIsGone({ error: errorWithStatus(404, 'ORDER_NOT_FOUND'), data: { status: 'open' } })).toBe(true)
+  })
 })
