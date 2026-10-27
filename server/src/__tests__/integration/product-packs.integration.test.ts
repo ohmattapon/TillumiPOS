@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { sql } from 'drizzle-orm'
 import { container } from 'tsyringe'
-import { MAIN_BRANCH_ID, resetDatabase, signIn } from '../../../test/harness'
+import { MAIN_BRANCH_ID, ok, resetDatabase, seedProduct, signIn, type Session } from '../../../test/harness'
 import { DomainError } from '../../domains/errors/domain-error'
 import { DomainNotFoundError } from '../../domains/errors/domain-not-found.error'
 import { ProductEntity, type ProductEntityProps } from '../../domains/product.domain'
@@ -62,6 +62,75 @@ const withPacks = () =>
 
 beforeEach(async () => {
   await resetDatabase()
+})
+
+const previousMode = Bun.env.CHECKOUT_MODE
+const key = () => crypto.randomUUID()
+
+/** Seeds a product with stock over HTTP, then attaches one pack through the repository. */
+async function seedStockedPack(session: Session, packSize: number, priceSatang: number) {
+  const tea = await seedProduct(session, { priceSatang: 2500, stock: 24 })
+  const entity = (await repository.findById(tea.id, branchId))!
+  const barcode = `885${String(tea.id).padStart(9, '0')}`
+
+  await update(new ProductEntity({ ...entity.toSnapshot(), packs: [pack(barcode, packSize, priceSatang)] }))
+  const saved = (await repository.findById(tea.id, branchId))!
+
+  return { tea, saved: saved.toSnapshot().packs[0]! }
+}
+
+describe('a pack sold in a shift', () => {
+  let owner: Session
+  let shiftId: number
+
+  beforeEach(async () => {
+    Bun.env.CHECKOUT_MODE = 'shifts'
+    owner = await signIn('owner')
+
+    const registerId = ok(await owner.apiV2.registers.get()).items[0]!.id
+    shiftId = ok(
+      await owner.apiV2.shifts.post({ registerId, openingCashSatang: 0 }, { headers: { 'idempotency-key': key() } }),
+    ).id
+  })
+
+  afterEach(() => {
+    if (previousMode === undefined) delete Bun.env.CHECKOUT_MODE
+    else Bun.env.CHECKOUT_MODE = previousMode
+  })
+
+  test('a pack sold in a shift is charged and counted as the pack', async () => {
+    const { tea, saved } = await seedStockedPack(owner, 6, 13_000)
+
+    const sale = ok(
+      await owner.apiV2.sales.post(
+        {
+          shiftId,
+          items: [{ productId: tea.id, quantity: 1, packId: saved.id }],
+          payments: [{ method: 'cash', amountSatang: 13_000 }],
+        },
+        { headers: { 'idempotency-key': key() } },
+      ),
+    )
+
+    expect(sale.totalSatang).toBe(13_000)
+    expect(sale.items[0]!.packSize).toBe(6)
+    expect(ok(await owner.api.catalog.products({ id: tea.id }).get()).stockQty).toBe(18)
+
+    const quote = ok(await owner.api.quotes.post({ lines: [{ productId: tea.id, quantity: 1, packId: saved.id }] }))
+    const quoted = ok(
+      await owner.apiV2.sales.post(
+        {
+          shiftId,
+          quoteId: quote.id,
+          items: [{ productId: tea.id, quantity: 1, packId: saved.id }],
+          payments: [{ method: 'cash', amountSatang: 13_000 }],
+        },
+        { headers: { 'idempotency-key': key() } },
+      ),
+    )
+
+    expect(quoted.totalSatang).toBe(13_000)
+  })
 })
 
 describe('product packs', () => {

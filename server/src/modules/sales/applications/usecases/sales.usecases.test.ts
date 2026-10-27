@@ -1,6 +1,6 @@
 import { mockAuditLog as auditMock, mockUnitOfWork as auditUnitOfWork } from '../../../../__tests__/mocks'
 import { mockMemberRepository, mockQuoteClaims } from '../../../../__tests__/mocks'
-import { beforeEach, describe, expect, test } from 'bun:test'
+import { beforeEach, describe, expect, mock, test } from 'bun:test'
 import { ZodError } from 'zod'
 import { makeBranch, makeProduct, makeSale, makeStockMovement } from '../../../../__tests__/factories'
 import {
@@ -26,6 +26,10 @@ import { GetSaleUseCase } from './get-sale.usecase'
 import { GetSalesSummaryUseCase } from './get-sales-summary.usecase'
 import { ListSalesUseCase } from './list-sales.usecase'
 import { VoidSaleUseCase } from './void-sale.usecase'
+import { CompleteSaleV2UseCase } from './complete-sale-v2.usecase'
+import { CommandIdempotency } from '../../../shared/applications/command-idempotency'
+import type { ICommandReceipts } from '../../../shared/ports/command-receipts.port'
+import { mockSaleCheckout } from '../../../../__tests__/mocks'
 
 const cashier = { id: 7, displayName: 'สมชาย' }
 const cash = (amountSatang: number) => [{ method: 'cash' as const, amountSatang }]
@@ -605,6 +609,36 @@ describe('GetSalesSummaryUseCase', () => {
 
   test('requires both ends of the period', async () => {
     await expect(new GetSalesSummaryUseCase(sales).execute({ from: period.from }, 1)).rejects.toBeInstanceOf(ZodError)
+  })
+})
+
+describe('CompleteSaleV2UseCase', () => {
+  const receiptStore = () => {
+    const prior = new Map<string, { requestHash: string; result: unknown }>()
+    return new CommandIdempotency({
+      lock: mock(async () => {}),
+      find: mock(async (scope) => prior.get(scope.key) ?? null),
+      create: mock<ICommandReceipts['create']>(async (scope, requestHash, result) => {
+        prior.set(scope.key, { requestHash, result })
+      }),
+    })
+  }
+
+  test('passes the pack of each line to the checkout', async () => {
+    const checkout = mockSaleCheckout()
+    checkout.checkout.mockResolvedValue(makeSale())
+    const useCase = new CompleteSaleV2UseCase(checkout, mockUnitOfWork(), receiptStore())
+
+    await useCase.execute(
+      { items: [{ productId: 1, quantity: 2, packId: 7 }], payments: cash(5000), shiftId: 3 },
+      cashier,
+      { id: 1, code: 'MAIN' },
+      crypto.randomUUID(),
+    )
+
+    expect(checkout.checkout.mock.calls[0]![0].lines).toEqual([
+      { productId: 1, quantity: 2, optionIds: undefined, packId: 7 },
+    ])
   })
 })
 
