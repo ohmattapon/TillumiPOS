@@ -13,15 +13,7 @@ export interface PromotionFilters {
 const fetchPromotions = (filters: PromotionFilters) =>
   unwrap(api.promotions.get({ query: { limit: 100, offset: 0, ...filters } }))
 
-// Task 2 adds the coupon, bundle and limit fields to this contract; the local type carries them as
-// optional until then, so the rules helpers can read them.
-export type Promotion = Awaited<ReturnType<typeof fetchPromotions>>['items'][number] & Partial<{
-  couponCode: string | null
-  buyQuantity: number | null
-  freeQuantity: number | null
-  maxUses: number | null
-  maxUsesPerMember: number | null
-}>
+export type Promotion = Awaited<ReturnType<typeof fetchPromotions>>['items'][number]
 
 export const promotionsQuery = (filters: PromotionFilters = {}) =>
   queryOptions({

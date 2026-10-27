@@ -1,6 +1,7 @@
 import 'reflect-metadata'
 import { describe, expect, test } from 'bun:test'
 import { PromotionEntity } from '../../../../domains/promotion.domain'
+import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { mockClock, mockPromotionRepository } from '../../../../__tests__/mocks'
 import { CreatePromotionUseCase } from './create-promotion.usecase'
 import { GetPromotionUseCase } from './get-promotion.usecase'
@@ -74,6 +75,42 @@ describe('CreatePromotionUseCase', () => {
       new CreatePromotionUseCase(repo, clock).execute({ name: 'x', kind: 'fixed', value: 1 }, { role: 'cashier' }),
     ).rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'promotions.write' } })
     expect(repo.create).not.toHaveBeenCalled()
+  })
+
+  test('creates a bundle promotion', async () => {
+    const { repo, clock } = setup()
+    const created = await new CreatePromotionUseCase(repo, clock).execute(
+      {
+        name: 'ซื้อ 2 แถม 1', kind: 'bundle', value: 0, buyQuantity: 2, freeQuantity: 1,
+        scope: { productIds: [3], categoryIds: [] },
+      },
+      { role: 'owner' },
+    )
+    expect(created.toSnapshot()).toMatchObject({
+      kind: 'bundle', value: 0, buyQuantity: 2, freeQuantity: 1, maxUses: null, maxUsesPerMember: null,
+    })
+  })
+
+  test('creates a coupon promotion and stores the code upper-case', async () => {
+    const { repo, clock } = setup()
+    const created = await new CreatePromotionUseCase(repo, clock).execute(
+      { name: 'คูปอง', kind: 'percent', value: 1000, couponCode: '  summer10  ' },
+      { role: 'owner' },
+    )
+    expect(created.toSnapshot()).toMatchObject({ couponCode: 'SUMMER10', buyQuantity: null, freeQuantity: null })
+  })
+
+  test('refuses a duplicate coupon code', async () => {
+    const { repo, clock } = setup()
+    repo.create.mockImplementation(async () => {
+      throw new DomainConflictError('รหัสคูปองนี้ถูกใช้แล้ว', 'COUPON_CODE_TAKEN')
+    })
+    await expect(
+      new CreatePromotionUseCase(repo, clock).execute(
+        { name: 'x', kind: 'percent', value: 1000, couponCode: 'SUMMER10' },
+        { role: 'owner' },
+      ),
+    ).rejects.toMatchObject({ code: 'COUPON_CODE_TAKEN' })
   })
 
   test('refuses what the rules refuse', async () => {

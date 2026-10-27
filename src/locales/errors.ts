@@ -47,6 +47,7 @@ export const errors = {
     PROMOTION_NOT_FOUND: 'Promotion not found.',
     INVALID_SLIDE: 'These slide details are not valid.',
     PROMOTION_NAME_TAKEN: 'Another promotion already has this name.',
+    COUPON_CODE_TAKEN: 'Another promotion already uses this coupon code.',
     INVALID_PROMOTION: 'These promotion settings are not valid.',
     QUOTE_NOT_FOUND: 'The pinned price was not found.',
     QUOTE_EXPIRED: 'The pinned price has expired. Ask for the price again.',

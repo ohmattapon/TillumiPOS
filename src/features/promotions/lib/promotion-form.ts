@@ -1,4 +1,4 @@
-export type PromotionKind = 'fixed' | 'percent'
+export type PromotionKind = 'fixed' | 'percent' | 'bundle'
 export type PromotionAudience = 'everyone' | 'members'
 
 /** What the owner has typed into the promotion form, as text; `toBody` turns it into what the API takes. */
@@ -85,8 +85,9 @@ export function toBody(
   const name = form.name.trim()
   if (name.length < 1 || name.length > 80) problems.push('name')
 
-  const value = form.kind === 'percent' ? percentToBp(form.value) : amounts.parse(form.value)
-  if (value === null || value < 1) problems.push('value')
+  // A bundle has no typed value; the free items come from the buy/free fields the form gets in Task 6.
+  const value = form.kind === 'bundle' ? 0 : form.kind === 'percent' ? percentToBp(form.value) : amounts.parse(form.value)
+  if (form.kind !== 'bundle' && (value === null || value < 1)) problems.push('value')
 
   // A cap belongs to percent promotions only; what was typed before the kind changed is dropped.
   const typedCap = form.kind === 'percent' && form.maxDiscount.trim() !== ''

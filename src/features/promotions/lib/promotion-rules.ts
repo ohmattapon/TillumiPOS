@@ -2,9 +2,8 @@ import type { PromotionCandidate } from '@pos/api/promotions'
 import type { Promotion } from '../api'
 
 /**
- * The rules a promotion evaluation reads. The API does not carry the coupon, bundle and limit fields yet
- * (Task 2 adds them), and the rules require them, so a missing field is read as null. No promotion the API
- * can return is a bundle or a coupon before that, so the nulls never change an evaluation.
+ * The rules a promotion evaluation reads, with the API's display fields (name, image URL, timestamps) left
+ * in; the candidate type allows both shapes.
  */
 export function promotionRulesOf(promotion: Promotion): PromotionCandidate {
   return {

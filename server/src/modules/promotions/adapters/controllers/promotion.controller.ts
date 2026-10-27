@@ -30,8 +30,6 @@ export class PromotionElysiaController {
     // The API exposes a ready-to-use image URL; the storage key stays internal.
     const toResponse = (promotion: PromotionEntity) => {
       const { imageKey, ...fields } = snapshotOf(promotion)
-      // The kind union widens with Task 2's OpenAPI change, when the migration actually allows storing a
-      // bundle; no such promotion can be stored before that, but the snapshot type already carries the union.
       return { ...fields, imageUrl: imageKey ? this.media.urlFor(imageKey) : null } as PromotionResponse
     }
 

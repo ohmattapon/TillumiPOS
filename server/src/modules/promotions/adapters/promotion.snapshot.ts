@@ -18,9 +18,6 @@ export function rowOf(promotion: PromotionEntity) {
   const { scope, ...fields } = snapshotOf(promotion)
   return {
     ...fields,
-    // A bundle cannot be written until Task 2's migration widens the enum; the create/edit API refuses the
-    // kind before that, so no bundle row can exist yet, and the narrow cast only serves the type checker.
-    kind: fields.kind as Exclude<typeof fields.kind, 'bundle'>,
     productIds: scope?.productIds ?? null,
     categoryIds: scope?.categoryIds ?? null,
   }
