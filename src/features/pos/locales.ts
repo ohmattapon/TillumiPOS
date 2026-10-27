@@ -121,6 +121,7 @@ const th = {
     save: 'เก็บออเดอร์',
     saving: 'กำลังบันทึก…',
     saved: 'เก็บเป็นออเดอร์ค้างแล้ว',
+    discountNotKept: 'ส่วนลดที่พิมพ์ไว้จะไม่ถูกเก็บกับออเดอร์ ให้ใส่อีกครั้งตอนชำระ',
   },
   payment: {
     due: 'ยอดที่ต้องชำระ',
@@ -297,6 +298,7 @@ const en = {
     save: 'Save order',
     saving: 'Saving…',
     saved: 'Saved as an open order',
+    discountNotKept: 'The discount you typed is not kept with the order. Enter it again when paying.',
   },
   payment: {
     due: 'Amount due',
