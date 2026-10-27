@@ -1,0 +1,2 @@
+ALTER TABLE "order_items" DROP CONSTRAINT "order_items_orderId_productId_optionsKey_unique";--> statement-breakpoint
+ALTER TABLE "order_items" ADD CONSTRAINT "order_items_orderId_productId_optionsKey_note_unique" UNIQUE NULLS NOT DISTINCT("order_id","product_id","options_key","note");
