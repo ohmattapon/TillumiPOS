@@ -36,6 +36,10 @@ describe('ShopSettingsEntity', () => {
       receiptPrinterEnabled: false,
       cashDrawerEnabled: false,
       logoKey: null,
+      pointsEnabled: false,
+      pointsEarnSatang: 2500,
+      pointsRedeemSatang: 100,
+      pointsMinRedeem: 10,
     })
   })
 

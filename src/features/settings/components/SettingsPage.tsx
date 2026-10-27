@@ -134,6 +134,11 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     modifiersEnabled: form.modifiersEnabled,
     promptpayMode: form.promptpayMode,
     promptpayTarget: normalizePromptPayTarget(form.promptpayTarget),
+    // Points are edited in their own section; the form passes the stored rule through untouched.
+    pointsEnabled: settings.pointsEnabled,
+    pointsEarnSatang: settings.pointsEarnSatang,
+    pointsRedeemSatang: settings.pointsRedeemSatang,
+    pointsMinRedeem: settings.pointsMinRedeem,
   }
   const isDirty = JSON.stringify(changes) !== JSON.stringify(persisted)
   const canSave = isDirty && isRateValid && isPromptPayValid && isPrinterValid && changes.shopName !== '' && !save.isPending

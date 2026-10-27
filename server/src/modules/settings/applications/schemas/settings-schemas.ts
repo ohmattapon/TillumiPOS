@@ -46,5 +46,9 @@ export const updateShopSettingsSchema = z
     receiptPrinterPort: z.number().int().min(1).max(65535),
     receiptPrinterEnabled: z.boolean(),
     cashDrawerEnabled: z.boolean(),
+    pointsEnabled: z.boolean(),
+    pointsEarnSatang: z.number().int().min(100),
+    pointsRedeemSatang: z.number().int().min(1),
+    pointsMinRedeem: z.number().int().min(1),
   })
   .partial()

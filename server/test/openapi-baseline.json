@@ -30055,6 +30055,51 @@
                         "null"
                       ]
                     },
+                    "pointsEarnSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 100,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 100
+                    },
+                    "pointsEnabled": {
+                      "type": "boolean"
+                    },
+                    "pointsMinRedeem": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
+                    "pointsRedeemSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
                     "promptpayMode": {
                       "enum": [
                         "bank",
@@ -30179,6 +30224,10 @@
                     "receiptPrinterPort",
                     "receiptPrinterEnabled",
                     "cashDrawerEnabled",
+                    "pointsEnabled",
+                    "pointsEarnSatang",
+                    "pointsRedeemSatang",
+                    "pointsMinRedeem",
                     "logoUrl"
                   ],
                   "type": "object"
@@ -30240,6 +30289,51 @@
                       "string",
                       "null"
                     ]
+                  },
+                  "pointsEarnSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 100,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 100
+                  },
+                  "pointsEnabled": {
+                    "type": "boolean"
+                  },
+                  "pointsMinRedeem": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
+                  "pointsRedeemSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
                   },
                   "promptpayMode": {
                     "enum": [
@@ -30391,6 +30485,51 @@
                       "null"
                     ]
                   },
+                  "pointsEarnSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 100,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 100
+                  },
+                  "pointsEnabled": {
+                    "type": "boolean"
+                  },
+                  "pointsMinRedeem": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
+                  "pointsRedeemSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
                   "promptpayMode": {
                     "enum": [
                       "bank",
@@ -30540,6 +30679,51 @@
                       "string",
                       "null"
                     ]
+                  },
+                  "pointsEarnSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 100,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 100
+                  },
+                  "pointsEnabled": {
+                    "type": "boolean"
+                  },
+                  "pointsMinRedeem": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
+                  "pointsRedeemSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
                   },
                   "promptpayMode": {
                     "enum": [
@@ -30704,6 +30888,51 @@
                         "null"
                       ]
                     },
+                    "pointsEarnSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 100,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 100
+                    },
+                    "pointsEnabled": {
+                      "type": "boolean"
+                    },
+                    "pointsMinRedeem": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
+                    "pointsRedeemSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
                     "promptpayMode": {
                       "enum": [
                         "bank",
@@ -30828,6 +31057,10 @@
                     "receiptPrinterPort",
                     "receiptPrinterEnabled",
                     "cashDrawerEnabled",
+                    "pointsEnabled",
+                    "pointsEarnSatang",
+                    "pointsRedeemSatang",
+                    "pointsMinRedeem",
                     "logoUrl"
                   ],
                   "type": "object"
@@ -30900,6 +31133,51 @@
                         "null"
                       ]
                     },
+                    "pointsEarnSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 100,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 100
+                    },
+                    "pointsEnabled": {
+                      "type": "boolean"
+                    },
+                    "pointsMinRedeem": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
+                    "pointsRedeemSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
                     "promptpayMode": {
                       "enum": [
                         "bank",
@@ -31024,6 +31302,10 @@
                     "receiptPrinterPort",
                     "receiptPrinterEnabled",
                     "cashDrawerEnabled",
+                    "pointsEnabled",
+                    "pointsEarnSatang",
+                    "pointsRedeemSatang",
+                    "pointsMinRedeem",
                     "logoUrl"
                   ],
                   "type": "object"
@@ -31162,6 +31444,51 @@
                         "null"
                       ]
                     },
+                    "pointsEarnSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 100,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 100
+                    },
+                    "pointsEnabled": {
+                      "type": "boolean"
+                    },
+                    "pointsMinRedeem": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
+                    "pointsRedeemSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
                     "promptpayMode": {
                       "enum": [
                         "bank",
@@ -31286,6 +31613,10 @@
                     "receiptPrinterPort",
                     "receiptPrinterEnabled",
                     "cashDrawerEnabled",
+                    "pointsEnabled",
+                    "pointsEarnSatang",
+                    "pointsRedeemSatang",
+                    "pointsMinRedeem",
                     "logoUrl"
                   ],
                   "type": "object"
