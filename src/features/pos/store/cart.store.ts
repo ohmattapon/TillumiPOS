@@ -1,20 +1,23 @@
+import { normalizeCouponCode } from '@pos/api/promotions'
 import { create } from 'zustand'
 
 /**
- * A cart line holds only the product id, the option ids chosen and the quantity. Names, prices and
- * stock are read from the products and modifier queries when the cart is priced, so the cart can
- * never show a stale price.
+ * A cart line holds only the product id, the option ids chosen, the pack chosen and the quantity.
+ * Names, prices and stock are read from the products and modifier queries when the cart is priced,
+ * so the cart can never show a stale price.
  */
 export interface CartLine {
-  /** `productId:optionIds`: the same product with the same options is one line. */
+  /** `productId:optionIds`, with `:p<packId>` when the line sells a pack: the same thing twice is one line. */
   key: string
   productId: number
   optionIds: number[]
+  /** The pack the line sells; undefined when it sells single pieces. A pack line never carries options. */
+  packId?: number
   quantity: number
 }
 
-export const cartLineKey = (productId: number, optionIds: readonly number[]) =>
-  `${productId}:${[...optionIds].sort((a, b) => a - b).join('-')}`
+export const cartLineKey = (productId: number, optionIds: readonly number[], packId?: number) =>
+  `${productId}:${[...optionIds].sort((a, b) => a - b).join('-')}${packId === undefined ? '' : `:p${packId}`}`
 
 interface CartState {
   lines: CartLine[]
@@ -26,8 +29,17 @@ interface CartState {
    */
   memberId: number | null
   setMember: (memberId: number | null) => void
+  /**
+   * The coupon code the cashier typed, already upper-cased, or ''. Only the one-step cart asks
+   * with a code, because a quote is the only thing that pins a coupon.
+   */
+  couponCode: string
+  setCouponCode: (couponCode: string) => void
+  /** The points the member spends on this cart. Only the one-step cart redeems; an order never does. */
+  redeemPoints: number
+  setRedeemPoints: (points: number) => void
   orderId: number | null
-  add: (productId: number, optionIds?: readonly number[]) => void
+  add: (productId: number, optionIds?: readonly number[], packId?: number) => void
   /** A quantity of 0 or less removes the line. */
   setQuantity: (key: string, quantity: number) => void
   setDiscount: (discount: string) => void
@@ -46,15 +58,24 @@ export const useCartStore = create<CartState>()((set) => ({
   discount: '',
   orderId: null,
   memberId: null,
+  couponCode: '',
+  redeemPoints: 0,
   promotionDeclined: false,
-  setMember: (memberId) => set({ memberId }),
-  add: (productId, optionIds = []) =>
+  // The points belong to the member, so they go whenever the member does, even to the same one.
+  setMember: (memberId) => set({ memberId, redeemPoints: 0 }),
+  setCouponCode: (couponCode) => set({ couponCode: normalizeCouponCode(couponCode) }),
+  setRedeemPoints: (redeemPoints) => set({ redeemPoints }),
+  add: (productId, optionIds = [], packId) =>
     set((state) => {
-      const key = cartLineKey(productId, optionIds)
+      const key = cartLineKey(productId, optionIds, packId)
+      const sortedOptionIds = [...optionIds].sort((a, b) => a - b)
+      const line: CartLine = packId === undefined
+        ? { key, productId, optionIds: sortedOptionIds, quantity: 1 }
+        : { key, productId, optionIds: sortedOptionIds, packId, quantity: 1 }
       return {
-        lines: state.lines.some((line) => line.key === key)
-          ? state.lines.map((line) => (line.key === key ? { ...line, quantity: line.quantity + 1 } : line))
-          : [...state.lines, { key, productId, optionIds: [...optionIds].sort((a, b) => a - b), quantity: 1 }],
+        lines: state.lines.some((entry) => entry.key === key)
+          ? state.lines.map((entry) => (entry.key === key ? { ...entry, quantity: entry.quantity + 1 } : entry))
+          : [...state.lines, line],
       }
     }),
   setQuantity: (key, quantity) =>
@@ -65,8 +86,10 @@ export const useCartStore = create<CartState>()((set) => ({
     })),
   setDiscount: (discount) => set({ discount }),
   setPromotionDeclined: (promotionDeclined) => set({ promotionDeclined }),
-  workOnOrder: (orderId) => set({ orderId, lines: [], discount: '', memberId: null, promotionDeclined: false }),
-  clear: () => set({ lines: [], discount: '', orderId: null, memberId: null, promotionDeclined: false }),
+  workOnOrder: (orderId) =>
+    set({ orderId, lines: [], discount: '', memberId: null, couponCode: '', redeemPoints: 0, promotionDeclined: false }),
+  clear: () =>
+    set({ lines: [], discount: '', orderId: null, memberId: null, couponCode: '', redeemPoints: 0, promotionDeclined: false }),
 }))
 
 /** For code outside React, such as the logout handler. */

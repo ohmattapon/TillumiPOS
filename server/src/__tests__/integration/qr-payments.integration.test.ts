@@ -2,14 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { eq } from 'drizzle-orm'
 import { qrPayments } from '../../infrastructure/database/schema/qr-payments'
 import { db } from '../../libs/db'
-import { fakeScb, SCB_ENV_KEYS } from '../../../test/scb-server'
+import { fakeKbank, KBANK_ENV_KEYS } from '../../../test/kbank-server'
 import {
   baseUrl,
-  login,
   ok,
   PASSWORD,
   resetDatabase,
-  seedBranch,
   seedProduct,
   signIn,
   type Session,
@@ -20,14 +18,14 @@ let cashier: Session
 
 beforeEach(async () => {
   await resetDatabase()
-  fakeScb.reset()
-  fakeScb.enableIn(Bun.env)
+  fakeKbank.reset()
+  fakeKbank.enableIn(Bun.env)
   owner = await signIn('owner')
   cashier = await signIn('cashier')
 })
 
 afterEach(() => {
-  for (const key of SCB_ENV_KEYS) delete Bun.env[key]
+  for (const key of KBANK_ENV_KEYS) delete Bun.env[key]
 })
 
 const createQr = async (amountSatang: number, api = cashier.api) => ok(await api.payments.qr.post({ amountSatang }))
@@ -35,14 +33,14 @@ const promptpay = (amountSatang: number, qrPaymentId?: number) => [
   { method: 'promptpay' as const, amountSatang, ...(qrPaymentId !== undefined && { qrPaymentId }) },
 ]
 const cash = (amountSatang: number) => [{ method: 'cash' as const, amountSatang }]
-const inquiries = () => fakeScb.requests.filter((request) => request.path.startsWith('/v1/payment/billpayment/inquiry'))
+const inquiries = () => fakeKbank.requests.filter((request) => request.path.startsWith('/v1/qrpayment/v4/inquiry'))
 
 /** The polling screen asks every 3 seconds; tests do not wait, they just say the interval has passed. */
 const letTimePass = (id: number) => db.update(qrPayments).set({ lastCheckedAt: null }).where(eq(qrPayments.id, id))
 
 /** Customer pays at the bank, then the till's next poll sees it. */
 async function customerPays(qr: { id: number; reference: string }, api = cashier.api) {
-  fakeScb.pay(qr.reference)
+  fakeKbank.pay(qr.reference)
   await letTimePass(qr.id)
   return ok(await api.payments.qr({ id: qr.id }).get())
 }
@@ -51,18 +49,18 @@ describe('configuration', () => {
   test('reports whether QR payment is set up', async () => {
     expect(ok(await cashier.api.payments.qr.config.get())).toEqual({ enabled: true })
 
-    for (const key of SCB_ENV_KEYS) delete Bun.env[key]
+    for (const key of KBANK_ENV_KEYS) delete Bun.env[key]
     expect(ok(await cashier.api.payments.qr.config.get())).toEqual({ enabled: false })
   })
 
   test('values copied from the example file do not count as configured', async () => {
-    Bun.env.SCB_API_KEY = 'your-scb-api-key'
+    Bun.env.KBANK_CONSUMER_ID = 'your-kbank-consumer-id'
 
     expect(ok(await cashier.api.payments.qr.config.get())).toEqual({ enabled: false })
   })
 
   test('creating a QR when it is not set up is refused', async () => {
-    for (const key of SCB_ENV_KEYS) delete Bun.env[key]
+    for (const key of KBANK_ENV_KEYS) delete Bun.env[key]
 
     const refused = await cashier.api.payments.qr.post({ amountSatang: 1000 })
 
@@ -83,15 +81,13 @@ describe('creating a QR', () => {
       qrRawData: expect.stringContaining(qr.reference),
       qrImage: expect.any(String),
     })
-    expect(qr.reference).toMatch(/^QR[A-Z0-9]{14}$/)
+    expect(qr.reference).toMatch(/^QR[A-Z0-9]{13}$/)
     expect(new Date(qr.expiresAt).getTime()).toBeGreaterThan(Date.now() + 9 * 60_000)
 
-    expect(fakeScb.created.get(qr.reference)).toEqual({
+    expect(fakeKbank.created.get(qr.reference)).toEqual({
       amount: '50.25',
-      ppId: fakeScb.credentials.billerId,
-      // The merchant profile's prefix, then the branch the sale belongs to.
-      ref3: 'TSTMAIN',
-      ref2: undefined,
+      // The branch the sale belongs to, sent as reference 1.
+      reference1: 'MAIN',
     })
   })
 
@@ -104,19 +100,16 @@ describe('creating a QR', () => {
     const text = await response.text()
 
     expect(response.status).toBe(200)
-    expect(text).not.toContain(fakeScb.credentials.apiSecret)
-    expect(text).not.toContain(fakeScb.credentials.apiKey)
-    const sent = fakeScb.requests.find((request) => request.path === '/v1/payment/qrcode/create')!
-    expect(sent.headers.resourceownerid).toBe(fakeScb.credentials.apiKey)
+    expect(text).not.toContain(fakeKbank.credentials.consumerSecret)
+    expect(text).not.toContain(fakeKbank.credentials.partnerSecret)
+    const sent = fakeKbank.requests.find((request) => request.path === '/v1/qrpayment/request')!
     expect(sent.headers.authorization).toMatch(/^Bearer token-/)
   })
 
-  test('sends reference 2 only when the merchant profile uses two references', async () => {
-    Bun.env.SCB_TWO_REFERENCES = 'true'
-
+  test('sends the branch as reference 1', async () => {
     const qr = await createQr(1000)
 
-    expect(fakeScb.created.get(qr.reference)?.ref2).toBe('MAIN')
+    expect(fakeKbank.created.get(qr.reference)?.reference1).toBe('MAIN')
   })
 
   test.each([0, -100, 1.5])('refuses an amount of %p', async (amountSatang) => {
@@ -126,16 +119,16 @@ describe('creating a QR', () => {
   test('reuses the bank token, and renews it when the bank stops accepting it', async () => {
     await createQr(1000)
     await createQr(1000)
-    expect(fakeScb.tokensIssued).toBe(1)
+    expect(fakeKbank.tokensIssued).toBe(1)
 
-    fakeScb.revokeTokens()
+    fakeKbank.revokeTokens()
     await createQr(1000)
 
-    expect(fakeScb.tokensIssued).toBe(2)
+    expect(fakeKbank.tokensIssued).toBe(2)
   })
 
   test('a bank outage is a 502 with its own code, and stores nothing', async () => {
-    fakeScb.setFailing(503)
+    fakeKbank.setFailing(503)
 
     const failed = await cashier.api.payments.qr.post({ amountSatang: 1000 })
 
@@ -154,8 +147,8 @@ describe('waiting for payment', () => {
 
     expect(paid).toMatchObject({
       status: 'paid',
-      bankTransactionId: 'FAKE-TX-1',
-      payerName: 'ลูกค้าทดสอบ',
+      // KBank sends no transaction number, so the reference identifies the money.
+      bankTransactionId: qr.reference,
       paidAt: expect.any(Date),
     })
   })
@@ -172,15 +165,15 @@ describe('waiting for payment', () => {
 
   test('a payment of another amount is not accepted', async () => {
     const qr = await createQr(5000)
-    fakeScb.pay(qr.reference, { amountSatang: 4000 })
+    fakeKbank.pay(qr.reference, { amountSatang: 4000 })
     await letTimePass(qr.id)
 
     expect(ok(await cashier.api.payments.qr({ id: qr.id }).get()).status).toBe('pending')
   })
 
-  test('a refunded payment is not accepted', async () => {
+  test('a voided payment is not accepted', async () => {
     const qr = await createQr(5000)
-    fakeScb.pay(qr.reference, { reverseFlag: 'R' })
+    fakeKbank.void(qr.reference)
     await letTimePass(qr.id)
 
     expect(ok(await cashier.api.payments.qr({ id: qr.id }).get()).status).toBe('pending')
@@ -188,75 +181,62 @@ describe('waiting for payment', () => {
 
   test('a payment made after midnight is still found', async () => {
     const qr = await createQr(5000)
-    // Made late yesterday, paid today: the bank files it under today's date.
+    // Made late yesterday, paid today: the inquiry still finds it.
     await db
       .update(qrPayments)
       .set({ createdAt: new Date(Date.now() - 86_400_000), lastCheckedAt: null })
       .where(eq(qrPayments.id, qr.id))
-    fakeScb.pay(qr.reference)
+    fakeKbank.pay(qr.reference)
 
     expect(ok(await cashier.api.payments.qr({ id: qr.id }).get()).status).toBe('paid')
   })
 
   test('when the bank cannot be reached the screen keeps waiting instead of failing', async () => {
     const qr = await createQr(5000)
-    fakeScb.setFailing(503)
+    fakeKbank.setFailing(503)
     await letTimePass(qr.id)
 
     expect(ok(await cashier.api.payments.qr({ id: qr.id }).get()).status).toBe('pending')
   })
 
-  test("another branch's payment is not found", async () => {
-    const qr = await createQr(5000)
-    const bkk = await seedBranch('BKK', 'สาขากรุงเทพ')
-    const elsewhere = await login('owner', PASSWORD, bkk.id)
-
-    expect((await elsewhere.payments.qr({ id: qr.id }).get()).status).toBe(404)
-    expect((await elsewhere.payments.qr({ id: qr.id }).cancel.post()).status).toBe(404)
-  })
 })
 
-describe("SCB's confirmation callback", () => {
+describe("KBank's payment notification", () => {
   const confirm = (body: unknown) =>
-    fetch(`${baseUrl}/payments/qr/scb/confirmation`, {
+    fetch(`${baseUrl}/payments/qr/kbank/confirmation`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     })
 
-  test('is answered the way SCB requires and marks the payment paid at once', async () => {
+  test('is answered with success and marks the payment paid at once', async () => {
     const qr = await createQr(5000)
-    fakeScb.pay(qr.reference)
+    fakeKbank.pay(qr.reference)
 
-    const response = await confirm({ billPaymentRef1: qr.reference, transactionId: 'SCB-TX-9', amount: '50.00' })
+    const response = await confirm({ partnerTxnUid: qr.reference })
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ resCode: '00', resDesc: 'success', transactionId: 'SCB-TX-9' })
-    // Not through the polling throttle: the callback is the news.
+    expect(await response.json()).toMatchObject({ statusCode: '00', partnerTxnUid: qr.reference })
+    // Not through the polling throttle: the notification is the news.
     expect(ok(await cashier.api.payments.qr({ id: qr.id }).get()).status).toBe('paid')
     expect(inquiries()).toHaveLength(1)
   })
 
-  test('a forged callback does not make anything paid: only the bank itself is believed', async () => {
+  test('a forged notification does not make anything paid: only the bank itself is believed', async () => {
     const qr = await createQr(5000)
 
-    const response = await confirm({
-      billPaymentRef1: qr.reference,
-      transactionId: 'FORGED',
-      amount: '50.00',
-      payerName: 'ผู้ไม่หวังดี',
-    })
+    const response = await confirm({ partnerTxnUid: qr.reference, txnAmount: '9999.99' })
 
     expect(response.status).toBe(200)
     const still = ok(await cashier.api.payments.qr({ id: qr.id }).get())
     expect(still).toMatchObject({ status: 'pending', bankTransactionId: null })
   })
 
-  test('an unknown reference is acknowledged too, so SCB stops retrying', async () => {
-    const response = await confirm({ billPaymentRef1: 'NOSUCHREF', transactionId: 'X' })
+  test('an unknown reference is acknowledged too, so KBank stops retrying', async () => {
+    const response = await confirm({ partnerTxnUid: 'NOSUCHREF' })
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toMatchObject({ resCode: '00' })
+    expect(await response.json()).toMatchObject({ statusCode: '00' })
   })
 
   test('needs no session', async () => {
@@ -275,7 +255,7 @@ describe('cancelling', () => {
 
   test('checks with the bank first, so money that has just arrived is not cancelled away', async () => {
     const qr = await createQr(5000)
-    fakeScb.pay(qr.reference)
+    fakeKbank.pay(qr.reference)
 
     const refused = await cashier.api.payments.qr({ id: qr.id }).cancel.post()
 
@@ -384,21 +364,6 @@ describe('paying a sale with a QR', () => {
     expect(refused.error?.value).toMatchObject({ code: 'QR_AMOUNT_MISMATCH' })
   })
 
-  test("another branch's QR cannot be used", async () => {
-    const tea = await seedProduct(owner, { priceSatang: 1000, stock: 5 })
-    const bkk = await seedBranch('BKK', 'สาขากรุงเทพ')
-    const ownerInBkk = await login('owner', PASSWORD, bkk.id)
-    const qr = await createQr(1000, ownerInBkk)
-    await customerPays(qr, ownerInBkk)
-
-    const refused = await cashier.api.sales.post({
-      items: [{ productId: tea.id, quantity: 1 }],
-      payments: promptpay(1000, qr.id),
-    })
-
-    expect(refused.status).toBe(404)
-  })
-
   test('a sale that fails after the customer paid leaves the QR paid and usable for the corrected sale', async () => {
     const tea = await seedProduct(owner, { priceSatang: 1000, stock: 1 })
     const qr = await createQr(1000)
@@ -418,12 +383,29 @@ describe('paying a sale with a QR', () => {
   })
 
   test('without QR payment set up, promptpay is taken on trust as before', async () => {
-    for (const key of SCB_ENV_KEYS) delete Bun.env[key]
+    for (const key of KBANK_ENV_KEYS) delete Bun.env[key]
     const tea = await seedProduct(owner, { priceSatang: 1000, stock: 5 })
 
     const sale = ok(await cashier.api.sales.post({ items: [{ productId: tea.id, quantity: 1 }], payments: promptpay(1000) }))
 
     expect(sale.payments[0]).toMatchObject({ method: 'promptpay' })
+  })
+
+  test('static mode takes promptpay on trust even with the bank set up, and a bank QR from before still works', async () => {
+    const tea = await seedProduct(owner, { priceSatang: 1000, stock: 5 })
+    const qr = await createQr(1000)
+    await customerPays(qr)
+    ok(await owner.api.settings.patch({ promptpayMode: 'static', promptpayTarget: '0812345678' }))
+
+    // No qrPaymentId: the staff confirm the money themselves.
+    const sale = ok(await cashier.api.sales.post({ items: [{ productId: tea.id, quantity: 1 }], payments: promptpay(1000) }))
+    expect(sale.payments).toEqual([{ method: 'promptpay', amountSatang: 1000 }])
+
+    // A bank-confirmed QR made before the switch still claims normally.
+    const second = ok(
+      await cashier.api.sales.post({ items: [{ productId: tea.id, quantity: 1 }], payments: promptpay(1000, qr.id) }),
+    )
+    expect(ok(await cashier.api.payments.qr({ id: qr.id }).get())).toMatchObject({ status: 'paid', saleId: second.id })
   })
 })
 

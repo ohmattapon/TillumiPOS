@@ -1,5 +1,6 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiV2, unwrap } from '@/lib/api'
+import { withIdempotencyKey } from '@/lib/idempotency-key'
 
 export const shiftKeys = {
   all: ['shifts'] as const,
@@ -55,6 +56,14 @@ export const shiftHistoryQuery = (filters: ShiftHistoryFilters) => queryOptions(
 })
 
 /** The report of a shift: live while it is open, frozen from when counting started. */
+/** One shift with its closing state, kept fresh because another till may be counting it. */
+export const shiftQuery = (id: number) => queryOptions({
+  queryKey: shiftKeys.detail(id),
+  queryFn: () => unwrap(apiV2.shifts({ id }).get()),
+  refetchInterval: 5_000,
+  refetchOnWindowFocus: true,
+})
+
 export const shiftSummaryQuery = (id: number) => queryOptions({
   queryKey: shiftKeys.summary(id),
   queryFn: () => unwrap(apiV2.shifts({ id }).summary.get()),
@@ -90,7 +99,7 @@ export function useOpenShift() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: ({ idempotencyKey, ...input }: { registerId: number; openingCashSatang: number; openingNote?: string; idempotencyKey: string }) =>
-      unwrap(apiV2.shifts.post(input, { headers: { 'idempotency-key': idempotencyKey } })),
+      unwrap(apiV2.shifts.post(input, withIdempotencyKey(idempotencyKey))),
     onSuccess: () => invalidateShifts(client),
   })
 }
@@ -99,7 +108,7 @@ export function useStartClosing() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: ({ id, acknowledgePendingQr }: { id: number; acknowledgePendingQr?: boolean }) =>
-      unwrap(apiV2.shifts({ id })['start-closing'].post(acknowledgePendingQr ? { acknowledgePendingQr } : {}, { headers: { 'idempotency-key': crypto.randomUUID() } })),
+      unwrap(apiV2.shifts({ id })['start-closing'].post(acknowledgePendingQr ? { acknowledgePendingQr } : {}, withIdempotencyKey())),
     onSuccess: () => invalidateShifts(client),
   })
 }
@@ -108,7 +117,7 @@ export function useCloseShift() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (input: { id: number; closingRevision: number; countedCashSatang: number; reason?: string }) =>
-      unwrap(apiV2.shifts({ id: input.id }).close.post({ closingRevision: input.closingRevision, countedCashSatang: input.countedCashSatang, reason: input.reason }, { headers: { 'idempotency-key': crypto.randomUUID() } })),
+      unwrap(apiV2.shifts({ id: input.id }).close.post({ closingRevision: input.closingRevision, countedCashSatang: input.countedCashSatang, reason: input.reason }, withIdempotencyKey())),
     onSuccess: () => invalidateShifts(client),
   })
 }
@@ -117,7 +126,7 @@ export function useCancelClosing() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (input: { id: number; closingRevision: number }) =>
-      unwrap(apiV2.shifts({ id: input.id })['cancel-closing'].post({ closingRevision: input.closingRevision }, { headers: { 'idempotency-key': crypto.randomUUID() } })),
+      unwrap(apiV2.shifts({ id: input.id })['cancel-closing'].post({ closingRevision: input.closingRevision }, withIdempotencyKey())),
     onSuccess: () => invalidateShifts(client),
   })
 }
@@ -126,7 +135,7 @@ export function useRecordCashMovement() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: ({ idempotencyKey, ...input }: { id: number; kind: 'cash_in' | 'cash_out'; amountSatang: number; reason: string; idempotencyKey: string }) =>
-      unwrap(apiV2.shifts({ id: input.id })['cash-entries'].post({ kind: input.kind, amountSatang: input.amountSatang, reason: input.reason }, { headers: { 'idempotency-key': idempotencyKey } })),
+      unwrap(apiV2.shifts({ id: input.id })['cash-entries'].post({ kind: input.kind, amountSatang: input.amountSatang, reason: input.reason }, withIdempotencyKey(idempotencyKey))),
     onSuccess: () => invalidateShifts(client),
   })
 }

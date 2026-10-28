@@ -17,6 +17,14 @@ $full = Join-Path (Get-Location) $file
 # the PowerShell pipeline (which would damage it).
 compose -f docker-compose.yml exec -T db sh -c 'pg_dump -U pos -d pos --clean --if-exists --no-owner | gzip > /tmp/backup.sql.gz'
 if ($LASTEXITCODE -ne 0) { Write-Error 'The backup failed: is the database running? (podman compose ps)' }
+# sh has no pipefail, so a pg_dump that failed halfway still gives exit code 0 here. pg_dump ends every complete
+# dump with a closing line; a dump cut off by a failure (a full disk, a dropped connection) is a valid gzip file
+# that would wipe the shop's data when restored, so it is not kept as a backup.
+compose -f docker-compose.yml exec -T db sh -c 'gunzip -c /tmp/backup.sql.gz | tail -n 20 | grep -q PostgreSQL.database.dump.complete'
+if ($LASTEXITCODE -ne 0) {
+  compose -f docker-compose.yml exec -T db rm -f /tmp/backup.sql.gz
+  Write-Error 'The backup failed: the dump is incomplete (is the disk full?).'
+}
 compose -f docker-compose.yml cp db:/tmp/backup.sql.gz $full
 compose -f docker-compose.yml exec -T db rm -f /tmp/backup.sql.gz
 

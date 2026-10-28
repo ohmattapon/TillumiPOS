@@ -5,7 +5,8 @@ import { createUserSchema } from '../../../users/applications/schemas/user-schem
 export const completeSetupSchema = z.object({
   setupCode: z.string().min(1).max(64),
   shopName: z.string().trim().min(1).max(100),
-  branchName: z.string().trim().min(1).max(100),
+  // Optional: the shop has one branch, and without a name it takes the shop's name.
+  branchName: z.string().trim().min(1).max(100).optional(),
   username: createUserSchema.shape.username,
   displayName: z.string().trim().min(1).max(100),
   // Longer than the 8 an owner may later give a cashier: this account can do everything.

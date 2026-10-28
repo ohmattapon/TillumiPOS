@@ -134,6 +134,160 @@
       "when": 1792155800309,
       "tag": "0018_shop_features",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792242200000,
+      "tag": "0019_reopen_main_branch",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792328600000,
+      "tag": "0020_user_pin",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792328700000,
+      "tag": "0021_display_slides",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792328800000,
+      "tag": "0022_promotion_image",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792328800001,
+      "tag": "0023_gray_green_goblin",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792328800002,
+      "tag": "0024_repair_modifier_option_default",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792328800003,
+      "tag": "0025_product_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792328800004,
+      "tag": "0026_repair_product_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1792328900001,
+      "tag": "0027_auto_product_sku",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1792328900002,
+      "tag": "0028_stock_receipts",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792328900003,
+      "tag": "0029_kind_moonstone",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792328900004,
+      "tag": "0030_worthless_marauders",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792328900005,
+      "tag": "0031_cooing_robbie_robertson",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792386717710,
+      "tag": "0032_printer_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792500954221,
+      "tag": "0033_shop_logo",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792841287141,
+      "tag": "0034_robust_virginia_dare",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793074725093,
+      "tag": "0035_open_the_fallen",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793102023659,
+      "tag": "0036_high_firestar",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793103135053,
+      "tag": "0037_first_killer_shrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793142919584,
+      "tag": "0038_watery_cerise",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793145678127,
+      "tag": "0039_lonely_xorn",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793152680846,
+      "tag": "0040_silly_randall_flagg",
+      "breakpoints": true
     }
   ]
 }

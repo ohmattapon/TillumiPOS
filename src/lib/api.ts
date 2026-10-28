@@ -1,16 +1,9 @@
 import { treaty } from '@elysiajs/eden'
 import type { App } from '@pos/api'
 import i18n from 'i18next'
-import { chosenBranchId } from './active-branch'
 
 // End-to-end typed client: routes, bodies and responses are inferred from the API source.
-// Every request names the branch being worked in; without a choice the API uses the user's own.
-const client = treaty<App>(window.location.origin, {
-  headers: () => {
-    const branchId = chosenBranchId()
-    return branchId === null ? {} : { 'x-branch-id': String(branchId) }
-  },
-})
+const client = treaty<App>(window.location.origin)
 
 export const api = client.api.v1
 export const apiV2 = client.api.v2

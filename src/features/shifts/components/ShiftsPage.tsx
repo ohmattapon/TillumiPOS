@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { meQuery, useAuthorization } from '@/features/auth'
-import { useActiveBranch } from '@/features/branches'
 import { useFormat } from '@/features/settings'
 import { ApiError } from '@/lib/api'
 import { selectedRegisterId, useRegisterSelectionStore } from '../store/register-selection'
@@ -19,7 +18,8 @@ import { QrRecoveryPanel } from './QrRecoveryPanel'
 import { ShiftHistoryPanel } from './ShiftHistoryPanel'
 import { ShiftSummaryView } from './ShiftSummaryView'
 import { ShiftEntriesPanel } from './ShiftEntriesPanel'
-import { checkoutModeQuery, currentShiftQuery, registersQuery, useCancelClosing, useCloseShift, useCreateRegister, useOpenShift, useRecordCashMovement, useStartClosing, useUpdateRegister } from '../api'
+import { checkoutModeQuery, currentShiftQuery, registersQuery, shiftQuery, useCancelClosing, useCloseShift, useCreateRegister, useOpenShift, useRecordCashMovement, useStartClosing, useUpdateRegister } from '../api'
+import { newIdempotencyKey } from '@/lib/idempotency-key'
 
 export function ShiftsPage() {
   const { can } = useAuthorization()
@@ -27,7 +27,6 @@ export function ShiftsPage() {
   const { t: tc } = useTranslation()
   const { money, date } = useFormat()
   const me = useQuery(meQuery).data
-  const { branch } = useActiveBranch()
   const mode = useQuery(checkoutModeQuery)
   const registers = useQuery(registersQuery)
   const registerPaging = useListPagination('registers')
@@ -46,7 +45,7 @@ export function ShiftsPage() {
   const [confirming, setConfirming] = useState<'start' | 'close' | 'cancel' | null>(null)
   const openCommandKey = useRef<string | null>(null)
   const movementCommandKey = useRef<string | null>(null)
-  const rememberedRegisterId = selectedRegisterId(selections, me?.id, branch?.id)
+  const rememberedRegisterId = selectedRegisterId(selections, me?.id)
   const currentId = (rememberedRegisterId && registers.data?.items.some((register) => register.id === rememberedRegisterId && register.isActive)
     ? rememberedRegisterId : registers.data?.items.find((register) => register.isActive)?.id) ?? null
   const current = useQuery({ ...currentShiftQuery(currentId ?? 0), enabled: currentId !== null })
@@ -54,11 +53,8 @@ export function ShiftsPage() {
   const shiftLoading = registers.isPending || (currentId !== null && current.isPending)
   const detailsId = current.data?.id
   const activeShift = useQuery({
-    queryKey: ['shifts', 'detail', detailsId],
-    queryFn: () => import('@/lib/api').then(({ apiV2, unwrap }) => unwrap(apiV2.shifts({ id: detailsId! }).get())),
+    ...shiftQuery(detailsId ?? 0),
     enabled: detailsId !== undefined,
-    refetchInterval: 5_000,
-    refetchOnWindowFocus: true,
   })
   const open = useOpenShift()
   const startClosing = useStartClosing()
@@ -126,8 +122,8 @@ export function ShiftsPage() {
             <Label htmlFor="shift-register">{t('register')}</Label>
             <Select
               value={currentId === null ? '' : String(currentId)}
-              disabled={registers.isPending || currentId === null || !me || !branch}
-              onValueChange={(value) => { if (value && me && branch) selectRegister(me.id, branch.id, Number(value)) }}
+              disabled={registers.isPending || currentId === null || !me}
+              onValueChange={(value) => { if (value && me) selectRegister(me.id, Number(value)) }}
             >
               <SelectTrigger id="shift-register" className="h-11! w-full min-w-0">
                 <SelectValue placeholder={t('chooseRegister')} />
@@ -160,7 +156,7 @@ export function ShiftsPage() {
                   event.preventDefault()
                   const amountSatang = money.parse(movementAmount)
                   if (amountSatang && current.data) {
-                    movementCommandKey.current ??= crypto.randomUUID()
+                    movementCommandKey.current ??= newIdempotencyKey()
                     movement.mutate({ id: current.data.id, kind: movementKind, amountSatang, reason: movementReason, idempotencyKey: movementCommandKey.current }, {
                       onSuccess: () => { movementCommandKey.current = null; setMovementAmount(''); setMovementReason('') },
                     })
@@ -259,7 +255,7 @@ export function ShiftsPage() {
             <div className="space-y-4 border-t pt-5">
               <p className="text-sm text-muted-foreground">{t('noShift')}</p>
               <label className="grid gap-2 text-sm font-medium">{t('openingCash')}<Input inputMode="decimal" value={openingAmount} onChange={(e) => { openCommandKey.current = null; setOpeningAmount(e.target.value) }} /></label>
-              <Button className="h-11" disabled={mode.data?.checkoutMode !== 'shifts' || currentId === null || open.isPending || money.parse(openingAmount) === null} onClick={() => { const openingCashSatang = money.parse(openingAmount); if (currentId !== null && openingCashSatang !== null) { openCommandKey.current ??= crypto.randomUUID(); open.mutate({ registerId: currentId, openingCashSatang, idempotencyKey: openCommandKey.current }, { onSuccess: () => { openCommandKey.current = null } }) } }}>{t('openAction')}</Button>
+              <Button className="h-11" disabled={mode.data?.checkoutMode !== 'shifts' || currentId === null || open.isPending || money.parse(openingAmount) === null} onClick={() => { const openingCashSatang = money.parse(openingAmount); if (currentId !== null && openingCashSatang !== null) { openCommandKey.current ??= newIdempotencyKey(); open.mutate({ registerId: currentId, openingCashSatang, idempotencyKey: openCommandKey.current }, { onSuccess: () => { openCommandKey.current = null } }) } }}>{t('openAction')}</Button>
             </div>
           )}
           {error && <p role="alert" className="text-sm text-destructive">{errorCode ? t(`errors.${errorCode}`, { defaultValue: error.message }) : error.message || t('error')}</p>}

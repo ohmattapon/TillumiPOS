@@ -6,30 +6,43 @@ const fields = {
   barcode: t.Nullable(t.String({ minLength: 1, maxLength: 64 })),
   name: t.String({ minLength: 1, maxLength: 200 }),
   categoryId: t.Nullable(t.Integer()),
+  productType: t.Union([t.Literal('normal'), t.Literal('cafe')]),
   priceSatang: satang(),
   costSatang: satang(),
   trackStock: t.Boolean(),
   isActive: t.Boolean(),
 }
 
+const packFields = {
+  barcode: t.String({ minLength: 1, maxLength: 64 }),
+  size: t.Integer(),
+  priceSatang: t.Nullable(satang()),
+}
+const pack = t.Object({ id: t.Integer(), ...packFields, isActive: t.Boolean() })
+// Range rules (size, price) are checked by the domain, not here.
+const packInput = t.Object({ id: t.Optional(t.Integer()), ...packFields, isActive: t.Optional(t.Boolean()) })
+
 export const productSchemas = {
-  product: t.Object({ id: t.Integer(), ...fields, stockQty: t.Integer(), imageUrl: t.Nullable(t.String()) }),
+  product: t.Object({ id: t.Integer(), ...fields, stockQty: t.Integer(), imageUrl: t.Nullable(t.String()), packs: t.Array(pack) }),
   create: t.Object({
-    sku: fields.sku,
+    sku: t.Optional(fields.sku),
     name: fields.name,
     priceSatang: fields.priceSatang,
     barcode: t.Optional(fields.barcode),
     categoryId: t.Optional(fields.categoryId),
+    productType: t.Optional(fields.productType),
     costSatang: t.Optional(fields.costSatang),
     trackStock: t.Optional(fields.trackStock),
+    packs: t.Optional(t.Array(packInput)),
   }),
   // Stock is deliberately absent: it only changes through the inventory module.
-  update: t.Partial(t.Object(fields)),
+  update: t.Partial(t.Object({ ...fields, packs: t.Array(packInput) })),
   image: t.Object({ file: t.File({ type: ['image/jpeg', 'image/png', 'image/webp'], maxSize: '5m' }) }),
   listQuery: t.Object({
     q: t.Optional(t.String()),
     code: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
     categoryId: t.Optional(t.Numeric()),
+    productType: t.Optional(fields.productType),
     includeInactive: t.Optional(t.BooleanString()),
     isActive: t.Optional(t.BooleanString()),
     stockAtMost: t.Optional(t.Numeric()),

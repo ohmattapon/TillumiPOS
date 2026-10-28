@@ -1,7 +1,7 @@
 ---
 version: alpha
 name: TillumiPOS
-description: A point-of-sale system in mint-teal on white. Deep teal accent, dense but readable data, usable with mouse, keyboard and touch screen.
+description: A point-of-sale system in mint-teal on white. Deep teal accent, roomy, readable data, usable with mouse, keyboard and touch screen.
 colors:
   background: "#ffffff"
   canvas: "#f7fbfa"
@@ -92,7 +92,7 @@ TillumiPOS is a work tool, not a landing page. Staff use the sales screen hundre
 2. **Calm.** White cards on a pale mint canvas, thin lines, a single accent color (teal). Other colors appear only when they carry meaning (status, category, or telling the figures in a summary card apart).
 3. **Hard to get wrong.** Actions that cannot be undone must ask for confirmation and say what will happen. A button that cannot be pressed must look like it cannot be pressed.
 
-The approach comes from the restraint of Attio mixed with Linear: a white sidebar, the selected menu item on a soft mint background with teal text, a white page header with a navigation breadcrumb, and compact tables that can be read densely without taking a hand off the mouse or keyboard.
+The approach comes from the restraint of Attio mixed with Linear: a white sidebar, the selected menu item on a soft mint background with teal text, a white page header with a navigation breadcrumb, and roomy tables in a white card, with rows tall enough to read at a glance and to tap.
 
 ## Colors
 
@@ -169,12 +169,12 @@ Design and test at three sizes. These values match the Tailwind breakpoints `sm`
 - Main menu: on a large screen the sidebar is expanded with names. On a tablet it is a 48px icon rail by default. On a phone the sidebar is hidden and a bottom bar with 4 slots (Sell, Today, Shift, Menu) is used. The remaining items open from the "Menu" button.
 - Cart: on a large screen it is a fixed right panel. Below 1024px it is a bottom bar showing the count, the total and the pay button. Tapping it opens the whole cart as a sheet from the bottom.
 - Buttons in the header bar: every button is 44px tall. Below 640px they are gathered into a "More actions" button. A long title can wrap, and never breaks in the middle of a word.
-- Tables: always use `DataTable`. A `primary` column is the title of a row on a phone, `secondary` is the secondary line, and `wide-only` is shown from 1024px up.
+- Tables: always use `DataTable`. A `primary` column is the title of a row on a phone, `secondary` is the secondary line, and `wide-only` is shown from 1024px up. A table can carry a toolbar inside its card (the `toolbar` prop, usually a `TableSearch`); the toolbar is drawn once, above both the table and the phone list.
 - Dialogs: at most `100svh - 2rem` tall and scrollable inside. A dialog without a form uses `DialogFooter sticky` so the buttons stay at the bottom. A dialog with a form puts its buttons at the end of the form, and you scroll down to reach them.
 - Table floor plan: below 640px it is a list where you can edit the name and seats and turn a table on or off. Positions cannot be dragged.
 - No page scrolls horizontally at 390, 768 and 1366px (checked by e2e).
-- Login page (`LoginPage`): from 1024px up it is split in two. The left panel has a picture of a till on top and a `primary` background below showing the main capabilities briefly. This is an exception, for this page only, to the rule "one accent button per screen". The right side is a white form card on the `canvas` background. Below that width it is a single column with the system name on top.
-- Touch target: every visible button and input field is at least 44px tall, with no exceptions (checked on the sales page by e2e).
+- Login page (`LoginPage`): a single floating card centered on the `muted` background. From 1024px up the card holds two halves in about a 1:1 ratio, a till picture filling the left half, and the form on the right. Below that width the picture is hidden and the card shows the form only. The card stays flat at elevation level 1, a border with no shadow.
+- Touch target: every visible button and input field on the sales page and in the payment dialog is at least 44px tall, with no exceptions (checked on the sales page by e2e). Other screens follow the size table under Components.
 
 ## Elevation & Depth
 
@@ -201,7 +201,7 @@ Always use components from `src/components/ui` (shadcn/ui) first, and use the sh
 |---|---|---|
 | `PageHeader` | `components/PageHeader.tsx` | The header of every page: a faint breadcrumb on top (the `breadcrumb` prop), the page title, a one-line description and the primary button on the right |
 | `Panel` | `components/Panel.tsx` | A card with a header, a description and a table or list inside. 10px corners, a border, no shadow |
-| `tableHead`, `tableCell` | `components/Panel.tsx` | The classes for a table header and a cell, used on every data table |
+| `tableHead`, `tableCell` | `components/Panel.tsx` | The classes for a table header and a cell, used on every data table: roomy spacing (`px-4`, `py-4`) and no vertical dividers between columns |
 | `StatusBadge` | `components/StatusBadge.tsx` | A status badge with a colored dot in front. Four tones: `success`, `warning`, `danger`, `neutral` |
 | `SegmentedTabs` | `components/SegmentedTabs.tsx` | A filter that picks one of a few options. Use `size="touch"` on the sales page |
 | `DatePicker` | `components/DatePicker.tsx` | Choosing a day with the shadcn Calendar + Popover. The button and the days are at least 44px tall. It takes the language and the Buddhist/Gregorian year from `useFormat()`. The value in a form is still `YYYY-MM-DD` and is converted through `lib/calendar-date.ts` without shifting the day because of the timezone |
@@ -214,8 +214,8 @@ Size of tappable elements:
 | Context | Height |
 |---|---|
 | Buttons on management pages and in the page header | 36px |
-| A table row on a management page (`DataTable`) | About 40px, with hover |
-| Buttons in a dialog | 40px |
+| A table row on a management page (`DataTable`) | About 52px for a row of text, about 60px when it holds an action button, with hover |
+| Buttons and input fields in a dialog | 40px |
 | Everything on the sales page and in the payment dialog | At least 44px |
 | The pay button | 56px |
 

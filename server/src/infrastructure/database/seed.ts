@@ -9,12 +9,15 @@ import { CreateUserUseCase } from '../../modules/users/applications/usecases/cre
 import { branches } from './schema/branches'
 import { users } from './schema/users'
 import { client, db } from '../../libs/db'
+import { requireSeedOwnerPassword } from '../../libs/seed-owner-password'
 
 const [existing] = await db.select({ total: count() }).from(users)
 if (existing!.total > 0) {
   console.log('Database already has users, skipping seed')
 } else {
-  const password = Bun.env.SEED_OWNER_PASSWORD ?? 'admin1234'
+  // There is deliberately no default password: seeding an owner must be an explicit
+  // choice, never something an installer forgets to change.
+  const password = requireSeedOwnerPassword(Bun.env.SEED_OWNER_PASSWORD)
   // The migration that introduced branches created this one, so every database has it.
   const [main] = await db.select({ id: branches.id }).from(branches).where(eq(branches.code, 'MAIN'))
   const branchId = main!.id
@@ -39,7 +42,8 @@ if (existing!.total > 0) {
     await container.resolve(ReceiveStockUseCase).execute({ productId: product.id, quantity: 50, note: 'ยอดยกมา' }, owner, branchId)
   }
 
-  console.log(`Seeded owner "admin" (password: ${password}) and ${samples.length} sample products`)
+  // The password itself is never logged: logs outlive the terminal they were printed in.
+  console.log(`Seeded owner "admin" and ${samples.length} sample products`)
 }
 
 await client.close()

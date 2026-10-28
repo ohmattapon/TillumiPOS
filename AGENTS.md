@@ -70,15 +70,19 @@ server/src/
 
 ### Layer rules
 
-| Layer | May import | Must not import |
-|---|---|---|
-| `domains/` | Files in `domains/` only | Elysia, Drizzle, tsyringe, zod, `libs/`, `modules/`, `infrastructure/` |
-| `applications/` | `domains/`, ports of its own module and of other modules, `modules/tokens.ts`, tsyringe, zod | Elysia, Drizzle, `infrastructure/`, files in `adapters/` |
-| `adapters/` | All layers above, Elysia, Drizzle, `libs/`, `infrastructure/` | Use cases or adapters of another module directly |
+Each layer imports only what its row allows. Anything not listed is forbidden, with no exceptions.
+
+| Layer | May import (the whole list) |
+|---|---|
+| `domains/` | Files in `domains/` (and `bun:test` in test files) |
+| `applications/` of module X | `domains/`; X's own `applications/`; `modules/shared/ports/`, `modules/shared/applications/` and `modules/tokens.ts`; tsyringe (DI decorators only); zod (input parsing only) |
+| `adapters/` of module X | `domains/`; X's own `applications/` and `adapters/`; a port of another module only to implement it (the provider side of a consumer-owned port); `modules/shared/`; `libs/`; `infrastructure/`; Elysia, Drizzle and other I/O libraries |
 
 - Business rules live in an entity or a use case only, never in a controller or a repository
-- Modules call each other through ports injected with a token. Never touch another module's tables or adapters.
-- Everything external (the database, file storage, time, payment services) must sit behind a port
+- Modules call each other only through a port the consumer owns: it is declared in the consumer's `applications/ports/`, implemented by an adapter in the providing module, and bound in the providing module's `<module>.module.ts` (`ITableOccupancy`: declared by `tables`, implemented and bound by `orders`). Declare the narrow port you need even when another module's repository port already has the method.
+- A port that several modules need (unit of work, clock, id generator, logger, audit log) lives in `modules/shared/ports/`, with its token in `modules/tokens.ts`
+- HTTP schemas and presenters that controllers of several modules need live in `libs/`, never in one module's `adapters/`
+- Everything external (the database, file storage, time, randomness, logging, payment services) must sit behind a port
 - File and class names: `complete-sale.usecase.ts` with `CompleteSaleUseCase`, `sale.repository.ts` with `ISaleRepository` and `saleRepositoryToken`, `sale.drizzle.repository.ts` with `DrizzleSaleRepository`, `sale.controller.ts` with `SaleElysiaController`
 
 ### Use cases and CQRS
@@ -108,13 +112,16 @@ Every operation is a use case that is exactly one of a command or a query, and t
 - Every error response is RFC 9457 Problem Details (`application/problem+json`): `type`, `title`, `status`, `detail`, `code`, and `errors` for validation errors only. The user-facing message goes in `detail`. Never add a `message` field.
 - A repository converts database errors (duplicate value, foreign key) into domain errors before they leave the adapter
 
-### Branches (shop branches)
+### Branches (one fixed branch)
 
-- Stock, sales bills, stock movements and the receipt number counter belong to a branch. The product list, categories, prices and the shop settings are shared by all branches.
-- The branch being worked in comes from the `X-Branch-Id` header (not sent = the user's own branch). Only the shop owner may choose another branch. Controllers read it from `await branch()` in the `auth` context, which checks the permission and the branch status. Never read the header yourself.
+- The shop has one branch, `MAIN`, created with the database. Every request works in `MAIN`: `ResolveBranchUseCase` ignores the `X-Branch-Id` header and the user's own branch, so old clients that still send them keep working in `MAIN`. Controllers read the branch from `await branch()` in the `auth` context. Never read the header yourself.
+- Creating a branch always answers `SINGLE_BRANCH_ONLY` (409), and `MAIN` cannot be closed (`MAIN_BRANCH_REQUIRED`, 409). The route stays in v1 so nothing disappears. Its name, address and phone can still be changed.
+- The web has no branch screens, switcher or header. Branch data is not shown except on old receipts, which still print the branch they were sold in when no header was stored with the bill.
+- The branch permissions `branches.manage` and `branches.switch` still exist in the API, but the role editor does not offer them.
+- Exception to the QR money rule: a paid QR with no bill, a QR with an unknown outcome, a quote reserved by a QR and an open shift in a branch other than `MAIN` that existed before the one-branch change are unreachable from the system. Only demo databases had a second branch, so no check was added. New data never goes to another branch.
 - A use case that touches stock or bills takes `branchId` as an explicit parameter, and the repository ports that deal with stock or bills take `branchId` too. Never use a hidden ambient value (such as AsyncLocalStorage). A bill of another branch must answer "not found".
 - The stock level lives in the `branch_stock` table. There is no `products.stock_qty` column. A product with no row has no stock in that branch. Lock the `products` row first and only then read the level (in the next statement). Locking together with a join returns a stale level and oversells.
-- A branch can be closed but not deleted, and its code cannot be changed because it is the prefix of the receipt number
+- A branch's code cannot be changed, because it is the prefix of the receipt number. `MAIN` is never closed.
 
 ### Orders
 
@@ -128,7 +135,17 @@ Every operation is a use case that is exactly one of a command or a query, and t
 - A modifier group is created once and attached to many products, shared by all branches. A modifier option can be disabled but not deleted.
 - The selection rules (required, maximum count, duplicates, not in the product's group, disabled) live in `resolveLineOptions` in `domains/modifier.domain.ts` only. Both orders and `SaleCheckout` call it through the `ILineOptionsResolver` port, and the web uses the same function through `@pos/api/modifiers`.
 - An order or bill line is a product + a set of options (`options` is a snapshot). `unitPriceSatang` already includes the option prices, and the bill's `unitCostSatang` includes the option costs. Never change the `calculateTotals` formula. The cost of an option does not appear in order and bill responses.
-- Stock is checked against the product's total, not per line. An order line is edited by `lineId` (the repository compares lines, it does not delete and re-insert). The route by `productId` is for lines without options only.
+- An order line is a product + a set of options + a note: the same product and options with different notes are separate lines, so adding a plain unit never takes another line's note and merging bills keeps every note. Every line of the same product and options in one order has the price of that item's first line, because `SaleCheckout` merges them and charges that price. Both rules live in `mergeLines` in `domains/order.domain.ts` only, and `order_items` is unique on (order, product, options key, note) with `NULLS NOT DISTINCT`. Editing a note so that it matches another line merges the two into the first one.
+- Stock is checked against the product's total, not per line. An order line is edited by `lineId` (the repository compares lines, it does not delete and re-insert). The route by `productId` is for lines without options only and edits the first such line.
+
+### Product packs (products, sales, stock)
+
+- A pack (`product_packs`) lets one product be sold and received in a fixed number of pieces, for example a carton of 12 bottles. A product has at most `MAX_PACKS_PER_PRODUCT` (10) packs, each with a barcode, a size of 2 to 9999 pieces and an optional price. `priceSatang: null` means the pack sells for `size × the product price`; that rule lives in `packUnitPriceSatang` and `packUnitCostSatang` in `domains/product-pack.ts` only, and the web uses the same functions through `@pos/api/packs`.
+- A pack barcode and a product barcode share one namespace, so scanning either one finds the product. `ProductDrizzleRepository.assertBarcodesFree` checks both under advisory lock `731_092_448`, in statements taken after the lock, and answers `BARCODE_TAKEN` when a barcode is already used; one barcode never resolves to two products.
+- A pack is an alternative to options, never combined with them: a line that names a pack and options answers `PACK_WITH_OPTIONS` (`assertPackHasNoOptions`). A disabled pack refuses a new sale (`PACK_INACTIVE`), and a pack that history points at cannot be deleted, because the foreign-key violation becomes `PACK_IN_USE`; it is disabled instead.
+- A bill line stores `packId` (`null` once the pack row is gone, so the bill still prints) and `packSize`, keeps the pack's own unit price and costs `size × the product's unit cost`. Stock always moves in pieces: a pack line moves `quantity × packSize`, a void returns the same amount, and a receipt is converted to pieces before the ledger is written.
+- A quote pins the pack: `packId`, `packSize` and the unit price are stored, and a pack line never merges with a piece line of the same product (`keyOf` uses `packId ?? 0`). An order carries no packs; `order-quote-source.ts` forces `packId: null, packSize: 1`, and the sales page does not let a cart that holds a pack be saved as an open order (`canSaveAsOrder` in `features/pos/lib/save-order.ts`).
+- Receiving by pack sends the same `packId` to the inventory and stock-receipt payloads, where `quantity` then counts packs. `receiptPieces` multiplies once for the whole line and rejects a piece count above `POSTGRES_INT_MAX`, and the note reads `รับ {quantity} ลัง ({barcode}) = {pieces} ชิ้น` (`packReceiptNote`).
 
 ### Promotions and pinned prices (promotions, quotes)
 
@@ -137,9 +154,25 @@ Every operation is a use case that is exactly one of a command or a query, and t
 - A quote (`price_quotes`) is a cart that the server has priced and pinned: the lines, unit prices, member, promotion, discount, `vatMode`, `vatRateBp` and the grand total. A bill sold with a `quoteId` uses all of these values, even if the promotion has since been disabled, a product price changed or the tax edited. A request that does not send a `quoteId` must behave exactly as before.
 - An `open` quote expires with time (15 minutes), but a quote reserved by a QR (`reserved`) does not expire until the QR is used, cancelled or dismissed, so that money that arrives late still gets a bill at the original amount. Never add a path that releases a reserved quote without going through QR cancellation or dismissal.
 - A sale with a quote checks that the member is enabled when the quote is created and does not check again at payment, because the money may already have been paid. A QR reserved by a quote cannot be used with a request that does not send a `quoteId` (`QUOTE_REQUIRED` with `params.quoteId`).
-- Lock order when selling: order → QR payment record → quote → member → product. A command that cancels or dismisses a QR locks the QR first and only then touches the quote.
+- Lock order when selling: order → QR payment record → quote → promotion → member → product. The promotion row is locked by `lockForUse` before its uses are counted. A command that cancels or dismisses a QR locks the QR first and only then touches the quote.
 - An order whose quote is reserved by a QR cannot be edited (`ORDER_LOCKED_BY_QR_PAYMENT`), checked in one place, the `save` of `GuardedOrderRepository`
 - `GET /api/v1/quotes/{id}` is a pure query. It must not extend the expiry or write data.
+- Usage limits (`maxUses`, `maxUsesPerMember`) live on the promotion but are enforced in the quotes module (`IPromotionUsage`): a full promotion is not offered when a quote is made, and paying out of a quote answers `PROMOTION_LIMIT_REACHED` under the promotion's row lock. A quote a QR holds spent its slot when it was reserved and is never re-checked, and voiding a bill gives the slot back (counted sales are `completed` only).
+- A coupon code (`couponCode`) on a promotion is used only when the cashier types it: `evaluatePromotion` never picks a coupon by itself, and `CreateQuoteUseCase` pins the typed code in `price_quotes.coupon_code`, so the bill keeps the code it was sold under. The code is trimmed and upper-cased by `normalizeCouponCode` and must match `COUPON_CODE_PATTERN` (3 to 20 of A-Z, 0-9 and `-`), and `upper(coupon_code)` is unique, so a second promotion with the same code answers `COUPON_CODE_TAKEN`. A code no active promotion holds answers `COUPON_NOT_FOUND`, and one that cannot apply to this cart answers `COUPON_NOT_APPLICABLE` with `params.reason` (`not_running`, `min_subtotal`, `members_only`, `exhausted`, `not_eligible`). A coupon that applies still loses to an automatic promotion that discounts more.
+- A bundle is `kind: 'bundle'` with `buyQuantity` and `freeQuantity` (1 to 99) and a `value` of 0, and it must name a `scope`, because the free items come from the lines in that scope. Its discount is the total of the cheapest `freeQuantity` of every `buy + free` group, walking the in-scope non-pack lines by unit price descending in one pass, and the formula lives in `domains/promotion.domain.ts` only. A bundle with a typed value, a quantity out of range or no scope answers `INVALID_PROMOTION`.
+- A coupon is a promise the quote makes, so it exists only in the one-step cart: an open order has no quote and never sends `couponCode`. The till keeps a typed discount and a coupon apart, because a quote cannot pin a typed discount.
+- `GET /api/v1/sales/reports/promotions` reads the promotion snapshot stored on the bill and never the promotion table: voided bills are excluded, the name is the one on the latest sale of the range, and the rows are sorted by discount descending and then by promotion id. Net sales are bill totals net of VAT.
+
+### Member points (members, sales, quotes)
+
+- The rule lives on the shop settings: `pointsEnabled`, `pointsEarnSatang` (the amount paid that earns one point), `pointsRedeemSatang` (what one point is worth) and `pointsMinRedeem`. The formulas (`pointsEarned`, `maxRedeemable`, `pointsDiscountSatang`, `assertRedeemable`, `voidEarnPoints`) live in `domains/member-points.ts` only, and the web uses the same functions through `@pos/api/points`.
+- The balance is `members.points_balance`, and it moves only through the `member_point_movements` ledger (`earn`, `redeem`, `void_earn`, `void_redeem`, `adjust`). The table is append-only: a mistake is corrected by a new movement, never by editing or deleting one. Never write the balance directly; `IMemberPoints.record` writes the movement and the balance in the caller's unit of work, and it refuses a balance below zero (`POINTS_NOT_ENOUGH`). `(sale_id, kind)` is unique, so the same bill cannot earn or return its points twice (`POINTS_ALREADY_RECORDED`).
+- Points stack on top of either a promotion or a typed discount, while a promotion and a typed discount still never stack. The points discount is added to the quote's `discountSatang` and `calculateTotals` runs on the sum, so never change `calculateTotals` to handle points. A receipt shows the points as information, because the discount line already includes them.
+- Points are redeemed only through a quote: `redeemPoints` on the quote input, priced by `PriceQuoteEntity`, so the total charged is always the pinned one. An open order never redeems points, because an order has no quote.
+- A quote that a QR reserves holds its points (`QuoteClaims.holdPoints`) until the QR is used, cancelled or dismissed, so money that arrives late still finds the points there; cancelling or releasing the reservation returns them (`returnPoints`).
+- Voiding a bill returns the points it redeemed first, then takes back the points it earned up to what the member still has. When they have already been spent, the movement stops at zero and records the shortfall in its `reason`.
+- A member with points the shop has switched off keeps them; they are only unusable. Adjusting a balance by hand is the command `POST /members/{id}/points/adjustments` behind `members.points_adjust`, and it is audited as `member.points_adjusted`.
+- The till offers the redeem field only for the one-step cart and never beside a typed discount, because a quote cannot pin a typed discount. The member page lists the movements through `GET /members/{id}/points`.
 
 ### Tables (tables)
 
@@ -169,6 +202,17 @@ Every operation is a use case that is exactly one of a command or a query, and t
 - `users.role` (the original enum) is still written according to the role for v1 compatibility: it is `owner` when the role is `owner` and `cashier` otherwise. `users.role_id` is the real value. The last active owner cannot have the `owner` role removed.
 - A command that changes money, stock, users, roles or the shop settings must call `IAuditLog.record` inside the same unit of work as the command (so they roll back together). `audit_logs` is write-only: there must be no update/delete in either the port or the adapter, and passwords or hashes must never be stored (`buildAuditEntry` strips secret fields). The exception is `auth.login_failed`, which is written outside a transaction and must never make a login fail.
 - A test suite that truncates every table (`resetDatabase`) must put the system roles back, otherwise `signIn()` fails every test
+
+### Quick staff switch (auth, users)
+
+- A signed-in till hands over to another active user who has a PIN, without a password: `POST /auth/switch` (`SwitchUserUseCase`), with `GET /auth/switch-users` for the list and `PUT /auth/me/pin` / `PUT /users/{id}/pin` to set or clear a PIN. The switch is `auth: true` and is never a login method: it needs an existing session, and a user with no PIN answers `PIN_NOT_SET`.
+- The PIN hash lives only in `users.pin_hash` and is read only by `IUserRepository.findPinHash`. It never enters `UserEntity` (the entity carries `hasPin` only) and never appears in a log, an audit entry or a response.
+- The PIN rule (4 to 6 ASCII digits) lives only in `domains/pin.vo.ts` (`assertValidPin`).
+- A wrong PIN answers 400 (`PIN_INVALID`), never 401, so the web does not treat the till as signed out, and the session cookie is set only after the use case accepts the PIN, so a wrong PIN sets no cookie. A locked user answers 409 (`PIN_LOCKED`).
+- `IPinGuard.begin(userId)` reserves an attempt synchronously, before the hash check is awaited, so parallel requests cannot all pass before a failure is counted. 5 tries lock the target user for 15 minutes, and `recordSuccess` clears the count. The counters are in memory (`InMemoryPinGuard`), so this works with a single API instance only, like the customer display.
+- A PIN of an `owner` is set or cleared only by that owner (`OWNER_PIN_SELF_ONLY`), so a user manager cannot take over an owner's quick switch.
+- Audit: `auth.switch` and `user.pin_set` / `user.pin_cleared` are recorded in the command's own unit of work (with `hasPin` only, never the PIN). `auth.switch_failed` is written outside a transaction and must never change the answer.
+- The web keeps the cart on a switch. Before `me` is reloaded, `handOver` in `features/shifts/store/register-selection.ts` gives the till's current register to the new user, and `handOverSession` (`features/auth/lib/hand-over-session.ts`) drops every other cached query so nothing of the last person's data shows. The `me` query is never set to `null`, so the login page does not appear.
 
 ### Customer display through the server (customer-display)
 
@@ -266,7 +310,7 @@ src/
 
 - A new screen must work at 390, 768 and 1366px, per `DESIGN.md` (the section "Screen sizes and app structure"). e2e checks that every page does not overflow horizontally. If a new page is not in the list, add it.
 - Tables always use `DataTable`, and every column must specify a `priority` (`primary`, `secondary` or `wide-only`)
-- Tappable buttons and input fields must be at least 44px tall (`h-11` or `size-11`)
+- Tappable height follows the size table in `DESIGN.md`: at least 44px (`h-11` or `size-11`) on the sales page and in the payment dialog, 40px (`h-10`) for buttons and input fields in other dialogs, and 36px for buttons on management pages and in the page header. A new control uses the row of the screen it is on; never go below its row
 - The confirm button of a dialog without a form uses `DialogFooter sticky`, while in a form put the buttons at the end of the form (a sticky footer inside a form floats in the middle of the dialog)
 - Before merging screen work, run `bun run screenshots` and look at the phone / tablet / desktop images by eye
 
@@ -277,7 +321,7 @@ These are the patterns this codebase already uses and the practices every change
 ### Principles
 
 - **Make the smallest change that solves the problem.** Build for the requirement in front of you (YAGNI). Do not add options, layers or generality "for later".
-- **Do not abstract on the first or second use.** Duplicate once, extract on the third, and only when the copies really change for the same reason. A wrong abstraction costs more than a little duplication.
+- **Do not abstract on the first or second use.** Duplicate once, extract on the third, and only when the copies really change for the same reason. A wrong abstraction costs more than a little duplication. Generated values are the exception: see "One generator per value".
 - **Put each rule in exactly one place.** Totals in `calculateTotals`, option rules in `resolveLineOptions`, promotion rules in `evaluatePromotion`, permissions in `domains/authorization.ts`. If you find a second copy of a rule, remove the copy.
 - **Make invalid states unrepresentable.** Validate when an object is created (entities and value objects throw from their constructor), so the rest of the code can trust what it holds.
 - **The core validates its own input.** A use case can be driven by more than one adapter (HTTP, a seed script, a test), so `execute()` parses its input with zod and never trusts the caller. The Elysia schema on a route only describes the HTTP contract (OpenAPI, coercion). Business rules are checked once, in the entity or use case, never in the route schema.
@@ -285,6 +329,23 @@ These are the patterns this codebase already uses and the practices every change
 - **Comments explain why, not what.** A comment records a reason, a constraint or a trap that the code cannot show (for example why a lock is taken before a read). Delete comments that restate the code and never leave commented-out code.
 - **Name things after the business.** `VoidSaleUseCase`, `ReceiveStockUseCase`, `quote`, `shift`. Avoid `Manager`, `Helper`, `Util` and `Data` in new names.
 - **Keep files and functions small and focused.** If a file needs a "section" comment to be navigable, or a function needs a comment per paragraph, split it.
+
+### One generator per value
+
+Every kind of generated value has exactly one function that makes it, and every place that needs the value calls that function. A generated value is anything built by code rather than typed by a user: ids, idempotency keys, reference codes, receipt numbers, SKUs, file and storage keys, QR payloads, query keys, export file names. The moment a second place needs the same kind of value, move the code into one generator and call it from both places; the copied expression never gets written.
+
+1. Search for an existing generator before writing one (`grep -rn "randomUUID\|function build\|function generate\|function new" server/src src`), and call it if it exists.
+2. Put the generator where its layer allows:
+
+   | The value is | Put the generator in | Example |
+   |---|---|---|
+   | Computed from its inputs only | A pure function in `server/src/domains/`, exported to the web through `@pos/api/...` when the web needs it; or `src/lib/` / `features/<name>/lib/` for web-only values | `buildPromptPayPayload` |
+   | Random or time-based, needed by the core | The shared port in `modules/shared/ports/` (id generator, `IClock`), with one adapter. Any format around the raw value (prefix, length, case) is a pure function in `domains/`. | The QR reference |
+   | Random, needed by server adapters only | One function in `server/src/libs/` | |
+   | Random, needed by the web | One function in `src/lib/`, passed into stateful classes as a constructor option so tests can fake it | `newIdempotencyKey()` |
+
+3. Name the generator after what it makes (`newIdempotencyKey`, `buildPromptPayPayload`), not `utils` or `helper`, and test it next to its file.
+4. If you find two copies of a generator, merge them into one in a separate commit on the same branch.
 
 ### Domain modeling
 
@@ -314,39 +375,49 @@ These are the patterns this codebase already uses and the practices every change
 The application core is `domains/` plus each module's `applications/`. Everything else is an adapter. These rules are what make the core testable and the adapters replaceable; the layer table above is how they are enforced on imports.
 
 - **Dependencies point inward only.** Adapters depend on the core; the core never depends on an adapter, a framework for I/O (Elysia, Drizzle), `libs/` or `infrastructure/`. If the core needs something from the outside, it declares a port and an adapter implements it.
-- **Driving side (primary).** Something outside calls the core: an HTTP controller, `auth.plugin.ts`, a seed or CLI script, a test. The driving port is the use case's `execute()`. A driving adapter translates its own input (an HTTP request, a script argument) into the use case input, calls exactly one use case, and translates the result back (an HTTP response). It holds no business decision. If a controller contains a condition about the business, move it into the use case or the entity.
-- **Driven side (secondary).** The core calls something outside through a port: repositories, `IUnitOfWork`, `IClock`, `IMediaStorage`, `IQrPaymentGateway`, `IAuditLog`. The core owns the port, so it is declared in `applications/ports/` of the module that uses it, with its DI token next to it.
+- **Driving side (primary).** Something outside calls the core: an HTTP controller, `auth.plugin.ts`, a seed or CLI script, a test. The driving port is the use case's `execute()`: the use case class is the port and controllers depend on it, so add an interface only when a second implementation is needed. A driving adapter translates its own input (an HTTP request, a script argument) into the use case input, calls exactly one use case, and translates the result back (an HTTP response). It holds no business decision. If a controller contains a condition about the business, move it into the use case or the entity.
+- **Driven side (secondary).** The core calls something outside through a port: repositories, `IUnitOfWork`, `IClock`, `IMediaStorage`, `IQrPaymentGateway`, `IAuditLog`. The core owns the port, so it is declared in `applications/ports/` of the module that uses it, with its DI token next to it, or in `modules/shared/ports/` when several modules use it.
 - **Name ports by what the core needs, not by the technology.** `IMediaStorage`, not `IR2Client`; `IQrPaymentGateway`, not `IScbApi`; `findByIdForUpdate`, not `selectWithRowLock`.
 - **Port signatures speak domain types only.** Entities, value objects, plain read models and domain errors. Never a Drizzle row, a SQL fragment, an Elysia context, an HTTP status, a `Response` or a library type. A port that exposes the technology has leaked the adapter into the core.
 - **Adapters contain no business rules.** An adapter translates and moves data: map rows to entities, call the outside system, convert its errors into domain errors. Caching, retries, connection handling and serialization belong in adapters; "may this order be edited" does not.
 - **Decorators are allowed on both sides, for their own side's concerns.** A technical decorator stays in `adapters/` (`CachedCategoryRepository` adds caching behind `ICategoryRepository`). A decorator that enforces a business rule must live in the core, in `applications/`, wrapping the port, not in `adapters/`.
-- **Everything nondeterministic is a port.** Time (`IClock`), random codes and ids, the database transaction (`IUnitOfWork`), outside services. The core never calls `Date.now()`, `crypto`, `fetch`, `setTimeout` or reads `process.env` directly.
+- **Everything nondeterministic is a port.** Time (`IClock`), random codes and ids (one shared id-generator port), waiting and scheduling, logging, the database transaction (`IUnitOfWork`), outside services. The core never calls `Date.now()`, `new Date()`, `crypto`, `Math.random`, `fetch`, `setTimeout`, `console` or reads `process.env` / `Bun.env` directly.
 - **Configuration is read at the edge.** Environment variables are read by adapters and the composition root (`libs/env`, `libs/scb-config.ts`, `createMediaStorage()`), and the core receives behavior through ports (`IMediaStorage.isEnabled()`), never a config value to branch on.
 - **One composition root chooses the adapters.** `<module>.module.ts` binds each port token to its adapter and `di-registrations.ts` imports every module. Nothing else decides which implementation is used. Use cases are singletons and hold no per-request state.
 - **Gateways are anti-corruption layers.** Translate the outside system's vocabulary and errors into ours inside the adapter, and never trust data the outside system did not make verifiable (a callback body is only a signal to go and check).
-- **Modules talk through ports, not through each other's insides.** A module that needs an answer from another declares a port in its own `applications/ports/` (the consumer owns it) and the owning module implements it as an adapter (`ITableOccupancy` answered by `orders`, `IRoleDirectory` answered by `roles`). Never import another module's use case, repository or table.
+- **Modules talk through ports, not through each other's insides.** A module that needs an answer from another declares a port in its own `applications/ports/` (the consumer owns it) and the owning module implements it as an adapter (`ITableOccupancy` answered by `orders`, `IRoleDirectory` answered by `roles`). Never import another module's use case, service, schema, repository port, repository, presenter or table.
 - **Authorization is a business rule.** The use case enforces the permission (`requirePermission`) so the rule holds whichever adapter drives it. The route guard (`auth: { can }`) is the HTTP adapter's early rejection and does not replace the check in the core when the use case's rule depends on the data (whose shift, which branch).
 - **Errors cross the boundary as domain errors.** The core throws domain errors with a stable `code`. Only the driving adapter (`libs/http-error.factory.ts`) decides how they look on the wire.
+- **Check the imports before every server commit.** These commands (test files excluded) must print nothing beyond the fix list below:
+
+  ```bash
+  cd server/src && for m in $(ls -d modules/*/ | xargs -n1 basename | grep -v '^shared$'); do
+    grep -rnE "from '(\.\./)+[a-z-]+/(applications|adapters)/" modules/$m/applications --include='*.ts' --exclude='*.test.ts' | grep -vE "'(\.\./)+($m|shared)/"
+    grep -rnE "from '(\.\./)+[a-z-]+/(adapters|applications/(usecases|services|schemas))/" modules/$m/adapters --include='*.ts' --exclude='*.test.ts' | grep -vE "'(\.\./)+($m|shared)/"
+  done
+  grep -rnE "new Date\(\)|Date\.now\(|Math\.random|crypto\.|process\.env|Bun\.env|console\.|setTimeout|setInterval|fetch\(" modules/*/applications domains --include='*.ts' | grep -v '\.test\.'
+  ```
+
 - **The core is tested without adapters.** Use cases are tested with fake ports (`src/__tests__/mocks.ts`); adapters are tested against the real thing (PostgreSQL, the fake SCB server). If a use case test needs a database, a port is missing.
 
-### Accepted compromises and known deviations
+### Code that still breaks these rules
 
-Pragmatic choices that are allowed, and places where the code does not yet follow the rules above. Do not copy a deviation into new code; fix it when you work in that area.
+The rules above have no exceptions. The code below predates them: it is a fix list, never a precedent, so new code never copies it. When your change touches a file in this list, fix that violation in its own commit on the same branch first. If the fix is too large for the task, stop and ask the project owner. Remove a row once its fix is merged.
 
-| Kind | What | The rule-following way |
+| Violation | Where | The fix |
 |---|---|---|
-| Accepted | `applications/` uses tsyringe decorators and zod | Kept for brevity; they do no I/O. Do not add other frameworks to the core. |
-| Accepted | Domain errors carry a Thai message | The `code` and `params` are the contract; the web translates from them. |
-| Accepted | The use case class is the driving port, with no separate interface | Controllers depend on the class; add an interface only if a second implementation is needed. |
-| Deviation | `orders/adapters/repository/guarded-order.repository.ts` enforces `ORDER_LOCKED_BY_QR_PAYMENT` in the adapter layer | Move the decorator to `orders/applications/` so the rule lives in the core, wrapping `IOrderRepository`. |
-| Deviation | `auth/applications/usecases/login.usecase.ts` and `qr-payments/applications/services/qr-payment-refresher.ts` call `console` from the core | Add a logger port (or let the adapter log) and inject it. |
-| Deviation | `products/.../set-product-image.usecase.ts`, `qr-payments/.../create-qr-payment.usecase.ts` and `create-qr-payment-v2.usecase.ts` call `crypto.randomUUID()` in the use case | Generate keys and references through an id-generator port, as `customer-display` does with its identifiers port. |
-| Deviation | `customer-display/.../open-display-stream.usecase.ts` waits with `setTimeout` in the use case | Take the wait (or the ping schedule) through a port so tests can drive it. |
+| The core imports another module's ports (125 import lines when this list was written) | `applications/` of most modules; the check command above lists them. The most used are `audit/.../audit-log.port`, `products/.../product.repository`, `settings/.../shop-settings.repository` and `users/.../user.repository`. | Move `IAuditLog` to `modules/shared/ports/`. For the rest, declare a narrow port in the consumer and implement it in the provider's adapters. |
+| The core imports another module's non-port code | `orders/.../pay-order-v2.usecase.ts` uses `sales/applications/sale-snapshot`; `setup/.../setup-schemas.ts` uses `users/applications/schemas/user-schemas` | Move pure shared rules to `domains/`; otherwise give the consumer its own copy of the input contract. |
+| Adapters import another module's adapters | `auth` and `setup` controllers use `users/.../user.schema`; `orders` controllers use `sales/.../sale.presenter`, `sale-v2.presenter` and `sale.schema` | Move the shared HTTP schemas and presenters to `libs/`. |
+| The core logs with `console` | `auth/.../login.usecase.ts`, `switch-user.usecase.ts`, `set-own-pin.usecase.ts`, `qr-payments/.../qr-payment-refresher.ts` | Add a logger port in `modules/shared/ports/` and inject it. |
+| The core generates random values | `products/.../set-product-image.usecase.ts`, `qr-payments/.../create-qr-payment.usecase.ts` and `create-qr-payment-v2.usecase.ts` call `crypto.randomUUID()`, and the two QR use cases build the reference with the same copied expression | Add one id-generator port in `modules/shared/ports/`; build the QR reference with one pure function in `domains/`. |
+| A module has its own id generator | `display-slides` declares `ISlideIdGenerator` | Replace it with the shared id-generator port. |
+| The core waits with `setTimeout` | `customer-display/.../open-display-stream.usecase.ts` | Take the wait (or the ping schedule) through a port so tests can drive it. |
 
 ### Evolving the contract
 
 - **Additive only in a published version.** New optional fields, new routes and relaxed requirements are fine. Removing a field, changing a type, tightening validation or changing an error `code` that clients switch on is a breaking change and needs a new version.
-- **Keep error codes stable.** Clients switch on `code`. Reuse an existing code for the same situation (for example `BRANCH_FORBIDDEN`) instead of introducing a more generic one.
+- **Keep error codes stable.** Clients switch on `code`. Reuse an existing code for the same situation (for example `BRANCH_NOT_FOUND`) instead of introducing a more generic one.
 - **Keep old and new representations in step during a transition** (as `users.role` and `users.role_id` are), and write down which one is the source of truth.
 - **Review the OpenAPI diff** before recording a baseline. Every change must be explainable as additive, and the project owner is told first.
 
@@ -364,7 +435,7 @@ Pragmatic choices that are allowed, and places where the code does not yet follo
 - **Newest wins for streams of updates.** When updates replace each other (the customer display), keep one request in flight and send only the latest waiting value (`createServerSender`), so a slow network never replays stale states.
 - **Make the failure path visible.** Every query shows a skeleton, then data, an error with a retry, or an empty state. Never show "no results" while loading or after a failure.
 - **Optimistic UI only when the server can be undone.** Otherwise wait for the server. Never show money as paid before the server says so.
-- **Accessible by default.** Labels tied to inputs, `aria-label` on icon buttons, `role="alert"` on form errors, no meaning by color alone, and 44px touch targets.
+- **Accessible by default.** Labels tied to inputs, `aria-label` on icon buttons, `role="alert"` on form errors, no meaning by color alone, and touch targets of the height `DESIGN.md` gives the screen.
 
 ### Testing practices
 
@@ -413,7 +484,7 @@ The repo is one package (`package.json` at the root holds the API and the web), 
 - `workers/media`: a Cloudflare Worker that stores product images in R2
 - `workers/cloud`: a Cloudflare Worker that runs the Docker image (API and web) in one Cloudflare Container, see `docs/cloudflare.md`
 - `Dockerfile`, `docker-compose.yml`, `docker-compose.dev.yml`, `Caddyfile`, `docker/entrypoint.sh`, `scripts/`: the install kit for shops (the guide for installers is `docs/install.md`), per the section "Installation and first-run setup"
-- `LICENSE`: AGPL-3.0
+- `LICENSE` and `NOTICE`: Apache-2.0
 - `DESIGN.md`: the design system of the web pages (colors, typography, components and interaction rules). Read it before changing or adding a screen.
 - `docs/superpowers`: `roadmap.md`, design documents in `specs/` and implementation plans in `plans/`
 
@@ -446,6 +517,17 @@ Run from the root of the repo:
 
 - Money is always an integer number of satang. Never use decimals.
 - A sales bill must never be edited or deleted. Mistakes are fixed by voiding the bill.
-- The receipt header (shop name, tax id, branch name, address, phone number) is stored on the bill at sale time in `SaleCheckout`. A receipt must be shown from the values on the bill, and current data is used only for old bills whose values are null (see `receiptHeading` in `src/features/sales/lib`).
+- The receipt header (shop name, tax id, branch name, address, phone number) is stored on the bill at sale time in `SaleCheckout`. New bills take the address and phone from shop settings and store no branch name. A receipt must be shown from the values on the bill, and current data is used only for old bills whose values are null (see `receiptHeading` in `src/features/sales/lib`).
 - Stock changes only through the `IStockLedger` port of the `inventory` module, and every change must have a movement record with the branch
 - Before saying that work is done, `bun run typecheck` and `bun run test` must pass
+
+## Reporting finished work
+
+When you finish a task that changed code, the final report to the project owner explains the change in brief, in the language the owner writes in. For each change, write a short entry (a few sentences, not a line-by-line walkthrough) with:
+
+- **What changed:** the file or the behavior, linked where possible.
+- **Why this way:** the reason for the approach you chose, such as the rule it follows, the bug it prevents or the constraint it respects.
+- **Not chosen:** the main alternative you considered and why you did not use it. Leave this out when there was no real alternative.
+- **Risk:** anything the change could affect that you did not verify. Leave this out when there is none.
+
+Keep it to what the owner needs to review the change. Do not restate the diff, and do not explain code that you did not change.

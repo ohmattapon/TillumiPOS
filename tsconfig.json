@@ -13,9 +13,15 @@
       "@pos/api/pricing": ["./server/src/domains/pricing.ts"],
       "@pos/api/shop-settings": ["./server/src/domains/shop-settings.domain.ts"],
       "@pos/api/modifiers": ["./server/src/domains/modifier.domain.ts"],
+      "@pos/api/cafe-menu": ["./server/src/domains/cafe-menu.domain.ts"],
       "@pos/api/promotions": ["./server/src/domains/promotion.domain.ts"],
       "@pos/api/dining-table": ["./server/src/domains/dining-table.domain.ts"],
-      "@pos/api/permissions": ["./server/src/permissions.ts"]
+      "@pos/api/pin": ["./server/src/domains/pin.vo.ts"],
+      "@pos/api/promptpay-qr": ["./server/src/domains/promptpay-qr.domain.ts"],
+      "@pos/api/receipt-raster": ["./server/src/domains/receipt-raster.domain.ts"],
+      "@pos/api/permissions": ["./server/src/permissions.ts"],
+      "@pos/api/packs": ["./server/src/domains/product-pack.ts"],
+      "@pos/api/points": ["./server/src/domains/member-points.ts"]
     }
   },
   "references": [

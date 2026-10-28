@@ -143,6 +143,31 @@ async function main() {
         await page.keyboard.press('Escape')
       }
 
+      // Creation without typing a SKU works at every supported viewport.
+      await page.goto(`${WEB}/products`)
+      await page.getByRole('button', { name: 'เพิ่มสินค้า', exact: true }).click()
+      const productForm = page.getByRole('dialog')
+      const skuInput = productForm.getByLabel('รหัสสินค้า (SKU)', { exact: true })
+      assert.equal(await skuInput.inputValue(), '')
+      assert.equal(await skuInput.getAttribute('required'), null)
+      await productForm.getByText('เว้นว่างเพื่อสร้างรหัสเมื่อบันทึก หรือกรอกรหัสเอง').waitFor()
+      await shot('05a-product-auto-sku')
+      const productName = `Auto SKU ${size.name}`
+      await productForm.getByLabel('ชื่อสินค้า', { exact: true }).fill(productName)
+      await productForm.locator('#product-price').fill('10')
+      const createdResponse = page.waitForResponse((response) =>
+        response.request().method() === 'POST' && /\/api\/v1\/catalog\/products\/?$/.test(response.url()))
+      await productForm.getByRole('button', { name: 'บันทึก', exact: true }).click()
+      const created = await createdResponse
+      assert(created.ok(), 'creating a product without SKU must succeed')
+      const savedProduct = await created.json() as { id: number; sku: string; name: string }
+      assert.match(savedProduct.sku, /^SKU-\d{6,}$/)
+      assert.equal(savedProduct.name, productName)
+      await productForm.waitFor({ state: 'hidden' })
+      // Keep this fixture out of the next viewport's sale catalogue.
+      const retired = await page.request.patch(`${WEB}/api/v1/catalog/products/${savedProduct.id}`, { data: { isActive: false } })
+      assert(retired.ok(), 'retire the automatic SKU screenshot fixture')
+
       if (size.name === 'phone-short') {
         await page.goto(`${WEB}/products`)
         await page.waitForTimeout(800)
@@ -155,17 +180,18 @@ async function main() {
 
       for (const [name, path] of [
         ['11-today', '/today'], ['12-products', '/products'], ['13-categories', '/categories'], ['14-modifiers', '/modifiers'],
-        ['15-tables', '/tables'], ['16-branches', '/branches'], ['17-users', '/users'], ['18-settings', '/settings'], ['19-shifts', '/shifts'],
+        ['15-tables', '/tables'], ['18-settings', '/settings'], ['19-shifts', '/shifts'],
         ['22-reports', '/reports'],
-        ['23-promotions', '/promotions'],
-        ['24-roles', '/roles'], ['25-audit', '/audit'],
+        ['23-promotions', '/promotions'], ['16-display-slides', '/display-slides'],
+        ['24-users-team', '/users'], ['25-audit', '/audit'],
+        ['31-stock-receipts', '/stock-receipts'], ['32-stock-receipt-draft', '/stock-receipts/new'],
       ] as const) {
         await page.goto(`${WEB}${path}`)
         await page.waitForTimeout(1000)
         await shot(name)
       }
       await shootCustomerDisplay(context, size.name)
-      await page.goto(`${WEB}/roles`)
+      await page.goto(`${WEB}/users`)
       await page.getByRole('button', { name: 'เพิ่มบทบาท', exact: true }).click()
       await page.getByRole('dialog').waitFor()
       await shot('26-role-form')
@@ -179,7 +205,7 @@ async function main() {
       assert((await page.request.patch(`${WEB}/api/v1/settings`, { data: { homeView: 'till' } })).ok())
 
       // Date-only values survive the shadcn calendar without UTC conversion or premature submission.
-      await page.goto(`${WEB}/reports?from=2024-02-01&to=2024-02-29&scope=branch`)
+      await page.goto(`${WEB}/reports?from=2024-02-01&to=2024-02-29`)
       const from = page.getByRole('button', { name: 'ตั้งแต่วันที่', exact: true })
       const apply = page.getByRole('button', { name: 'แสดงรายงาน', exact: true })
       await from.waitFor()
@@ -197,7 +223,7 @@ async function main() {
       await picker.waitFor({ state: 'hidden' })
       assert.equal(new URL(page.url()).searchParams.get('from'), '2024-02-01', 'choosing a day must not submit the form')
       await apply.click()
-      await page.waitForURL('**/reports?from=2024-02-29&to=2024-02-29&scope=branch')
+      await page.waitForURL('**/reports?from=2024-02-29&to=2024-02-29')
 
       const to = page.getByRole('button', { name: 'ถึงวันที่', exact: true })
       await to.click()
@@ -206,7 +232,7 @@ async function main() {
       await page.getByRole('dialog', { name: 'ถึงวันที่', exact: true }).waitFor({ state: 'hidden' })
       assert((await to.textContent())?.includes('1 มี.ค. 2567'))
       await apply.click()
-      await page.waitForURL('**/reports?from=2024-02-29&to=2024-03-01&scope=branch')
+      await page.waitForURL('**/reports?from=2024-02-29&to=2024-03-01')
 
       // Keyboard opening and Escape restore focus to the trigger.
       await from.focus()
@@ -230,7 +256,7 @@ async function main() {
 
       // Switch only this isolated fixture's locale; Gregorian request values stay unchanged.
       assert((await page.request.patch(`${WEB}/api/v1/settings`, { data: { locale: 'en' } })).ok())
-      await page.goto(`${WEB}/reports?from=2024-02-01&to=2024-02-29&scope=branch`)
+      await page.goto(`${WEB}/reports?from=2024-02-01&to=2024-02-29`)
       const englishFrom = page.getByRole('button', { name: 'From', exact: true })
       await englishFrom.waitFor()
       assert((await englishFrom.textContent())?.includes('Feb 1, 2024'))
@@ -240,7 +266,7 @@ async function main() {
       await shot('25-report-calendar-en')
       await englishPicker.getByRole('button', { name: 'Feb 29, 2024', exact: true }).click()
       await page.getByRole('button', { name: 'View report', exact: true }).click()
-      await page.waitForURL('**/reports?from=2024-02-29&to=2024-02-29&scope=branch')
+      await page.waitForURL('**/reports?from=2024-02-29&to=2024-02-29')
       assert((await page.request.patch(`${WEB}/api/v1/settings`, { data: { locale: 'th' } })).ok())
 
       for (const theme of ['dark', 'midnight', 'forest', 'rose']) {
@@ -291,7 +317,7 @@ async function shootSetup(browser: Browser, size: typeof sizes[number]) {
   const page = await context.newPage()
   await page.goto(WEB)
   await page.getByText('ตั้งค่าร้านครั้งแรก', { exact: true }).waitFor()
-  await page.getByRole('radio', { name: /คาเฟ่/ }).check()
+  await page.getByText('คาเฟ่', { exact: true }).click()
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${size.name}/setup: horizontal overflow`)
   await page.screenshot({ path: join(OUT, `${size.name}-00-setup.png`), animations: 'disabled', fullPage: true })
   await context.close()
@@ -363,11 +389,28 @@ async function memberScreens(page: Page, size: typeof sizes[number], shot: (name
     await page.getByRole('button', { name: new RegExp(`${name} edited`) }).click()
   }
   const openBasket = async () => {
-    if (size.width < 1024) await page.getByRole('button', { name: /items/ }).and(page.locator(':visible')).click()
+    if (size.width < 1024) await page.getByRole('button', { name: /pcs|ชิ้น/ }).and(page.locator(':visible')).click()
   }
   await page.goto(WEB)
   // A full navigation deliberately creates a fresh cart; add one item through the real picker.
-  await tryClick(page, page.getByRole('button', { name: /[$]| \d+\.\d\d/ }).first())
+  // The grid refetches after navigation; the sell flow absorbs slow loads
+  // with four sequential tryClick windows, so wait explicitly here (script-only).
+  // Settle-then-click: several queries (products, categories, promotions, shift)
+  // land at different times and each swaps the grid DOM. Clicking .first()
+  // mid-churn resolves a detached node (whiff, swallowed, empty basket), so
+  // poll until the product count is stable across two consecutive reads.
+  let settled = 0
+  let lastCount = -1
+  for (let i = 0; i < 30 && settled < 2; i++) {
+    const n = await page.getByRole('button', { name: /฿|\d+\.\d\d/ }).count()
+    if (n > 0 && n === lastCount) settled++
+    else {
+      settled = 0
+      lastCount = n
+    }
+    if (settled < 2) await page.waitForTimeout(500)
+  }
+  await tryClick(page, page.getByRole('button', { name: /฿|\d+\.\d\d/ }).first())
   await openBasket()
   await selectMember()
   await page.getByRole('button', { name: `${name} edited`, exact: true }).and(page.locator(':visible')).waitFor()
@@ -414,7 +457,13 @@ async function memberScreens(page: Page, size: typeof sizes[number], shot: (name
     await page.goto(WEB)
     await page.getByLabel('Username', { exact: true }).fill(username)
     await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
+    // Let the sign-in round-trip finish first: navigating immediately aborts
+    // the login POST, leaving the login page stuck under /members/{id}.
+    const loggedIn = page.waitForResponse(
+      (response) => response.url().endsWith('/api/v1/auth/login') && response.request().method() === 'POST',
+    )
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    await loggedIn
     await page.goto(`${WEB}/members/${memberId}`)
     await page.getByRole('heading', { name: 'Purchase history' }).waitFor()
     assert.equal(await page.getByRole('button', { name: 'Edit member', exact: true }).count(), 0)

@@ -16,6 +16,8 @@ export interface IPromotionRepository {
   /** Throws PROMOTION_NAME_TAKEN when another promotion has the name (ignoring case). */
   create(entity: PromotionEntity): Promise<PromotionEntity>
   update(entity: PromotionEntity): Promise<PromotionEntity>
+  /** The only writer of the display image key. Throws PROMOTION_NOT_FOUND when the id is unknown. */
+  setImageKey(id: number, imageKey: string | null): Promise<PromotionEntity>
 }
 
 export const promotionRepositoryToken = Symbol('IPromotionRepository').toString()

@@ -12,24 +12,37 @@ function readSelections(): Record<string, number> {
 
 interface RegisterSelectionState {
   selections: Record<string, number>
-  select: (userId: number, branchId: number, registerId: number) => void
+  select: (userId: number, registerId: number) => void
+  /** Another person takes over this till: the till's current register becomes theirs. */
+  handOver: (toUserId: number, registerId: number | undefined) => void
   clear: () => void
 }
 
 export const useRegisterSelectionStore = create<RegisterSelectionState>((set) => ({
   selections: readSelections(),
-  select: (userId, branchId, registerId) => set((state) => {
-    const selections = { ...state.selections, [`${userId}:${branchId}`]: registerId }
+  select: (userId, registerId) => set((state) => {
+    const selections = { ...state.selections, [String(userId)]: registerId }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(selections))
     return { selections }
   }),
+  handOver: (toUserId, registerId) => {
+    if (registerId === undefined) return
+    set((state) => {
+      const selections = { ...state.selections, [String(toUserId)]: registerId }
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(selections))
+      } catch { /* Storage may be unavailable; the choice still holds for this session. */ }
+      return { selections }
+    })
+  },
   clear: () => {
     localStorage.removeItem(STORAGE_KEY)
     set({ selections: {} })
   },
 }))
 
-export function selectedRegisterId(selections: Record<string, number>, userId: number | undefined, branchId: number | undefined) {
-  if (userId === undefined || branchId === undefined) return undefined
-  return selections[`${userId}:${branchId}`]
+/** The register this user last chose. The shop has one branch, so a user has one register choice. */
+export function selectedRegisterId(selections: Record<string, number>, userId: number | undefined) {
+  if (userId === undefined) return undefined
+  return selections[String(userId)]
 }

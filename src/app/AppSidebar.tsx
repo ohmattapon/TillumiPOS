@@ -2,12 +2,13 @@ import type { User } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
 import {
   Armchair,
-  Building2,
   ChartNoAxesCombined,
   CalendarCheck,
-  ChefHat,
+  ChevronDown,
   ChevronsUpDown,
+  Database,
   LayoutGrid,
+  KeyRound,
   LogOut,
   Package,
   Palette,
@@ -19,16 +20,17 @@ import {
   Settings,
   ShoppingCart,
   SlidersHorizontal,
+  Store,
   WalletCards,
+  MonitorPlay,
   BadgePercent,
   Tags,
   UserRound,
   Users,
-  ShieldCheck,
   History,
-  Utensils,
   type LucideIcon,
 } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, useLocation } from 'react-router'
 import {
@@ -49,19 +51,17 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@/components/ui/sidebar'
-import { BranchSwitcher, useActiveBranch } from '@/features/branches'
-import { clearCart } from '@/features/pos'
-import { useRegisterSelectionStore } from '@/features/shifts'
 import { LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
 import { useFeatures, useSettings } from '@/features/settings'
-import { useAuthorization } from '@/features/auth'
+import { OwnPinDialog, useAuthorization } from '@/features/auth'
+import { cn } from '@/lib/utils'
 import { themes, useTheme, type Theme } from './theme'
 
 interface NavItem {
@@ -71,6 +71,13 @@ interface NavItem {
   badge?: number
 }
 
+interface NavGroup {
+  key: 'sales' | 'manage'
+  label: string
+  icon: LucideIcon
+  items: NavItem[]
+}
+
 // Active item reads as a flat mint wash with deep-teal text. Hover is a quieter neutral wash, so pointing at a row never
 // looks like the page you are on; the active row keeps its mint while hovered.
 const activeItem =
@@ -78,19 +85,25 @@ const activeItem =
 
 export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => void }) {
   const { t } = useTranslation('app')
+  const { t: ta } = useTranslation('auth')
   const { pathname } = useLocation()
   const { shopName, homeView } = useSettings()
   const { theme, setTheme } = useTheme()
-  const { branch, canSwitch } = useActiveBranch()
   const { can, user: currentUser } = useAuthorization()
   const features = useFeatures()
+  const [pinOpen, setPinOpen] = useState(false)
   const products = useQuery(productsQuery({ stockAtMost: LOW_STOCK_THRESHOLD, limit: 1 }))
   const lowStockCount = products.data?.total ?? 0
-  const clearRegisterSelection = useRegisterSelectionStore((state) => state.clear)
+  const { state } = useSidebar()
+  // A folded sidebar shows every item as an icon, so a group is only collapsible while it shows its labels.
+  const iconMode = state === 'collapsed'
+  const [chosenOpen, setChosenOpen] = useState<Record<string, boolean>>({})
 
-  const groups: { label: string; items: NavItem[] }[] = [
+  const groups: NavGroup[] = [
     {
+      key: 'sales',
       label: t('groups.sales'),
+      icon: Store,
       items: [
         // With the floor as home the till moves to /sell, and the floor takes its place at the top.
         ...(homeView === 'tables'
@@ -99,30 +112,35 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
               { to: '/sell', label: t('nav.sell'), icon: ShoppingCart },
             ]
           : [{ to: '/', label: t('nav.sell'), icon: ShoppingCart }]),
-        ...(features.kitchen ? [{ to: '/kitchen', label: t('nav.kitchen'), icon: ChefHat }] : []),
         { to: '/today', label: t('nav.today'), icon: CalendarCheck },
         ...(can('reports.read') ? [{ to: '/reports', label: t('nav.reports'), icon: ChartNoAxesCombined }] : []),
         { to: '/members', label: t('nav.members'), icon: UserRound },
         { to: '/promotions', label: t('nav.promotions'), icon: BadgePercent },
+        ...(can('promotions.write') ? [{ to: '/display-slides', label: t('nav.displaySlides'), icon: MonitorPlay }] : []),
         { to: '/shifts', label: t('nav.shifts'), icon: WalletCards },
       ],
     },
-          {
-            label: t('groups.manage'),
-            items: [
-              ...((can('products.write') || can('inventory.receive') || can('inventory.adjust')) ? [{ to: '/products', label: t('nav.products'), icon: Package, badge: lowStockCount }] : []),
-              ...(can('categories.write') ? [{ to: '/categories', label: t('nav.categories'), icon: Tags }] : []),
-              ...(features.modifiers && can('modifiers.write') ? [{ to: '/modifiers', label: t('nav.modifiers'), icon: SlidersHorizontal }] : []),
-              ...(features.tables && can('tables.write') ? [{ to: '/tables', label: t('nav.tables'), icon: LayoutGrid }] : []),
-              ...(features.kitchen && can('kitchen.write') ? [{ to: '/kitchen-stations', label: t('nav.kitchenStations'), icon: Utensils }] : []),
-              ...(can('branches.manage') ? [{ to: '/branches', label: t('nav.branches'), icon: Building2 }] : []),
-              ...(can('users.manage') ? [{ to: '/users', label: t('nav.users'), icon: Users }] : []),
-              ...(can('settings.write') ? [{ to: '/settings', label: t('nav.settings'), icon: Settings }] : []),
-              ...(can('roles.manage') ? [{ to: '/roles', label: t('nav.roles'), icon: ShieldCheck }] : []),
-              ...(can('audit.read') ? [{ to: '/audit', label: t('nav.audit'), icon: History }] : []),
-            ],
-          },
+    {
+      key: 'manage',
+      label: t('groups.manage'),
+      icon: Database,
+      items: [
+        ...((can('products.write') || can('inventory.receive') || can('inventory.adjust')) ? [{ to: '/products', label: t('nav.products'), icon: Package, badge: lowStockCount }] : []),
+        ...(can('inventory.receive') ? [{ to: '/stock-receipts', label: t('nav.stockReceipts'), icon: Package }] : []),
+        ...(can('categories.write') ? [{ to: '/categories', label: t('nav.categories'), icon: Tags }] : []),
+        ...(features.modifiers && can('modifiers.write') ? [{ to: '/modifiers', label: t('nav.modifiers'), icon: SlidersHorizontal }] : []),
+        ...(features.tables && can('tables.write') ? [{ to: '/tables', label: t('nav.tables'), icon: LayoutGrid }] : []),
+        ...((can('users.manage') || can('roles.manage')) ? [{ to: '/users', label: t('nav.users'), icon: Users }] : []),
+        ...(can('settings.write') ? [{ to: '/settings', label: t('nav.settings'), icon: Settings }] : []),
+        ...(can('audit.read') ? [{ to: '/audit', label: t('nav.audit'), icon: History }] : []),
+      ],
+    },
   ]
+
+  const isGroupOpen = (group: NavGroup) =>
+    iconMode ||
+    (chosenOpen[group.key] ??
+      group.items.some((item) => pathname === item.to || (item.to !== '/' && pathname.startsWith(`${item.to}/`))))
 
   return (
     <Sidebar collapsible="icon" className="print:hidden">
@@ -138,49 +156,64 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        {canSwitch ? (
-          <div className="px-2 group-data-[collapsible=icon]:hidden">
-            {/* The cart is for the branch it was rung up in, so a switch starts a fresh one. */}
-            <BranchSwitcher onSwitched={() => { clearCart(); clearRegisterSelection() }} />
-          </div>
-        ) : (
-          branch &&
-          branch.name !== shopName && (
-            <p className="truncate px-4 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-              {branch.name}
-            </p>
-          )
-        )}
       </SidebarHeader>
 
       <SidebarContent>
-        {groups.filter((group) => group.items.length > 0).map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel className="text-[11px] tracking-wider uppercase">{group.label}</SidebarGroupLabel>
-            <SidebarMenu className="gap-1">
-              {group.items.map((item) => (
-                <SidebarMenuItem key={item.to}>
+        {groups.filter((group) => group.items.length > 0).map((group) => {
+          const open = isGroupOpen(group)
+          const hasActive = group.items.some(
+            (item) => pathname === item.to || (item.to !== '/' && pathname.startsWith(`${item.to}/`)),
+          )
+          return (
+            <SidebarGroup key={group.key}>
+              <SidebarMenu className="gap-1">
+                <SidebarMenuItem>
+                  {/* A group has no page of its own, so its row only folds and unfolds the items under it. */}
                   <SidebarMenuButton
-                    asChild
-                    isActive={pathname === item.to || (item.to !== '/' && pathname.startsWith(`${item.to}/`))}
-                    tooltip={item.label}
-                    className={`h-11 ${activeItem}`}
+                    type="button"
+                    onClick={() => setChosenOpen((previous) => ({ ...previous, [group.key]: !open }))}
+                    aria-expanded={open}
+                    aria-controls={`nav-group-${group.key}`}
+                    tooltip={group.label}
+                    className={cn('h-11', !hasActive && 'text-muted-foreground')}
                   >
-                    <NavLink to={item.to}>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </NavLink>
+                    <group.icon />
+                    <span>{group.label}</span>
+                    {!iconMode && (
+                      <ChevronDown className={cn('ml-auto size-4 transition-transform', open && 'rotate-180')} />
+                    )}
                   </SidebarMenuButton>
-                  {!!item.badge && (
-                    <SidebarMenuBadge className="rounded-full bg-primary/10 px-1.5 text-primary">
-                      {item.badge}
-                    </SidebarMenuBadge>
-                  )}
                 </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
-        ))}
+                {open && (
+                  <SidebarMenuItem>
+                    <SidebarMenu id={`nav-group-${group.key}`} className={cn('gap-1', !iconMode && 'ml-3 border-l pl-2')}>
+                      {group.items.map((item) => (
+                        <SidebarMenuItem key={item.to}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={pathname === item.to || (item.to !== '/' && pathname.startsWith(`${item.to}/`))}
+                            tooltip={item.label}
+                            className={`h-11 ${activeItem}`}
+                          >
+                            <NavLink to={item.to}>
+                              <item.icon />
+                              <span>{item.label}</span>
+                            </NavLink>
+                          </SidebarMenuButton>
+                          {!!item.badge && (
+                            <SidebarMenuBadge className="rounded-full bg-primary/10 px-1.5 text-primary">
+                              {item.badge}
+                            </SidebarMenuBadge>
+                          )}
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarMenuItem>
+                )}
+              </SidebarMenu>
+            </SidebarGroup>
+          )
+        })}
       </SidebarContent>
 
       <SidebarFooter>
@@ -228,6 +261,10 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => setPinOpen(true)}>
+                  <KeyRound />
+                  {ta('pin.setOwn')}
+                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={onLogout}>
                   <LogOut />
                   {t('logout')}
@@ -237,6 +274,7 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+      {pinOpen && <OwnPinDialog hasPin={currentUser?.hasPin ?? false} onClose={() => setPinOpen(false)} />}
     </Sidebar>
   )
 }

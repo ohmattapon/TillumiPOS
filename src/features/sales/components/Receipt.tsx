@@ -25,6 +25,7 @@ export function Receipt({ sale, elementRef }: { sale: Sale; elementRef?: Ref<HTM
   return (
     <div ref={elementRef} data-receipt-paper={shop.receiptPaperMm} className="space-y-2 font-mono text-sm tabular-nums">
       <div className="text-center">
+        {shop.logoUrl && <img src={shop.logoUrl} alt="" className="mx-auto mb-1 max-h-20 max-w-[70%] object-contain" />}
         <p className="text-base font-bold">{heading.shopName}</p>
         {heading.branchName && <p>{heading.branchName}</p>}
         {heading.address && <p>{heading.address}</p>}
@@ -41,6 +42,7 @@ export function Receipt({ sale, elementRef }: { sale: Sale; elementRef?: Ref<HTM
       {sale.items.map((item, index) => (
         <div key={`${item.productId}-${index}`}>
           <p>{item.productName}</p>
+          {item.packSize > 1 && <p className="text-xs">{t('receipt.pack', { size: item.packSize })}</p>}
           {item.options.map((option) => (
             <p key={option.optionId} className="pl-3 text-xs">
               + {option.name}
@@ -65,6 +67,12 @@ export function Receipt({ sale, elementRef }: { sale: Sale; elementRef?: Ref<HTM
         </p>
       )}
       {sale.promotion && <p className="pl-3 text-xs">{t('receipt.promotion', { name: sale.promotion.name })}</p>}
+      {/* The points discount is part of the discount above; the line says how much of it the points gave. */}
+      {sale.pointsRedeemed > 0 && (
+        <p className="pl-3 text-xs">
+          {t('receipt.pointsUsed', { points: sale.pointsRedeemed, amount: money.plain(sale.pointsDiscountSatang) })}
+        </p>
+      )}
       {vatAdded && (
         <p className={row}>
           <span>{t('receipt.vatAdded', { rate: vatRate })}</span>
@@ -79,6 +87,18 @@ export function Receipt({ sale, elementRef }: { sale: Sale; elementRef?: Ref<HTM
         <p className={row}>
           <span>{t('receipt.vatIncluded', { rate: vatRate })}</span>
           <span>{money.plain(sale.vatSatang)}</span>
+        </p>
+      )}
+      {sale.pointsEarned > 0 && (
+        <p className={row}>
+          <span>{t('receipt.pointsEarned')}</span>
+          <span>+{sale.pointsEarned}</span>
+        </p>
+      )}
+      {sale.pointsBalanceAfter !== null && (
+        <p className={row}>
+          <span>{t('receipt.pointsBalance')}</span>
+          <span>{sale.pointsBalanceAfter}</span>
         </p>
       )}
       {sale.payments.map((payment, index) => (

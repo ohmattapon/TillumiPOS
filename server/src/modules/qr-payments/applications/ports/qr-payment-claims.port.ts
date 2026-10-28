@@ -4,8 +4,12 @@
  * Both calls belong inside the unit of work that stores the sale.
  */
 export interface IQrPaymentClaims {
-  /** True when a shop has QR payment configured: `promptpay` then has to be backed by a confirmed QR. */
-  isRequired(): boolean
+  /**
+   * True when a shop has QR payment configured and takes PromptPay through the bank: `promptpay`
+   * then has to be backed by a confirmed QR. False in `static` mode (staff confirm the money
+   * themselves) and when no bank gateway is set up. Reads settings read-only; takes no locks.
+   */
+  isRequired(): Promise<boolean>
   /**
    * Throws unless the payment is confirmed by the bank, belongs to this branch, is unused, and is for
    * exactly `amountSatang`. Locks the payment so two sales cannot both use it.

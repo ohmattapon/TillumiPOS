@@ -11,12 +11,24 @@ import { OrderEntity, type OrderEntityProps } from '../domains/order.domain'
 import { QrPaymentEntity, type QrPaymentEntityProps } from '../domains/qr-payment.domain'
 import { CategoryEntity, type CategoryEntityProps } from '../domains/category.domain'
 import { ProductEntity, type ProductEntityProps } from '../domains/product.domain'
+import { RegisterEntity, type RegisterProps } from '../domains/register.domain'
 import { SaleEntity, type SaleEntityProps } from '../domains/sale.domain'
+import { ShiftEntity, type ShiftProps } from '../domains/shift.domain'
+import { SlideEntity, type SlideEntityProps } from '../domains/slide.domain'
 import { StockMovementEntity, type StockMovementEntityProps } from '../domains/stock-movement.domain'
 import { UserEntity, type UserEntityProps } from '../domains/user.domain'
 
 export const makeCategory = (overrides: Partial<CategoryEntityProps> = {}) =>
   new CategoryEntity({ id: 1, name: 'เครื่องดื่ม', sortOrder: 0, isActive: true, ...overrides })
+
+export const makeSlide = (overrides: Partial<SlideEntityProps> = {}) =>
+  new SlideEntity({
+    id: 1,
+    imageKey: 'slides/550e8400-e29b-41d4-a716-446655440000.png',
+    sortOrder: 0,
+    isActive: true,
+    ...overrides,
+  })
 
 export const makeBranch = (overrides: Partial<BranchEntityProps> = {}) =>
   new BranchEntity({ id: 1, code: 'MAIN', name: 'สาขาหลัก', address: null, phone: null, isActive: true, ...overrides })
@@ -83,6 +95,7 @@ export const makeProduct = (overrides: Partial<ProductEntityProps> = {}) =>
     barcode: null,
     name: 'น้ำดื่ม',
     categoryId: null,
+    productType: 'normal',
     priceSatang: 1000,
     costSatang: 600,
     trackStock: true,
@@ -142,6 +155,8 @@ export const makeSale = (overrides: Partial<SaleEntityProps> = {}) =>
         unitCostSatang: 600,
         quantity: 3,
         lineTotalSatang: 3000,
+        packId: null,
+        packSize: 1,
         options: [],
       },
     ],
@@ -153,7 +168,7 @@ export const makeModifierGroup = (overrides: Partial<ModifierGroupProps> = {}) =
   new ModifierGroupEntity({ id: 1, name: 'ระดับความหวาน', required: true, maxSelections: 1, sortOrder: 0, isActive: true, ...overrides })
 
 export const makeModifierOption = (overrides: Partial<ModifierOptionProps> = {}) =>
-  new ModifierOptionEntity({ id: 10, groupId: 1, name: 'หวานน้อย', priceSatang: 0, costSatang: 0, sortOrder: 0, isActive: true, ...overrides })
+  new ModifierOptionEntity({ id: 10, groupId: 1, name: 'หวานน้อย', priceSatang: 0, costSatang: 0, sortOrder: 0, isActive: true, isDefault: false, ...overrides })
 
 export const makeTable = (overrides: Partial<DiningTableProps> = {}) =>
   new DiningTableEntity({
@@ -179,8 +194,9 @@ export const makePriceQuote = (overrides: Partial<PriceQuoteProps> = {}) =>
     memberId: null,
     member: null,
     orderId: null,
-    lines: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 1000, quantity: 3, options: [] }],
+    lines: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 1000, quantity: 3, options: [], packId: null, packSize: 1 }],
     promotion: null,
+    couponCode: null,
     vatMode: 'inclusive',
     vatRateBp: 700,
     subtotalSatang: 3000,
@@ -193,5 +209,35 @@ export const makePriceQuote = (overrides: Partial<PriceQuoteProps> = {}) =>
     createdById: 1,
     expiresAt: new Date('2026-10-15T05:15:00Z'),
     createdAt: new Date('2026-10-15T05:00:00Z'),
+    ...overrides,
+  })
+
+export const makeRegister = (overrides: Partial<RegisterProps> = {}) =>
+  new RegisterEntity({ id: 3, branchId: 1, code: 'FRONT', name: 'หน้าร้าน', isActive: true, ...overrides })
+
+export const makeShift = (overrides: Partial<ShiftProps> = {}) =>
+  new ShiftEntity({
+    id: 7,
+    branchId: 1,
+    registerId: 3,
+    status: 'open',
+    openedAt: new Date('2026-03-01T02:00:00Z'),
+    openedById: 1,
+    openedByName: 'เจ้าของร้าน',
+    openingCashSatang: 100_000,
+    openingNote: null,
+    currency: 'THB',
+    timeZone: 'Asia/Bangkok',
+    closingRevision: 0,
+    closingStartedAt: null,
+    closingStartedById: null,
+    closingStartedByName: null,
+    closingExpectedCashSatang: null,
+    closedAt: null,
+    closedById: null,
+    closedByName: null,
+    countedCashSatang: null,
+    cashDifferenceSatang: null,
+    differenceReason: null,
     ...overrides,
   })

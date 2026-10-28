@@ -1,10 +1,9 @@
 import { container } from 'tsyringe'
 import { OrderElysiaController } from './adapters/controllers/order.controller'
-import { GuardedOrderRepository } from './adapters/repository/guarded-order.repository'
-import { DrizzleKitchenOrderRefs } from './adapters/repository/kitchen-order-refs.drizzle.adapter'
+import { GuardedOrderRepository } from './applications/decorators/guarded-order.repository'
+import { DrizzleOrderRepository } from './adapters/repository/order.drizzle.repository'
 import { DrizzleTableOccupancy } from './adapters/repository/table-occupancy.drizzle.adapter'
-import { orderRepositoryToken } from './applications/ports/order.repository'
-import { kitchenOrderRefsToken } from '../kitchen/applications/ports/kitchen-order-refs.port'
+import { orderRepositoryInnerToken, orderRepositoryToken } from './applications/ports/order.repository'
 import { tableOccupancyToken } from '../tables/applications/ports/table-occupancy.port'
 import { orderQuoteSourceToken } from '../quotes/applications/ports/order-quote-source.port'
 import { OrderQuoteSource } from './applications/services/order-quote-source'
@@ -26,10 +25,10 @@ import { SplitOrderUseCase } from './applications/usecases/split-order.usecase'
 import { SetOrderLineNoteUseCase } from './applications/usecases/set-order-line-note.usecase'
 import { SetOrderLineQuantityUseCase } from './applications/usecases/set-order-line-quantity.usecase'
 
+container.register(orderRepositoryInnerToken, { useClass: DrizzleOrderRepository })
 container.register(orderRepositoryToken, { useClass: GuardedOrderRepository })
 container.register(tableOccupancyToken, { useClass: DrizzleTableOccupancy })
 container.register(orderQuoteSourceToken, { useClass: OrderQuoteSource })
-container.register(kitchenOrderRefsToken, { useClass: DrizzleKitchenOrderRefs })
 container.registerSingleton(ListOrdersUseCase)
 container.registerSingleton(GetOrderUseCase)
 container.registerSingleton(OpenOrderUseCase)

@@ -1,15 +1,14 @@
-import { ClipboardList, Minus, Plus, ShoppingCart, Trash2, X } from 'lucide-react'
+import { ClipboardList, Minus, Plus, ShoppingCart, Tag, Trash2, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Kbd } from '@/components/Kbd'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSetOrderLineNote } from '@/features/orders'
-import { useFeatures, useFormat, useSettings } from '@/features/settings'
+import { useFormat, useSettings } from '@/features/settings'
 import { tablesQuery } from '@/features/tables'
 import { cn } from '@/lib/utils'
 import { useCart } from '../hooks/use-cart'
@@ -17,8 +16,8 @@ import { OrderQrHold } from './OrderQrHold'
 import { useCartActions } from '../hooks/use-cart-actions'
 import type { PricedLine } from '../lib/cart'
 import { noteToSave } from '../lib/note'
+import { canSaveAsOrder } from '../lib/save-order'
 import { useCartStore } from '../store/cart.store'
-import { KitchenSendButton } from './KitchenSendButton'
 import { CartMember } from './CartMember'
 import { OrderTools } from './OrderTools'
 
@@ -31,17 +30,18 @@ interface Props {
   /** side: the wide-screen panel. sheet: the same cart, shown from the bottom on a small screen. */
   variant?: 'side' | 'sheet'
   onClose?: () => void
+  /** Why the quote refused the coupon code, shown under the field. */
+  couponError?: string | null
 }
 
 /**
- * The note for the kitchen on one order line. What is typed is kept here until the field is left;
- * until then the field shows the note the order has. A line the kitchen already has keeps its note.
+ * The note on one order line. What is typed is kept here until the field is left;
+ * until then the field shows the note the order has.
  */
 function LineNote({ orderId, lineId, line }: { orderId: number; lineId: number; line: PricedLine }) {
   const { t } = useTranslation('pos')
   const setNote = useSetOrderLineNote()
   const [draft, setDraft] = useState<string | null>(null)
-  const locked = line.sentQuantity > 0
 
   // Only a changed note is sent. The typed text stays on screen until the answer is in, so the field never flashes the old note.
   // If the save fails the text stays too, so the cashier can see it and leave the field again to retry.
@@ -62,24 +62,74 @@ function LineNote({ orderId, lineId, line }: { orderId: number; lineId: number; 
     <div className="space-y-1">
       <Input
         className="h-11 bg-background text-sm"
-        aria-label={t('kitchen.noteFor', { name: line.name })}
-        placeholder={t('kitchen.notePlaceholder')}
+        aria-label={t('note.noteFor', { name: line.name })}
+        placeholder={t('note.notePlaceholder')}
         maxLength={500}
-        disabled={locked}
-        value={locked ? (line.note ?? '') : (draft ?? line.note ?? '')}
+        value={draft ?? line.note ?? ''}
         onChange={(event) => setDraft(event.target.value)}
         onBlur={save}
       />
-      {locked && <p className="text-xs text-muted-foreground">{t('kitchen.lockedNote')}</p>}
     </div>
   )
 }
 
-export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant = 'side', onClose }: Props) {
+/**
+ * The coupon code. What is typed is kept here until it is sent, so the quote is asked for once
+ * per code rather than once per keystroke.
+ */
+function CouponField({ disabled, error }: { disabled: boolean; error: string | null }) {
+  const { t } = useTranslation('pos')
+  const code = useCartStore((state) => state.couponCode)
+  const setCouponCode = useCartStore((state) => state.setCouponCode)
+  const [draft, setDraft] = useState<string | null>(null)
+  const apply = () => {
+    setCouponCode(draft ?? '')
+    setDraft(null)
+  }
+
+  return (
+    <div className="space-y-1">
+      {code !== '' ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-accent px-3 py-1 text-sm text-accent-foreground">
+          <span className="min-w-0 truncate font-medium">{t('cart.couponApplied', { code })}</span>
+          <Button variant="ghost" className="h-11 px-2" onClick={() => setCouponCode('')}>
+            {t('cart.couponRemove')}
+          </Button>
+        </div>
+      ) : draft === null ? (
+        <Button variant="outline" className="h-11 w-full" disabled={disabled} onClick={() => setDraft('')}>
+          <Tag />
+          {t('cart.couponAdd')}
+        </Button>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Input
+            className="h-11 flex-1 bg-background"
+            aria-label={t('cart.couponAdd')}
+            placeholder={t('cart.couponPlaceholder')}
+            maxLength={20}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') apply()
+            }}
+          />
+          <Button className="h-11 shrink-0" onClick={apply}>{t('cart.couponUse')}</Button>
+          <Button variant="ghost" className="size-11 shrink-0" aria-label={t('cart.couponCancel')} onClick={() => setDraft(null)}>
+            <X />
+          </Button>
+        </div>
+      )}
+      {disabled && <p className="text-xs text-muted-foreground">{t('cart.couponNotWithDiscount')}</p>}
+      {error !== null && <p role="alert" className="text-xs text-destructive">{error}</p>}
+    </div>
+  )
+}
+
+export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant = 'side', onClose, couponError = null }: Props) {
   const { t } = useTranslation('pos')
   const { money, currency } = useFormat()
   const { vatMode, vatRateBp } = useSettings()
-  const features = useFeatures()
   const cart = useCart()
   const discount = useCartStore((state) => state.discount)
   const setDiscount = useCartStore((state) => state.setDiscount)
@@ -90,6 +140,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
   const isOrder = cart.orderId !== null
   const tables = useQuery(tablesQuery)
   const tableName = tables.data?.find((table) => table.id === cart.order?.tableId)?.name
+  const hasPackLine = storedLines.length > 0 && !canSaveAsOrder(storedLines)
 
   return (
     <aside
@@ -117,12 +168,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
       </div>
       {cart.orderId !== null && <OrderQrHold orderId={cart.orderId} />}
 
-      {cart.order && cart.order.status === 'open' && (
-        <>
-          <OrderTools order={cart.order} />
-          {features.kitchen && <KitchenSendButton order={cart.order} />}
-        </>
-      )}
+      {cart.order && cart.order.status === 'open' && <OrderTools order={cart.order} />}
 
       <CartMember />
 
@@ -134,13 +180,13 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
           <li className="px-4 py-16 text-center text-sm text-muted-foreground">{t('cart.empty')}</li>
         )}
         {cart.lines.map((line) => {
-          const { lineKey, lineId, name, unitPriceSatang, stockQty, quantity, lineTotalSatang, exceedsStock, options, unavailable, sentQuantity } = line
+          const { lineKey, lineId, name, unitPriceSatang, stockQty, quantity, lineTotalSatang, exceedsStock, options, unavailable, packSize } = line
           return (
           <li key={lineKey} className="space-y-2 px-4 py-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 space-y-1">
                 <p className="text-base leading-snug font-medium">{name}</p>
-                {features.kitchen && sentQuantity > 0 && <Badge variant="secondary">{t('kitchen.sentBadge', { count: sentQuantity })}</Badge>}
+                {packSize > 1 && <p className="text-xs text-muted-foreground">{t('cart.pack', { size: packSize })}</p>}
               </div>
               <p className="shrink-0 text-sm font-semibold tabular-nums">{money.plain(lineTotalSatang)}</p>
             </div>
@@ -155,6 +201,22 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
               </ul>
             )}
             {unavailable && <p className="text-xs font-medium text-destructive">{t('cart.optionUnavailable')}</p>}
+            {cart.productPromotions.has(line.productId) && (
+              <ul aria-label={t('cart.promotions', { name })} className="flex flex-wrap gap-1.5">
+                {cart.productPromotions.get(line.productId)!.map((promotion) => (
+                  <li key={promotion.id} className="inline-flex max-w-full items-center gap-1 rounded-md bg-accent px-2 py-0.5 text-xs text-accent-foreground">
+                    <Tag className="size-3 shrink-0" aria-hidden />
+                    <span className="truncate">
+                      {[
+                        promotion.name,
+                        promotion.minSubtotalSatang > 0 && t('cart.promotionMin', { amount: money.format(promotion.minSubtotalSatang) }),
+                        promotion.membersOnly && t('cart.promotionMembers'),
+                      ].filter(Boolean).join(' · ')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -195,7 +257,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
                   : `@ ${money.plain(unitPriceSatang)}`}
               </span>
             </div>
-            {features.kitchen && cart.orderId !== null && lineId !== null && <LineNote orderId={cart.orderId} lineId={lineId} line={line} />}
+            {cart.orderId !== null && lineId !== null && <LineNote orderId={cart.orderId} lineId={lineId} line={line} />}
           </li>
           )
         })}
@@ -237,6 +299,15 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
             )}
           </>
         )}
+        {/* A coupon is pinned by a quote, so it is offered only while the cart is priced by one. */}
+        {!isOrder && <CouponField disabled={discount.trim() !== ''} error={couponError} />}
+        {/* The points the member spends come off after the promotion or the typed discount, as the quote prices them. */}
+        {cart.pointsDiscountSatang > 0 && (
+          <p className="flex justify-between gap-4 text-sm text-muted-foreground">
+            <span>{t('cart.pointsDiscount', { points: cart.pointsRedeemed })}</span>
+            <span className="tabular-nums">-{money.format(cart.pointsDiscountSatang)}</span>
+          </p>
+        )}
         {/* When prices already include VAT there is nothing to add; only an added tax is shown here. */}
         {vatMode === 'exclusive' && (
           <p className="flex justify-between text-sm text-muted-foreground">
@@ -249,10 +320,13 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
           <span className="text-3xl font-semibold tabular-nums">{money.format(cart.totalSatang)}</span>
         </p>
         {!isOrder && (
-          <Button variant="outline" className="h-11 w-full" disabled={cart.lines.length === 0 || !cart.productsReady} onClick={onSaveOrder}>
-            <ClipboardList />
-            {t('cart.saveOrder')}
-          </Button>
+          <>
+            <Button variant="outline" className="h-11 w-full" disabled={!canSaveAsOrder(storedLines) || !cart.productsReady} onClick={onSaveOrder}>
+              <ClipboardList />
+              {t('cart.saveOrder')}
+            </Button>
+            {hasPackLine && <p className="text-xs text-muted-foreground">{t('cart.saveOrderNoPacks')}</p>}
+          </>
         )}
         <Button className="h-14 w-full gap-3 text-lg" disabled={!cart.canPay || !paymentAvailable} onClick={onPay}>
           {t('cart.pay')}

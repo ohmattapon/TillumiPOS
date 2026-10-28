@@ -4,6 +4,6 @@ import type { ProductResponse } from './schemas/product.schema'
 
 /** The API exposes a ready-to-use image URL; the storage key stays internal. */
 export function toProductResponse(product: ProductEntity, media: IMediaStorage): ProductResponse {
-  const { imageKey, ...fields } = product.toSnapshot()
-  return { ...fields, imageUrl: imageKey ? media.urlFor(imageKey) : null }
+  const { imageKey, packs: _packs, ...fields } = product.toSnapshot()
+  return { ...fields, packs: product.packs.map((pack) => ({ ...pack })), imageUrl: imageKey ? media.urlFor(imageKey) : null }
 }

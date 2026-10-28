@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { client as sql } from '../../libs/db'
-import { baseUrl, login, ok, resetDatabase, seedBranch, seedProduct, signIn, type Session } from '../../../test/harness'
+import { baseUrl, ok, resetDatabase, seedProduct, signIn, type Session } from '../../../test/harness'
 
 let owner: Session
 let cashier: Session
@@ -182,31 +182,7 @@ describe('order membership', () => {
   })
 })
 
-describe('branch-scoped purchase history', () => {
-  test('shares members but keeps branch sales and order mutations isolated', async () => {
-    const created = await member()
-    const branch = await seedBranch()
-    const otherCashier = await signIn('cashier', 'bkk-cashier', { branchId: branch.id })
-    const otherOwner = await login('owner', undefined, branch.id)
-    const mainProduct = await seedProduct(owner, { stock: 5 })
-    const otherProduct = await seedProduct(owner, { stock: 5, branchId: branch.id })
-    const mainSale = ok(await cashier.api.sales.post({
-      memberId: created.id, items: [{ productId: mainProduct.id, quantity: 1 }], payments: cash(1000),
-    }))
-    const otherSale = ok(await otherCashier.api.sales.post({
-      memberId: created.id, items: [{ productId: otherProduct.id, quantity: 1 }], payments: cash(1000),
-    }))
-    expect(ok(await otherCashier.api.members({ id: created.id }).get()).id).toBe(created.id)
-    const mainHistory = ok(await cashier.api.members({ id: created.id }).sales.get({ query: {} }))
-    expect(mainHistory.items.map((sale) => sale.id)).toEqual([mainSale.id])
-    expect(mainHistory.summary).toEqual({ saleCount: 1, totalSatang: 1000 })
-    expect(ok(await otherOwner.members({ id: created.id }).sales.get({ query: {} })).items.map((sale) => sale.id)).toEqual([otherSale.id])
-    const denied = await login('cashier', undefined, branch.id)
-    expect((await denied.members({ id: created.id }).sales.get({ query: {} })).status).toBe(403)
-    const order = ok(await cashier.api.orders.post({ memberId: created.id }))
-    expect((await otherCashier.api.orders({ id: order.id }).member.patch({ memberId: null })).status).toBe(404)
-  })
-
+describe('member purchase history', () => {
   test('filters civil days in shop timezone, paginates independently of summary and excludes voided totals', async () => {
     const created = await member()
     const product = await seedProduct(owner, { stock: 10, priceSatang: 1000 })

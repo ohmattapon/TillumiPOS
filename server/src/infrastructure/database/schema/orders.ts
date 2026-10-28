@@ -57,8 +57,9 @@ export const orderItems = pgTable(
     options: jsonb().$type<StoredLineOption[]>().notNull().default([]),
     // The chosen option ids, sorted and joined: the same product with different options is a different line.
     optionsKey: text().notNull().default(''),
-    // A note for the kitchen on this line. Frozen once the line has been sent.
+    // An optional note on this line, such as a customer preference. Always editable. Two lines of one
+    // item differ by this note, so the unique constraint below includes it.
     note: text(),
   },
-  (table) => [unique().on(table.orderId, table.productId, table.optionsKey)],
+  (table) => [unique().on(table.orderId, table.productId, table.optionsKey, table.note).nullsNotDistinct()],
 )

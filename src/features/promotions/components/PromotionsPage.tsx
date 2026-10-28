@@ -31,12 +31,20 @@ export function PromotionsPage() {
   const all = promotions.data?.items ?? []
 
   const discountText = (promotion: Promotion) => {
+    if (promotion.kind === 'bundle')
+      return t('summary.bundle', { buy: promotion.buyQuantity ?? 0, free: promotion.freeQuantity ?? 0 })
     if (promotion.kind === 'fixed') return t('summary.fixed', { amount: money.format(promotion.value) })
     const percent = bpToPercent(promotion.value)
     return promotion.maxDiscountSatang === null
       ? t('summary.percent', { percent })
       : t('summary.percentCapped', { percent, max: money.format(promotion.maxDiscountSatang) })
   }
+
+  // Reserved and paid bills both count, so a limit shows the room left before the till refuses it.
+  const usesText = (promotion: Promotion) =>
+    promotion.maxUses === null
+      ? t('uses.unlimited', { used: promotion.usedCount })
+      : t('uses.count', { used: promotion.usedCount, max: promotion.maxUses })
 
   const whenText = (promotion: Promotion) => {
     const parts: string[] = []
@@ -90,6 +98,7 @@ export function PromotionsPage() {
               columns={[
                 { id: 'name', header: t('columns.name'), priority: 'primary', className: 'font-medium', cell: (promotion) => promotion.name },
                 { id: 'discount', header: t('columns.discount'), priority: 'primary', cell: discountText },
+                { id: 'uses', header: t('columns.uses'), priority: 'secondary', cell: usesText },
                 { id: 'when', header: t('columns.when'), priority: 'secondary', cell: whenText },
                 {
                   id: 'audience', header: t('columns.audience'), priority: 'wide-only',
@@ -97,11 +106,14 @@ export function PromotionsPage() {
                 },
                 {
                   id: 'status', header: t('columns.status'), priority: 'secondary',
-                  cell: (promotion) => (
-                    <StatusBadge tone={promotion.isActive ? 'success' : 'neutral'}>
-                      {promotion.isActive ? t('status.active') : t('status.inactive')}
-                    </StatusBadge>
-                  ),
+                  cell: (promotion) =>
+                    promotion.isExhausted ? (
+                      <StatusBadge tone="warning">{t('status.exhausted')}</StatusBadge>
+                    ) : (
+                      <StatusBadge tone={promotion.isActive ? 'success' : 'neutral'}>
+                        {promotion.isActive ? t('status.active') : t('status.inactive')}
+                      </StatusBadge>
+                    ),
                 },
               ]}
               actions={

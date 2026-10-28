@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { currentShiftQuery, registersQuery } from '@/features/shifts'
 import { saleQuery, useCashRefund, useVoidSale } from '../api'
+import { LanPrintButton } from './LanPrintButton'
 import { Receipt } from './Receipt'
 import { ReceiptPdfButton } from './ReceiptPdfButton'
 
@@ -116,6 +117,7 @@ export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
                 </ConfirmDialog>
               ) : <Button variant="outline" className="h-10" disabled={!shift.data} onClick={() => setIsRefunding(true)}>{t('detail.cashRefund')}</Button>
             )}
+            <LanPrintButton saleId={saleId} receiptRef={receiptRef} disabled={!sale.data} />
             <ReceiptPdfButton
               receiptNo={sale.data?.receiptNo ?? ''}
               receiptRef={receiptRef}

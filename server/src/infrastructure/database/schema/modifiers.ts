@@ -40,6 +40,7 @@ export const modifierOptions = pgTable(
     costSatang: integer().notNull().default(0),
     sortOrder: integer().notNull().default(0),
     isActive: boolean().notNull().default(true),
+    isDefault: boolean().notNull().default(false),
     ...timestamps,
   },
   (table) => [

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { makeQrPayment } from '../__tests__/factories'
 import { DomainError } from './errors/domain-error'
 import { QrPaymentEntity } from './qr-payment.domain'
+import { buildQrReference } from './qr-payment.domain'
 
 const paidAt = new Date('2026-10-13T06:05:00Z')
 const confirmation = { transactionId: 'TX-1', amountSatang: 5000, paidAt, payerName: 'สมหญิง' }
@@ -14,6 +15,16 @@ const codeOf = (run: () => unknown) => {
   }
   return undefined
 }
+
+describe('buildQrReference', () => {
+  test('builds a 15-character bank reference from a raw id', () => {
+    expect(buildQrReference('123e4567-e89b-12d3-a456-426614174000')).toBe('QR123E4567E89B1')
+  })
+
+  test('strips hyphens and upper-cases', () => {
+    expect(buildQrReference('id-1')).toBe('QRID1')
+  })
+})
 
 describe('QrPaymentEntity', () => {
   test('starts pending and unused', () => {

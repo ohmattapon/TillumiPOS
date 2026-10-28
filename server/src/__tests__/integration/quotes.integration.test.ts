@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { baseUrl, ok, resetDatabase, seedBranch, seedProduct, signIn, type Session } from '../../../test/harness'
+import { baseUrl, ok, resetDatabase, seedProduct, signIn, type Session } from '../../../test/harness'
 
 let owner: Session
 let cashier: Session
@@ -26,7 +26,7 @@ describe('creating a quote', () => {
       promotion: { name: 'ลด 10%', kind: 'percent', value: 1000, discountSatang: 500 },
     })
     expect(quote.lines).toEqual([
-      { productId: tea.id, productName: tea.name, sku: tea.sku, unitPriceSatang: 2500, quantity: 2, options: [] },
+      { productId: tea.id, productName: tea.name, sku: tea.sku, unitPriceSatang: 2500, quantity: 2, options: [], packId: null, packSize: 1 },
     ])
     expect(new Date(quote.expiresAt).getTime()).toBeGreaterThan(Date.now() + 14 * 60_000)
   })
@@ -51,6 +51,29 @@ describe('creating a quote', () => {
     const promotion = ok(await owner.api.promotions.post(tenPercent))
     ok(await owner.api.promotions({ id: promotion.id }).patch({ isActive: false }))
     expect(ok(await cashier.api.quotes.post({ lines: [{ productId: tea.id, quantity: 2 }] })).promotion).toBeNull()
+  })
+
+  test('a promotion limited to a category discounts only those lines, and wins only when it gives more', async () => {
+    const drinks = ok(await owner.api.catalog.categories.post({ name: 'เครื่องดื่ม' }))
+    const coffee = await seedProduct(owner, { priceSatang: 6000, stock: 10, categoryId: drinks.id })
+    const cake = await seedProduct(owner, { priceSatang: 4000, stock: 10 })
+    ok(await owner.api.promotions.post({ name: 'กาแฟลด 20%', kind: 'percent', value: 2000, scope: { productIds: [], categoryIds: [drinks.id] } }))
+    ok(await owner.api.promotions.post({ name: 'ลด 10 บาท', kind: 'fixed', value: 1000 }))
+
+    const both = ok(await cashier.api.quotes.post({ lines: [{ productId: coffee.id, quantity: 1 }, { productId: cake.id, quantity: 1 }] }))
+    expect(both).toMatchObject({ subtotalSatang: 10000, discountSatang: 1200, promotion: { name: 'กาแฟลด 20%', discountSatang: 1200 } })
+
+    const cakeOnly = ok(await cashier.api.quotes.post({ lines: [{ productId: cake.id, quantity: 1 }] }))
+    expect(cakeOnly).toMatchObject({ discountSatang: 1000, promotion: { name: 'ลด 10 บาท' } })
+  })
+
+  test('a promotion limited to a product applies to an open order the same way as to a cart', async () => {
+    const coffee = await seedProduct(owner, { priceSatang: 6000, stock: 10 })
+    const cake = await seedProduct(owner, { priceSatang: 4000, stock: 10 })
+    ok(await owner.api.promotions.post({ name: 'เค้กลด 50%', kind: 'percent', value: 5000, scope: { productIds: [cake.id], categoryIds: [] } }))
+    const order = ok(await cashier.api.orders.post({ items: [{ productId: coffee.id, quantity: 1 }, { productId: cake.id, quantity: 2 }] }))
+    const quote = ok(await cashier.api.quotes.post({ orderId: order.id }))
+    expect(quote).toMatchObject({ subtotalSatang: 14000, discountSatang: 4000, promotion: { name: 'เค้กลด 50%' } })
   })
 
   test("prices an open order at the prices it quoted, whatever the menu says now", async () => {
@@ -89,12 +112,4 @@ describe('reading and cancelling', () => {
     expect(ok(await cashier.api.quotes({ id: made.id }).get()).status).toBe('cancelled')
   })
 
-  test("another branch's quote is not found", async () => {
-    const tea = await seedProduct(owner, { priceSatang: 2500, stock: 10 })
-    const made = ok(await cashier.api.quotes.post({ lines: [{ productId: tea.id, quantity: 1 }] }))
-    const other = await seedBranch('BKK', 'สาขากรุงเทพ')
-    const away = await signIn('cashier', 'bkk-cashier', { branchId: other.id })
-    expect((await away.api.quotes({ id: made.id }).get()).status).toBe(404)
-    expect((await away.api.quotes({ id: made.id }).cancel.post()).status).toBe(404)
-  })
 })

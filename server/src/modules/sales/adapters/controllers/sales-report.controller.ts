@@ -3,6 +3,7 @@ import { inject, injectable } from 'tsyringe'
 import { page } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import { GetSalesReportUseCase } from '../../applications/usecases/get-sales-report.usecase'
+import { GetPromotionReportUseCase } from '../../applications/usecases/get-promotion-report.usecase'
 import { ListReportProductsUseCase } from '../../applications/usecases/list-report-products.usecase'
 import { ListReportBranchesUseCase } from '../../applications/usecases/list-report-branches.usecase'
 import { reportSchemas } from './schemas/sales-report.schema'
@@ -13,6 +14,7 @@ export class SalesReportElysiaController {
     @inject(GetSalesReportUseCase) private readonly overview: GetSalesReportUseCase,
     @inject(ListReportProductsUseCase) private readonly products: ListReportProductsUseCase,
     @inject(ListReportBranchesUseCase) private readonly branches: ListReportBranchesUseCase,
+    @inject(GetPromotionReportUseCase) private readonly promotions: GetPromotionReportUseCase,
   ) {}
   getRoutes() {
     return new Elysia({ name: 'sales-reports', prefix: '/sales/reports', detail: { tags: ['Sales'] } })
@@ -28,6 +30,10 @@ export class SalesReportElysiaController {
       .get('/branches', async ({ query, user, branch }) => this.branches.execute(query, user, (await branch()).id), {
         auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: page(reportSchemas.branch),
         detail: { summary: 'เปรียบเทียบยอดขายแยกสาขา' },
+      })
+      .get('/promotions', async ({ query, user, branch }) => this.promotions.execute(query, user, (await branch()).id), {
+        auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: page(reportSchemas.promotion),
+        detail: { summary: 'ยอดขายและส่วนลดแยกตามโปรโมชัน ใช้ข้อมูล ณ ตอนขาย' },
       })
   }
 }

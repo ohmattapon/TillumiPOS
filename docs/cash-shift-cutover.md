@@ -1,24 +1,39 @@
-# Cash shift cutover
+# เปลี่ยนร้านเดิมเป็นโหมดกะ
 
-The migration creates a `MAIN` register for each existing branch and a new branch receives one in its create transaction. It does not open shifts or change old sales. `CHECKOUT_MODE` defaults to `legacy` in `.env.example`.
+คู่มือนี้สำหรับผู้ดูแลที่มีร้านเดิมในโหมด `legacy` และต้องการเปลี่ยนเป็น `shifts` ร้านใหม่ที่ติดตั้งด้วยสคริปต์จะใช้ `shifts` อยู่แล้ว ส่วน `.env.example` สำหรับพัฒนายังใช้ `legacy`
 
-## Current implementation boundary
+ถ้าต้องการขั้นตอนเปิดและปิดกะประจำวัน อ่าน [คู่มือเริ่มใช้งาน](user-guide.md) ก่อน
 
-- `legacy`: existing v1 checkout and QR behavior remains active. Shift opening and v2 checkout are blocked.
-- `shifts`: v2 cash/card sale and order checkout require an open shift; the selected register is scoped to the signed-in user and branch. The web POS blocks payment until it sees an open shift.
-- v1 money commands for sale, order payment, void, and QR create/cancel are retired in `shifts` mode. Existing read routes and the SCB confirmation callback remain.
-- Web cash refunds are recorded as a one-time cash outflow in an open same-branch shift after a sale is voided.
-- Bank QR works in `shifts` mode through `/api/v2/payments/qr`: each request is recorded before the bank is called, an unknown outcome is kept until someone checks it with the bank, and paid money without a sale is listed for the branch until it is sold or an owner dismisses it. **This has been tested against a fake SCB only. Make one real payment in your own environment before relying on it.**
-- A shift cannot be counted while it has a QR request with an unknown outcome or paid money without a sale. QRs still waiting to be paid need an acknowledgement, because counting does not cancel them at the bank.
-- The shift report is frozen when counting starts and is not rewritten afterwards; sales voided later are listed beside it. Shift history and detail are on the shift page.
-- Browser-checked with `bun run e2e`: two accounts selling in one shift, the till stopping when another session starts counting, reload, the variance reason, history and English. Not browser-checked: QR recovery, cash refund, register management and paying an order in a shift.
+## ความต่างของสองโหมด
 
-## Before enabling shifts
+| เรื่อง | `legacy` | `shifts` |
+|---|---|---|
+| การขาย | ใช้ checkout v1 | ใช้ v2 ต้องเลือกจุดขายและมีกะเปิดอยู่ |
+| เปิดกะ | ยังเปิดไม่ได้ | กรอกเงินตั้งต้นแล้วเริ่มขาย |
+| เงินเข้าออกและปิดกะ | ไม่มีขั้นตอนกะที่ใช้ขาย | บันทึกเงินสด นับยอด และปิดกะ |
+| QR | เส้นทาง v1 | `/api/v2/payments/qr` พร้อมรายการตรวจสอบผลที่ยังไม่ชัดเจน |
 
-1. Back up PostgreSQL and verify the backup can be restored.
-2. Apply migrations and confirm each branch has exactly one active `MAIN` register.
-3. Inventory all clients and move money commands to `/api/v2`; v1 money commands return `API_VERSION_RETIRED` after activation.
-4. Reconcile pending, paid, and unclaimed QR payments before cutover. QR payments made in legacy mode have no origin shift; paid ones without a sale appear in the v2 unclaimed list and can be sold in the first shift or dismissed by an owner.
-5. Enable `CHECKOUT_MODE=shifts` only after the shop has reviewed the client migration and refund/closing procedures.
+main ใช้สาขา `MAIN` เพียงสาขาเดียว แต่สร้างหลายจุดขายได้ Migration เดิมสร้างจุดขายรหัส `MAIN` ให้สาขาที่มีอยู่ การรัน migration ไม่ได้เปิดกะหรือแก้ยอดขายเก่า และไม่ได้เปิดโหมดกะให้เอง
 
-The mode is deployment-wide. The first successfully opened shift writes a permanent activation marker; switching the environment back to `legacy` afterwards does not restore v1 money commands. A schema migration does not enable shifts. Keep a copy of the v1 and v2 OpenAPI snapshots with the deployment release.
+## เตรียมก่อนเปลี่ยน
+
+1. หยุดรับรายการใหม่ชั่วคราว สำรองฐานข้อมูลและรูป แล้วตรวจว่าสามารถกู้คืนในระบบแยกได้
+2. รัน migration ให้ครบ ตรวจว่ามีจุดขายที่เปิดใช้งานสำหรับร้าน และกำหนดขั้นตอนนับเงิน/คืนเงินให้พนักงาน
+3. ถ้ามีโปรแกรมอื่นเรียก API ให้ย้ายคำสั่งเกี่ยวกับเงินไป v2 ก่อน เมื่อเปิดโหมดกะ คำสั่ง v1 สำหรับขาย ชำระออเดอร์ ยกเลิกบิล และสร้าง/ยกเลิก QR จะตอบ `API_VERSION_RETIRED` ส่วนเส้นทางอ่านและ callback SCB เดิมยังอยู่
+4. ตรวจ QR ค้าง ทั้งรอจ่าย ไม่รู้ผล และเงินเข้าที่ยังไม่มีบิล QR เดิมไม่มีต้นทางเป็นกะ เงินที่จ่ายแล้วแต่ยังไม่มีบิลจะอยู่ในรายการเงินเข้าค้างของ v2 ให้ชำระเป็นบิลในกะแรก หรือให้ผู้มีสิทธิ์ dismiss พร้อมเหตุผล
+5. เมื่อเตรียมครบ ให้ตั้ง `CHECKOUT_MODE=shifts` ใน `.env` แล้วรัน `scripts/install.ps1` สำหรับการติดตั้งแบบ Podman เพื่อให้แอปรับค่าใหม่
+6. เปิดกะ ทดลองขาย นับเงิน ปิดกะ และตรวจรายงานบนระบบทดสอบก่อนใช้กับร้าน ตรวจทั้งเครื่องขายหลักและเครื่องอื่นที่เชื่อมต่อ
+
+ค่าโหมดมีผลทั้งระบบ หลังเปิดกะสำเร็จครั้งแรก ฐานข้อมูลจะเก็บเครื่องหมายเปิดใช้งานถาวร การเปลี่ยน `.env` กลับเป็น `legacy` จะไม่ทำให้คำสั่งเงิน v1 กลับมาใช้ได้ จึงควรตรวจการย้ายผู้เรียก API ให้ครบก่อนเปิดกะแรก
+
+## QR และการนับเงิน
+
+- ระบบบันทึกความพยายามสร้าง QR ก่อนเรียกธนาคาร หากไม่รู้ผล ต้องตรวจจากธนาคารก่อน ไม่ปล่อยรายการค้างด้วยการรอหมดเวลาอย่างเดียว
+- เงินที่จ่ายแล้วแต่ยังไม่มีบิลต้องออกบิล หรือ dismiss โดยผู้มีสิทธิ์พร้อมเหตุผล ไม่เปลี่ยนกลับเป็นรอจ่าย
+- กะเริ่มนับไม่ได้ถ้ามี QR ที่ไม่รู้ผลหรือเงินเข้าที่ยังไม่มีบิล ส่วน QR ที่ยังรอจ่ายต้องรับทราบก่อนนับ เพราะการนับเงินไม่ได้ยกเลิก QR ที่ธนาคาร
+- รายงานกะเก็บยอดตอนเริ่มนับ การยกเลิกบิลหลังจากนั้นแสดงแยก ไม่เขียนทับรายงานเดิม
+- หลังยกเลิกบิลเงินสด หน้าเว็บบันทึกการคืนเงินออกได้หนึ่งครั้งในกะที่เปิดอยู่ของสาขาเดียวกัน ตรวจว่าได้คืนเงินจริงแล้วก่อนยืนยัน
+
+การทดสอบ SCB ใน repository ใช้เซิร์ฟเวอร์จำลอง ต้องทดสอบรับเงินจริงในสภาพแวดล้อมของร้านก่อนเปิดรับชำระ การผ่านชุดทดสอบไม่ยืนยันบัญชีธนาคารหรือเครือข่ายของร้าน
+
+เก็บรุ่นโค้ดและ OpenAPI v1/v2 ที่ใช้พร้อมสำรองแต่ละรอบ เพื่อให้ตรวจสอบหรือกู้คืนได้ตรงรุ่น

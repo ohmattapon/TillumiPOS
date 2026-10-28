@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { qrPayments } from '../../infrastructure/database/schema/qr-payments'
 import { shiftQrAttempts } from '../../infrastructure/database/schema/shift-qr-attempts'
 import { db } from '../../libs/db'
-import { fakeScb, SCB_ENV_KEYS } from '../../../test/scb-server'
+import { fakeKbank, KBANK_ENV_KEYS } from '../../../test/kbank-server'
 import { baseUrl, ok, resetDatabase, seedProduct, signIn } from '../../../test/harness'
 
 const previousMode = Bun.env.CHECKOUT_MODE
@@ -16,8 +16,8 @@ let registerId: number
 beforeEach(async () => {
   Bun.env.CHECKOUT_MODE = 'shifts'
   await resetDatabase()
-  fakeScb.reset()
-  fakeScb.enableIn(Bun.env)
+  fakeKbank.reset()
+  fakeKbank.enableIn(Bun.env)
   owner = await signIn('owner')
   cashier = await signIn('cashier')
   registerId = ok(await owner.apiV2.registers.get()).items[0]!.id
@@ -25,7 +25,7 @@ beforeEach(async () => {
 })
 
 afterEach(() => {
-  for (const name of SCB_ENV_KEYS) delete Bun.env[name]
+  for (const name of KBANK_ENV_KEYS) delete Bun.env[name]
   if (previousMode === undefined) delete Bun.env.CHECKOUT_MODE
   else Bun.env.CHECKOUT_MODE = previousMode
 })
@@ -37,7 +37,7 @@ const promptpay = (amountSatang: number, qrPaymentId: number) => [{ method: 'pro
 
 /** The customer pays at the bank and the till's next refresh records it. */
 async function customerPays(payment: { id: number; reference: string }) {
-  fakeScb.pay(payment.reference)
+  fakeKbank.pay(payment.reference)
   await letTimePass(payment.id)
   return ok(await qr()({ id: payment.id }).refresh.post())
 }
@@ -63,7 +63,7 @@ describe('asking for a QR in a shift', () => {
     const closing = await qr().post({ amountSatang: 5000, shiftId }, key())
     expect(closing.status).toBe(409)
     expect(closing.error?.value).toMatchObject({ code: 'SHIFT_NOT_OPEN' })
-    expect(fakeScb.created.size).toBe(0)
+    expect(fakeKbank.created.size).toBe(0)
   })
 
   test('the same key gives the same QR again without asking the bank twice', async () => {
@@ -73,7 +73,7 @@ describe('asking for a QR in a shift', () => {
     const again = await createQr(5000, options)
 
     expect(again).toMatchObject({ id: first.id, reference: first.reference, qrImage: first.qrImage })
-    expect(fakeScb.created.size).toBe(1)
+    expect(fakeKbank.created.size).toBe(1)
   })
 
   test('a key reused for another amount is refused', async () => {
@@ -87,7 +87,7 @@ describe('asking for a QR in a shift', () => {
   })
 
   test('a bank that refuses leaves a failed attempt and no payment', async () => {
-    Bun.env.SCB_BILLER_ID = '999999999999999'
+    Bun.env.KBANK_MERCHANT_ID = 'wrong-merchant'
 
     const refused = await qr().post({ amountSatang: 5000, shiftId }, key())
 
@@ -109,30 +109,30 @@ describe('asking for a QR in a shift', () => {
 
     expect(refused.status).toBe(409)
     expect(refused.error?.value).toMatchObject({ code: 'CHECKOUT_MODE_REQUIRED' })
-    expect(fakeScb.created.size).toBe(0)
+    expect(fakeKbank.created.size).toBe(0)
   })
 })
 
 describe('reading and refreshing', () => {
   test('reading never asks the bank; refreshing does and records the answer', async () => {
     const created = await createQr(5000)
-    fakeScb.pay(created.reference)
-    const before = fakeScb.requests.length
+    fakeKbank.pay(created.reference)
+    const before = fakeKbank.requests.length
 
     expect(ok(await qr()({ id: created.id }).get()).status).toBe('pending')
-    expect(fakeScb.requests.length).toBe(before)
+    expect(fakeKbank.requests.length).toBe(before)
 
-    expect(ok(await qr()({ id: created.id }).refresh.post())).toMatchObject({ status: 'paid', bankTransactionId: 'FAKE-TX-1' })
+    expect(ok(await qr()({ id: created.id }).refresh.post())).toMatchObject({ status: 'paid', bankTransactionId: created.reference })
     expect(ok(await qr()({ id: created.id }).get()).status).toBe('paid')
   })
 
   test('a forged callback still marks nothing paid', async () => {
     const created = await createQr(5000)
 
-    await fetch(`${baseUrl}/payments/qr/scb/confirmation`, {
+    await fetch(`${baseUrl}/payments/qr/kbank/confirmation`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ billPaymentRef1: created.reference, transactionId: 'FORGED', amount: '50.00' }),
+      body: JSON.stringify({ partnerTxnUid: created.reference }),
     })
 
     expect(ok(await qr()({ id: created.id }).get()).status).toBe('pending')
@@ -141,7 +141,7 @@ describe('reading and refreshing', () => {
 
 describe('an unknown outcome at the bank', () => {
   test('is kept as an unresolved attempt, is not retried with the same key, and blocks counting', async () => {
-    fakeScb.loseNextCreateAnswer(true)
+    fakeKbank.loseNextCreateAnswer(true)
     const options = key()
 
     const lost = await qr().post({ amountSatang: 5000, shiftId }, options)
@@ -151,7 +151,7 @@ describe('an unknown outcome at the bank', () => {
     const retried = await qr().post({ amountSatang: 5000, shiftId }, options)
     expect(retried.status).toBe(409)
     expect(retried.error?.value).toMatchObject({ code: 'QR_PAYMENT_UNRESOLVED' })
-    expect(fakeScb.created.size).toBe(1)
+    expect(fakeKbank.created.size).toBe(1)
 
     const unresolved = ok(await qr().attempts.get({ query: {} }))
     expect(unresolved.items).toMatchObject([{ state: 'unknown', amountSatang: 5000, originShiftId: shiftId }])
@@ -162,7 +162,7 @@ describe('an unknown outcome at the bank', () => {
   })
 
   test('resolving asks the bank: no payment there closes the attempt as failed and frees the shift', async () => {
-    fakeScb.loseNextCreateAnswer(false)
+    fakeKbank.loseNextCreateAnswer(false)
     await qr().post({ amountSatang: 5000, shiftId }, key())
     const attempt = ok(await qr().attempts.get({ query: {} })).items[0]!
 
@@ -174,10 +174,10 @@ describe('an unknown outcome at the bank', () => {
   })
 
   test('resolving finds money the bank did take, and records it as paid and waiting for a sale', async () => {
-    fakeScb.loseNextCreateAnswer(true)
+    fakeKbank.loseNextCreateAnswer(true)
     await qr().post({ amountSatang: 5000, shiftId }, key())
     const attempt = ok(await qr().attempts.get({ query: {} })).items[0]!
-    fakeScb.pay(attempt.reference)
+    fakeKbank.pay(attempt.reference)
 
     const resolved = ok(await qr().attempts({ id: attempt.id }).resolve.post())
 
@@ -187,10 +187,10 @@ describe('an unknown outcome at the bank', () => {
   })
 
   test('a bank that cannot be reached leaves the attempt unresolved: a timeout proves nothing', async () => {
-    fakeScb.loseNextCreateAnswer(true)
+    fakeKbank.loseNextCreateAnswer(true)
     await qr().post({ amountSatang: 5000, shiftId }, key())
     const attempt = ok(await qr().attempts.get({ query: {} })).items[0]!
-    fakeScb.setFailing(503)
+    fakeKbank.setFailing(503)
 
     const failed = await qr().attempts({ id: attempt.id }).resolve.post()
 

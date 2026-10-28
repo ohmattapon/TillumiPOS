@@ -54,6 +54,18 @@ describe('promotion management', () => {
     expect(ok(await owner.api.promotions.get({ query: { isActive: true } }))).toMatchObject({ items: [], total: 0 })
   })
 
+  test('keeps the products and categories a promotion is limited to, and clears them back to the whole bill', async () => {
+    const created = ok(await owner.api.promotions.post({ ...tenPercent, scope: { productIds: [7, 3, 7], categoryIds: [2] } }))
+    expect(created.scope).toEqual({ productIds: [3, 7], categoryIds: [2] })
+    expect(ok(await cashier.api.promotions({ id: created.id }).get()).scope).toEqual({ productIds: [3, 7], categoryIds: [2] })
+
+    const renamed = ok(await owner.api.promotions({ id: created.id }).patch({ name: 'ลด 10% เครื่องดื่ม' }))
+    expect(renamed.scope).toEqual({ productIds: [3, 7], categoryIds: [2] })
+    const cleared = ok(await owner.api.promotions({ id: created.id }).patch({ scope: { productIds: [], categoryIds: [] } }))
+    expect(cleared.scope).toBeNull()
+    expect(ok(await owner.api.promotions.post({ name: 'ทั้งบิล', kind: 'fixed', value: 100 })).scope).toBeNull()
+  })
+
   test('only the owner changes promotions', async () => {
     const created = ok(await owner.api.promotions.post(tenPercent))
     expect((await cashier.api.promotions.post(tenPercent)).status).toBe(403)

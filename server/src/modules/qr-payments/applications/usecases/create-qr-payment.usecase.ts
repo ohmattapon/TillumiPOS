@@ -1,6 +1,8 @@
 import { inject, injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
+import { buildQrReference } from '../../../../domains/qr-payment.domain'
 import type { IClock } from '../../../shared/ports/clock.port'
+import type { IIdGenerator } from '../../../shared/ports/id-generator.port'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import { quoteClaimsToken, type IQuoteClaims } from '../../../quotes/applications/ports/quote-claims.port'
 import { TOKENS } from '../../../tokens'
@@ -22,6 +24,7 @@ export class CreateQrPaymentUseCase {
     @inject(TOKENS.Clock) private readonly clock: IClock,
     @inject(quoteClaimsToken) private readonly quotes: IQuoteClaims,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
+    @inject(TOKENS.IdGenerator) private readonly ids: IIdGenerator,
   ) {}
 
   async execute(input: unknown, actor: { userId: number; branch: { id: number; code: string } }) {
@@ -29,8 +32,8 @@ export class CreateQrPaymentUseCase {
     if (!this.gateway.isEnabled())
       throw new DomainConflictError('ร้านนี้ยังไม่ได้ตั้งค่าการรับชำระด้วย QR', 'QR_NOT_CONFIGURED')
 
-    // Reference 1: 16 characters of A-Z and 0-9, unique, and unguessable.
-    const reference = 'QR' + crypto.randomUUID().replaceAll('-', '').slice(0, 14).toUpperCase()
+    // Reference 1: every QR reference in the system is built by one function (KBank takes at most 15).
+    const reference = buildQrReference(this.ids.newId())
     // A QR made from a pinned price holds that quote first, so the price cannot move while the customer pays.
     if (dto.quoteId !== undefined) {
       const quoteId = dto.quoteId

@@ -4,9 +4,11 @@ import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import { TOKENS } from '../../../tokens'
 import { inject, injectable } from 'tsyringe'
 import { ProductEntity } from '../../../../domains/product.domain'
+import { formatProductSku } from '../../../../domains/product-sku'
 import { createProductSchema } from '../schemas/product-schemas'
 import { productRepositoryToken } from '../ports/product.repository'
 import type { IProductRepository } from '../ports/product.repository'
+import { auditPack } from './audit-pack'
 
 /** Command. */
 @injectable()
@@ -19,13 +21,20 @@ export class CreateProductUseCase {
     const dto = createProductSchema.parse(input)
 
     return this.uow.run(async () => {
+      let sku = dto.sku
+      if (sku === undefined) {
+        do {
+          sku = formatProductSku(await this.products.nextSkuNumber())
+        } while (await this.products.skuExists(sku))
+      }
       const result = await this.products.create(
         new ProductEntity({
           id: 0,
-          sku: dto.sku,
+          sku,
           barcode: dto.barcode ?? null,
           name: dto.name,
           categoryId: dto.categoryId ?? null,
+          productType: dto.productType ?? 'normal',
           priceSatang: dto.priceSatang,
           costSatang: dto.costSatang ?? 0,
           trackStock: dto.trackStock ?? true,
@@ -33,6 +42,8 @@ export class CreateProductUseCase {
           stockQty: 0,
           isActive: true,
           imageKey: null,
+          // A pack sent without an id is new (0).
+          packs: (dto.packs ?? []).map((pack) => ({ id: 0, barcode: pack.barcode, size: pack.size, priceSatang: pack.priceSatang, isActive: pack.isActive ?? true })),
         }),
         branchId,
       )
@@ -41,7 +52,7 @@ export class CreateProductUseCase {
         entityType: 'product',
         entityId: String(result.id),
         summary: 'สร้างสินค้า',
-        after: { name: result.name, sku: result.sku, priceSatang: result.priceSatang, costSatang: result.costSatang, categoryId: result.categoryId, barcode: result.barcode, isActive: result.isActive },
+        after: { name: result.name, sku: result.sku, productType: result.productType, priceSatang: result.priceSatang, costSatang: result.costSatang, categoryId: result.categoryId, barcode: result.barcode, isActive: result.isActive, packs: result.packs.map(auditPack) },
       }))
       return result
     })

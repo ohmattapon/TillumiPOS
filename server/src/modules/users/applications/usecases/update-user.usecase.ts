@@ -62,6 +62,21 @@ export class UpdateUserUseCase {
         before: delta.before,
         after: delta.after,
       }))
+
+      // An owner's PIN is set only by that owner (OWNER_PIN_SELF_ONLY), so one chosen by whoever promoted them goes.
+      const becameOwner = existing.role !== 'owner' && result.role === 'owner'
+      if (becameOwner && existing.hasPin && actor.id !== id) {
+        await this.users.setPinHash(id, null)
+        await this.audit.record({ id: actor.id, name: actor.displayName }, result.branchId, buildAuditEntry({
+          action: 'user.pin_cleared',
+          entityType: 'user',
+          entityId: String(id),
+          summary: 'ลบ PIN เมื่อผู้ใช้กลายเป็นเจ้าของร้าน',
+          before: { hasPin: true },
+          after: { hasPin: false },
+        }))
+        return (await this.users.findById(id)) ?? result
+      }
       return result
     })
   }

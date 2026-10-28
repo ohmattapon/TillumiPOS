@@ -137,3 +137,25 @@ describe('pickNewer', () => {
     expect(pickNewer(current, late)).toBe(current)
   })
 })
+
+describe('a static PromptPay QR, drawn by the screen from its payload', () => {
+  // The text the QR holds: EMV digits and letters only. It is drawn as a picture, never put into markup.
+  const payload = '00020101021229370016A000000677010111011300668123456785802TH530376454041.006304ABCD'
+  const paying = (qr: unknown) => envelope({ state: { kind: 'paying', lines: [line], totalSatang: 100, qr } })
+
+  test('is accepted as sent, with no expiry because the bank is never asked', () => {
+    expect(parseEnvelope(paying({ payload }))?.state).toEqual({ kind: 'paying', lines: [line], totalSatang: 100, qr: { payload } })
+  })
+
+  test('rejects an empty payload, one that is not printable ASCII, and one that is too long', () => {
+    expect(parseEnvelope(paying({ payload: '' }))).toBeNull()
+    expect(parseEnvelope(paying({ payload: 'ไม่ใช่ QR' }))).toBeNull()
+    expect(parseEnvelope(paying({ payload: `${payload}\n${payload}` }))).toBeNull()
+    expect(parseEnvelope(paying({ payload: 'A'.repeat(513) }))).toBeNull()
+    expect(parseEnvelope(paying({ payload: 42 }))).toBeNull()
+  })
+
+  test('rejects a QR that is both a picture and a payload, so the screen never has to choose', () => {
+    expect(parseEnvelope(paying({ payload, image: 'iVBORw0KGgo=', expiresAt: '2026-10-14T10:35:00.000Z' }))).toBeNull()
+  })
+})

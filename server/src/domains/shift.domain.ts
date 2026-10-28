@@ -88,19 +88,26 @@ export class ShiftEntity {
     this.differenceReason = props.differenceReason
   }
 
+  /** Cash may only move through a shift that is open: not one being counted, and not one already closed. */
+  assertOpen(): void {
+    if (this.status !== 'open') throw new DomainConflictError('กะนี้ไม่ได้เปิดรับรายการเงินสดอยู่', 'SHIFT_NOT_OPEN')
+  }
+
   expectedCashSatang(entries: readonly CashDelta[]): number {
-    let total = BigInt(this.openingCashSatang)
-    for (const entry of entries) {
-      if (!Number.isSafeInteger(entry.amountSatang) || Math.abs(entry.amountSatang) > MAX_AMOUNT_SATANG) throw invalidAmount()
-      total += BigInt(entry.amountSatang)
-    }
+    const total = this.cashBalance(entries)
     if (total < 0n) throw new DomainConflictError('เงินสดในลิ้นชักไม่พอสำหรับรายการนี้', 'CASH_BALANCE_INSUFFICIENT')
     if (total > BigInt(MAX_AMOUNT_SATANG)) throw invalidAmount()
     return Number(total)
   }
 
+  /** A refund hands cash back, so the drawer must still hold at least that much after every other movement. */
+  assertCashCoversRefund(entries: readonly CashDelta[], refundSatang: number): void {
+    if (this.cashBalance([...entries, { amountSatang: -refundSatang }]) < 0n)
+      throw new DomainConflictError('เงินสดในกะไม่พอสำหรับคืนเงิน กรุณาตรวจยอดเงินก่อน', 'SHIFT_CASH_INSUFFICIENT')
+  }
+
   startClosing(actorId: number, actorName: string, at: Date, expectedCashSatang: number): ShiftEntity {
-    if (this.status !== 'open') throw new DomainConflictError('กะนี้ไม่ได้เปิดอยู่', 'SHIFT_NOT_OPEN')
+    this.assertOpen()
     if (!isAmount(expectedCashSatang)) throw invalidAmount()
     if (this.closingRevision >= Number.MAX_SAFE_INTEGER) throw new DomainError('รอบการนับเงินเกินขอบเขต', 'INVALID_SHIFT')
     return new ShiftEntity({
@@ -171,6 +178,15 @@ export class ShiftEntity {
       cashDifferenceSatang: this.cashDifferenceSatang,
       differenceReason: this.differenceReason,
     }
+  }
+
+  private cashBalance(entries: readonly CashDelta[]): bigint {
+    let total = BigInt(this.openingCashSatang)
+    for (const entry of entries) {
+      if (!Number.isSafeInteger(entry.amountSatang) || Math.abs(entry.amountSatang) > MAX_AMOUNT_SATANG) throw invalidAmount()
+      total += BigInt(entry.amountSatang)
+    }
+    return total
   }
 
   private assertClosingRevision(revision: number) {

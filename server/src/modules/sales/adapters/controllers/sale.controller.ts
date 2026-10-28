@@ -1,13 +1,13 @@
 import { Elysia } from 'elysia'
 import { inject, injectable } from 'tsyringe'
-import { idParams, page } from '../../../../libs/http-schemas'
+import { idParams, optionalIdempotencyHeaders, page } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import { CompleteSaleUseCase } from '../../applications/usecases/complete-sale.usecase'
 import { GetSaleUseCase } from '../../applications/usecases/get-sale.usecase'
 import { GetSalesSummaryUseCase } from '../../applications/usecases/get-sales-summary.usecase'
 import { ListSalesUseCase } from '../../applications/usecases/list-sales.usecase'
 import { VoidSaleUseCase } from '../../applications/usecases/void-sale.usecase'
-import { toSaleResponse as toResponse } from './sale.presenter'
+import { toSaleHeaderResponse, toSaleResponse as toResponse } from './sale.presenter'
 import { saleSchemas } from './schemas/sale.schema'
 
 @injectable()
@@ -23,7 +23,10 @@ export class SaleElysiaController {
   getRoutes() {
     return new Elysia({ name: 'sales', prefix: '/sales', detail: { tags: ['Sales'] } })
       .use(auth)
-      .get('/', async ({ query, branch }) => this.listSales.execute(query, (await branch()).id), {
+      .get('/', async ({ query, branch }) => {
+        const result = await this.listSales.execute(query, (await branch()).id)
+        return { items: result.items.map(toSaleHeaderResponse), total: result.total }
+      }, {
         auth: true,
         query: saleSchemas.listQuery,
         response: page(saleSchemas.saleHeader),
@@ -41,12 +44,18 @@ export class SaleElysiaController {
         response: saleSchemas.sale,
         detail: { summary: 'รายละเอียดบิลขาย' },
       })
-      .post('/', async ({ body, user, branch }) => toResponse(await this.completeSale.execute(body, user, await branch())), {
-        auth: true,
-        body: saleSchemas.create,
-        response: saleSchemas.sale,
-        detail: { summary: 'บันทึกการขาย ตัดสต็อก และออกเลขที่ใบเสร็จ' },
-      })
+      .post(
+        '/',
+        async ({ body, headers, user, branch }) =>
+          toResponse(await this.completeSale.execute(body, user, await branch(), headers['idempotency-key'])),
+        {
+          auth: true,
+          body: saleSchemas.create,
+          headers: optionalIdempotencyHeaders,
+          response: saleSchemas.sale,
+          detail: { summary: 'บันทึกการขาย ตัดสต็อก และออกเลขที่ใบเสร็จ' },
+        },
+      )
       .post(
         '/:id/void',
         async ({ params, body, user, branch }) =>

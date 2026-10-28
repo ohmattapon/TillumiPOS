@@ -4,15 +4,17 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
-import { Panel } from '@/components/Panel'
+import { todayIn } from '@/lib/calendar-date'
+import { Panel, tableToolbar } from '@/components/Panel'
 import { DataTable } from '@/components/DataTable'
+import { TableSearch } from '@/components/TableSearch'
 import { PaginationBar } from '@/components/PaginationBar'
 import { DatePicker } from '@/components/DatePicker'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Input } from '@/components/ui/input'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { SegmentedTabs } from '@/components/SegmentedTabs'
 import {
   Select,
   SelectContent,
@@ -22,11 +24,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCan } from '@/features/auth'
-import { useActiveBranch } from '@/features/branches'
-import { Receipt } from '@/features/sales'
+import { Receipt, saleQuery } from '@/features/sales'
 import { useFormat, useSettings } from '@/features/settings'
-import { api, unwrap } from '@/lib/api'
-import { memberHistoryQuery, memberQuery, membersQuery, useUpdateMember } from '../api'
+import { memberHistoryQuery, memberPointsQuery, memberQuery, membersQuery, useUpdateMember } from '../api'
+import { AdjustPointsDialog } from './AdjustPointsDialog'
 import { MemberFormDialog } from './MemberFormDialog'
 
 export function MembersPage() {
@@ -51,6 +52,8 @@ export function MembersPage() {
     next.delete('page')
     setParams(next, { replace: true })
   }
+  const memberSearch = <TableSearch value={search} onChange={(value) => filter('search', value)} label={t('search')} placeholder={t('search')} />
+
   return (
     <>
       <PageHeader title={t('title')} description={t('description')}>
@@ -61,13 +64,6 @@ export function MembersPage() {
       </PageHeader>
       <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
         <div className="flex flex-wrap gap-3">
-          <Input
-            className="h-11 min-w-0 flex-1 basis-60"
-            aria-label={t('search')}
-            placeholder={t('search')}
-            value={search}
-            onChange={(e) => filter('search', e.target.value)}
-          />
           <Select value={active} onValueChange={(value) => filter('active', value)}>
             <SelectTrigger className="h-11 w-40" aria-label={t('status')}>
               <SelectValue />
@@ -82,6 +78,8 @@ export function MembersPage() {
           </Select>
         </div>
         <Panel title={t('directory')}>
+          {/* Drawn here, not in DataTable's toolbar: the table is hidden while a request fails, and a search that moved between the two places would be rebuilt and lose focus. */}
+          <div className={tableToolbar}>{memberSearch}</div>
           {members.error && (
             <p role="alert" className="p-4 text-sm text-destructive">
               {members.error.message}
@@ -139,21 +137,20 @@ export function MemberDetailsPage() {
   const navigate = useNavigate()
   const member = useQuery(memberQuery(id))
   const canEdit = useCan('members.write')
+  const canAdjustPoints = useCan('members.points_adjust')
   const update = useUpdateMember()
   const { money, date, locale } = useFormat()
   const shop = useSettings()
-  const { branch } = useActiveBranch()
   const [editing, setEditing] = useState(false)
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [status, setStatus] = useState('all')
   const [page, setPage] = useState(0)
+  const [pointsPage, setPointsPage] = useState(0)
+  const [tab, setTab] = useState('bills')
+  const [adjusting, setAdjusting] = useState(false)
   const [receiptId, setReceiptId] = useState<number | null>(null)
-  const receipt = useQuery({
-    queryKey: ['sales', 'detail', receiptId, branch?.id],
-    queryFn: () => unwrap(api.sales({ id: receiptId! }).get()),
-    enabled: receiptId !== null && Boolean(branch),
-  })
+  const receipt = useQuery({ ...saleQuery(receiptId ?? 0), enabled: receiptId !== null })
   const history = useQuery({
     ...memberHistoryQuery(
       id,
@@ -164,17 +161,11 @@ export function MemberDetailsPage() {
         limit: 20,
         offset: page * 20,
       },
-      branch?.id,
     ),
-    enabled: Boolean(branch) && (!from || !to || from <= to),
+    enabled: !from || !to || from <= to,
   })
-  const [now] = useState(() => new Date())
-  const today = new Intl.DateTimeFormat('en-CA', {
-    timeZone: shop.timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(now)
+  const points = useQuery(memberPointsQuery(id, { limit: 20, offset: pointsPage * 20 }))
+  const [today] = useState(() => todayIn(shop.timeZone))
   return (
     <>
       <PageHeader
@@ -205,6 +196,14 @@ export function MemberDetailsPage() {
             <Badge variant={member.data.isActive ? 'secondary' : 'outline'}>
               {t(member.data.isActive ? 'active' : 'inactive')}
             </Badge>
+            <Badge variant="outline" className="tabular-nums">
+              {t('pointsBalance', { points: member.data.pointsBalance })}
+            </Badge>
+            {canAdjustPoints && (
+              <Button variant="outline" className="h-11" onClick={() => setAdjusting(true)}>
+                {t('adjustPoints')}
+              </Button>
+            )}
             {canEdit && (
               <>
                 <Button variant="outline" className="h-11" onClick={() => setEditing(true)}>
@@ -227,7 +226,21 @@ export function MemberDetailsPage() {
             {update.error.message}
           </p>
         )}
-        <Panel title={t('history')} description={`${branch?.name ?? ''} / ${t('historyHint')}`}>
+        <SegmentedTabs
+          value={tab}
+          onChange={setTab}
+          className="w-fit"
+          options={[
+            { value: 'bills', label: t('history') },
+            { value: 'points', label: t('points') },
+          ]}
+        />
+        <Panel
+          title={t('history')}
+          description={t('historyHint')}
+          // The bills keep their filters and their place while the points are looked at.
+          className={tab === 'bills' ? undefined : 'hidden!'}
+        >
           <FieldGroup className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
             <Field>
               <FieldLabel htmlFor="member-from">{t('from')}</FieldLabel>
@@ -367,6 +380,66 @@ export function MemberDetailsPage() {
             onPageChange={setPage}
           />
         </Panel>
+        {tab === 'points' && (
+          <Panel title={t('points')} description={t('pointsHint')}>
+            {points.error && (
+              <p role="alert" className="p-4 text-sm text-destructive">
+                {points.error.message}
+                <Button variant="link" onClick={() => void points.refetch()}>
+                  {t('retry')}
+                </Button>
+              </p>
+            )}
+            {!points.error && (
+              <DataTable
+                rows={points.data?.items ?? []}
+                rowKey={(movement) => movement.id}
+                isPending={points.isPending}
+                empty={t('noPoints')}
+                columns={[
+                  {
+                    id: 'kind',
+                    header: t('pointsKind'),
+                    priority: 'primary',
+                    cell: (movement) => (
+                      <Badge variant="outline">{t(`pointsKinds.${movement.kind}`)}</Badge>
+                    ),
+                  },
+                  {
+                    id: 'points',
+                    header: t('points'),
+                    priority: 'primary',
+                    align: 'right',
+                    cell: (movement) => (
+                      <span className="tabular-nums">
+                        {movement.points > 0 ? `+${movement.points}` : movement.points}
+                      </span>
+                    ),
+                  },
+                  {
+                    id: 'reason',
+                    header: t('reason'),
+                    priority: 'secondary',
+                    cell: (movement) => movement.reason ?? '-',
+                  },
+                  {
+                    id: 'date',
+                    header: t('date'),
+                    priority: 'wide-only',
+                    cell: (movement) => date.dateTime(movement.createdAt),
+                  },
+                ]}
+              />
+            )}
+            <PaginationBar
+              page={pointsPage}
+              pageSize={20}
+              total={points.data?.total}
+              isLoading={points.isPending}
+              onPageChange={setPointsPage}
+            />
+          </Panel>
+        )}
         {receiptId !== null && (
           <Panel
             title={t('viewReceipt')}
@@ -392,6 +465,7 @@ export function MemberDetailsPage() {
         )}
       </main>
       {editing && member.data && <MemberFormDialog member={member.data} onClose={() => setEditing(false)} />}
+      {adjusting && <AdjustPointsDialog id={id} onClose={() => setAdjusting(false)} />}
     </>
   )
 }

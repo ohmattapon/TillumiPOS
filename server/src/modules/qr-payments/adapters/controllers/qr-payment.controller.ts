@@ -3,12 +3,11 @@ import { inject, injectable } from 'tsyringe'
 import type { QrPaymentEntity } from '../../../../domains/qr-payment.domain'
 import { idParams } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
-import { qrPaymentGatewayToken } from '../../applications/ports/qr-payment-gateway.port'
-import type { IQrPaymentGateway } from '../../applications/ports/qr-payment-gateway.port'
+import { GetQrConfigUseCase } from '../../applications/usecases/get-qr-config.usecase'
 import { CancelQrPaymentUseCase } from '../../applications/usecases/cancel-qr-payment.usecase'
-import { ConfirmScbCallbackUseCase } from '../../applications/usecases/confirm-scb-callback.usecase'
+import { ConfirmKbankCallbackUseCase } from '../../applications/usecases/confirm-kbank-callback.usecase'
 import { CreateQrPaymentUseCase } from '../../applications/usecases/create-qr-payment.usecase'
-import { GetQrPaymentUseCase } from '../../applications/usecases/get-qr-payment.usecase'
+import { RefreshQrPaymentUseCase } from '../../applications/usecases/refresh-qr-payment.usecase'
 import { qrPaymentSchemas, type QrPaymentResponse } from './schemas/qr-payment.schema'
 
 // The QR payload is shown once, in the answer that created it, and is not part of the stored view.
@@ -31,16 +30,16 @@ function toResponse(payment: QrPaymentEntity): QrPaymentResponse {
 export class QrPaymentElysiaController {
   constructor(
     @inject(CreateQrPaymentUseCase) private readonly createQrPayment: CreateQrPaymentUseCase,
-    @inject(GetQrPaymentUseCase) private readonly getQrPayment: GetQrPaymentUseCase,
+    @inject(RefreshQrPaymentUseCase) private readonly refreshQrPayment: RefreshQrPaymentUseCase,
     @inject(CancelQrPaymentUseCase) private readonly cancelQrPayment: CancelQrPaymentUseCase,
-    @inject(ConfirmScbCallbackUseCase) private readonly confirmScbCallback: ConfirmScbCallbackUseCase,
-    @inject(qrPaymentGatewayToken) private readonly gateway: IQrPaymentGateway,
+    @inject(ConfirmKbankCallbackUseCase) private readonly confirmKbankCallback: ConfirmKbankCallbackUseCase,
+    @inject(GetQrConfigUseCase) private readonly getQrConfig: GetQrConfigUseCase,
   ) {}
 
   getRoutes() {
     return new Elysia({ name: 'payments.qr', prefix: '/payments/qr', detail: { tags: ['Payments'] } })
       .use(auth)
-      .get('/config', () => ({ enabled: this.gateway.isEnabled() }), {
+      .get('/config', () => this.getQrConfig.execute(), {
         auth: true,
         response: qrPaymentSchemas.config,
         detail: { summary: 'ร้านนี้ตั้งค่ารับชำระด้วย QR แล้วหรือยัง' },
@@ -63,7 +62,7 @@ export class QrPaymentElysiaController {
       )
       .get(
         '/:id',
-        async ({ params, branch }) => toResponse(await this.getQrPayment.execute(params.id, (await branch()).id)),
+        async ({ params, branch }) => toResponse(await this.refreshQrPayment.execute(params.id, (await branch()).id)),
         {
           auth: true,
           params: idParams,
@@ -82,17 +81,18 @@ export class QrPaymentElysiaController {
         },
       )
       .post(
-        '/scb/confirmation',
+        '/kbank/confirmation',
         async ({ body }) => {
-          const { transactionId } = await this.confirmScbCallback.execute(body)
-          // The exact acknowledgement SCB expects; anything else makes it resend.
-          return { resCode: '00', resDesc: 'success', transactionId }
+          const { partnerTxnUid } = await this.confirmKbankCallback.execute(body)
+          // The acknowledgement KBank is assumed to expect ('00' means success in its API
+          // vocabulary); confirm against the portal webhook docs before registering this URL.
+          return { statusCode: '00', partnerTxnUid }
         },
         {
-          body: qrPaymentSchemas.scbConfirmation,
-          response: qrPaymentSchemas.scbAcknowledgement,
+          body: qrPaymentSchemas.kbankConfirmation,
+          response: qrPaymentSchemas.kbankAcknowledgement,
           detail: {
-            summary: 'ที่รับแจ้งการชำระจาก SCB (ไม่ต้องล็อกอิน) ใช้เป็นสัญญาณให้ตรวจกับ SCB เท่านั้น',
+            summary: 'ที่รับแจ้งการชำระจาก KBank (ไม่ต้องล็อกอิน) ใช้เป็นสัญญาณให้ตรวจกับ KBank เท่านั้น',
           },
         },
       )

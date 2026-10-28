@@ -1,3 +1,4 @@
+import type { ProductPack } from '@pos/api/packs'
 import type { Product } from '@pos/api/types'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
@@ -17,12 +18,14 @@ import { modifierGroupsQuery } from '@/features/modifiers'
 import { isLowStock, isOutOfStock, ProductImage, productsQuery, productKeys } from '@/features/products'
 import { useFormat } from '@/features/settings'
 import { cn } from '@/lib/utils'
-import { useActiveBranchStore } from '@/lib/active-branch'
 import { hasKeyboard } from '../lib/focus'
 import { offeredGroups } from '../lib/options'
+import { matchScan } from '../lib/scan'
 import { useCartActions } from '../hooks/use-cart-actions'
 import { useCartStore } from '../store/cart.store'
+import { unitChoices } from '../lib/units'
 import { OptionsDialog } from './OptionsDialog'
+import { UnitDialog } from './UnitDialog'
 
 interface Props {
   /** Owned by the page so it can also return focus here after a sale. */
@@ -39,6 +42,7 @@ export function ProductPicker({ searchRef }: Props) {
   const modifiers = useQuery(modifierGroupsQuery)
   const { add: addToCart } = useCartActions()
   const [choosing, setChoosing] = useState<Product | null>(null)
+  const [choosingUnit, setChoosingUnit] = useState<Product | null>(null)
 
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('all')
@@ -74,7 +78,34 @@ export function ProductPicker({ searchRef }: Props) {
       setChoosing(product)
       return
     }
+    // A product sold by the pack asks which unit first, unless an order is open: an order never carries a pack.
+    if (useCartStore.getState().orderId === null && unitChoices(product).length > 1) {
+      setChoosingUnit(product)
+      return
+    }
     addToCart(product.id)
+    if (hasKeyboard()) searchRef.current?.focus()
+  }
+
+  /**
+   * A pack barcode sells the whole pack. An order never carries a pack and a pack line never
+   * carries options, so both are refused here rather than at payment.
+   */
+  const sellPack = (product: Product, pack: ProductPack) => {
+    if (useCartStore.getState().orderId !== null) {
+      toast.error(t('picker.packNotInOrders'))
+      return
+    }
+    if (offeredGroups(modifiers.data ?? [], product.id).length > 0) {
+      toast.error(t('picker.packNeedsOptions'))
+      return
+    }
+    if (product.trackStock && product.stockQty < pack.size) {
+      toast.error(t('picker.packOutOfStock', { size: pack.size }))
+      return
+    }
+    client.setQueryData(productKeys.detail(product.id), product)
+    addToCart(product.id, [], pack.id)
     if (hasKeyboard()) searchRef.current?.focus()
   }
 
@@ -83,8 +114,6 @@ export function ProductPicker({ searchRef }: Props) {
     event.preventDefault()
     const code = search.trim()
     if (code === '') return
-    const term = code.toLowerCase()
-    const branchId = useActiveBranchStore.getState().branchId
     const orderId = useCartStore.getState().orderId
     // Free the input immediately so a second scan is not erased when the first request finishes.
     setSearch('')
@@ -92,13 +121,13 @@ export function ProductPicker({ searchRef }: Props) {
       // A scan must also find products beyond the displayed page or category.
       const exact = code.length <= 64 ? await client.fetchQuery(productsQuery({ code, limit: 2 })) : { items: [], total: 0 }
       const result = exact.total > 0 ? exact : await client.fetchQuery(productsQuery({ q: code, limit: 2 }))
-      if (!mounted.current || useActiveBranchStore.getState().branchId !== branchId || useCartStore.getState().orderId !== orderId) return
-      const match = result.items.find((product) => product.barcode === code)
-        ?? (exact.total > 0 ? result.items.find((product) => product.sku.toLowerCase() === term) : undefined)
-        ?? (result.total === 1 ? result.items[0] : undefined)
-      if (!match) toast.error(t('picker.notFound', { term: code }))
-      else if (isOutOfStock(match)) toast.error(t('picker.outOfStock', { name: match.name }))
-      else pick(match)
+      if (!mounted.current || useCartStore.getState().orderId !== orderId) return
+      const match = matchScan(code, result)
+      if (match.kind === 'none') toast.error(t('picker.notFound', { term: code }))
+      else if (match.kind === 'inactivePack') toast.error(t('picker.packDisabled', { barcode: match.pack.barcode }))
+      else if (match.kind === 'pack') sellPack(match.product, match.pack)
+      else if (isOutOfStock(match.product)) toast.error(t('picker.outOfStock', { name: match.product.name }))
+      else pick(match.product)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : tc('connectionFailed'))
     }
@@ -122,7 +151,7 @@ export function ProductPicker({ searchRef }: Props) {
         </span>
       </form>
 
-      <div className="-mx-4 overflow-x-auto px-4">
+      <div className="-mx-4 overflow-x-auto px-4 no-scrollbar">
         {categories.isPending ? (
           <Skeleton className="h-13 w-72 rounded-xl" />
         ) : (
@@ -141,7 +170,7 @@ export function ProductPicker({ searchRef }: Props) {
       </div>
 
       {products.error && <p className="text-sm text-destructive">{products.error.message}</p>}
-      <div ref={gridRef} className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-3 overflow-y-auto pb-1">
+      <div ref={gridRef} className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-3 overflow-y-auto pb-1 no-scrollbar">
         {(products.isPending || searching) && <SkeletonCardGrid className="contents" count={8} />}
         {visibleProducts.map((product) => (
           <button
@@ -187,6 +216,17 @@ export function ProductPicker({ searchRef }: Props) {
             setChoosing(null)
             if (hasKeyboard()) searchRef.current?.focus()
           }}
+        />
+      )}
+      {choosingUnit && (
+        <UnitDialog
+          product={choosingUnit}
+          onPick={(packId) => {
+            addToCart(choosingUnit.id, [], packId)
+            setChoosingUnit(null)
+            if (hasKeyboard()) searchRef.current?.focus()
+          }}
+          onCancel={() => setChoosingUnit(null)}
         />
       )}
     </section>

@@ -4,18 +4,20 @@ import { ZodError } from 'zod'
 import { makeQrPayment } from '../../../../__tests__/factories'
 import {
   mockClock,
+  mockIdGenerator,
   mockQrPaymentGateway,
   mockQrPaymentRepository,
   mockQuoteClaims,
+  mockShopSettingsRepository,
   mockUnitOfWork,
 } from '../../../../__tests__/mocks'
+import { DEFAULT_SHOP_SETTINGS, ShopSettingsEntity } from '../../../../domains/shop-settings.domain'
 import { DomainExternalServiceError } from '../../../../domains/errors/domain-external-service.error'
 import { QrPaymentClaims } from '../services/qr-payment-claims'
 import { MIN_CHECK_INTERVAL_MS, QrPaymentRefresher } from '../services/qr-payment-refresher'
 import { CancelQrPaymentUseCase } from './cancel-qr-payment.usecase'
-import { ConfirmScbCallbackUseCase } from './confirm-scb-callback.usecase'
 import { CreateQrPaymentUseCase, QR_VALID_FOR_MS } from './create-qr-payment.usecase'
-import { GetQrPaymentUseCase } from './get-qr-payment.usecase'
+import { RefreshQrPaymentUseCase } from './refresh-qr-payment.usecase'
 import { DismissQrPaymentUseCase } from './dismiss-qr-payment.usecase'
 
 const now = new Date('2026-10-13T06:01:00Z')
@@ -40,7 +42,7 @@ describe('CreateQrPaymentUseCase', () => {
   beforeEach(() => {
     gateway.createQr.mockResolvedValue({ qrRawData: 'RAW', qrImage: 'IMG' })
     repo.create.mockImplementation(async (payment) => makeQrPayment({ ...payment, id: 3 }))
-    useCase = new CreateQrPaymentUseCase(gateway, repo, mockClock(now), quotes, mockUnitOfWork())
+    useCase = new CreateQrPaymentUseCase(gateway, repo, mockClock(now), quotes, mockUnitOfWork(), mockIdGenerator())
   })
 
   test('a QR made from a quote holds the quote for the reference it gives the bank', async () => {
@@ -76,7 +78,7 @@ describe('CreateQrPaymentUseCase', () => {
     const { payment, qrImage } = await useCase.execute({ amountSatang: 5000 }, actor)
 
     expect(gateway.createQr).toHaveBeenCalledWith({
-      reference: expect.stringMatching(/^QR[A-Z0-9]{14}$/),
+      reference: 'QRID1',
       amountSatang: 5000,
       branchCode: 'MAIN',
     })
@@ -173,18 +175,18 @@ describe('QrPaymentRefresher', () => {
   })
 })
 
-describe('GetQrPaymentUseCase', () => {
+describe('RefreshQrPaymentUseCase', () => {
   test('refreshes a payment of the branch', async () => {
     repo.findByIdForUpdate.mockResolvedValue(makeQrPayment({ branchId: 1 }))
     gateway.findPayment.mockResolvedValue(found)
 
-    const payment = await new GetQrPaymentUseCase(repo, refresher, mockUnitOfWork()).execute(1, 1)
+    const payment = await new RefreshQrPaymentUseCase(repo, refresher, mockUnitOfWork()).execute(1, 1)
 
     expect(payment.status).toBe('paid')
   })
 
   test("another branch's payment and an unknown one are both not found", async () => {
-    const useCase = new GetQrPaymentUseCase(repo, refresher, mockUnitOfWork())
+    const useCase = new RefreshQrPaymentUseCase(repo, refresher, mockUnitOfWork())
     repo.findByIdForUpdate.mockResolvedValueOnce(makeQrPayment({ branchId: 2 })).mockResolvedValueOnce(null)
 
     await expect(useCase.execute(1, 1)).rejects.toMatchObject({ code: 'QR_PAYMENT_NOT_FOUND' })
@@ -233,47 +235,30 @@ describe('CancelQrPaymentUseCase', () => {
   })
 })
 
-describe('ConfirmScbCallbackUseCase', () => {
-  let useCase: ConfirmScbCallbackUseCase
-
-  beforeEach(() => {
-    useCase = new ConfirmScbCallbackUseCase(repo, refresher, mockUnitOfWork())
-  })
-
-  test('uses the reference only to know what to check, and checks with the bank regardless of the throttle', async () => {
-    repo.findByReferenceForUpdate.mockResolvedValue(makeQrPayment({ lastCheckedAt: new Date(now.getTime() - 1) }))
-    gateway.findPayment.mockResolvedValue(null)
-
-    const answer = await useCase.execute({
-      billPaymentRef1: 'QR0123456789ABCD',
-      transactionId: 'FORGED',
-      amount: '0.01',
-    })
-
-    expect(answer).toEqual({ transactionId: 'FORGED' })
-    expect(gateway.findPayment).toHaveBeenCalledTimes(1)
-    // The claim in the body changed nothing: the saved payment is still pending.
-    expect(repo.save.mock.calls[0]![0].status).toBe('pending')
-  })
-
-  test('an unknown reference, or none at all, is acknowledged without checking anything', async () => {
-    repo.findByReferenceForUpdate.mockResolvedValue(null)
-
-    expect(await useCase.execute({ billPaymentRef1: 'NOPE' })).toEqual({ transactionId: '' })
-    expect(await useCase.execute({})).toEqual({ transactionId: '' })
-    expect(gateway.findPayment).not.toHaveBeenCalled()
-  })
-})
-
 describe('QrPaymentClaims', () => {
-  const claims = () => new QrPaymentClaims(gateway, repo)
+  const claims = (mode: 'bank' | 'static' = 'bank') => {
+    const settings = mockShopSettingsRepository()
+    settings.get.mockResolvedValue(new ShopSettingsEntity({ ...DEFAULT_SHOP_SETTINGS, promptpayMode: mode }))
+    return new QrPaymentClaims(gateway, repo, settings)
+  }
 
-  test('is required exactly when the bank gateway is set up', () => {
+  test('is required exactly when the bank gateway is set up', async () => {
     gateway.isEnabled.mockReturnValue(true)
-    expect(claims().isRequired()).toBe(true)
+    await expect(claims().isRequired()).resolves.toBe(true)
 
     gateway.isEnabled.mockReturnValue(false)
-    expect(claims().isRequired()).toBe(false)
+    await expect(claims().isRequired()).resolves.toBe(false)
+  })
+
+  test.each([
+    ['static mode skips the bank claim even when the gateway is set up', 'static' as const, true, false],
+    ['bank mode still requires a confirmed QR when the gateway is set up', 'bank' as const, true, true],
+    ['bank mode without the gateway stays trust-based', 'bank' as const, false, false],
+    ['static mode without the gateway stays trust-based', 'static' as const, false, false],
+  ])('%s', async (_label, mode, gatewayEnabled, required) => {
+    gateway.isEnabled.mockReturnValue(gatewayEnabled)
+
+    await expect(claims(mode).isRequired()).resolves.toBe(required)
   })
 
   test('accepts a paid, unused payment of this branch and amount', async () => {

@@ -7,6 +7,10 @@ import type { ISaleCheckout } from '../ports/sale-checkout.port'
 import { completeSaleV2Schema } from '../schemas/sale-schemas'
 import { restoreSaleSnapshot } from '../sale-snapshot'
 
+/**
+ * Command: records a sale inside a shift, deducts stock and issues the receipt number, all or nothing.
+ * The idempotency key makes a retried request answer with the first sale instead of charging twice.
+ */
 @injectable()
 export class CompleteSaleV2UseCase {
   constructor(
@@ -21,7 +25,7 @@ export class CompleteSaleV2UseCase {
       { actorId: cashier.id, branchId: branch.id, action: 'sales.checkout', key: idempotencyKey },
       dto,
       () => this.checkout.checkout({
-        lines: dto.items.map(({ productId, quantity, options }) => ({ productId, quantity, optionIds: options })),
+        lines: dto.items.map(({ productId, quantity, options, packId }) => ({ productId, quantity, optionIds: options, packId })),
         memberId: dto.memberId ?? null,
         quoteId: dto.quoteId ?? null,
         discountSatang: dto.discountSatang ?? 0,

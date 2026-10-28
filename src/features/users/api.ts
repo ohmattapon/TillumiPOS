@@ -19,7 +19,8 @@ export interface NewUserInput {
   password: string
   displayName: string
   roleId: number
-  branchId: number
+  /** Left out, the user belongs to the shop's one branch. */
+  branchId?: number
 }
 
 export interface UserChanges {
@@ -47,6 +48,16 @@ export function useUpdateUser() {
   return useMutation({
     mutationFn: ({ id, changes }: { id: number; changes: UserChanges }) => unwrap(api.users({ id }).patch(changes)),
     onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: userKeys.all }), queryClient.invalidateQueries({ queryKey: roleKeys.all }), queryClient.invalidateQueries({ queryKey: authKeys.me })]) },
+  })
+}
+
+/** An owner or user manager sets or clears another user's PIN. */
+export function useSetUserPin() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, pin }: { id: number; pin: string | null }) => unwrap(api.users({ id }).pin.put({ pin })),
+    onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: userKeys.all }), queryClient.invalidateQueries({ queryKey: authKeys.me })]) },
   })
 }
 

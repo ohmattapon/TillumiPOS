@@ -130,6 +130,28 @@ describe('cart store with options', () => {
   })
 })
 
+describe('cart store with packs', () => {
+  test('a pack is a line of its own, next to the pieces of the same product', () => {
+    cart().add(7, [], 5)
+    cart().add(7)
+    cart().add(7, [], 5)
+
+    expect(cart().lines.map((line) => [line.key, line.quantity])).toEqual([
+      ['7::p5', 2],
+      ['7:', 1],
+    ])
+  })
+
+  test('the key names the pack, so its quantity is set alone', () => {
+    cart().add(7, [], 5)
+    cart().add(7)
+
+    cart().setQuantity('7::p5', 3)
+
+    expect(cart().lines.map((line) => line.quantity)).toEqual([3, 1])
+  })
+})
+
  describe('cart membership', () => {
   test('selects only an identity and clears it for the next customer', () => {
     cart().setMember(12)
@@ -159,5 +181,39 @@ describe('cart store with options', () => {
     cart().setPromotionDeclined(true)
     cart().workOnOrder(5)
     expect(cart().promotionDeclined).toBe(false)
+  })
+  test('clear and workOnOrder drop the coupon code', () => {
+    cart().setCouponCode('SUMMER10')
+    expect(cart().couponCode).toBe('SUMMER10')
+
+    cart().workOnOrder(5)
+    expect(cart().couponCode).toBe('')
+
+    cart().setCouponCode('SUMMER10')
+    clearCart()
+    expect(cart().couponCode).toBe('')
+  })
+  test('changing member clears redeemPoints', () => {
+    cart().setMember(12)
+    cart().setRedeemPoints(30)
+    expect(cart().redeemPoints).toBe(30)
+
+    cart().setMember(12)
+    expect(cart().redeemPoints).toBe(0)
+
+    cart().setRedeemPoints(40)
+    cart().setMember(null)
+    expect(cart().redeemPoints).toBe(0)
+  })
+  test('redeemPoints starts at zero and is dropped with the cart and by an order', () => {
+    expect(cart().redeemPoints).toBe(0)
+
+    cart().setRedeemPoints(15)
+    cart().workOnOrder(42)
+    expect(cart().redeemPoints).toBe(0)
+
+    cart().setRedeemPoints(15)
+    clearCart()
+    expect(cart().redeemPoints).toBe(0)
   })
 })
