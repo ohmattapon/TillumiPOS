@@ -119,6 +119,7 @@ export function PosPage() {
             productId: line.productId, quantity: line.quantity, options: line.optionIds, packId: line.packId ?? undefined,
           })),
           memberId: cart.memberId,
+          redeemPoints: cart.pointsRedeemed,
         }
   // The price is asked again, e.g. after the QR holding it was cancelled. The dialog opens on the method chosen.
   const requote = (method: PaymentMethod) => {
