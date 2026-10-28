@@ -4,7 +4,7 @@ import { currentExecutor } from '../../../../libs/transaction-context'
 import type { Page } from '../../../../domains/page'
 import type { SalesReportSums } from '../../../../domains/sales-report'
 import type {
-  ISalesReportRepository, SalesReportPeriod, ReportOverviewSums, ReportProduct, ReportPageQuery,
+  ISalesReportRepository, SalesReportPeriod, ReportOverviewSums, ReportProduct, ReportPageQuery, ReportPromotion,
 } from '../../applications/ports/sales-report.repository'
 
 // Aggregate sale costs first: joining lines or payments directly would multiply bill totals.
@@ -96,5 +96,27 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
         (select count(*)::integer from grouped) as total
     `)
     return { items: row!.items as (SalesReportSums & { branchId: number })[], total: Number(row!.total) }
+  }
+
+  async promotions(query: ReportPageQuery): Promise<Page<ReportPromotion>> {
+    // The promotion lives in the bill's snapshot, so a voided or renamed promotion changes nothing here.
+    const [row] = await currentExecutor().execute<{ items: ReportPromotion[]; total: number }>(sql`
+      with ${facts(query)},
+      grouped as (
+        select (s.promotion->>'id')::integer as "promotionId",
+          (array_agg(s.promotion->>'name' order by s.id desc))[1] as name,
+          count(*)::integer as bills,
+          coalesce(sum(s.discount_satang), 0)::integer as "discountSatang",
+          coalesce(sum(s.total_satang - s.vat_satang), 0)::integer as "netSalesSatang"
+        from period_sales s
+        where s.status = 'completed' and s.promotion is not null
+        group by (s.promotion->>'id')::integer
+      ),
+      paged as (select * from grouped order by "discountSatang" desc, "promotionId"
+        limit ${query.limit} offset ${query.offset})
+      select coalesce((select jsonb_agg(to_jsonb(paged) order by "discountSatang" desc, "promotionId") from paged), '[]'::jsonb) as items,
+        (select count(*)::integer from grouped) as total
+    `)
+    return { items: row!.items as ReportPromotion[], total: Number(row!.total) }
   }
 }
