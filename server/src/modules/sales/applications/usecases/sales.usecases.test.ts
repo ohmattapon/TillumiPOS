@@ -906,7 +906,7 @@ describe('SaleCheckout with a pinned pack', () => {
         {
           branchId: 1, memberId: 8, member: { id: 8, code: 'M8', name: 'ลูกค้าประจำ' }, orderId: null,
           lines: [{ productId: 3, productName: 'โซดา', sku: 'SODA', unitPriceSatang: 10000, quantity: 2, options: [], packId: null, packSize: 1 }],
-          promotion: null, vatMode: 'inclusive', vatRateBp: 700, createdById: 7,
+          promotion: null, couponCode: null, vatMode: 'inclusive', vatRateBp: 700, createdById: 7,
         },
         now,
       ),
