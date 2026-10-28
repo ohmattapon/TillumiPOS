@@ -4,7 +4,10 @@ import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found
 import { lineKey } from '../../../../domains/modifier.domain'
 import { assertPackHasNoOptions, packUnitPriceSatang } from '../../../../domains/product-pack'
 import { PriceQuoteEntity, type QuoteLine } from '../../../../domains/price-quote.domain'
-import { hasUsesLeft, pickBestPromotion, type PromotionCandidate } from '../../../../domains/promotion.domain'
+import {
+  couponIneligibility, hasUsesLeft, normalizeCouponCode, pickBestPromotion,
+  type PromotionCandidate, type PromotionEntity, type PromotionContext,
+} from '../../../../domains/promotion.domain'
 import type { ProductEntity } from '../../../../domains/product.domain'
 import type { SaleMember } from '../../../../domains/sale.domain'
 import type { IClock } from '../../../shared/ports/clock.port'
@@ -18,6 +21,15 @@ import { quoteMembersToken, type IQuoteMembers } from '../ports/quote-members.po
 import { quoteProductsToken, type IQuoteProducts } from '../ports/quote-products.port'
 import { quoteShopRulesToken, type IQuoteShopRules } from '../ports/quote-shop-rules.port'
 import { createQuoteSchema } from '../schemas/quote-schemas'
+
+/** Why a typed coupon cannot apply, each with the wording the cashier sees. */
+const COUPON_INAPPLICABLE: Record<string, string> = {
+  not_running: 'โค้ดคูปองนี้ยังไม่เริ่มหรือหมดช่วงเวลาที่ใช้ได้แล้ว',
+  min_subtotal: 'ยอดรวมสินค้าไม่ถึงยอดขั้นต่ำของโค้ดคูปองนี้',
+  members_only: 'โค้ดคูปองนี้สำหรับสมาชิกเท่านั้น',
+  exhausted: 'โค้ดคูปองนี้ถูกใช้ครบจำนวนครั้งที่กำหนดแล้ว',
+  not_eligible: 'รายการในตะกร้าไม่เข้าเงื่อนไขของโค้ดคูปองนี้',
+}
 
 /**
  * Command: prices a cart (or an open order) with the catalogue and the shop's rules as they are now,
@@ -65,9 +77,9 @@ export class CreateQuoteUseCase {
     const subtotalSatang = lines.reduce((total, line) => total + line.unitPriceSatang * line.quantity, 0)
     // One question for both a cart and an order: an order's lines carry no category.
     const categories = await this.products.categoriesOf([...new Set(lines.map((line) => line.productId))])
-    const best = pickBestPromotion(
-      await this.dropUsedUp(await this.catalog.activePromotions(), member !== null, memberId),
-      {subtotalSatang,
+    const couponCode = dto.couponCode ?? null
+    const context: PromotionContext = {
+      subtotalSatang,
       hasMember: member !== null,
       at: now,
       timeZone: shop.timeZone,
@@ -79,10 +91,25 @@ export class CreateQuoteUseCase {
         isPack: line.packId !== null,
         lineTotalSatang: line.unitPriceSatang * line.quantity,
       })),
-      // Task 4 wires the typed coupon code into the context.
-      couponCode: null,
-      },
-    )
+      couponCode,
+    }
+
+    const promotions = await this.catalog.activePromotions()
+    let couponPromotion: PromotionEntity | null = null
+    if (couponCode !== null) {
+      // Only a promotion that is switched on answers a code: an inactive one counts as not found.
+      couponPromotion = promotions.find((candidate) => candidate.couponCode !== null && normalizeCouponCode(candidate.couponCode) === couponCode) ?? null
+      if (couponPromotion === null)
+        throw new DomainNotFoundError(`ไม่พบโค้ดคูปอง ${couponCode}`, 'COUPON_NOT_FOUND')
+      const ruleReason = couponIneligibility(couponPromotion, context)
+      const uses = await this.usage.countUses(couponPromotion.id, memberId)
+      const noMoreUses = !hasUsesLeft(couponPromotion, uses, member !== null)
+      const reason = ruleReason ?? (noMoreUses ? 'exhausted' : null)
+      if (reason !== null)
+        throw new DomainError(COUPON_INAPPLICABLE[reason]!, 'COUPON_NOT_APPLICABLE', { reason })
+    }
+
+    const best = pickBestPromotion(await this.dropUsedUp(promotions, member !== null, memberId), context)
 
     return this.quotes.create(
       PriceQuoteEntity.price(
@@ -93,6 +120,8 @@ export class CreateQuoteUseCase {
           orderId: dto.orderId ?? null,
           lines,
           promotion: best ? best.promotion.toSalePromotion(best.discountSatang) : null,
+          // The typed code is pinned even when a better automatic promotion won: the till shows what was typed.
+          couponCode,
           vatMode: shop.vatMode,
           vatRateBp: shop.vatRateBp,
           createdById: actor.id,

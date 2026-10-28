@@ -748,7 +748,34 @@
                     "promotion": {
                       "nullable": true,
                       "properties": {
+                        "buyQuantity": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "couponCode": {
+                          "type": "string"
+                        },
                         "discountSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "freeQuantity": {
                           "anyOf": [
                             {
                               "default": 0,
@@ -775,7 +802,8 @@
                         "kind": {
                           "enum": [
                             "fixed",
-                            "percent"
+                            "percent",
+                            "bundle"
                           ],
                           "type": "string"
                         },
@@ -4620,7 +4648,34 @@
                     "promotion": {
                       "nullable": true,
                       "properties": {
+                        "buyQuantity": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "couponCode": {
+                          "type": "string"
+                        },
                         "discountSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "freeQuantity": {
                           "anyOf": [
                             {
                               "default": 0,
@@ -4647,7 +4702,8 @@
                         "kind": {
                           "enum": [
                             "fixed",
-                            "percent"
+                            "percent",
+                            "bundle"
                           ],
                           "type": "string"
                         },
@@ -5484,7 +5540,34 @@
                     "promotion": {
                       "nullable": true,
                       "properties": {
+                        "buyQuantity": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "couponCode": {
+                          "type": "string"
+                        },
                         "discountSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "freeQuantity": {
                           "anyOf": [
                             {
                               "default": 0,
@@ -5511,7 +5594,8 @@
                         "kind": {
                           "enum": [
                             "fixed",
-                            "percent"
+                            "percent",
+                            "bundle"
                           ],
                           "type": "string"
                         },

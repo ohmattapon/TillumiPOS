@@ -26,6 +26,8 @@ export const priceQuotes = pgTable(
     orderId: integer().references(() => orders.id),
     lines: jsonb().$type<QuoteLine[]>().notNull(),
     promotion: jsonb().$type<SalePromotion>(),
+    // The coupon code typed when the quote was priced; null when no coupon was typed.
+    couponCode: text(),
     subtotalSatang: integer().notNull(),
     discountSatang: integer().notNull().default(0),
     vatMode: vatMode().notNull(),

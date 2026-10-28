@@ -18,6 +18,8 @@ export function toQuoteResponse(quote: PriceQuoteEntity): QuoteResponse {
     // The schema widens with Task 2's OpenAPI change, when the migration actually allows storing a bundle;
     // no such quote can exist before that, but the snapshot type already carries the wider union.
     promotion: snapshot.promotion as QuoteResponse['promotion'],
+    // The typed coupon code is shown back to the till even when a better automatic promotion won.
+    couponCode: snapshot.couponCode,
     discountSatang: snapshot.discountSatang,
     vatMode: snapshot.vatMode,
     vatRateBp: snapshot.vatRateBp,

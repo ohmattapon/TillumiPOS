@@ -7,15 +7,19 @@ const memberInput = t.Optional(t.Nullable(t.Integer({ minimum: 1 })))
 const quoteInput = t.Optional(t.Nullable(t.Integer({ minimum: 1 })))
 const header = {
   member: t.Nullable(t.Object({ id: t.Integer(), code: t.String(), name: t.String() })),
-  // The promotion the sale was given, as it was when sold; null when it had none.
+  // The promotion the sale was given, as it was when sold; null when it had none. A bundle sale
+  // carries its group sizes, a coupon sale the code that was typed.
   promotion: t.Nullable(
     t.Object({
       id: t.Integer(),
       name: t.String(),
-      kind: t.Union([t.Literal('fixed'), t.Literal('percent')]),
+      kind: t.Union([t.Literal('fixed'), t.Literal('percent'), t.Literal('bundle')]),
       value: t.Integer(),
       maxDiscountSatang: t.Nullable(t.Integer()),
       discountSatang: t.Integer(),
+      couponCode: t.Optional(t.String()),
+      buyQuantity: t.Optional(t.Integer()),
+      freeQuantity: t.Optional(t.Integer()),
     }),
   ),
   id: t.Integer(),

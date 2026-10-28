@@ -189,6 +189,47 @@ describe('CreateQuoteUseCase', () => {
   })
 })
 
+describe('CreateQuoteUseCase coupons', () => {
+  test('an unknown coupon is refused', async () => {
+    catalog.activePromotions.mockResolvedValue([promotion({ id: 1 })])
+    await expect(create.execute({ lines: [{ productId: 1, quantity: 2 }], couponCode: 'SUMMER10' }, actor, branch))
+      .rejects.toMatchObject({ code: 'COUPON_NOT_FOUND' })
+    expect(quotes.create).not.toHaveBeenCalled()
+  })
+
+  test('a coupon outside its hours is refused with its reason', async () => {
+    catalog.activePromotions.mockResolvedValue([promotion({ id: 1, couponCode: 'SUMMER10', windowStartMinute: 14 * 60, windowEndMinute: 17 * 60 })])
+    await expect(create.execute({ lines: [{ productId: 1, quantity: 2 }], couponCode: 'SUMMER10' }, actor, branch))
+      .rejects.toMatchObject({ code: 'COUPON_NOT_APPLICABLE', params: { reason: 'not_running' } })
+    expect(quotes.create).not.toHaveBeenCalled()
+  })
+
+  test('a valid coupon gives its promotion and pins the code on the quote', async () => {
+    catalog.activePromotions.mockResolvedValue([promotion({ id: 1, couponCode: 'SUMMER10' })])
+    const quote = await create.execute({ lines: [{ productId: 1, quantity: 2 }], couponCode: 'SUMMER10' }, actor, branch)
+    expect(quote.promotion).toEqual({ id: 1, name: 'ลด 10%', kind: 'percent', value: 1000, maxDiscountSatang: null, discountSatang: 500, couponCode: 'SUMMER10' })
+    expect(quote.couponCode).toBe('SUMMER10')
+  })
+
+  test('a lower-case coupon matches the stored code', async () => {
+    catalog.activePromotions.mockResolvedValue([promotion({ id: 1, couponCode: 'SUMMER10' })])
+    const quote = await create.execute({ lines: [{ productId: 1, quantity: 2 }], couponCode: ' summer10 ' }, actor, branch)
+    expect(quote.promotion?.id).toBe(1)
+    expect(quote.couponCode).toBe('SUMMER10')
+  })
+
+  test('a coupon that loses to a better promotion quotes with the other promotion', async () => {
+    catalog.activePromotions.mockResolvedValue([
+      promotion({ id: 1, couponCode: 'SUMMER10' }),
+      promotion({ id: 2, name: 'ลด 300', kind: 'fixed', value: 5000 }),
+    ])
+    const quote = await create.execute({ lines: [{ productId: 1, quantity: 2 }], couponCode: 'SUMMER10' }, actor, branch)
+    expect(quote.promotion).toMatchObject({ id: 2, discountSatang: 5000 })
+    expect(quote.promotion?.couponCode).toBeUndefined()
+    expect(quote.couponCode).toBe('SUMMER10')
+  })
+})
+
 describe('CreateQuoteUseCase usage limits', () => {
   test('a full promotion is left out of a new quote, without locking anything', async () => {
     catalog.activePromotions.mockResolvedValue([promotion({ id: 1, maxUses: 1 })])
