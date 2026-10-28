@@ -60,10 +60,6 @@ mock.module('@/features/auth', () => ({
   useAuthorization: () => ({ can: () => true }),
 }))
 
-mock.module('@/features/branches', () => ({
-  useActiveBranch: () => ({ branch: { id: 1 } }),
-}))
-
 mock.module('@/features/settings', () => ({
   useFormat: () => ({
     money: {

@@ -728,6 +728,8 @@ async function main() {
 
     await check('the owner starts counting: the report is frozen and shows what the drawer should hold', async () => {
       await owner.getByRole('button', { name: 'เริ่มนับปิดกะ' }).click()
+      // Starting the count asks for confirmation first (ConfirmDialog).
+      await owner.getByRole('dialog').getByRole('button', { name: 'เริ่มนับปิดกะ' }).click()
       await owner.getByText(/ยอดที่หยุดไว้ตอนเริ่มนับ/).waitFor()
       // 100.00 opening + seven cash sales of 79.00: five of 10.00 (one of them on a phone, one on a tablet over plain
       // http), one of 9.00 (a 10.00 sale with the 10% promotion), one of 20.00 (10.00 and a 10.00 topping).
@@ -752,6 +754,8 @@ async function main() {
       if (!(await close.isDisabled())) throw new Error('Close is enabled without a reason for the difference')
       await owner.getByLabel('เหตุผลของยอดเงินที่ต่างกัน').fill('ทอนเงินผิด')
       await close.click()
+      // Closing asks for confirmation first, with the counted cash and the difference shown.
+      await owner.getByRole('dialog').getByRole('button', { name: 'ยืนยันปิดกะ' }).click()
       await owner.getByRole('button', { name: 'เปิดกะและเริ่มขาย' }).waitFor()
     })
 

@@ -34,8 +34,6 @@ mock.module('@/hooks/use-list-pagination', () => ({
   useListPagination: () => ({ page: 0, pageSize: 10, offset: 0, setPage: () => {} }),
 }))
 
-mock.module('@/components/PaginationBar', () => ({ PaginationBar: () => null }))
-
 let container: HTMLDivElement
 let root: Root
 const t18n = createInstance()
