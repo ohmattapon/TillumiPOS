@@ -182,6 +182,17 @@ describe('cart store with packs', () => {
     cart().workOnOrder(5)
     expect(cart().promotionDeclined).toBe(false)
   })
+  test('clear and workOnOrder drop the coupon code', () => {
+    cart().setCouponCode('SUMMER10')
+    expect(cart().couponCode).toBe('SUMMER10')
+
+    cart().workOnOrder(5)
+    expect(cart().couponCode).toBe('')
+
+    cart().setCouponCode('SUMMER10')
+    clearCart()
+    expect(cart().couponCode).toBe('')
+  })
   test('changing member clears redeemPoints', () => {
     cart().setMember(12)
     cart().setRedeemPoints(30)

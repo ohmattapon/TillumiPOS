@@ -1,0 +1,1 @@
+ALTER TABLE "price_quotes" ADD COLUMN "coupon_code" text;

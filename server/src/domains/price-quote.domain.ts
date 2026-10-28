@@ -49,6 +49,8 @@ export interface NewPriceQuote {
   orderId: number | null
   lines: QuoteLine[]
   promotion: SalePromotion | null
+  /** The coupon code typed when the quote was priced, normalized; null when no coupon was typed. */
+  couponCode: string | null
   /** The VAT rules in force when the quote was made; the sale uses these, not the current ones. */
   vatMode: VatMode
   vatRateBp: number
@@ -109,6 +111,7 @@ export class PriceQuoteEntity {
   public readonly orderId: number | null
   public readonly lines: readonly QuoteLine[]
   public readonly promotion: Readonly<SalePromotion> | null
+  public readonly couponCode: string | null
   public readonly vatMode: VatMode
   public readonly vatRateBp: number
   public readonly subtotalSatang: number
@@ -145,6 +148,7 @@ export class PriceQuoteEntity {
       options: line.options.map((option) => ({ ...option })),
     }))
     this.promotion = props.promotion ? Object.freeze({ ...props.promotion }) : null
+    this.couponCode = props.couponCode
     this.vatMode = props.vatMode
     this.vatRateBp = props.vatRateBp
     this.subtotalSatang = props.subtotalSatang
@@ -267,6 +271,7 @@ export class PriceQuoteEntity {
       orderId: this.orderId,
       lines: this.lines.map((line) => ({ ...line, options: line.options.map((option) => ({ ...option })) })),
       promotion: this.promotion ? { ...this.promotion } : null,
+      couponCode: this.couponCode,
       vatMode: this.vatMode,
       vatRateBp: this.vatRateBp,
       subtotalSatang: this.subtotalSatang,

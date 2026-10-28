@@ -1,3 +1,4 @@
+import { normalizeCouponCode } from '@pos/api/promotions'
 import { create } from 'zustand'
 
 /**
@@ -28,6 +29,12 @@ interface CartState {
    */
   memberId: number | null
   setMember: (memberId: number | null) => void
+  /**
+   * The coupon code the cashier typed, already upper-cased, or ''. Only the one-step cart asks
+   * with a code, because a quote is the only thing that pins a coupon.
+   */
+  couponCode: string
+  setCouponCode: (couponCode: string) => void
   /** The points the member spends on this cart. Only the one-step cart redeems; an order never does. */
   redeemPoints: number
   setRedeemPoints: (points: number) => void
@@ -51,10 +58,12 @@ export const useCartStore = create<CartState>()((set) => ({
   discount: '',
   orderId: null,
   memberId: null,
+  couponCode: '',
   redeemPoints: 0,
   promotionDeclined: false,
   // The points belong to the member, so they go whenever the member does, even to the same one.
   setMember: (memberId) => set({ memberId, redeemPoints: 0 }),
+  setCouponCode: (couponCode) => set({ couponCode: normalizeCouponCode(couponCode) }),
   setRedeemPoints: (redeemPoints) => set({ redeemPoints }),
   add: (productId, optionIds = [], packId) =>
     set((state) => {
@@ -77,8 +86,10 @@ export const useCartStore = create<CartState>()((set) => ({
     })),
   setDiscount: (discount) => set({ discount }),
   setPromotionDeclined: (promotionDeclined) => set({ promotionDeclined }),
-  workOnOrder: (orderId) => set({ orderId, lines: [], discount: '', memberId: null, redeemPoints: 0, promotionDeclined: false }),
-  clear: () => set({ lines: [], discount: '', orderId: null, memberId: null, redeemPoints: 0, promotionDeclined: false }),
+  workOnOrder: (orderId) =>
+    set({ orderId, lines: [], discount: '', memberId: null, couponCode: '', redeemPoints: 0, promotionDeclined: false }),
+  clear: () =>
+    set({ lines: [], discount: '', orderId: null, memberId: null, couponCode: '', redeemPoints: 0, promotionDeclined: false }),
 }))
 
 /** For code outside React, such as the logout handler. */

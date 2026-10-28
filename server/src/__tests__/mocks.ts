@@ -16,6 +16,7 @@ export const mockSalesReportRepository = (): Mocked<ISalesReportRepository> => (
   overview: mock<ISalesReportRepository['overview']>(),
   products: mock<ISalesReportRepository['products']>(),
   branches: mock<ISalesReportRepository['branches']>(),
+  promotions: mock<ISalesReportRepository['promotions']>(),
 })
 import type { IBranchRepository } from '../modules/branches/applications/ports/branch.repository'
 import type { ICategoryRepository } from '../modules/categories/applications/ports/category.repository'
@@ -359,6 +360,15 @@ export const mockMemberPoints = (): Mocked<IMemberPoints> => ({
 
 export const mockPromotionCatalog = (): Mocked<IPromotionCatalog> => ({
   activePromotions: mock<IPromotionCatalog['activePromotions']>(async () => []),
+})
+
+import type { IPromotionUsage } from '../modules/quotes/applications/ports/promotion-usage.port'
+
+/** Every promotion is unlimited and unlocked unless a test says otherwise. */
+export const mockPromotionUsage = (): Mocked<IPromotionUsage> => ({
+  countUses: mock<IPromotionUsage['countUses']>(async () => ({ total: 0, byMember: 0 })),
+  countMany: mock<IPromotionUsage['countMany']>(async () => new Map()),
+  lockForUse: mock<IPromotionUsage['lockForUse']>(async () => null),
 })
 
 export const mockOrderQuoteSource = (): Mocked<IOrderQuoteSource> => ({

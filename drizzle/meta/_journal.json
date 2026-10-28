@@ -267,6 +267,27 @@
       "when": 1793103135053,
       "tag": "0037_first_killer_shrike",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793142919584,
+      "tag": "0038_watery_cerise",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793145678127,
+      "tag": "0039_lonely_xorn",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793152680846,
+      "tag": "0040_silly_randall_flagg",
+      "breakpoints": true
     }
   ]
 }

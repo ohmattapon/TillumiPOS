@@ -1,10 +1,12 @@
 import { inject, injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
+import { hasUsesLeft } from '../../../../domains/promotion.domain'
 import type { PriceQuoteEntity, QuoteRequest } from '../../../../domains/price-quote.domain'
 import type { IClock } from '../../../shared/ports/clock.port'
 import { TOKENS } from '../../../tokens'
 import { orderQuoteSourceToken, type IOrderQuoteSource } from '../ports/order-quote-source.port'
+import { promotionLimitReached, promotionUsageToken, type IPromotionUsage } from '../ports/promotion-usage.port'
 import { priceQuoteRepositoryToken, type IPriceQuoteRepository } from '../ports/price-quote.repository'
 import type { IQuoteClaims } from '../ports/quote-claims.port'
 import { quotePointsToken, type IQuotePoints } from '../ports/quote-points.port'
@@ -17,6 +19,7 @@ export class QuoteClaims implements IQuoteClaims {
     @inject(priceQuoteRepositoryToken) private readonly quotes: IPriceQuoteRepository,
     @inject(orderQuoteSourceToken) private readonly orders: IOrderQuoteSource,
     @inject(TOKENS.Clock) private readonly clock: IClock,
+    @inject(promotionUsageToken) private readonly usage: IPromotionUsage,
     @inject(quotePointsToken) private readonly points: IQuotePoints,
   ) {}
 
@@ -25,7 +28,23 @@ export class QuoteClaims implements IQuoteClaims {
     // Another branch's quote is not even acknowledged to exist.
     if (!quote || quote.branchId !== request.branchId) throw notFound()
     quote.assertSellable(request, this.clock.now(), claimedReferences)
+    await this.assertUsageLeft(quote)
     return quote
+  }
+
+  /**
+   * A promotion with usage limits must still have a slot: the row is locked first so two payments at
+   * once cannot both pass. A quote a QR holds already spent its slot when it was reserved, and the money
+   * may already be at the bank, so it is never re-checked.
+   */
+  private async assertUsageLeft(quote: PriceQuoteEntity) {
+    if (quote.status === 'reserved') return
+    const promotionId = quote.promotion?.id
+    if (promotionId === undefined) return
+    const limits = await this.usage.lockForUse(promotionId)
+    if (limits === null) return
+    const counts = await this.usage.countUses(promotionId, quote.memberId)
+    if (!hasUsesLeft(limits, counts, quote.memberId !== null)) throw promotionLimitReached()
   }
 
   /** The quote a QR holds: while the QR is held, and after it was cancelled, when its money may still arrive. */
@@ -68,6 +87,8 @@ export class QuoteClaims implements IQuoteClaims {
         throw new DomainConflictError('ออเดอร์เปลี่ยนไปจากราคาที่ตรึงไว้ กรุณาขอราคาใหม่', 'QUOTE_MISMATCH')
     }
     quote.assertQrAmount(amountSatang)
+    // Reserving is what spends a slot, but the money has not moved yet, so a full promotion still refuses here.
+    await this.assertUsageLeft(quote)
     const reserved = quote.reserve(reference, this.clock.now())
     if (reserved !== quote) await this.holdPoints(quote)
     await this.quotes.save(reserved)

@@ -4,12 +4,15 @@ import { DomainConflictError } from '../../../../domains/errors/domain-conflict.
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import { PromotionEntity } from '../../../../domains/promotion.domain'
 import { promotions } from '../../../../infrastructure/database/schema/promotions'
-import { isUniqueViolation } from '../../../../libs/pg-error'
+import { isUniqueViolation, violatedConstraint } from '../../../../libs/pg-error'
 import { currentExecutor } from '../../../../libs/transaction-context'
 import type { IPromotionRepository, PromotionListQuery } from '../../applications/ports/promotion.repository'
 import { rowOf } from '../promotion.snapshot'
 
 const nameTaken = () => new DomainConflictError('ชื่อโปรโมชันนี้ถูกใช้แล้ว', 'PROMOTION_NAME_TAKEN')
+const couponTaken = () => new DomainConflictError('รหัสคูปองนี้ถูกใช้แล้ว', 'COUPON_CODE_TAKEN')
+// The two unique indexes collide from two different kinds, so the constraint tells the errors apart.
+const brokeCouponConstraint = (error: unknown) => isUniqueViolation(error) && violatedConstraint(error) === 'promotions_coupon_code_upper_unique'
 
 /**
  * The shop's calendar day for a `date` column. The Bun driver gives it as a Date at UTC midnight, whatever drizzle's type
@@ -18,7 +21,9 @@ const nameTaken = () => new DomainConflictError('ชื่อโปรโมช�
 const calendarDay = (value: string | Date | null): string | null =>
   value instanceof Date ? value.toISOString().slice(0, 10) : value
 
-/** Rebuilds a promotion from a row, with its dates as the YYYY-MM-DD strings the rules are written in. */
+/**
+ * Rebuilds a promotion from a row, with its dates as the YYYY-MM-DD strings the rules are written in.
+ */
 const entityOf = ({ productIds, categoryIds, ...row }: typeof promotions.$inferSelect) =>
   new PromotionEntity({
     ...row,
@@ -58,6 +63,7 @@ export class DrizzlePromotionRepository implements IPromotionRepository {
       const [row] = await currentExecutor().insert(promotions).values(values).returning()
       return entityOf(row!)
     } catch (error) {
+      if (brokeCouponConstraint(error)) throw couponTaken()
       if (isUniqueViolation(error)) throw nameTaken()
       throw error
     }
@@ -71,6 +77,7 @@ export class DrizzlePromotionRepository implements IPromotionRepository {
       if (!row) throw new DomainNotFoundError('ไม่พบโปรโมชัน', 'PROMOTION_NOT_FOUND')
       return entityOf(row)
     } catch (error) {
+      if (brokeCouponConstraint(error)) throw couponTaken()
       if (isUniqueViolation(error)) throw nameTaken()
       throw error
     }

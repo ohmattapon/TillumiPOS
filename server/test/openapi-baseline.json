@@ -19075,7 +19075,34 @@
                     "promotion": {
                       "nullable": true,
                       "properties": {
+                        "buyQuantity": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "couponCode": {
+                          "type": "string"
+                        },
                         "discountSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "freeQuantity": {
                           "anyOf": [
                             {
                               "default": 0,
@@ -19102,7 +19129,8 @@
                         "kind": {
                           "enum": [
                             "fixed",
-                            "percent"
+                            "percent",
+                            "bundle"
                           ],
                           "type": "string"
                         },
@@ -20774,6 +20802,33 @@
                             ],
                             "type": "string"
                           },
+                          "buyQuantity": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "couponCode": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "createdAt": {
                             "anyOf": [
                               {
@@ -20795,6 +20850,26 @@
                               "string",
                               "null"
                             ]
+                          },
+                          "freeQuantity": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
                           },
                           "id": {
                             "anyOf": [
@@ -20818,14 +20893,58 @@
                           "isActive": {
                             "type": "boolean"
                           },
+                          "isExhausted": {
+                            "type": "boolean"
+                          },
                           "kind": {
                             "enum": [
                               "fixed",
-                              "percent"
+                              "percent",
+                              "bundle"
                             ],
                             "type": "string"
                           },
                           "maxDiscountSatang": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "maxUses": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "maxUsesPerMember": {
                             "anyOf": [
                               {
                                 "anyOf": [
@@ -20933,6 +21052,18 @@
                               }
                             ]
                           },
+                          "usedCount": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "value": {
                             "anyOf": [
                               {
@@ -21020,6 +21151,13 @@
                           "audience",
                           "isActive",
                           "scope",
+                          "couponCode",
+                          "buyQuantity",
+                          "freeQuantity",
+                          "maxUses",
+                          "maxUsesPerMember",
+                          "usedCount",
+                          "isExhausted",
                           "imageUrl",
                           "createdAt",
                           "updatedAt"
@@ -21071,6 +21209,37 @@
                     ],
                     "type": "string"
                   },
+                  "buyQuantity": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "maximum": 99,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "maximum": 99,
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "couponCode": {
+                    "maxLength": 120,
+                    "minLength": 1,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "endsOn": {
                     "format": "date",
                     "nullable": true,
@@ -21079,13 +21248,37 @@
                       "null"
                     ]
                   },
+                  "freeQuantity": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "maximum": 99,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "maximum": 99,
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "isActive": {
                     "type": "boolean"
                   },
                   "kind": {
                     "enum": [
                       "fixed",
-                      "percent"
+                      "percent",
+                      "bundle"
                     ],
                     "type": "string"
                   },
@@ -21110,6 +21303,48 @@
                       }
                     ],
                     "nullable": true
+                  },
+                  "maxUses": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "maxUsesPerMember": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "minSubtotalSatang": {
                     "anyOf": [
@@ -21195,11 +21430,11 @@
                         "type": "string"
                       },
                       {
-                        "minimum": 1,
+                        "minimum": 0,
                         "type": "integer"
                       }
                     ],
-                    "minimum": 1
+                    "minimum": 0
                   },
                   "weekdays": {
                     "items": {
@@ -21292,6 +21527,37 @@
                     ],
                     "type": "string"
                   },
+                  "buyQuantity": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "maximum": 99,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "maximum": 99,
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "couponCode": {
+                    "maxLength": 120,
+                    "minLength": 1,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "endsOn": {
                     "format": "date",
                     "nullable": true,
@@ -21300,13 +21566,37 @@
                       "null"
                     ]
                   },
+                  "freeQuantity": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "maximum": 99,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "maximum": 99,
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "isActive": {
                     "type": "boolean"
                   },
                   "kind": {
                     "enum": [
                       "fixed",
-                      "percent"
+                      "percent",
+                      "bundle"
                     ],
                     "type": "string"
                   },
@@ -21331,6 +21621,48 @@
                       }
                     ],
                     "nullable": true
+                  },
+                  "maxUses": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "maxUsesPerMember": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "minSubtotalSatang": {
                     "anyOf": [
@@ -21416,11 +21748,11 @@
                         "type": "string"
                       },
                       {
-                        "minimum": 1,
+                        "minimum": 0,
                         "type": "integer"
                       }
                     ],
-                    "minimum": 1
+                    "minimum": 0
                   },
                   "weekdays": {
                     "items": {
@@ -21513,6 +21845,37 @@
                     ],
                     "type": "string"
                   },
+                  "buyQuantity": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "maximum": 99,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "maximum": 99,
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "couponCode": {
+                    "maxLength": 120,
+                    "minLength": 1,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "endsOn": {
                     "format": "date",
                     "nullable": true,
@@ -21521,13 +21884,37 @@
                       "null"
                     ]
                   },
+                  "freeQuantity": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "maximum": 99,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "maximum": 99,
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "isActive": {
                     "type": "boolean"
                   },
                   "kind": {
                     "enum": [
                       "fixed",
-                      "percent"
+                      "percent",
+                      "bundle"
                     ],
                     "type": "string"
                   },
@@ -21552,6 +21939,48 @@
                       }
                     ],
                     "nullable": true
+                  },
+                  "maxUses": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "maxUsesPerMember": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "minSubtotalSatang": {
                     "anyOf": [
@@ -21637,11 +22066,11 @@
                         "type": "string"
                       },
                       {
-                        "minimum": 1,
+                        "minimum": 0,
                         "type": "integer"
                       }
                     ],
-                    "minimum": 1
+                    "minimum": 0
                   },
                   "weekdays": {
                     "items": {
@@ -21740,6 +22169,33 @@
                       ],
                       "type": "string"
                     },
+                    "buyQuantity": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "couponCode": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -21761,6 +22217,26 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "freeQuantity": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
                     },
                     "id": {
                       "anyOf": [
@@ -21784,14 +22260,58 @@
                     "isActive": {
                       "type": "boolean"
                     },
+                    "isExhausted": {
+                      "type": "boolean"
+                    },
                     "kind": {
                       "enum": [
                         "fixed",
-                        "percent"
+                        "percent",
+                        "bundle"
                       ],
                       "type": "string"
                     },
                     "maxDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "maxUses": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "maxUsesPerMember": {
                       "anyOf": [
                         {
                           "anyOf": [
@@ -21899,6 +22419,18 @@
                         }
                       ]
                     },
+                    "usedCount": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "value": {
                       "anyOf": [
                         {
@@ -21986,6 +22518,13 @@
                     "audience",
                     "isActive",
                     "scope",
+                    "couponCode",
+                    "buyQuantity",
+                    "freeQuantity",
+                    "maxUses",
+                    "maxUsesPerMember",
+                    "usedCount",
+                    "isExhausted",
                     "imageUrl",
                     "createdAt",
                     "updatedAt"
@@ -22040,6 +22579,33 @@
                       ],
                       "type": "string"
                     },
+                    "buyQuantity": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "couponCode": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -22061,6 +22627,26 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "freeQuantity": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
                     },
                     "id": {
                       "anyOf": [
@@ -22084,14 +22670,58 @@
                     "isActive": {
                       "type": "boolean"
                     },
+                    "isExhausted": {
+                      "type": "boolean"
+                    },
                     "kind": {
                       "enum": [
                         "fixed",
-                        "percent"
+                        "percent",
+                        "bundle"
                       ],
                       "type": "string"
                     },
                     "maxDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "maxUses": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "maxUsesPerMember": {
                       "anyOf": [
                         {
                           "anyOf": [
@@ -22199,6 +22829,18 @@
                         }
                       ]
                     },
+                    "usedCount": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "value": {
                       "anyOf": [
                         {
@@ -22286,6 +22928,13 @@
                     "audience",
                     "isActive",
                     "scope",
+                    "couponCode",
+                    "buyQuantity",
+                    "freeQuantity",
+                    "maxUses",
+                    "maxUsesPerMember",
+                    "usedCount",
+                    "isExhausted",
                     "imageUrl",
                     "createdAt",
                     "updatedAt"
@@ -22337,6 +22986,37 @@
                     ],
                     "type": "string"
                   },
+                  "buyQuantity": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "maximum": 99,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "maximum": 99,
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "couponCode": {
+                    "maxLength": 120,
+                    "minLength": 1,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "endsOn": {
                     "format": "date",
                     "nullable": true,
@@ -22345,13 +23025,37 @@
                       "null"
                     ]
                   },
+                  "freeQuantity": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "maximum": 99,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "maximum": 99,
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "isActive": {
                     "type": "boolean"
                   },
                   "kind": {
                     "enum": [
                       "fixed",
-                      "percent"
+                      "percent",
+                      "bundle"
                     ],
                     "type": "string"
                   },
@@ -22376,6 +23080,48 @@
                       }
                     ],
                     "nullable": true
+                  },
+                  "maxUses": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "maxUsesPerMember": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "minSubtotalSatang": {
                     "anyOf": [
@@ -22461,11 +23207,11 @@
                         "type": "string"
                       },
                       {
-                        "minimum": 1,
+                        "minimum": 0,
                         "type": "integer"
                       }
                     ],
-                    "minimum": 1
+                    "minimum": 0
                   },
                   "weekdays": {
                     "items": {
@@ -22553,6 +23299,37 @@
                     ],
                     "type": "string"
                   },
+                  "buyQuantity": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "maximum": 99,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "maximum": 99,
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "couponCode": {
+                    "maxLength": 120,
+                    "minLength": 1,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "endsOn": {
                     "format": "date",
                     "nullable": true,
@@ -22561,13 +23338,37 @@
                       "null"
                     ]
                   },
+                  "freeQuantity": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "maximum": 99,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "maximum": 99,
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "isActive": {
                     "type": "boolean"
                   },
                   "kind": {
                     "enum": [
                       "fixed",
-                      "percent"
+                      "percent",
+                      "bundle"
                     ],
                     "type": "string"
                   },
@@ -22592,6 +23393,48 @@
                       }
                     ],
                     "nullable": true
+                  },
+                  "maxUses": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "maxUsesPerMember": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "minSubtotalSatang": {
                     "anyOf": [
@@ -22677,11 +23520,11 @@
                         "type": "string"
                       },
                       {
-                        "minimum": 1,
+                        "minimum": 0,
                         "type": "integer"
                       }
                     ],
-                    "minimum": 1
+                    "minimum": 0
                   },
                   "weekdays": {
                     "items": {
@@ -22769,6 +23612,37 @@
                     ],
                     "type": "string"
                   },
+                  "buyQuantity": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "maximum": 99,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "maximum": 99,
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "couponCode": {
+                    "maxLength": 120,
+                    "minLength": 1,
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "endsOn": {
                     "format": "date",
                     "nullable": true,
@@ -22777,13 +23651,37 @@
                       "null"
                     ]
                   },
+                  "freeQuantity": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "maximum": 99,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "maximum": 99,
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "isActive": {
                     "type": "boolean"
                   },
                   "kind": {
                     "enum": [
                       "fixed",
-                      "percent"
+                      "percent",
+                      "bundle"
                     ],
                     "type": "string"
                   },
@@ -22808,6 +23706,48 @@
                       }
                     ],
                     "nullable": true
+                  },
+                  "maxUses": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "maxUsesPerMember": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        ],
+                        "minimum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "minSubtotalSatang": {
                     "anyOf": [
@@ -22893,11 +23833,11 @@
                         "type": "string"
                       },
                       {
-                        "minimum": 1,
+                        "minimum": 0,
                         "type": "integer"
                       }
                     ],
-                    "minimum": 1
+                    "minimum": 0
                   },
                   "weekdays": {
                     "items": {
@@ -22991,6 +23931,33 @@
                       ],
                       "type": "string"
                     },
+                    "buyQuantity": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "couponCode": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -23012,6 +23979,26 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "freeQuantity": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
                     },
                     "id": {
                       "anyOf": [
@@ -23035,14 +24022,58 @@
                     "isActive": {
                       "type": "boolean"
                     },
+                    "isExhausted": {
+                      "type": "boolean"
+                    },
                     "kind": {
                       "enum": [
                         "fixed",
-                        "percent"
+                        "percent",
+                        "bundle"
                       ],
                       "type": "string"
                     },
                     "maxDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "maxUses": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "maxUsesPerMember": {
                       "anyOf": [
                         {
                           "anyOf": [
@@ -23150,6 +24181,18 @@
                         }
                       ]
                     },
+                    "usedCount": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "value": {
                       "anyOf": [
                         {
@@ -23237,6 +24280,13 @@
                     "audience",
                     "isActive",
                     "scope",
+                    "couponCode",
+                    "buyQuantity",
+                    "freeQuantity",
+                    "maxUses",
+                    "maxUsesPerMember",
+                    "usedCount",
+                    "isExhausted",
                     "imageUrl",
                     "createdAt",
                     "updatedAt"
@@ -23291,6 +24341,33 @@
                       ],
                       "type": "string"
                     },
+                    "buyQuantity": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "couponCode": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -23312,6 +24389,26 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "freeQuantity": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
                     },
                     "id": {
                       "anyOf": [
@@ -23335,14 +24432,58 @@
                     "isActive": {
                       "type": "boolean"
                     },
+                    "isExhausted": {
+                      "type": "boolean"
+                    },
                     "kind": {
                       "enum": [
                         "fixed",
-                        "percent"
+                        "percent",
+                        "bundle"
                       ],
                       "type": "string"
                     },
                     "maxDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "maxUses": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "maxUsesPerMember": {
                       "anyOf": [
                         {
                           "anyOf": [
@@ -23450,6 +24591,18 @@
                         }
                       ]
                     },
+                    "usedCount": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "value": {
                       "anyOf": [
                         {
@@ -23537,6 +24690,13 @@
                     "audience",
                     "isActive",
                     "scope",
+                    "couponCode",
+                    "buyQuantity",
+                    "freeQuantity",
+                    "maxUses",
+                    "maxUsesPerMember",
+                    "usedCount",
+                    "isExhausted",
                     "imageUrl",
                     "createdAt",
                     "updatedAt"
@@ -23657,6 +24817,33 @@
                       ],
                       "type": "string"
                     },
+                    "buyQuantity": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "couponCode": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -23678,6 +24865,26 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "freeQuantity": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
                     },
                     "id": {
                       "anyOf": [
@@ -23701,14 +24908,58 @@
                     "isActive": {
                       "type": "boolean"
                     },
+                    "isExhausted": {
+                      "type": "boolean"
+                    },
                     "kind": {
                       "enum": [
                         "fixed",
-                        "percent"
+                        "percent",
+                        "bundle"
                       ],
                       "type": "string"
                     },
                     "maxDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "maxUses": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "maxUsesPerMember": {
                       "anyOf": [
                         {
                           "anyOf": [
@@ -23816,6 +25067,18 @@
                         }
                       ]
                     },
+                    "usedCount": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "value": {
                       "anyOf": [
                         {
@@ -23903,6 +25166,13 @@
                     "audience",
                     "isActive",
                     "scope",
+                    "couponCode",
+                    "buyQuantity",
+                    "freeQuantity",
+                    "maxUses",
+                    "maxUsesPerMember",
+                    "usedCount",
+                    "isExhausted",
                     "imageUrl",
                     "createdAt",
                     "updatedAt"
@@ -23928,6 +25198,10 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "couponCode": {
+                    "maxLength": 40,
+                    "type": "string"
+                  },
                   "lines": {
                     "items": {
                       "properties": {
@@ -24059,6 +25333,10 @@
             "application/x-www-form-urlencoded": {
               "schema": {
                 "properties": {
+                  "couponCode": {
+                    "maxLength": 40,
+                    "type": "string"
+                  },
                   "lines": {
                     "items": {
                       "properties": {
@@ -24190,6 +25468,10 @@
             "multipart/form-data": {
               "schema": {
                 "properties": {
+                  "couponCode": {
+                    "maxLength": 40,
+                    "type": "string"
+                  },
                   "lines": {
                     "items": {
                       "properties": {
@@ -24339,6 +25621,13 @@
                         }
                       ]
                     },
+                    "couponCode": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -24641,7 +25930,34 @@
                     "promotion": {
                       "nullable": true,
                       "properties": {
+                        "buyQuantity": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "couponCode": {
+                          "type": "string"
+                        },
                         "discountSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "freeQuantity": {
                           "anyOf": [
                             {
                               "default": 0,
@@ -24668,7 +25984,8 @@
                         "kind": {
                           "enum": [
                             "fixed",
-                            "percent"
+                            "percent",
+                            "bundle"
                           ],
                           "type": "string"
                         },
@@ -24796,6 +26113,7 @@
                     "lines",
                     "subtotalSatang",
                     "promotion",
+                    "couponCode",
                     "discountSatang",
                     "pointsRedeemed",
                     "pointsDiscountSatang",
@@ -24862,6 +26180,13 @@
                         }
                       ]
                     },
+                    "couponCode": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -25164,7 +26489,34 @@
                     "promotion": {
                       "nullable": true,
                       "properties": {
+                        "buyQuantity": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "couponCode": {
+                          "type": "string"
+                        },
                         "discountSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "freeQuantity": {
                           "anyOf": [
                             {
                               "default": 0,
@@ -25191,7 +26543,8 @@
                         "kind": {
                           "enum": [
                             "fixed",
-                            "percent"
+                            "percent",
+                            "bundle"
                           ],
                           "type": "string"
                         },
@@ -25319,6 +26672,7 @@
                     "lines",
                     "subtotalSatang",
                     "promotion",
+                    "couponCode",
                     "discountSatang",
                     "pointsRedeemed",
                     "pointsDiscountSatang",
@@ -25385,6 +26739,13 @@
                         }
                       ]
                     },
+                    "couponCode": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -25687,7 +27048,34 @@
                     "promotion": {
                       "nullable": true,
                       "properties": {
+                        "buyQuantity": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "couponCode": {
+                          "type": "string"
+                        },
                         "discountSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "freeQuantity": {
                           "anyOf": [
                             {
                               "default": 0,
@@ -25714,7 +27102,8 @@
                         "kind": {
                           "enum": [
                             "fixed",
-                            "percent"
+                            "percent",
+                            "bundle"
                           ],
                           "type": "string"
                         },
@@ -25842,6 +27231,7 @@
                     "lines",
                     "subtotalSatang",
                     "promotion",
+                    "couponCode",
                     "discountSatang",
                     "pointsRedeemed",
                     "pointsDiscountSatang",
@@ -26978,7 +28368,34 @@
                           "promotion": {
                             "nullable": true,
                             "properties": {
+                              "buyQuantity": {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              "couponCode": {
+                                "type": "string"
+                              },
                               "discountSatang": {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              "freeQuantity": {
                                 "anyOf": [
                                   {
                                     "default": 0,
@@ -27005,7 +28422,8 @@
                               "kind": {
                                 "enum": [
                                   "fixed",
-                                  "percent"
+                                  "percent",
+                                  "bundle"
                                 ],
                                 "type": "string"
                               },
@@ -28216,7 +29634,34 @@
                     "promotion": {
                       "nullable": true,
                       "properties": {
+                        "buyQuantity": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "couponCode": {
+                          "type": "string"
+                        },
                         "discountSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "freeQuantity": {
                           "anyOf": [
                             {
                               "default": 0,
@@ -28243,7 +29688,8 @@
                         "kind": {
                           "enum": [
                             "fixed",
-                            "percent"
+                            "percent",
+                            "bundle"
                           ],
                           "type": "string"
                         },
@@ -28879,7 +30325,34 @@
                     "promotion": {
                       "nullable": true,
                       "properties": {
+                        "buyQuantity": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "couponCode": {
+                          "type": "string"
+                        },
                         "discountSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "freeQuantity": {
                           "anyOf": [
                             {
                               "default": 0,
@@ -28906,7 +30379,8 @@
                         "kind": {
                           "enum": [
                             "fixed",
-                            "percent"
+                            "percent",
+                            "bundle"
                           ],
                           "type": "string"
                         },
@@ -29592,7 +31066,34 @@
                     "promotion": {
                       "nullable": true,
                       "properties": {
+                        "buyQuantity": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "couponCode": {
+                          "type": "string"
+                        },
                         "discountSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "freeQuantity": {
                           "anyOf": [
                             {
                               "default": 0,
@@ -29619,7 +31120,8 @@
                         "kind": {
                           "enum": [
                             "fixed",
-                            "percent"
+                            "percent",
+                            "bundle"
                           ],
                           "type": "string"
                         },
@@ -30633,6 +32135,183 @@
           }
         },
         "summary": "สินค้าขายดี เรียงตามจำนวน ใช้ข้อมูล ณ ตอนขาย",
+        "tags": [
+          "Sales"
+        ]
+      }
+    },
+    "/api/v1/sales/reports/promotions": {
+      "get": {
+        "operationId": "getApiV1SalesReportsPromotions",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "enum": [
+                "branch",
+                "all"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "maximum": 500,
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "maximum": 500,
+              "minimum": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "bills": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "discountSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "netSalesSatang": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "promotionId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "promotionId",
+                          "name",
+                          "bills",
+                          "discountSatang",
+                          "netSalesSatang"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ยอดขายและส่วนลดแยกตามโปรโมชัน ใช้ข้อมูล ณ ตอนขาย",
         "tags": [
           "Sales"
         ]

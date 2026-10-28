@@ -32,12 +32,17 @@ export const quoteSchemas = {
       t.Object({
         id: t.Integer(),
         name: t.String(),
-        kind: t.Union([t.Literal('fixed'), t.Literal('percent')]),
+        kind: t.Union([t.Literal('fixed'), t.Literal('percent'), t.Literal('bundle')]),
         value: t.Integer(),
         maxDiscountSatang: t.Nullable(t.Integer()),
         discountSatang: t.Integer(),
+        couponCode: t.Optional(t.String()),
+        buyQuantity: t.Optional(t.Integer()),
+        freeQuantity: t.Optional(t.Integer()),
       }),
     ),
+    // The coupon code typed when the quote was priced; null when no coupon was typed.
+    couponCode: t.Nullable(t.String()),
     discountSatang: t.Integer(),
     pointsRedeemed: t.Integer(),
     pointsDiscountSatang: t.Integer(),
@@ -63,6 +68,7 @@ export const quoteSchemas = {
     ),
     memberId: t.Optional(t.Nullable(t.Integer({ minimum: 1 }))),
     orderId: t.Optional(t.Integer({ minimum: 1 })),
+    couponCode: t.Optional(t.String({ maxLength: 40 })),
     redeemPoints: t.Optional(t.Integer({ minimum: 0 })),
   }),
 }
