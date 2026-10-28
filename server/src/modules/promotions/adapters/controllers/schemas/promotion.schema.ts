@@ -53,6 +53,8 @@ export const promotionSchemas = {
     freeQuantity: t.Nullable(t.Integer()),
     maxUses: t.Nullable(t.Integer()),
     maxUsesPerMember: t.Nullable(t.Integer()),
+    usedCount: t.Integer(),
+    isExhausted: t.Boolean(),
     imageUrl: t.Nullable(t.String()),
     createdAt: t.Date(),
     updatedAt: t.Date(),

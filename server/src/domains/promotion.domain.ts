@@ -217,6 +217,20 @@ export function couponIneligibility(rules: PromotionRules, context: PromotionCon
   return evaluatePromotion(rules, context).eligible ? null : 'not_eligible'
 }
 
+/**
+ * Whether a promotion with usage limits still has a slot. Completed sales and quotes a QR holds have
+ * used it, a voided bill has cleared its slot, and a per-member limit counts only the member at hand.
+ */
+export function hasUsesLeft(
+  limits: Pick<PromotionRules, 'maxUses' | 'maxUsesPerMember'>,
+  uses: { total: number; byMember: number },
+  hasMember: boolean,
+): boolean {
+  if (limits.maxUses !== null && uses.total >= limits.maxUses) return false
+  if (hasMember && limits.maxUsesPerMember !== null && uses.byMember >= limits.maxUsesPerMember) return false
+  return true
+}
+
 /** What the callers hand in: the rules plus the display name; the entity and the web's API item both have it. */
 export type PromotionCandidate = PromotionRules & { name: string }
 
@@ -424,6 +438,14 @@ export class PromotionEntity implements PromotionRules {
         ? { buyQuantity: this.buyQuantity ?? 0, freeQuantity: this.freeQuantity ?? 0 }
         : {}),
     }
+  }
+
+  /**
+   * Whether every use this promotion permits in total is spent. A per-member limit is not shown here:
+   * what is left for a member needs the member to ask about.
+   */
+  isExhausted(totalUses: number): boolean {
+    return !hasUsesLeft(this, { total: totalUses, byMember: 0 }, false)
   }
 
   toSnapshot(): PromotionProps {

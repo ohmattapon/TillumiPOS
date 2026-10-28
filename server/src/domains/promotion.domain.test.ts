@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import {
-  evaluatePromotion, pickBestPromotion, promotionsFor, PromotionEntity,
+  evaluatePromotion, hasUsesLeft, pickBestPromotion, promotionsFor, PromotionEntity,
   type PromotionCandidate, type PromotionContext,
 } from './promotion.domain'
 
@@ -404,6 +404,23 @@ describe('coupons and bundles', () => {
     test('a per-member limit belongs to a members-only promotion', () => {
       expect(codeOf(() => ea({ maxUsesPerMember: 1 }))).toBe('INVALID_PROMOTION')
       expect(ea({ audience: 'members', maxUsesPerMember: 2 }).maxUsesPerMember).toBe(2)
+    })
+
+    test('a slot is spent only when the count reaches the limit it is asked against', () => {
+      expect(hasUsesLeft({ maxUses: 3, maxUsesPerMember: null }, { total: 2, byMember: 0 }, false)).toBe(true)
+      expect(hasUsesLeft({ maxUses: 3, maxUsesPerMember: null }, { total: 3, byMember: 0 }, false)).toBe(false)
+      // A promotion with no limit always has a slot, whatever was counted.
+      expect(hasUsesLeft({ maxUses: null, maxUsesPerMember: null }, { total: 99, byMember: 0 }, false)).toBe(true)
+      // The per-member limit counts only the member at hand: an empty member leaves it alone.
+      expect(hasUsesLeft({ maxUses: null, maxUsesPerMember: 2 }, { total: 99, byMember: 2 }, false)).toBe(true)
+      expect(hasUsesLeft({ maxUses: null, maxUsesPerMember: 2 }, { total: 99, byMember: 2 }, true)).toBe(false)
+      expect(hasUsesLeft({ maxUses: null, maxUsesPerMember: 2 }, { total: 99, byMember: 1 }, true)).toBe(true)
+    })
+
+    test('isExhausted answers the total limit only', () => {
+      expect(ea({ maxUses: 3 }).isExhausted(2)).toBe(false)
+      expect(ea({ maxUses: 3 }).isExhausted(3)).toBe(true)
+      expect(ea({ maxUses: null, maxUsesPerMember: 1, audience: 'members' as const }).isExhausted(99)).toBe(false)
     })
 
     test('a bundle may set value 0, and the cap applies to a bundle too', () => {

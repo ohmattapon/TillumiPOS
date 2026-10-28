@@ -4,7 +4,7 @@ import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found
 import { lineKey } from '../../../../domains/modifier.domain'
 import { assertPackHasNoOptions, packUnitPriceSatang } from '../../../../domains/product-pack'
 import { PriceQuoteEntity, type QuoteLine } from '../../../../domains/price-quote.domain'
-import { pickBestPromotion } from '../../../../domains/promotion.domain'
+import { hasUsesLeft, pickBestPromotion, type PromotionCandidate } from '../../../../domains/promotion.domain'
 import type { ProductEntity } from '../../../../domains/product.domain'
 import type { SaleMember } from '../../../../domains/sale.domain'
 import type { IClock } from '../../../shared/ports/clock.port'
@@ -12,6 +12,7 @@ import { TOKENS } from '../../../tokens'
 import { orderQuoteSourceToken, type IOrderQuoteSource } from '../ports/order-quote-source.port'
 import { priceQuoteRepositoryToken, type IPriceQuoteRepository } from '../ports/price-quote.repository'
 import { promotionCatalogToken, type IPromotionCatalog } from '../ports/promotion-catalog.port'
+import { promotionUsageToken, type IPromotionUsage } from '../ports/promotion-usage.port'
 import { quoteLineOptionsToken, type IQuoteLineOptions } from '../ports/quote-line-options.port'
 import { quoteMembersToken, type IQuoteMembers } from '../ports/quote-members.port'
 import { quoteProductsToken, type IQuoteProducts } from '../ports/quote-products.port'
@@ -34,6 +35,7 @@ export class CreateQuoteUseCase {
     @inject(orderQuoteSourceToken) private readonly orders: IOrderQuoteSource,
     @inject(priceQuoteRepositoryToken) private readonly quotes: IPriceQuoteRepository,
     @inject(TOKENS.Clock) private readonly clock: IClock,
+    @inject(promotionUsageToken) private readonly usage: IPromotionUsage,
   ) {}
 
   async execute(input: unknown, actor: { id: number }, branch: { id: number }) {
@@ -63,8 +65,9 @@ export class CreateQuoteUseCase {
     const subtotalSatang = lines.reduce((total, line) => total + line.unitPriceSatang * line.quantity, 0)
     // One question for both a cart and an order: an order's lines carry no category.
     const categories = await this.products.categoriesOf([...new Set(lines.map((line) => line.productId))])
-    const best = pickBestPromotion(await this.catalog.activePromotions(), {
-      subtotalSatang,
+    const best = pickBestPromotion(
+      await this.dropUsedUp(await this.catalog.activePromotions(), member !== null, memberId),
+      {subtotalSatang,
       hasMember: member !== null,
       at: now,
       timeZone: shop.timeZone,
@@ -78,7 +81,8 @@ export class CreateQuoteUseCase {
       })),
       // Task 4 wires the typed coupon code into the context.
       couponCode: null,
-    })
+      },
+    )
 
     return this.quotes.create(
       PriceQuoteEntity.price(
@@ -96,6 +100,20 @@ export class CreateQuoteUseCase {
         now,
       ),
     )
+  }
+
+  /** A quote pins a price but not a slot: a promotion every slot of which is spent is simply not offered. No row is locked, because nothing is being claimed yet. */
+  private async dropUsedUp<T extends PromotionCandidate>(promotions: readonly T[], hasMember: boolean, memberId: number | null) {
+    const kept: T[] = []
+    for (const promotion of promotions) {
+      const limits = { maxUses: promotion.maxUses, maxUsesPerMember: promotion.maxUsesPerMember }
+      if (limits.maxUses === null && limits.maxUsesPerMember === null) {
+        kept.push(promotion)
+        continue
+      }
+      if (hasUsesLeft(limits, await this.usage.countUses(promotion.id, memberId), hasMember)) kept.push(promotion)
+    }
+    return kept
   }
 
   /** The same product with the same options is one line; stock is the product's, so checked for the total. */

@@ -7,6 +7,7 @@ const fixture = {
   startsOn: null, endsOn: null, weekdays: null, windowStartMinute: null, windowEndMinute: null,
   audience: 'everyone' as const, isActive: true, scope: null, imageUrl: null,
   couponCode: null, buyQuantity: null, freeQuantity: null, maxUses: null, maxUsesPerMember: null,
+  usedCount: 0, isExhausted: false,
   createdAt: new Date('2026-10-15T12:00:00Z'), updatedAt: new Date('2026-10-15T12:00:00Z'),
 }
 

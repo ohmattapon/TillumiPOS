@@ -20360,6 +20360,9 @@
                           "isActive": {
                             "type": "boolean"
                           },
+                          "isExhausted": {
+                            "type": "boolean"
+                          },
                           "kind": {
                             "enum": [
                               "fixed",
@@ -20516,6 +20519,18 @@
                               }
                             ]
                           },
+                          "usedCount": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "value": {
                             "anyOf": [
                               {
@@ -20608,6 +20623,8 @@
                           "freeQuantity",
                           "maxUses",
                           "maxUsesPerMember",
+                          "usedCount",
+                          "isExhausted",
                           "imageUrl",
                           "createdAt",
                           "updatedAt"
@@ -21713,397 +21730,7 @@
                     "isActive": {
                       "type": "boolean"
                     },
-                    "kind": {
-                      "enum": [
-                        "fixed",
-                        "percent",
-                        "bundle"
-                      ],
-                      "type": "string"
-                    },
-                    "maxDiscountSatang": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    },
-                    "maxUses": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    },
-                    "maxUsesPerMember": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    },
-                    "minSubtotalSatang": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    },
-                    "name": {
-                      "maxLength": 80,
-                      "minLength": 1,
-                      "type": "string"
-                    },
-                    "scope": {
-                      "nullable": true,
-                      "properties": {
-                        "categoryIds": {
-                          "items": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "minimum": 1,
-                                "type": "integer"
-                              }
-                            ],
-                            "minimum": 1
-                          },
-                          "maxItems": 500,
-                          "type": "array"
-                        },
-                        "productIds": {
-                          "items": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "minimum": 1,
-                                "type": "integer"
-                              }
-                            ],
-                            "minimum": 1
-                          },
-                          "maxItems": 500,
-                          "type": "array"
-                        }
-                      },
-                      "required": [
-                        "productIds",
-                        "categoryIds"
-                      ],
-                      "type": [
-                        "object",
-                        "null"
-                      ]
-                    },
-                    "startsOn": {
-                      "nullable": true,
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "updatedAt": {
-                      "anyOf": [
-                        {
-                          "format": "date-time",
-                          "type": "string"
-                        },
-                        {
-                          "format": "date",
-                          "type": "string"
-                        },
-                        {
-                          "type": "number"
-                        }
-                      ]
-                    },
-                    "value": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    },
-                    "weekdays": {
-                      "items": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      },
-                      "nullable": true,
-                      "type": [
-                        "array",
-                        "null"
-                      ]
-                    },
-                    "windowEndMinute": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    },
-                    "windowStartMinute": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "name",
-                    "kind",
-                    "value",
-                    "maxDiscountSatang",
-                    "minSubtotalSatang",
-                    "startsOn",
-                    "endsOn",
-                    "weekdays",
-                    "windowStartMinute",
-                    "windowEndMinute",
-                    "audience",
-                    "isActive",
-                    "scope",
-                    "couponCode",
-                    "buyQuantity",
-                    "freeQuantity",
-                    "maxUses",
-                    "maxUsesPerMember",
-                    "imageUrl",
-                    "createdAt",
-                    "updatedAt"
-                  ],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Response for status 200"
-          }
-        },
-        "summary": "สร้างโปรโมชัน",
-        "tags": [
-          "Promotions"
-        ]
-      }
-    },
-    "/api/v1/promotions/{id}": {
-      "get": {
-        "operationId": "getApiV1PromotionsById",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "anyOf": [
-                {
-                  "default": 0,
-                  "format": "numeric",
-                  "type": "string"
-                },
-                {
-                  "minimum": 1,
-                  "type": "number"
-                }
-              ],
-              "minimum": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "audience": {
-                      "enum": [
-                        "everyone",
-                        "members"
-                      ],
-                      "type": "string"
-                    },
-                    "buyQuantity": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    },
-                    "couponCode": {
-                      "nullable": true,
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "createdAt": {
-                      "anyOf": [
-                        {
-                          "format": "date-time",
-                          "type": "string"
-                        },
-                        {
-                          "format": "date",
-                          "type": "string"
-                        },
-                        {
-                          "type": "number"
-                        }
-                      ]
-                    },
-                    "endsOn": {
-                      "nullable": true,
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "freeQuantity": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    },
-                    "id": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    },
-                    "imageUrl": {
-                      "nullable": true,
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "isActive": {
+                    "isExhausted": {
                       "type": "boolean"
                     },
                     "kind": {
@@ -22262,6 +21889,18 @@
                         }
                       ]
                     },
+                    "usedCount": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "value": {
                       "anyOf": [
                         {
@@ -22354,6 +21993,418 @@
                     "freeQuantity",
                     "maxUses",
                     "maxUsesPerMember",
+                    "usedCount",
+                    "isExhausted",
+                    "imageUrl",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "สร้างโปรโมชัน",
+        "tags": [
+          "Promotions"
+        ]
+      }
+    },
+    "/api/v1/promotions/{id}": {
+      "get": {
+        "operationId": "getApiV1PromotionsById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "audience": {
+                      "enum": [
+                        "everyone",
+                        "members"
+                      ],
+                      "type": "string"
+                    },
+                    "buyQuantity": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "couponCode": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "endsOn": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "freeQuantity": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "imageUrl": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "isExhausted": {
+                      "type": "boolean"
+                    },
+                    "kind": {
+                      "enum": [
+                        "fixed",
+                        "percent",
+                        "bundle"
+                      ],
+                      "type": "string"
+                    },
+                    "maxDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "maxUses": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "maxUsesPerMember": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "minSubtotalSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "name": {
+                      "maxLength": 80,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "scope": {
+                      "nullable": true,
+                      "properties": {
+                        "categoryIds": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 500,
+                          "type": "array"
+                        },
+                        "productIds": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 500,
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "productIds",
+                        "categoryIds"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "startsOn": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "updatedAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "usedCount": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "value": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "weekdays": {
+                      "items": {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "type": "integer"
+                          }
+                        ]
+                      },
+                      "nullable": true,
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "windowEndMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "windowStartMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "kind",
+                    "value",
+                    "maxDiscountSatang",
+                    "minSubtotalSatang",
+                    "startsOn",
+                    "endsOn",
+                    "weekdays",
+                    "windowStartMinute",
+                    "windowEndMinute",
+                    "audience",
+                    "isActive",
+                    "scope",
+                    "couponCode",
+                    "buyQuantity",
+                    "freeQuantity",
+                    "maxUses",
+                    "maxUsesPerMember",
+                    "usedCount",
+                    "isExhausted",
                     "imageUrl",
                     "createdAt",
                     "updatedAt"
@@ -23444,397 +23495,7 @@
                     "isActive": {
                       "type": "boolean"
                     },
-                    "kind": {
-                      "enum": [
-                        "fixed",
-                        "percent",
-                        "bundle"
-                      ],
-                      "type": "string"
-                    },
-                    "maxDiscountSatang": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    },
-                    "maxUses": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    },
-                    "maxUsesPerMember": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    },
-                    "minSubtotalSatang": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    },
-                    "name": {
-                      "maxLength": 80,
-                      "minLength": 1,
-                      "type": "string"
-                    },
-                    "scope": {
-                      "nullable": true,
-                      "properties": {
-                        "categoryIds": {
-                          "items": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "minimum": 1,
-                                "type": "integer"
-                              }
-                            ],
-                            "minimum": 1
-                          },
-                          "maxItems": 500,
-                          "type": "array"
-                        },
-                        "productIds": {
-                          "items": {
-                            "anyOf": [
-                              {
-                                "default": 0,
-                                "format": "integer",
-                                "type": "string"
-                              },
-                              {
-                                "minimum": 1,
-                                "type": "integer"
-                              }
-                            ],
-                            "minimum": 1
-                          },
-                          "maxItems": 500,
-                          "type": "array"
-                        }
-                      },
-                      "required": [
-                        "productIds",
-                        "categoryIds"
-                      ],
-                      "type": [
-                        "object",
-                        "null"
-                      ]
-                    },
-                    "startsOn": {
-                      "nullable": true,
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "updatedAt": {
-                      "anyOf": [
-                        {
-                          "format": "date-time",
-                          "type": "string"
-                        },
-                        {
-                          "format": "date",
-                          "type": "string"
-                        },
-                        {
-                          "type": "number"
-                        }
-                      ]
-                    },
-                    "value": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    },
-                    "weekdays": {
-                      "items": {
-                        "anyOf": [
-                          {
-                            "default": 0,
-                            "format": "integer",
-                            "type": "string"
-                          },
-                          {
-                            "type": "integer"
-                          }
-                        ]
-                      },
-                      "nullable": true,
-                      "type": [
-                        "array",
-                        "null"
-                      ]
-                    },
-                    "windowEndMinute": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    },
-                    "windowStartMinute": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "name",
-                    "kind",
-                    "value",
-                    "maxDiscountSatang",
-                    "minSubtotalSatang",
-                    "startsOn",
-                    "endsOn",
-                    "weekdays",
-                    "windowStartMinute",
-                    "windowEndMinute",
-                    "audience",
-                    "isActive",
-                    "scope",
-                    "couponCode",
-                    "buyQuantity",
-                    "freeQuantity",
-                    "maxUses",
-                    "maxUsesPerMember",
-                    "imageUrl",
-                    "createdAt",
-                    "updatedAt"
-                  ],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Response for status 200"
-          }
-        },
-        "summary": "แก้ไขโปรโมชันและเปิด/ปิดใช้",
-        "tags": [
-          "Promotions"
-        ]
-      }
-    },
-    "/api/v1/promotions/{id}/image": {
-      "delete": {
-        "operationId": "deleteApiV1PromotionsByIdImage",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "anyOf": [
-                {
-                  "default": 0,
-                  "format": "numeric",
-                  "type": "string"
-                },
-                {
-                  "minimum": 1,
-                  "type": "number"
-                }
-              ],
-              "minimum": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "audience": {
-                      "enum": [
-                        "everyone",
-                        "members"
-                      ],
-                      "type": "string"
-                    },
-                    "buyQuantity": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    },
-                    "couponCode": {
-                      "nullable": true,
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "createdAt": {
-                      "anyOf": [
-                        {
-                          "format": "date-time",
-                          "type": "string"
-                        },
-                        {
-                          "format": "date",
-                          "type": "string"
-                        },
-                        {
-                          "type": "number"
-                        }
-                      ]
-                    },
-                    "endsOn": {
-                      "nullable": true,
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "freeQuantity": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "default": 0,
-                              "format": "integer",
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "nullable": true
-                    },
-                    "id": {
-                      "anyOf": [
-                        {
-                          "default": 0,
-                          "format": "integer",
-                          "type": "string"
-                        },
-                        {
-                          "type": "integer"
-                        }
-                      ]
-                    },
-                    "imageUrl": {
-                      "nullable": true,
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "isActive": {
+                    "isExhausted": {
                       "type": "boolean"
                     },
                     "kind": {
@@ -23993,6 +23654,18 @@
                         }
                       ]
                     },
+                    "usedCount": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "value": {
                       "anyOf": [
                         {
@@ -24085,6 +23758,418 @@
                     "freeQuantity",
                     "maxUses",
                     "maxUsesPerMember",
+                    "usedCount",
+                    "isExhausted",
+                    "imageUrl",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "แก้ไขโปรโมชันและเปิด/ปิดใช้",
+        "tags": [
+          "Promotions"
+        ]
+      }
+    },
+    "/api/v1/promotions/{id}/image": {
+      "delete": {
+        "operationId": "deleteApiV1PromotionsByIdImage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "audience": {
+                      "enum": [
+                        "everyone",
+                        "members"
+                      ],
+                      "type": "string"
+                    },
+                    "buyQuantity": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "couponCode": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "endsOn": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "freeQuantity": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "id": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "imageUrl": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "isExhausted": {
+                      "type": "boolean"
+                    },
+                    "kind": {
+                      "enum": [
+                        "fixed",
+                        "percent",
+                        "bundle"
+                      ],
+                      "type": "string"
+                    },
+                    "maxDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "maxUses": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "maxUsesPerMember": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "minSubtotalSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "name": {
+                      "maxLength": 80,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "scope": {
+                      "nullable": true,
+                      "properties": {
+                        "categoryIds": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 500,
+                          "type": "array"
+                        },
+                        "productIds": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "minimum": 1,
+                                "type": "integer"
+                              }
+                            ],
+                            "minimum": 1
+                          },
+                          "maxItems": 500,
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "productIds",
+                        "categoryIds"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "startsOn": {
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "updatedAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "usedCount": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "value": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "weekdays": {
+                      "items": {
+                        "anyOf": [
+                          {
+                            "default": 0,
+                            "format": "integer",
+                            "type": "string"
+                          },
+                          {
+                            "type": "integer"
+                          }
+                        ]
+                      },
+                      "nullable": true,
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "windowEndMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "windowStartMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "kind",
+                    "value",
+                    "maxDiscountSatang",
+                    "minSubtotalSatang",
+                    "startsOn",
+                    "endsOn",
+                    "weekdays",
+                    "windowStartMinute",
+                    "windowEndMinute",
+                    "audience",
+                    "isActive",
+                    "scope",
+                    "couponCode",
+                    "buyQuantity",
+                    "freeQuantity",
+                    "maxUses",
+                    "maxUsesPerMember",
+                    "usedCount",
+                    "isExhausted",
                     "imageUrl",
                     "createdAt",
                     "updatedAt"
@@ -24296,6 +24381,9 @@
                     "isActive": {
                       "type": "boolean"
                     },
+                    "isExhausted": {
+                      "type": "boolean"
+                    },
                     "kind": {
                       "enum": [
                         "fixed",
@@ -24452,6 +24540,18 @@
                         }
                       ]
                     },
+                    "usedCount": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "value": {
                       "anyOf": [
                         {
@@ -24544,6 +24644,8 @@
                     "freeQuantity",
                     "maxUses",
                     "maxUsesPerMember",
+                    "usedCount",
+                    "isExhausted",
                     "imageUrl",
                     "createdAt",
                     "updatedAt"

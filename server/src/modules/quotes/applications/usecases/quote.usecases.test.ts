@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 import { makeProduct, makePriceQuote } from '../../../../__tests__/factories'
 import {
   mockClock, mockLineOptionsResolver, mockMemberRepository, mockOrderQuoteSource, mockPriceQuoteRepository,
-  mockPromotionCatalog, mockQuoteProducts, mockShopSettingsRepository, mockUnitOfWork,
+  mockPromotionCatalog, mockPromotionUsage, mockQuoteProducts, mockShopSettingsRepository, mockUnitOfWork,
 } from '../../../../__tests__/mocks'
 import { MemberEntity } from '../../../../domains/member.domain'
 import { PriceQuoteEntity } from '../../../../domains/price-quote.domain'
@@ -34,6 +34,7 @@ let members: ReturnType<typeof mockMemberRepository>
 let catalog: ReturnType<typeof mockPromotionCatalog>
 let orders: ReturnType<typeof mockOrderQuoteSource>
 let quotes: ReturnType<typeof mockPriceQuoteRepository>
+let usage: ReturnType<typeof mockPromotionUsage>
 let create: CreateQuoteUseCase
 
 beforeEach(() => {
@@ -49,7 +50,8 @@ beforeEach(() => {
   quotes.create.mockImplementation(async (priced) =>
     new PriceQuoteEntity({ ...priced, id: 5, status: 'open', qrReference: null, saleId: null, createdAt: now }),
   )
-  create = new CreateQuoteUseCase(products, lineOptions, settings, members, catalog, orders, quotes, mockClock(now))
+  usage = mockPromotionUsage()
+  create = new CreateQuoteUseCase(products, lineOptions, settings, members, catalog, orders, quotes, mockClock(now), usage)
 })
 
 describe('CreateQuoteUseCase', () => {
@@ -184,6 +186,39 @@ describe('CreateQuoteUseCase', () => {
     await expect(create.execute({}, actor, branch)).rejects.toThrow()
     await expect(create.execute({ orderId: 9, lines: [{ productId: 1, quantity: 1 }] }, actor, branch)).rejects.toThrow()
     await expect(create.execute({ orderId: 9, memberId: 8 }, actor, branch)).rejects.toThrow()
+  })
+})
+
+describe('CreateQuoteUseCase usage limits', () => {
+  test('a full promotion is left out of a new quote, without locking anything', async () => {
+    catalog.activePromotions.mockResolvedValue([promotion({ id: 1, maxUses: 1 })])
+    usage.countUses.mockResolvedValue({ total: 1, byMember: 0 })
+    const quote = await create.execute({ lines: [{ productId: 1, quantity: 2 }] }, actor, branch)
+    expect(usage.countUses).toHaveBeenCalledWith(1, null)
+    expect(usage.lockForUse).not.toHaveBeenCalled()
+    expect(quote.promotion).toBeNull()
+    expect(quote.discountSatang).toBe(0)
+  })
+
+  test('a limited promotion still applies while it has uses left', async () => {
+    catalog.activePromotions.mockResolvedValue([promotion({ id: 1, maxUses: 5 })])
+    usage.countUses.mockResolvedValue({ total: 4, byMember: 0 })
+    const quote = await create.execute({ lines: [{ productId: 1, quantity: 2 }] }, actor, branch)
+    expect(quote.promotion?.id).toBe(1)
+  })
+
+  test('per-member limit counts only that member', async () => {
+    catalog.activePromotions.mockResolvedValue([promotion({ id: 1, audience: 'members', maxUsesPerMember: 2 })])
+    members.findById.mockResolvedValue(member())
+    usage.countUses.mockResolvedValue({ total: 9, byMember: 2 })
+    const blocked = await create.execute({ lines: [{ productId: 1, quantity: 2 }], memberId: 8 }, actor, branch)
+    expect(usage.countUses).toHaveBeenCalledWith(1, 8)
+    expect(blocked.promotion).toBeNull()
+    expect(blocked.discountSatang).toBe(0)
+    // Another member still has slots of their own, even though the promotion was used 9 times in total.
+    usage.countUses.mockResolvedValue({ total: 9, byMember: 1 })
+    const allowed = await create.execute({ lines: [{ productId: 1, quantity: 2 }], memberId: 8 }, actor, branch)
+    expect(allowed.promotion?.id).toBe(1)
   })
 })
 

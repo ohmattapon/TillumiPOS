@@ -154,9 +154,10 @@ Every operation is a use case that is exactly one of a command or a query, and t
 - A quote (`price_quotes`) is a cart that the server has priced and pinned: the lines, unit prices, member, promotion, discount, `vatMode`, `vatRateBp` and the grand total. A bill sold with a `quoteId` uses all of these values, even if the promotion has since been disabled, a product price changed or the tax edited. A request that does not send a `quoteId` must behave exactly as before.
 - An `open` quote expires with time (15 minutes), but a quote reserved by a QR (`reserved`) does not expire until the QR is used, cancelled or dismissed, so that money that arrives late still gets a bill at the original amount. Never add a path that releases a reserved quote without going through QR cancellation or dismissal.
 - A sale with a quote checks that the member is enabled when the quote is created and does not check again at payment, because the money may already have been paid. A QR reserved by a quote cannot be used with a request that does not send a `quoteId` (`QUOTE_REQUIRED` with `params.quoteId`).
-- Lock order when selling: order → QR payment record → quote → member → product. A command that cancels or dismisses a QR locks the QR first and only then touches the quote.
+- Lock order when selling: order → QR payment record → quote → promotion → member → product. The promotion row is locked by `lockForUse` before its uses are counted. A command that cancels or dismisses a QR locks the QR first and only then touches the quote.
 - An order whose quote is reserved by a QR cannot be edited (`ORDER_LOCKED_BY_QR_PAYMENT`), checked in one place, the `save` of `GuardedOrderRepository`
 - `GET /api/v1/quotes/{id}` is a pure query. It must not extend the expiry or write data.
+- Usage limits (`maxUses`, `maxUsesPerMember`) live on the promotion but are enforced in the quotes module (`IPromotionUsage`): a full promotion is not offered when a quote is made, and paying out of a quote answers `PROMOTION_LIMIT_REACHED` under the promotion's row lock. A quote a QR holds spent its slot when it was reserved and is never re-checked, and voiding a bill gives the slot back (counted sales are `completed` only).
 
 ### Tables (tables)
 

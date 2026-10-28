@@ -1,4 +1,5 @@
 import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 import type { QuoteLine } from '../../../domains/price-quote.domain'
 import type { SaleMember, SalePromotion } from '../../../domains/sale.domain'
 import { id, timestamps } from '../columns'
@@ -44,5 +45,7 @@ export const priceQuotes = pgTable(
     uniqueIndex('price_quotes_qr_reference_unique').on(table.qrReference),
     uniqueIndex('price_quotes_sale_id_unique').on(table.saleId),
     index('price_quotes_order_status_idx').on(table.orderId, table.status),
+    // Speeds up usage-limit counting, which hashes into the promotion snapshot's id on every paid quote.
+    index('price_quotes_promotion_id_idx').on(sql`(${table.promotion} ->> 'id')`),
   ],
 )
