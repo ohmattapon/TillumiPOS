@@ -39,6 +39,13 @@ export const shopSettings = pgTable(
     cashDrawerEnabled: boolean().notNull().default(false),
     // Storage key of the logo printed at the top of receipts; null means no logo.
     logoKey: text(),
+    // Off by default: a shop that has not set a rule earns and redeems nothing.
+    pointsEnabled: boolean().notNull().default(false),
+    // Baht per point, in satang: 2500 means one point for every 25 baht paid.
+    pointsEarnSatang: integer().notNull().default(2500),
+    // What one point is worth when redeemed, in satang.
+    pointsRedeemSatang: integer().notNull().default(100),
+    pointsMinRedeem: integer().notNull().default(10),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [check('shop_settings_single_row', sql`${table.id} = 1`)],

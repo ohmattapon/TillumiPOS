@@ -127,6 +127,24 @@ describe('UpdateShopSettingsUseCase', () => {
     expect(saved.receiptPrinterIp).toBeNull()
   })
 
+  test('stores a valid points rule', async () => {
+    const saved = await update({ pointsEnabled: true, pointsEarnSatang: 5000, pointsRedeemSatang: 50, pointsMinRedeem: 20 })
+
+    expect(saved.toSnapshot()).toEqual({
+      ...current.toSnapshot(),
+      pointsEnabled: true,
+      pointsEarnSatang: 5000,
+      pointsRedeemSatang: 50,
+      pointsMinRedeem: 20,
+    })
+    expect(repo.save).toHaveBeenCalledWith(saved)
+  })
+
+  test('refuses a points rule that earns faster than one point per baht, and stores nothing', async () => {
+    await expect(update({ pointsEarnSatang: 99 })).rejects.toBeInstanceOf(ZodError)
+    expect(repo.save).not.toHaveBeenCalled()
+  })
+
   test.each([
     ['an unknown PromptPay mode', { promptpayMode: 'qr' }],
     ['a non-digit PromptPay target', { promptpayTarget: '081-234-5678' }],

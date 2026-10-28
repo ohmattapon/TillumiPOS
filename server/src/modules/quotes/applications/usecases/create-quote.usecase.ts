@@ -1,10 +1,18 @@
 import { inject, injectable } from 'tsyringe'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
+import {
+  assertRedeemable,
+  pointsDiscountSatang as discountForPoints,
+  type PointsRule,
+} from '../../../../domains/member-points'
 import { lineKey } from '../../../../domains/modifier.domain'
 import { assertPackHasNoOptions, packUnitPriceSatang } from '../../../../domains/product-pack'
 import { PriceQuoteEntity, type QuoteLine } from '../../../../domains/price-quote.domain'
-import { pickBestPromotion } from '../../../../domains/promotion.domain'
+import {
+  couponIneligibility, hasUsesLeft, normalizeCouponCode, pickBestPromotion,
+  type PromotionCandidate, type PromotionEntity, type PromotionContext,
+} from '../../../../domains/promotion.domain'
 import type { ProductEntity } from '../../../../domains/product.domain'
 import type { SaleMember } from '../../../../domains/sale.domain'
 import type { IClock } from '../../../shared/ports/clock.port'
@@ -12,11 +20,22 @@ import { TOKENS } from '../../../tokens'
 import { orderQuoteSourceToken, type IOrderQuoteSource } from '../ports/order-quote-source.port'
 import { priceQuoteRepositoryToken, type IPriceQuoteRepository } from '../ports/price-quote.repository'
 import { promotionCatalogToken, type IPromotionCatalog } from '../ports/promotion-catalog.port'
+import { promotionUsageToken, type IPromotionUsage } from '../ports/promotion-usage.port'
 import { quoteLineOptionsToken, type IQuoteLineOptions } from '../ports/quote-line-options.port'
 import { quoteMembersToken, type IQuoteMembers } from '../ports/quote-members.port'
+import { quotePointsToken, type IQuotePoints } from '../ports/quote-points.port'
 import { quoteProductsToken, type IQuoteProducts } from '../ports/quote-products.port'
 import { quoteShopRulesToken, type IQuoteShopRules } from '../ports/quote-shop-rules.port'
 import { createQuoteSchema } from '../schemas/quote-schemas'
+
+/** Why a typed coupon cannot apply, each with the wording the cashier sees. */
+const COUPON_INAPPLICABLE: Record<string, string> = {
+  not_running: 'โค้ดคูปองนี้ยังไม่เริ่มหรือหมดช่วงเวลาที่ใช้ได้แล้ว',
+  min_subtotal: 'ยอดรวมสินค้าไม่ถึงยอดขั้นต่ำของโค้ดคูปองนี้',
+  members_only: 'โค้ดคูปองนี้สำหรับสมาชิกเท่านั้น',
+  exhausted: 'โค้ดคูปองนี้ถูกใช้ครบจำนวนครั้งที่กำหนดแล้ว',
+  not_eligible: 'รายการในตะกร้าไม่เข้าเงื่อนไขของโค้ดคูปองนี้',
+}
 
 /**
  * Command: prices a cart (or an open order) with the catalogue and the shop's rules as they are now,
@@ -34,6 +53,8 @@ export class CreateQuoteUseCase {
     @inject(orderQuoteSourceToken) private readonly orders: IOrderQuoteSource,
     @inject(priceQuoteRepositoryToken) private readonly quotes: IPriceQuoteRepository,
     @inject(TOKENS.Clock) private readonly clock: IClock,
+    @inject(promotionUsageToken) private readonly usage: IPromotionUsage,
+    @inject(quotePointsToken) private readonly points: IQuotePoints,
   ) {}
 
   async execute(input: unknown, actor: { id: number }, branch: { id: number }) {
@@ -63,7 +84,8 @@ export class CreateQuoteUseCase {
     const subtotalSatang = lines.reduce((total, line) => total + line.unitPriceSatang * line.quantity, 0)
     // One question for both a cart and an order: an order's lines carry no category.
     const categories = await this.products.categoriesOf([...new Set(lines.map((line) => line.productId))])
-    const best = pickBestPromotion(await this.catalog.activePromotions(), {
+    const couponCode = dto.couponCode ?? null
+    const context: PromotionContext = {
       subtotalSatang,
       hasMember: member !== null,
       at: now,
@@ -71,9 +93,48 @@ export class CreateQuoteUseCase {
       lines: lines.map((line) => ({
         productId: line.productId,
         categoryId: categories.get(line.productId) ?? null,
+        unitPriceSatang: line.unitPriceSatang,
+        quantity: line.quantity,
+        isPack: line.packId !== null,
         lineTotalSatang: line.unitPriceSatang * line.quantity,
       })),
-    })
+      couponCode,
+    }
+
+    const promotions = await this.catalog.activePromotions()
+    let couponPromotion: PromotionEntity | null = null
+    if (couponCode !== null) {
+      // Only a promotion that is switched on answers a code: an inactive one counts as not found.
+      couponPromotion = promotions.find((candidate) => candidate.couponCode !== null && normalizeCouponCode(candidate.couponCode) === couponCode) ?? null
+      if (couponPromotion === null)
+        throw new DomainNotFoundError(`ไม่พบโค้ดคูปอง ${couponCode}`, 'COUPON_NOT_FOUND')
+      const ruleReason = couponIneligibility(couponPromotion, context)
+      const uses = await this.usage.countUses(couponPromotion.id, memberId)
+      const noMoreUses = !hasUsesLeft(couponPromotion, uses, member !== null)
+      const reason = ruleReason ?? (noMoreUses ? 'exhausted' : null)
+      if (reason !== null)
+        throw new DomainError(COUPON_INAPPLICABLE[reason]!, 'COUPON_NOT_APPLICABLE', { reason })
+    }
+
+    const best = pickBestPromotion(await this.dropUsedUp(promotions, member !== null, memberId), context)
+
+    // The rule is pinned on the quote, so a sale made from it redeems at the rate the cashier saw.
+    const rule: PointsRule = {
+      earnSatang: shop.pointsEarnSatang,
+      redeemSatang: shop.pointsRedeemSatang,
+      minRedeem: shop.pointsMinRedeem,
+    }
+    const redeemPoints = dto.redeemPoints ?? 0
+    let pointsDiscount = 0
+    if (redeemPoints > 0) {
+      if (memberId === null) throw new DomainError('ต้องเลือกสมาชิกก่อนใช้แต้ม', 'MEMBER_REQUIRED')
+      if (!shop.pointsEnabled) throw new DomainError('ร้านนี้ยังไม่เปิดใช้แต้มสมาชิก', 'POINTS_DISABLED')
+      // Points come off what is left after the promotion, so a cart can never pay less than nothing.
+      const payableSatang = subtotalSatang - (best?.discountSatang ?? 0)
+      const balance = await this.points.balanceOf(memberId)
+      assertRedeemable(redeemPoints, payableSatang, balance, rule)
+      pointsDiscount = discountForPoints(redeemPoints, rule)
+    }
 
     return this.quotes.create(
       PriceQuoteEntity.price(
@@ -84,13 +145,32 @@ export class CreateQuoteUseCase {
           orderId: dto.orderId ?? null,
           lines,
           promotion: best ? best.promotion.toSalePromotion(best.discountSatang) : null,
+          // The typed code is pinned even when a better automatic promotion won: the till shows what was typed.
+          couponCode,
           vatMode: shop.vatMode,
           vatRateBp: shop.vatRateBp,
+          pointsRedeemed: redeemPoints,
+          pointsDiscountSatang: pointsDiscount,
+          pointsRule: rule,
           createdById: actor.id,
         },
         now,
       ),
     )
+  }
+
+  /** A quote pins a price but not a slot: a promotion every slot of which is spent is simply not offered. No row is locked, because nothing is being claimed yet. */
+  private async dropUsedUp<T extends PromotionCandidate>(promotions: readonly T[], hasMember: boolean, memberId: number | null) {
+    const kept: T[] = []
+    for (const promotion of promotions) {
+      const limits = { maxUses: promotion.maxUses, maxUsesPerMember: promotion.maxUsesPerMember }
+      if (limits.maxUses === null && limits.maxUsesPerMember === null) {
+        kept.push(promotion)
+        continue
+      }
+      if (hasUsesLeft(limits, await this.usage.countUses(promotion.id, memberId), hasMember)) kept.push(promotion)
+    }
+    return kept
   }
 
   /** The same product with the same options is one line; stock is the product's, so checked for the total. */

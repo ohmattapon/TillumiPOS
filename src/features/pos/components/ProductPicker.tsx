@@ -23,7 +23,9 @@ import { offeredGroups } from '../lib/options'
 import { matchScan } from '../lib/scan'
 import { useCartActions } from '../hooks/use-cart-actions'
 import { useCartStore } from '../store/cart.store'
+import { unitChoices } from '../lib/units'
 import { OptionsDialog } from './OptionsDialog'
+import { UnitDialog } from './UnitDialog'
 
 interface Props {
   /** Owned by the page so it can also return focus here after a sale. */
@@ -40,6 +42,7 @@ export function ProductPicker({ searchRef }: Props) {
   const modifiers = useQuery(modifierGroupsQuery)
   const { add: addToCart } = useCartActions()
   const [choosing, setChoosing] = useState<Product | null>(null)
+  const [choosingUnit, setChoosingUnit] = useState<Product | null>(null)
 
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('all')
@@ -73,6 +76,11 @@ export function ProductPicker({ searchRef }: Props) {
     // A product with option groups is asked about them first; one without goes straight into the cart.
     if (offeredGroups(modifiers.data ?? [], product.id).length > 0) {
       setChoosing(product)
+      return
+    }
+    // A product sold by the pack asks which unit first, unless an order is open: an order never carries a pack.
+    if (useCartStore.getState().orderId === null && unitChoices(product).length > 1) {
+      setChoosingUnit(product)
       return
     }
     addToCart(product.id)
@@ -208,6 +216,17 @@ export function ProductPicker({ searchRef }: Props) {
             setChoosing(null)
             if (hasKeyboard()) searchRef.current?.focus()
           }}
+        />
+      )}
+      {choosingUnit && (
+        <UnitDialog
+          product={choosingUnit}
+          onPick={(packId) => {
+            addToCart(choosingUnit.id, [], packId)
+            setChoosingUnit(null)
+            if (hasKeyboard()) searchRef.current?.focus()
+          }}
+          onCancel={() => setChoosingUnit(null)}
         />
       )}
     </section>

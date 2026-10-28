@@ -1,0 +1,1 @@
+DROP INDEX "member_point_movements_quote_kind_unique";

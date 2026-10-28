@@ -46,9 +46,11 @@ export function useUpdatePromotion() {
 }
 
 export interface QuoteInput {
-  lines?: { productId: number; quantity: number; options?: number[] }[]
+  lines?: { productId: number; quantity: number; options?: number[]; packId?: number }[]
   memberId?: number | null
   orderId?: number
+  /** The points the member spends; the quote prices them, none for an open order. */
+  redeemPoints?: number
 }
 
 const requestQuote = (input: QuoteInput) => unwrap(api.quotes.post(input))

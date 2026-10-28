@@ -18,7 +18,11 @@ const th = {
   empty: 'ไม่มีข้อมูลในช่วงวันที่เลือก', retry: 'ลองอีกครั้ง',
   basis: 'ใช้ข้อมูล ณ ตอนขาย และสถานะบิลปัจจุบัน บิลยกเลิกไม่รวมในยอดขาย กำไรขั้นต้นยังไม่หักค่าใช้จ่ายร้าน',
   zone: 'เขตเวลาร้าน: {{zone}}', currency: 'สกุลเงิน', generated: 'เวลาส่งออก',
-  summarySheet: 'สรุป', dailySheet: 'รายวัน', productsSheet: 'สินค้า', methodsSheet: 'การชำระเงิน',
+  summarySheet: 'สรุป', dailySheet: 'รายวัน', productsSheet: 'สินค้า', methodsSheet: 'การชำระเงิน', promotionsSheet: 'โปรโมชัน',
+  tabSales: 'ยอดขาย', tabPromotions: 'โปรโมชัน',
+  promotions: 'ยอดขายตามโปรโมชัน', promotionsNote: 'ใช้ชื่อโปรโมชัน ณ ตอนขาย · บิลยกเลิกไม่รวม',
+  promotionName: 'โปรโมชัน', promotionBills: 'จำนวนบิล', promotionDiscount: 'ส่วนลดที่ให้ไป', promotionNetSales: 'ยอดขายไม่รวม VAT',
+  noPromotions: 'ไม่มีบิลที่ใช้โปรโมชันในช่วงนี้',
   cash: 'เงินสด', promptpay: 'พร้อมเพย์', card: 'บัตร',
 }
 const en = {
@@ -41,7 +45,11 @@ const en = {
   empty: 'No data for this period', retry: 'Retry',
   basis: 'Uses sale snapshots and current bill statuses. Voids are excluded from sales. Gross profit does not deduct operating expenses.',
   zone: 'Shop time zone: {{zone}}', currency: 'Currency', generated: 'Exported at',
-  summarySheet: 'Summary', dailySheet: 'Daily', productsSheet: 'Products', methodsSheet: 'Payments',
+  summarySheet: 'Summary', dailySheet: 'Daily', productsSheet: 'Products', methodsSheet: 'Payments', promotionsSheet: 'Promotions',
+  tabSales: 'Sales', tabPromotions: 'Promotions',
+  promotions: 'Sales by promotion', promotionsNote: 'Uses the promotion name as it was at sale time · voids are excluded',
+  promotionName: 'Promotion', promotionBills: 'Bills', promotionDiscount: 'Given away', promotionNetSales: 'Sales excluding VAT',
+  noPromotions: 'No bill used a promotion in this period',
   cash: 'Cash', promptpay: 'PromptPay', card: 'Card',
 } satisfies typeof th
 export const reportsLocales = { th, en }

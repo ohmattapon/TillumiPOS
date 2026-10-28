@@ -7,10 +7,16 @@ export interface MemberEntityProps {
   name: string
   phone: string
   isActive: boolean
+  /** The member's points, kept as the sum of the ledger. Only the ledger writes it. */
+  pointsBalance?: number
   createdAt: Date
   updatedAt: Date
 }
-export interface MemberSnapshot extends MemberEntityProps { code: string }
+export interface MemberSnapshot extends Omit<MemberEntityProps, 'pointsBalance'> {
+  code: string
+  /** Always a number on the way out: a member with no ledger rows has no balance yet. */
+  pointsBalance: number
+}
 
 export class MemberEntity {
   readonly id: number
@@ -18,6 +24,7 @@ export class MemberEntity {
   readonly name: string
   readonly phone: string
   readonly isActive: boolean
+  readonly pointsBalance: number
   readonly createdAt: Date
   readonly updatedAt: Date
 
@@ -30,6 +37,8 @@ export class MemberEntity {
     this.name = name
     this.phone = new MemberPhone(props.phone).value
     this.isActive = props.isActive
+    // A member created before points existed has no balance of its own until the ledger gives it one.
+    this.pointsBalance = props.pointsBalance ?? 0
     this.createdAt = props.createdAt
     this.updatedAt = props.updatedAt
   }
@@ -43,6 +52,15 @@ export class MemberEntity {
   }
 
   toSnapshot(): MemberSnapshot {
-    return { id: this.id, code: this.code, name: this.name, phone: this.phone, isActive: this.isActive, createdAt: this.createdAt, updatedAt: this.updatedAt }
+    return {
+      id: this.id,
+      code: this.code,
+      name: this.name,
+      phone: this.phone,
+      isActive: this.isActive,
+      pointsBalance: this.pointsBalance,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+    }
   }
 }

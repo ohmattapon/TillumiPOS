@@ -17,7 +17,7 @@ const codeOf = (action: () => unknown): string | undefined => {
 const now = new Date('2026-10-15T05:00:00Z')
 const option = { groupId: 1, groupName: 'ท็อปปิง', optionId: 7, name: 'ไข่มุก', priceSatang: 500, costSatang: 200 }
 const input = (overrides: Partial<NewPriceQuote> = {}): NewPriceQuote => ({
-  branchId: 1, memberId: null, member: null, orderId: null,
+  branchId: 1, memberId: null, member: null, orderId: null, couponCode: null,
   lines: [
     { productId: 1, productName: 'ชาไทย', sku: 'T1', unitPriceSatang: 4500, quantity: 2, options: [option], packId: null, packSize: 1 },
     { productId: 2, productName: 'เค้ก', sku: 'C1', unitPriceSatang: 6000, quantity: 1, options: [], packId: null, packSize: 1 },

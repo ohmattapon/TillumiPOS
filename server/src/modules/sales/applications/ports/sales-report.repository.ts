@@ -22,10 +22,20 @@ export interface ReportProduct {
   /** Line totals before bill discounts and any VAT added at checkout. */
   lineTotalSatang: number
 }
+export interface ReportPromotion {
+  promotionId: number
+  /** The name on the latest sale in the range, so bills keep the name they were sold under. */
+  name: string
+  bills: number
+  discountSatang: number
+  /** Bill totals net of VAT, added up as the other reports do. */
+  netSalesSatang: number
+}
 export type ReportPageQuery = SalesReportPeriod & { limit: number; offset: number }
 export interface ISalesReportRepository {
   overview(period: SalesReportPeriod): Promise<ReportOverviewSums>
   products(query: ReportPageQuery): Promise<Page<ReportProduct>>
   branches(query: ReportPageQuery): Promise<Page<SalesReportSums & { branchId: number }>>
+  promotions(query: ReportPageQuery): Promise<Page<ReportPromotion>>
 }
 export const salesReportRepositoryToken = Symbol('ISalesReportRepository').toString()

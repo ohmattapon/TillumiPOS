@@ -52,6 +52,7 @@ describe('toBody', () => {
       ok: true,
       body: {
         name: 'ลดเปิดร้าน', kind: 'percent', value: 1250, maxDiscountSatang: 10000, minSubtotalSatang: 30000,
+        buyQuantity: null, freeQuantity: null, couponCode: null, maxUses: null, maxUsesPerMember: null,
         startsOn: null, endsOn: null, weekdays: null, windowStartMinute: null, windowEndMinute: null,
         audience: 'everyone', isActive: true,
       },
@@ -93,10 +94,38 @@ describe('fromPromotion', () => {
     }
     expect(fromPromotion(stored, baht)).toEqual({
       name: 'ศุกร์ดึก', kind: 'percent', value: '12.5', maxDiscount: '100', minSubtotal: '300',
+      buyQuantity: '', freeQuantity: '', couponCode: '', maxUses: '', maxUsesPerMember: '',
       startsOn: '2026-10-01', endsOn: '', weekdays: [5, 6], windowStart: '22:00', windowEnd: '02:00',
       audience: 'members', isActive: false,
     })
     const again = toBody(fromPromotion(stored, baht), baht)
     expect(again.ok && again.body).toMatchObject({ value: 1250, maxDiscountSatang: 10000, minSubtotalSatang: 30000 })
+  })
+})
+
+describe('bundles, coupons and limits', () => {
+  test('a bundle form maps to buyQuantity and freeQuantity and no value', () => {
+    const result = toBody(form({ kind: 'bundle', value: '20', buyQuantity: '2', freeQuantity: '1' }), baht)
+    expect(result.ok && result.body).toMatchObject({ kind: 'bundle', value: 0, buyQuantity: 2, freeQuantity: 1 })
+    expect(toBody(form({ kind: 'bundle', value: '', buyQuantity: '0', freeQuantity: '1' }), baht)).toEqual({
+      ok: false, problems: ['buyQuantity'],
+    })
+    expect(toBody(form({ kind: 'bundle', value: '', buyQuantity: '2', freeQuantity: '100' }), baht)).toEqual({
+      ok: false, problems: ['freeQuantity'],
+    })
+  })
+
+  test('a coupon code is trimmed and upper-cased', () => {
+    const result = toBody(form({ couponCode: ' summer10 ' }), baht)
+    expect(result.ok && result.body.couponCode).toBe('SUMMER10')
+    expect(toBody(form({ couponCode: 'ab' }), baht)).toEqual({ ok: false, problems: ['couponCode'] })
+    expect(toBody(form({ couponCode: '   ' }), baht)).toMatchObject({ ok: true, body: { couponCode: null } })
+  })
+
+  test('per-member limit is dropped when the audience is everyone', () => {
+    expect(toBody(form({ audience: 'members', maxUses: '50', maxUsesPerMember: '2' }), baht))
+      .toMatchObject({ ok: true, body: { maxUses: 50, maxUsesPerMember: 2 } })
+    expect(toBody(form({ audience: 'everyone', maxUses: '50', maxUsesPerMember: '2' }), baht))
+      .toMatchObject({ ok: true, body: { maxUses: 50, maxUsesPerMember: null } })
   })
 })

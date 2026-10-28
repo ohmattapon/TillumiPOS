@@ -23,6 +23,7 @@
     "db:seed": "bun --env-file=.env server/src/infrastructure/database/seed.ts",
     "db:seed:demo": "bun --env-file=.env server/src/infrastructure/database/seed-demo.ts",
     "db:seed:catalog": "bun --env-file=.env server/src/infrastructure/database/seed-demo-catalog.run.ts",
+    "db:seed:packs": "bun --env-file=.env server/src/infrastructure/database/seed-packs.ts",
     "db:studio": "bun --env-file=.env drizzle-kit studio",
     "e2e": "bun run test:e2e-support && bun e2e/run.ts",
     "e2e:stock-receipts": "bun e2e/stock-receipts.ts",

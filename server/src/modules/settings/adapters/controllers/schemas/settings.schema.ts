@@ -24,6 +24,10 @@ const fields = {
   receiptPrinterPort: t.Integer({ minimum: 1, maximum: 65535 }),
   receiptPrinterEnabled: t.Boolean(),
   cashDrawerEnabled: t.Boolean(),
+  pointsEnabled: t.Boolean(),
+  pointsEarnSatang: t.Integer({ minimum: 100 }),
+  pointsRedeemSatang: t.Integer({ minimum: 1 }),
+  pointsMinRedeem: t.Integer({ minimum: 1 }),
 }
 
 export const settingsSchemas = {

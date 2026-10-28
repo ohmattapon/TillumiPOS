@@ -16,5 +16,9 @@ export function snapshotOf(promotion: PromotionEntity) {
 /** The columns a promotion is stored in: the scope is two id arrays, both null for the whole bill. */
 export function rowOf(promotion: PromotionEntity) {
   const { scope, ...fields } = snapshotOf(promotion)
-  return { ...fields, productIds: scope?.productIds ?? null, categoryIds: scope?.categoryIds ?? null }
+  return {
+    ...fields,
+    productIds: scope?.productIds ?? null,
+    categoryIds: scope?.categoryIds ?? null,
+  }
 }

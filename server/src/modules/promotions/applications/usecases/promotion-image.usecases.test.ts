@@ -21,7 +21,8 @@ const makePromotion = (overrides: Partial<ConstructorParameters<typeof Promotion
     id: 4, name: 'ลด 10%', kind: 'percent', value: 1000, maxDiscountSatang: 100, minSubtotalSatang: 0,
     startsOn: null, endsOn: null, weekdays: null, windowStartMinute: null, windowEndMinute: null,
     audience: 'everyone', isActive: true, scope: null, imageKey: 'promotions/4/old.png',
-    createdAt: now, updatedAt: now, ...overrides,
+    createdAt: now, updatedAt: now,
+    couponCode: null, buyQuantity: null, freeQuantity: null, maxUses: null, maxUsesPerMember: null, ...overrides,
   })
 const notFound = { code: 'PROMOTION_NOT_FOUND' }
 const png = () => new Blob(['image bytes'], { type: 'image/png' })

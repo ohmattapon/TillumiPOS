@@ -1,5 +1,6 @@
 import { DomainConflictError } from './errors/domain-conflict.error'
 import { DomainError } from './errors/domain-error'
+import type { PointsRule } from './member-points'
 import { lineKey, type LineOption } from './modifier.domain'
 import { calculateTotals, type VatMode } from './pricing'
 import { MAX_AMOUNT_SATANG, type SaleMember, type SalePromotion } from './sale.domain'
@@ -48,10 +49,16 @@ export interface NewPriceQuote {
   orderId: number | null
   lines: QuoteLine[]
   promotion: SalePromotion | null
+  /** The coupon code typed when the quote was priced, normalized; null when no coupon was typed. */
+  couponCode: string | null
   /** The VAT rules in force when the quote was made; the sale uses these, not the current ones. */
   vatMode: VatMode
   vatRateBp: number
   createdById: number
+  /** Points the cart pinned: a sale made from it redeems them at this rate, whatever the shop changes since. */
+  pointsRedeemed?: number
+  pointsDiscountSatang?: number
+  pointsRule?: PointsRule | null
 }
 
 export interface PricedQuote extends NewPriceQuote {
@@ -104,12 +111,16 @@ export class PriceQuoteEntity {
   public readonly orderId: number | null
   public readonly lines: readonly QuoteLine[]
   public readonly promotion: Readonly<SalePromotion> | null
+  public readonly couponCode: string | null
   public readonly vatMode: VatMode
   public readonly vatRateBp: number
   public readonly subtotalSatang: number
   public readonly discountSatang: number
   public readonly vatSatang: number
   public readonly totalSatang: number
+  public readonly pointsRedeemed: number
+  public readonly pointsDiscountSatang: number
+  public readonly pointsRule: PointsRule | null
   public readonly status: QuoteStatus
   public readonly qrReference: string | null
   public readonly saleId: number | null
@@ -137,12 +148,17 @@ export class PriceQuoteEntity {
       options: line.options.map((option) => ({ ...option })),
     }))
     this.promotion = props.promotion ? Object.freeze({ ...props.promotion }) : null
+    this.couponCode = props.couponCode
     this.vatMode = props.vatMode
     this.vatRateBp = props.vatRateBp
     this.subtotalSatang = props.subtotalSatang
     this.discountSatang = props.discountSatang
     this.vatSatang = props.vatSatang
     this.totalSatang = props.totalSatang
+    // `?? 0` / `?? null`: a quote stored before points existed has none of them.
+    this.pointsRedeemed = props.pointsRedeemed ?? 0
+    this.pointsDiscountSatang = props.pointsDiscountSatang ?? 0
+    this.pointsRule = props.pointsRule ?? null
     this.status = props.status
     this.qrReference = props.qrReference
     this.saleId = props.saleId
@@ -159,7 +175,9 @@ export class PriceQuoteEntity {
 
     const subtotalSatang = sum(input.lines.map((line) => line.unitPriceSatang * line.quantity))
     if (subtotalSatang > MAX_AMOUNT_SATANG) throw tooLarge()
-    const discountSatang = input.promotion?.discountSatang ?? 0
+    // The promotion (or typed) discount and the points discount stack: points are paid with,
+    // not a second discount, so both come off the subtotal before the VAT is worked out.
+    const discountSatang = (input.promotion?.discountSatang ?? 0) + (input.pointsDiscountSatang ?? 0)
     if (discountSatang > subtotalSatang) throw new DomainError('ส่วนลดมากกว่ายอดรวมสินค้า', 'DISCOUNT_TOO_LARGE')
     const { vatSatang, totalSatang } = calculateTotals({
       subtotalSatang, discountSatang, vatMode: input.vatMode, vatRateBp: input.vatRateBp,
@@ -253,12 +271,16 @@ export class PriceQuoteEntity {
       orderId: this.orderId,
       lines: this.lines.map((line) => ({ ...line, options: line.options.map((option) => ({ ...option })) })),
       promotion: this.promotion ? { ...this.promotion } : null,
+      couponCode: this.couponCode,
       vatMode: this.vatMode,
       vatRateBp: this.vatRateBp,
       subtotalSatang: this.subtotalSatang,
       discountSatang: this.discountSatang,
       vatSatang: this.vatSatang,
       totalSatang: this.totalSatang,
+      pointsRedeemed: this.pointsRedeemed,
+      pointsDiscountSatang: this.pointsDiscountSatang,
+      pointsRule: this.pointsRule,
       status: this.status,
       qrReference: this.qrReference,
       saleId: this.saleId,

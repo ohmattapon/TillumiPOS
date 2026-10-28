@@ -182,4 +182,38 @@ describe('cart store with packs', () => {
     cart().workOnOrder(5)
     expect(cart().promotionDeclined).toBe(false)
   })
+  test('clear and workOnOrder drop the coupon code', () => {
+    cart().setCouponCode('SUMMER10')
+    expect(cart().couponCode).toBe('SUMMER10')
+
+    cart().workOnOrder(5)
+    expect(cart().couponCode).toBe('')
+
+    cart().setCouponCode('SUMMER10')
+    clearCart()
+    expect(cart().couponCode).toBe('')
+  })
+  test('changing member clears redeemPoints', () => {
+    cart().setMember(12)
+    cart().setRedeemPoints(30)
+    expect(cart().redeemPoints).toBe(30)
+
+    cart().setMember(12)
+    expect(cart().redeemPoints).toBe(0)
+
+    cart().setRedeemPoints(40)
+    cart().setMember(null)
+    expect(cart().redeemPoints).toBe(0)
+  })
+  test('redeemPoints starts at zero and is dropped with the cart and by an order', () => {
+    expect(cart().redeemPoints).toBe(0)
+
+    cart().setRedeemPoints(15)
+    cart().workOnOrder(42)
+    expect(cart().redeemPoints).toBe(0)
+
+    cart().setRedeemPoints(15)
+    clearCart()
+    expect(cart().redeemPoints).toBe(0)
+  })
 })
