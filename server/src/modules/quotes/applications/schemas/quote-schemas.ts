@@ -19,6 +19,7 @@ export const createQuoteSchema = z
       .transform((code) => normalizeCouponCode(code))
       .refine((code) => COUPON_CODE_PATTERN.test(code), { message: 'รูปแบบโค้ดคูปองไม่ถูกต้อง' })
       .optional(),
+    redeemPoints: z.number().int().min(0).optional(),
   })
   .refine((value) => (value.orderId !== undefined) !== (value.lines !== undefined), {
     message: 'ต้องระบุรายการสินค้า (lines) หรือออเดอร์ (orderId) อย่างใดอย่างหนึ่ง',

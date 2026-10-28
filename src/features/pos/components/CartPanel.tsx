@@ -301,6 +301,13 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
         )}
         {/* A coupon is pinned by a quote, so it is offered only while the cart is priced by one. */}
         {!isOrder && <CouponField disabled={discount.trim() !== ''} error={couponError} />}
+        {/* The points the member spends come off after the promotion or the typed discount, as the quote prices them. */}
+        {cart.pointsDiscountSatang > 0 && (
+          <p className="flex justify-between gap-4 text-sm text-muted-foreground">
+            <span>{t('cart.pointsDiscount', { points: cart.pointsRedeemed })}</span>
+            <span className="tabular-nums">-{money.format(cart.pointsDiscountSatang)}</span>
+          </p>
+        )}
         {/* When prices already include VAT there is nothing to add; only an added tax is shown here. */}
         {vatMode === 'exclusive' && (
           <p className="flex justify-between text-sm text-muted-foreground">

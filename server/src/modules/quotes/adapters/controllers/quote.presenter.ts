@@ -21,6 +21,8 @@ export function toQuoteResponse(quote: PriceQuoteEntity): QuoteResponse {
     // The typed coupon code is shown back to the till even when a better automatic promotion won.
     couponCode: snapshot.couponCode,
     discountSatang: snapshot.discountSatang,
+    pointsRedeemed: snapshot.pointsRedeemed ?? 0,
+    pointsDiscountSatang: snapshot.pointsDiscountSatang ?? 0,
     vatMode: snapshot.vatMode,
     vatRateBp: snapshot.vatRateBp,
     vatSatang: snapshot.vatSatang,

@@ -1,7 +1,13 @@
 import 'reflect-metadata'
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { makePriceQuote } from '../../../../__tests__/factories'
-import { mockClock, mockOrderQuoteSource, mockPriceQuoteRepository, mockPromotionUsage } from '../../../../__tests__/mocks'
+import {
+  mockClock,
+  mockOrderQuoteSource,
+  mockPriceQuoteRepository,
+  mockPromotionUsage,
+  mockQuotePoints,
+} from '../../../../__tests__/mocks'
 import { QuoteClaims } from './quote-claims'
 
 const now = new Date('2026-10-15T05:05:00Z')
@@ -10,13 +16,15 @@ const cart = { branchId: 1, memberId: null, orderId: null, lines: [{ productId: 
 let quotes: ReturnType<typeof mockPriceQuoteRepository>
 let orders: ReturnType<typeof mockOrderQuoteSource>
 let usage: ReturnType<typeof mockPromotionUsage>
+let points: ReturnType<typeof mockQuotePoints>
 let claims: QuoteClaims
 
 beforeEach(() => {
   quotes = mockPriceQuoteRepository()
   orders = mockOrderQuoteSource()
   usage = mockPromotionUsage()
-  claims = new QuoteClaims(quotes, orders, mockClock(now), usage)
+  points = mockQuotePoints()
+  claims = new QuoteClaims(quotes, orders, mockClock(now), usage, points)
 })
 
 describe('lockForCheckout', () => {
@@ -208,5 +216,64 @@ describe('settling a QR', () => {
   test('consuming saves the quote with its sale', async () => {
     await claims.consume(makePriceQuote(), 8)
     expect(quotes.save.mock.calls[0]![0]).toMatchObject({ status: 'consumed', saleId: 8 })
+  })
+})
+
+describe('points while a QR waits', () => {
+  const claim = { branchId: 1, reference: 'QRABC', amountSatang: 3000 }
+  const pointsQuote = (overrides: Parameters<typeof makePriceQuote>[0] = {}) =>
+    makePriceQuote({
+      memberId: 8,
+      member: { id: 8, code: 'M-8', name: 'สมชาย' },
+      pointsRedeemed: 20,
+      pointsDiscountSatang: 2000,
+      pointsRule: { earnSatang: 2500, redeemSatang: 100, minRedeem: 10 },
+      ...overrides,
+    })
+
+  test('reserving a QR takes the points the quote promised', async () => {
+    quotes.findById.mockResolvedValue(pointsQuote())
+    quotes.findByIdForUpdate.mockResolvedValue(pointsQuote())
+    points.balanceOf.mockResolvedValue(20)
+    await claims.reserveForQr(5, claim)
+    expect(points.lockMember).toHaveBeenCalledWith(8)
+    expect(points.record.mock.calls[0]![0]).toMatchObject({ memberId: 8, kind: 'redeem', points: -20, saleId: null, quoteId: 5 })
+  })
+
+  test('reserving with too few points is refused and nothing is held', async () => {
+    quotes.findById.mockResolvedValue(pointsQuote())
+    quotes.findByIdForUpdate.mockResolvedValue(pointsQuote())
+    points.balanceOf.mockResolvedValue(5)
+    await expect(claims.reserveForQr(5, claim)).rejects.toMatchObject({ code: 'POINTS_NOT_ENOUGH' })
+    expect(points.record).not.toHaveBeenCalled()
+    expect(quotes.save).not.toHaveBeenCalled()
+  })
+
+  test('cancelling the QR gives the points back', async () => {
+    quotes.findByQrReferenceForUpdate.mockResolvedValue(pointsQuote({ status: 'reserved', qrReference: 'QRABC' }))
+    await claims.cancelByReference('QRABC')
+    expect(points.record.mock.calls[0]![0]).toMatchObject({ kind: 'void_redeem', points: 20, saleId: null, quoteId: 5 })
+  })
+
+  test('releasing gives them back, and the next QR takes them again', async () => {
+    quotes.findByQrReferenceForUpdate.mockResolvedValue(pointsQuote({ status: 'reserved', qrReference: 'QRABC' }))
+    await claims.releaseByReference('QRABC')
+    expect(points.record.mock.calls[0]![0]).toMatchObject({ kind: 'void_redeem', points: 20 })
+
+    quotes.findById.mockResolvedValue(pointsQuote())
+    quotes.findByIdForUpdate.mockResolvedValue(pointsQuote())
+    points.balanceOf.mockResolvedValue(20)
+    await claims.reserveForQr(5, claim)
+    expect(points.record.mock.calls[1]![0]).toMatchObject({ kind: 'redeem', points: -20 })
+  })
+
+  test('a quote without points never touches the ledger', async () => {
+    quotes.findById.mockResolvedValue(makePriceQuote())
+    quotes.findByIdForUpdate.mockResolvedValue(makePriceQuote())
+    await claims.reserveForQr(5, claim)
+    quotes.findByQrReferenceForUpdate.mockResolvedValue(makePriceQuote({ status: 'reserved', qrReference: 'QRABC' }))
+    await claims.cancelByReference('QRABC')
+    expect(points.lockMember).not.toHaveBeenCalled()
+    expect(points.record).not.toHaveBeenCalled()
   })
 })

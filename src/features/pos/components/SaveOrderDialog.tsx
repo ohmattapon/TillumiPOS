@@ -17,6 +17,7 @@ export function SaveOrderDialog({ onClose }: { onClose: () => void }) {
   const memberId = useCartStore((state) => state.memberId)
   const lines = useCartStore((state) => state.lines)
   const clear = useCartStore((state) => state.clear)
+  const discount = useCartStore((state) => state.discount)
   const openOrder = useOpenOrder()
 
   const submit = (event: FormEvent) => {
@@ -59,6 +60,10 @@ export function SaveOrderDialog({ onClose }: { onClose: () => void }) {
               autoFocus
             />
           </div>
+
+          {discount.trim() !== '' && (
+            <p className="text-sm text-muted-foreground">{t('saveOrder.discountNotKept')}</p>
+          )}
 
           {openOrder.error && (
             <p role="alert" className="text-sm text-destructive">

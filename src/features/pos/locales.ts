@@ -103,6 +103,12 @@ const th = {
     couponApplied: 'คูปอง {{code}}',
     couponRemove: 'เอารหัสออก',
     couponNotWithDiscount: 'ใส่คูปองไม่ได้เมื่อใส่ส่วนลดเอง',
+    pointsBalance: 'แต้มคงเหลือ {{points}}',
+    pointsRedeem: 'แต้มที่แลก',
+    pointsMax: 'สูงสุด',
+    pointsNotWithDiscount: 'แลกแต้มไม่ได้เมื่อใส่ส่วนลดเอง',
+    pointsNotApplied: 'จำนวนแต้มนี้แลกไม่ได้',
+    pointsDiscount: 'ส่วนลดจากแต้ม {{points}}',
   },
   orders: {
     button: 'ออเดอร์ค้าง',
@@ -128,6 +134,7 @@ const th = {
     save: 'เก็บออเดอร์',
     saving: 'กำลังบันทึก…',
     saved: 'เก็บเป็นออเดอร์ค้างแล้ว',
+    discountNotKept: 'ส่วนลดที่พิมพ์ไว้จะไม่ถูกเก็บกับออเดอร์ ให้ใส่อีกครั้งตอนชำระ',
   },
   payment: {
     due: 'ยอดที่ต้องชำระ',
@@ -286,6 +293,12 @@ const en = {
     couponApplied: 'Coupon {{code}}',
     couponRemove: 'Remove code',
     couponNotWithDiscount: 'A coupon cannot be used while you type a discount',
+    pointsBalance: 'Balance {{points}} pts',
+    pointsRedeem: 'Points to redeem',
+    pointsMax: 'Max',
+    pointsNotWithDiscount: 'Points cannot be redeemed while you type a discount',
+    pointsNotApplied: 'This many points cannot be redeemed',
+    pointsDiscount: 'Points discount {{points}}',
   },
   orders: {
     button: 'Open orders',
@@ -311,6 +324,7 @@ const en = {
     save: 'Save order',
     saving: 'Saving…',
     saved: 'Saved as an open order',
+    discountNotKept: 'The discount you typed is not kept with the order. Enter it again when paying.',
   },
   payment: {
     due: 'Amount due',

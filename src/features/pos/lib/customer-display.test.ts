@@ -28,6 +28,8 @@ const cart = (lines: PricedLine[] = [line()], overrides: Partial<PricedCart> = {
   discountSatang: 0,
   isDiscountValid: true,
   promotion: null,
+  pointsRedeemed: 0,
+  pointsDiscountSatang: 0,
   vatSatang: 458,
   totalSatang: lines.reduce((sum, item) => sum + item.lineTotalSatang, 0),
   canPay: lines.length > 0,

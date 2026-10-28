@@ -287,10 +287,13 @@ export const mockFirstRunGuard = (): Mocked<IFirstRunGuard> => ({
 })
 
 import type { IMemberRepository } from '../modules/members/applications/ports/member.repository'
+import type { IMemberPoints } from '../modules/members/applications/ports/member-points.port'
 import type { ISlideRepository } from '../modules/display-slides/applications/ports/slide.repository'
 import type { IPromotionRepository } from '../modules/promotions/applications/ports/promotion.repository'
 import type { IPriceQuoteRepository } from '../modules/quotes/applications/ports/price-quote.repository'
 import type { IQuoteClaims } from '../modules/quotes/applications/ports/quote-claims.port'
+import type { ICheckoutPoints } from '../modules/sales/applications/ports/checkout-points.port'
+import type { IQuotePoints } from '../modules/quotes/applications/ports/quote-points.port'
 import type { IPromotionCatalog } from '../modules/quotes/applications/ports/promotion-catalog.port'
 import type { IOrderQuoteSource } from '../modules/quotes/applications/ports/order-quote-source.port'
 export const mockPromotionRepository = (): Mocked<IPromotionRepository> => ({
@@ -330,6 +333,29 @@ export const mockQuoteClaims = (): Mocked<IQuoteClaims> => ({
   reserveForQr: mock<IQuoteClaims['reserveForQr']>(async () => {}),
   releaseByReference: mock<IQuoteClaims['releaseByReference']>(async () => {}),
   cancelByReference: mock<IQuoteClaims['cancelByReference']>(async () => {}),
+})
+
+/** The points a bill gives and takes: no balance by default, and every movement answers what is left. */
+export const mockCheckoutPoints = (): Mocked<ICheckoutPoints> => ({
+  balanceOf: mock<ICheckoutPoints['balanceOf']>(async () => 0),
+  lockMember: mock<ICheckoutPoints['lockMember']>(async () => {}),
+  record: mock<ICheckoutPoints['record']>(async () => ({ balanceAfter: 0 })),
+  findQuoteRedemption: mock<ICheckoutPoints['findQuoteRedemption']>(async () => null),
+})
+
+/** The points a quote pins: a member starts with none, and the row is locked without a check. */
+export const mockQuotePoints = (): Mocked<IQuotePoints> => ({
+  balanceOf: mock<IQuotePoints['balanceOf']>(async () => 0),
+  lockMember: mock<IQuotePoints['lockMember']>(async () => {}),
+  record: mock<IQuotePoints['record']>(async () => ({ balanceAfter: 0 })),
+  findQuoteRedemption: mock<IQuotePoints['findQuoteRedemption']>(async () => null),
+})
+
+/** Our own ledger: an empty history and a movement that leaves the balance where it is. */
+export const mockMemberPoints = (): Mocked<IMemberPoints> => ({
+  record: mock<IMemberPoints['record']>(async () => ({ balanceAfter: 0 })),
+  lockMember: mock<IMemberPoints['lockMember']>(async () => {}),
+  listMovements: mock<IMemberPoints['listMovements']>(async () => ({ items: [], total: 0 })),
 })
 
 export const mockPromotionCatalog = (): Mocked<IPromotionCatalog> => ({

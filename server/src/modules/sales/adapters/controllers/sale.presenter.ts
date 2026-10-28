@@ -11,9 +11,14 @@ export function toSaleHeaderResponse(sale: ISaleHeader): SaleHeaderResponse {
 
 /** Cost and the id of whoever voided the sale are internal: they are not part of the public receipt. */
 export function toSaleResponse(sale: SaleEntity): SaleResponse {
-  const { voidedById: _internal, shiftId: _shift, items, payments, ...header } = sale.toSnapshot()
+  const { voidedById: _internal, shiftId: _shift, pointsRule: _rule, items, payments, ...header } = sale.toSnapshot()
   return {
     ...header,
+    // A sale stored before points existed has none of them.
+    pointsEarned: header.pointsEarned ?? 0,
+    pointsRedeemed: header.pointsRedeemed ?? 0,
+    pointsDiscountSatang: header.pointsDiscountSatang ?? 0,
+    pointsBalanceAfter: header.pointsBalanceAfter ?? null,
     member: sale.member,
     // The schema widens with Task 2's OpenAPI change, when the migration actually allows storing a bundle;
     // no such bill can exist before that, but the snapshot type already carries the wider union.

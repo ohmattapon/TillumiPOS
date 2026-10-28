@@ -10,6 +10,7 @@ import { shifts } from './shifts'
 import { members } from './members'
 import { promotions } from './promotions'
 import type { SaleMember, SalePromotion } from '../../../domains/sale.domain'
+import type { PointsRule } from '../../../domains/member-points'
 
 export const saleStatus = pgEnum('sale_status', ['completed', 'voided'])
 export const paymentMethod = pgEnum('payment_method', ['cash', 'promptpay', 'card'])
@@ -54,6 +55,14 @@ export const sales = pgTable(
     vatRateBp: integer().notNull().default(700),
     paidSatang: integer().notNull(),
     changeSatang: integer().notNull(),
+    // What the sale gave and took in points, pinned with the rule, so editing the rule
+    // later never rewrites an old receipt. Zero on sales made before points existed.
+    pointsEarned: integer().notNull().default(0),
+    pointsRedeemed: integer().notNull().default(0),
+    pointsDiscountSatang: integer().notNull().default(0),
+    pointsRule: jsonb().$type<PointsRule>(),
+    // The member's balance right after this sale, so a receipt can show what is left.
+    pointsBalanceAfter: integer(),
     cashierId: integer()
       .notNull()
       .references(() => users.id),

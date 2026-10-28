@@ -255,6 +255,20 @@
       "breakpoints": true
     },
     {
+      "idx": 36,
+      "version": "7",
+      "when": 1793102023659,
+      "tag": "0036_high_firestar",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793103135053,
+      "tag": "0037_first_killer_shrike",
+      "breakpoints": true
+    },
+    {
       "idx": 38,
       "version": "7",
       "when": 1793142919584,

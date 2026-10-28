@@ -163,6 +163,17 @@ Every operation is a use case that is exactly one of a command or a query, and t
 - A coupon is a promise the quote makes, so it exists only in the one-step cart: an open order has no quote and never sends `couponCode`. The till keeps a typed discount and a coupon apart, because a quote cannot pin a typed discount.
 - `GET /api/v1/sales/reports/promotions` reads the promotion snapshot stored on the bill and never the promotion table: voided bills are excluded, the name is the one on the latest sale of the range, and the rows are sorted by discount descending and then by promotion id. Net sales are bill totals net of VAT.
 
+### Member points (members, sales, quotes)
+
+- The rule lives on the shop settings: `pointsEnabled`, `pointsEarnSatang` (the amount paid that earns one point), `pointsRedeemSatang` (what one point is worth) and `pointsMinRedeem`. The formulas (`pointsEarned`, `maxRedeemable`, `pointsDiscountSatang`, `assertRedeemable`, `voidEarnPoints`) live in `domains/member-points.ts` only, and the web uses the same functions through `@pos/api/points`.
+- The balance is `members.points_balance`, and it moves only through the `member_point_movements` ledger (`earn`, `redeem`, `void_earn`, `void_redeem`, `adjust`). The table is append-only: a mistake is corrected by a new movement, never by editing or deleting one. Never write the balance directly; `IMemberPoints.record` writes the movement and the balance in the caller's unit of work, and it refuses a balance below zero (`POINTS_NOT_ENOUGH`). `(sale_id, kind)` is unique, so the same bill cannot earn or return its points twice (`POINTS_ALREADY_RECORDED`).
+- Points stack on top of either a promotion or a typed discount, while a promotion and a typed discount still never stack. The points discount is added to the quote's `discountSatang` and `calculateTotals` runs on the sum, so never change `calculateTotals` to handle points. A receipt shows the points as information, because the discount line already includes them.
+- Points are redeemed only through a quote: `redeemPoints` on the quote input, priced by `PriceQuoteEntity`, so the total charged is always the pinned one. An open order never redeems points, because an order has no quote.
+- A quote that a QR reserves holds its points (`QuoteClaims.holdPoints`) until the QR is used, cancelled or dismissed, so money that arrives late still finds the points there; cancelling or releasing the reservation returns them (`returnPoints`).
+- Voiding a bill returns the points it redeemed first, then takes back the points it earned up to what the member still has. When they have already been spent, the movement stops at zero and records the shortfall in its `reason`.
+- A member with points the shop has switched off keeps them; they are only unusable. Adjusting a balance by hand is the command `POST /members/{id}/points/adjustments` behind `members.points_adjust`, and it is audited as `member.points_adjusted`.
+- The till offers the redeem field only for the one-step cart and never beside a typed discount, because a quote cannot pin a typed discount. The member page lists the movements through `GET /members/{id}/points`.
+
 ### Tables (tables)
 
 - A table belongs to a branch, its name must be unique within the branch, it can be disabled but not deleted, and it cannot be disabled while an order is open on it. Position and size are integers in floor-plan units (1000 wide, 700 high), and the entity rejects values outside the plan itself.

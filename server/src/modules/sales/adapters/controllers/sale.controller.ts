@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia'
 import { inject, injectable } from 'tsyringe'
-import { idParams, page } from '../../../../libs/http-schemas'
+import { idParams, optionalIdempotencyHeaders, page } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import { CompleteSaleUseCase } from '../../applications/usecases/complete-sale.usecase'
 import { GetSaleUseCase } from '../../applications/usecases/get-sale.usecase'
@@ -44,12 +44,18 @@ export class SaleElysiaController {
         response: saleSchemas.sale,
         detail: { summary: 'รายละเอียดบิลขาย' },
       })
-      .post('/', async ({ body, user, branch }) => toResponse(await this.completeSale.execute(body, user, await branch())), {
-        auth: true,
-        body: saleSchemas.create,
-        response: saleSchemas.sale,
-        detail: { summary: 'บันทึกการขาย ตัดสต็อก และออกเลขที่ใบเสร็จ' },
-      })
+      .post(
+        '/',
+        async ({ body, headers, user, branch }) =>
+          toResponse(await this.completeSale.execute(body, user, await branch(), headers['idempotency-key'])),
+        {
+          auth: true,
+          body: saleSchemas.create,
+          headers: optionalIdempotencyHeaders,
+          response: saleSchemas.sale,
+          detail: { summary: 'บันทึกการขาย ตัดสต็อก และออกเลขที่ใบเสร็จ' },
+        },
+      )
       .post(
         '/:id/void',
         async ({ params, body, user, branch }) =>

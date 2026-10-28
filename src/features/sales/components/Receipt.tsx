@@ -67,6 +67,12 @@ export function Receipt({ sale, elementRef }: { sale: Sale; elementRef?: Ref<HTM
         </p>
       )}
       {sale.promotion && <p className="pl-3 text-xs">{t('receipt.promotion', { name: sale.promotion.name })}</p>}
+      {/* The points discount is part of the discount above; the line says how much of it the points gave. */}
+      {sale.pointsRedeemed > 0 && (
+        <p className="pl-3 text-xs">
+          {t('receipt.pointsUsed', { points: sale.pointsRedeemed, amount: money.plain(sale.pointsDiscountSatang) })}
+        </p>
+      )}
       {vatAdded && (
         <p className={row}>
           <span>{t('receipt.vatAdded', { rate: vatRate })}</span>
@@ -81,6 +87,18 @@ export function Receipt({ sale, elementRef }: { sale: Sale; elementRef?: Ref<HTM
         <p className={row}>
           <span>{t('receipt.vatIncluded', { rate: vatRate })}</span>
           <span>{money.plain(sale.vatSatang)}</span>
+        </p>
+      )}
+      {sale.pointsEarned > 0 && (
+        <p className={row}>
+          <span>{t('receipt.pointsEarned')}</span>
+          <span>+{sale.pointsEarned}</span>
+        </p>
+      )}
+      {sale.pointsBalanceAfter !== null && (
+        <p className={row}>
+          <span>{t('receipt.pointsBalance')}</span>
+          <span>{sale.pointsBalanceAfter}</span>
         </p>
       )}
       {sale.payments.map((payment, index) => (

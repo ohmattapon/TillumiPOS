@@ -91,11 +91,24 @@ export const saleSchemas = {
   saleHeader: t.Object(header),
   sale: t.Object({
     ...header,
+    // What the sale gave and took in points; zero on sales made before points existed.
+    pointsEarned: t.Integer(),
+    pointsRedeemed: t.Integer(),
+    pointsDiscountSatang: t.Integer(),
+    // The member's balance right after the sale; null when the sale had no member.
+    pointsBalanceAfter: t.Nullable(t.Integer()),
     items: t.Array(saleItem),
     payments: t.Array(payment),
   }),
   saleV2: t.Composite([
-    t.Object({ ...header, shiftId: t.Integer() }),
+    t.Object({
+      ...header,
+      pointsEarned: t.Integer(),
+      pointsRedeemed: t.Integer(),
+      pointsDiscountSatang: t.Integer(),
+      pointsBalanceAfter: t.Nullable(t.Integer()),
+      shiftId: t.Integer(),
+    }),
     t.Object({
       items: t.Array(saleItem),
       payments: t.Array(payment),

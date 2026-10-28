@@ -37,7 +37,7 @@ test('failed login records only the attempted username and audit failure preserv
   } finally { diagnostic.mockRestore() }
 })
 import { makeBranch, makeQrPayment, makeSale, makeStockMovement, makeUser } from '../../../../__tests__/factories'
-import { mockAuditLog, mockBranchRepository, mockClock, mockProductRepository as productRepo, mockQuoteClaims, mockQrPaymentRepository, mockRoleDirectory, mockRoleRepository, mockSaleRepository, mockShiftLedger, mockShiftSettingsGuard, mockShopSettingsRepository, mockStockLedger } from '../../../../__tests__/mocks'
+import { mockAuditLog, mockBranchRepository, mockCheckoutPoints, mockClock, mockProductRepository as productRepo, mockQuoteClaims, mockQrPaymentRepository, mockRoleDirectory, mockRoleRepository, mockSaleRepository, mockShiftLedger, mockShiftSettingsGuard, mockShopSettingsRepository, mockStockLedger } from '../../../../__tests__/mocks'
 import { UpdateProductUseCase } from '../../../products/applications/usecases/update-product.usecase'
 import { ReceiveStockUseCase } from '../../../inventory/applications/usecases/receive-stock.usecase'
 import { AdjustStockUseCase } from '../../../inventory/applications/usecases/adjust-stock.usecase'
@@ -102,7 +102,7 @@ for (const operation of ['receive', 'adjust'] as const) test(`stock.${operation}
 test('void records actual operator and status after all stock returns, and rejects an already voided sale without logging', async () => {
   const repo = mockSaleRepository(), ledger = mockStockLedger(), log = mockAuditLog()
   repo.findByIdForUpdate.mockResolvedValue(makeSale({ id: 412 }))
-  const command = new VoidSaleUseCase(repo, ledger, mockUnitOfWork(), mockClock(now), log)
+  const command = new VoidSaleUseCase(repo, ledger, mockCheckoutPoints(), mockUnitOfWork(), mockClock(now), log)
   await command.execute(412, { reason: 'คิดเงินผิด' }, owner, 1)
   expect(log.record.mock.calls[0]).toEqual([{ id: 5, name: 'สมหญิง' }, 1, expect.objectContaining({ action: 'sale.void', entityId: '412', before: { status: 'completed' }, after: { status: 'voided' }, reason: 'คิดเงินผิด' })])
   repo.findByIdForUpdate.mockResolvedValue(makeSale({ status: 'voided', voidedAt: now, voidedById: 5, voidReason: 'ยกเลิก' })); log.record.mockClear()
@@ -182,7 +182,7 @@ const receiptStore = () => {
 test('v2 void replay returns the prior sale without repeating the audit or stock return', async () => {
   const repo = mockSaleRepository(), ledger = mockStockLedger(), log = mockAuditLog(), uow = mockUnitOfWork()
   repo.findByIdForUpdate.mockResolvedValue(makeSale())
-  const command = new VoidSaleV2UseCase(new VoidSaleUseCase(repo, ledger, uow, mockClock(now), log), uow, receiptStore())
+  const command = new VoidSaleV2UseCase(new VoidSaleUseCase(repo, ledger, mockCheckoutPoints(), uow, mockClock(now), log), uow, receiptStore())
   const key = crypto.randomUUID()
   await command.execute(1, { reason: 'ผิด' }, owner, 1, key)
   await command.execute(1, { reason: 'ผิด' }, owner, 1, key)

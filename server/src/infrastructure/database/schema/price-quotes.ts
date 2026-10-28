@@ -2,6 +2,7 @@ import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex } 
 import { sql } from 'drizzle-orm'
 import type { QuoteLine } from '../../../domains/price-quote.domain'
 import type { SaleMember, SalePromotion } from '../../../domains/sale.domain'
+import type { PointsRule } from '../../../domains/member-points'
 import { id, timestamps } from '../columns'
 import { branches } from './branches'
 import { members } from './members'
@@ -34,6 +35,10 @@ export const priceQuotes = pgTable(
     vatRateBp: integer().notNull(),
     vatSatang: integer().notNull(),
     totalSatang: integer().notNull(),
+    // Points this cart pinned: a sale made from it redeems them at this rate, whatever the shop changes since.
+    pointsRedeemed: integer().notNull().default(0),
+    pointsDiscountSatang: integer().notNull().default(0),
+    pointsRule: jsonb().$type<PointsRule>(),
     status: quoteStatus().notNull().default('open'),
     qrReference: text(),
     saleId: integer().references(() => sales.id),

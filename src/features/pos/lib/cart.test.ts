@@ -427,3 +427,50 @@ describe('a promotion', () => {
     expect(cart).toMatchObject({ subtotalSatang: 4000, discountSatang: 400, totalSatang: 3600 })
   })
 })
+
+describe('points on the cart', () => {
+  const tea = product({ id: 1, priceSatang: 2500 })
+  const lines = [{ key: '1:', productId: 1, optionIds: [], quantity: 2 }]
+  const rule = { earnSatang: 1000, redeemSatang: 100, minRedeem: 10 }
+  const points = { requested: 20, balance: 500, rule }
+
+  test('the discount is added to the one the promotion gives, as the quote prices it', () => {
+    const promotion = { id: 4, name: 'ลด 10%', discountSatang: 500 }
+    const cart = priceCart(lines, catalogue(tea), '', { ...inclusive, promotion, points })
+    expect(cart).toMatchObject({
+      subtotalSatang: 5000,
+      discountSatang: 500,
+      pointsRedeemed: 20,
+      pointsDiscountSatang: 2000,
+      totalSatang: 2500,
+    })
+  })
+
+  test('a request the shop would refuse is left out of the preview', () => {
+    const tooMany = priceCart(lines, catalogue(tea), '', { ...inclusive, points: { ...points, requested: 60 } })
+    expect(tooMany).toMatchObject({ pointsRedeemed: 0, pointsDiscountSatang: 0, totalSatang: 5000 })
+
+    const tooFew = priceCart(lines, catalogue(tea), '', { ...inclusive, points: { ...points, requested: 5 } })
+    expect(tooFew).toMatchObject({ pointsRedeemed: 0, pointsDiscountSatang: 0 })
+  })
+
+  test('no member means no points in the price', () => {
+    expect(priceCart(lines, catalogue(tea), '', { ...inclusive, points: null })).toMatchObject({
+      pointsRedeemed: 0,
+      pointsDiscountSatang: 0,
+      totalSatang: 5000,
+    })
+  })
+
+  test('a typed discount is never combined with points, because a quote cannot carry one', () => {
+    // The payment would send this cart with a quote, and the quote knows nothing of the typed discount.
+    const cart = priceCart(lines, catalogue(tea), '5', { ...inclusive, points })
+    expect(cart).toMatchObject({
+      subtotalSatang: 5000,
+      discountSatang: 500,
+      pointsRedeemed: 0,
+      pointsDiscountSatang: 0,
+      totalSatang: 4500,
+    })
+  })
+})
