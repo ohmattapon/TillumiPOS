@@ -20728,9 +20728,8 @@
                     ]
                   },
                   "couponCode": {
-                    "maxLength": 100,
-                    "minLength": 3,
-                    "pattern": "^[A-Za-z0-9-]+$",
+                    "maxLength": 120,
+                    "minLength": 1,
                     "type": [
                       "string",
                       "null"
@@ -21047,9 +21046,8 @@
                     ]
                   },
                   "couponCode": {
-                    "maxLength": 100,
-                    "minLength": 3,
-                    "pattern": "^[A-Za-z0-9-]+$",
+                    "maxLength": 120,
+                    "minLength": 1,
                     "type": [
                       "string",
                       "null"
@@ -21366,9 +21364,8 @@
                     ]
                   },
                   "couponCode": {
-                    "maxLength": 100,
-                    "minLength": 3,
-                    "pattern": "^[A-Za-z0-9-]+$",
+                    "maxLength": 120,
+                    "minLength": 1,
                     "type": [
                       "string",
                       "null"
@@ -22508,9 +22505,8 @@
                     ]
                   },
                   "couponCode": {
-                    "maxLength": 100,
-                    "minLength": 3,
-                    "pattern": "^[A-Za-z0-9-]+$",
+                    "maxLength": 120,
+                    "minLength": 1,
                     "type": [
                       "string",
                       "null"
@@ -22822,9 +22818,8 @@
                     ]
                   },
                   "couponCode": {
-                    "maxLength": 100,
-                    "minLength": 3,
-                    "pattern": "^[A-Za-z0-9-]+$",
+                    "maxLength": 120,
+                    "minLength": 1,
                     "type": [
                       "string",
                       "null"
@@ -23136,9 +23131,8 @@
                     ]
                   },
                   "couponCode": {
-                    "maxLength": 100,
-                    "minLength": 3,
-                    "pattern": "^[A-Za-z0-9-]+$",
+                    "maxLength": 120,
+                    "minLength": 1,
                     "type": [
                       "string",
                       "null"

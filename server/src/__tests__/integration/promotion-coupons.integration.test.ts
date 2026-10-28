@@ -13,7 +13,7 @@ beforeEach(async () => {
 describe('coupons and bundles over HTTP', () => {
   test('a coupon promotion round-trips over HTTP', async () => {
     const created = ok(await owner.api.promotions.post({
-      name: 'คูปองลด 10%', kind: 'percent', value: 1000, couponCode: '  summer10  ',
+      name: 'คูปองลด 10%', kind: 'percent', value: 1000, couponCode: '  summer10  ', audience: 'members',
     }))
     // The code is stored upper-case and every field the coupon does not use answers null.
     expect(created).toMatchObject({

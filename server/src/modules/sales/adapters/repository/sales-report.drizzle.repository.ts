@@ -100,17 +100,20 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
 
   async promotions(query: ReportPageQuery): Promise<Page<ReportPromotion>> {
     // The promotion lives in the bill's snapshot, so a voided or renamed promotion changes nothing here.
+    // The snapshot is stored as a JSON string, so it is unwrapped before its keys are read; JSON null
+    // (a bill with no promotion) unwraps to `null`, whose keys are SQL null.
+    const snapshot = sql`(s.promotion #>> '{}')::jsonb`
     const [row] = await currentExecutor().execute<{ items: ReportPromotion[]; total: number }>(sql`
       with ${facts(query)},
       grouped as (
-        select (s.promotion->>'id')::integer as "promotionId",
-          (array_agg(s.promotion->>'name' order by s.id desc))[1] as name,
+        select (${snapshot} ->> 'id')::integer as "promotionId",
+          (array_agg(${snapshot} ->> 'name' order by s.id desc))[1] as name,
           count(*)::integer as bills,
           coalesce(sum(s.discount_satang), 0)::integer as "discountSatang",
           coalesce(sum(s.total_satang - s.vat_satang), 0)::integer as "netSalesSatang"
         from period_sales s
-        where s.status = 'completed' and s.promotion is not null
-        group by (s.promotion->>'id')::integer
+        where s.status = 'completed' and ${snapshot} ->> 'id' is not null
+        group by (${snapshot} ->> 'id')::integer
       ),
       paged as (select * from grouped order by "discountSatang" desc, "promotionId"
         limit ${query.limit} offset ${query.offset})

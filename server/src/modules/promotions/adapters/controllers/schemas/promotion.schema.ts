@@ -4,8 +4,11 @@ import { satang } from '../../../../../libs/http-schemas'
 const kind = t.Union([t.Literal('fixed'), t.Literal('percent'), t.Literal('bundle')])
 const audience = t.Union([t.Literal('everyone'), t.Literal('members')])
 const name = t.String({ minLength: 1, maxLength: 80 })
-/** Upper-case, 3–20 letters, digits or dashes; the entity normalizes and re-checks every entry. */
-const couponCode = t.Union([t.String({ minLength: 3, maxLength: 100, pattern: '^[A-Za-z0-9-]+$' }), t.Null()])
+/**
+ * Whatever the cashier types, trimmed and upper-cased by the entity before the code is checked; the
+ * HTTP schema only bounds the length, because a pasted " Summer10 " must reach the core unchanged.
+ */
+const couponCode = t.Union([t.String({ minLength: 1, maxLength: 120 }), t.Null()])
 const bundleQuantity = t.Union([t.Integer({ minimum: 1, maximum: 99 }), t.Null()])
 const useLimit = t.Union([t.Integer({ minimum: 1 }), t.Null()])
 const day = t.String({ format: 'date' })

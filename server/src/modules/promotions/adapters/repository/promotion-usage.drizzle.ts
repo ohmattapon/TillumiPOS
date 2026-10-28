@@ -1,4 +1,4 @@
-import { and, count, eq, sql } from 'drizzle-orm'
+import { and, count, eq, inArray, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 import { priceQuotes } from '../../../../infrastructure/database/schema/price-quotes'
 import { promotions } from '../../../../infrastructure/database/schema/promotions'
@@ -15,9 +15,8 @@ import type {
 const quotePromotionId = (promotionId: number) =>
   sql`(coalesce(${priceQuotes.promotion} ->> 'id', '0'))::int = ${promotionId}`
 
-/** The same, for a whole list of promotions; `= any` keeps one query instead of one per id. */
-const quotePromotionIdIn = (promotionIds: readonly number[]) =>
-  sql`(coalesce(${priceQuotes.promotion} ->> 'id', '0'))::int = any(${promotionIds}::int[])`
+/** The same, for a whole list of promotions; one query instead of one per id. */
+const quotePromotionIdColumn = sql<number>`(coalesce(${priceQuotes.promotion} ->> 'id', '0'))::int`
 
 /**
  * Answers the usage-limit questions the quotes module asks. Completed (not voided) sales count through
@@ -51,19 +50,20 @@ export class DrizzlePromotionUsage implements IPromotionUsage, IPromotionStats {
   async countMany(promotionIds: readonly number[]): Promise<Map<number, PromotionUseCounts>> {
     const uses = new Map<number, PromotionUseCounts>(promotionIds.map((id) => [id, { total: 0, byMember: 0 }]))
     if (promotionIds.length === 0) return uses
+    // `inArray` is what turns a list into a bound array; a raw `= any(${ids})` binds one scalar.
     const soldRows = await currentExecutor()
       .select({ promotionId: sales.promotionId, total: count() })
       .from(sales)
-      .where(and(eq(sales.status, 'completed'), sql`${sales.promotionId} = any(${promotionIds}::int[])`))
+      .where(and(eq(sales.status, 'completed'), inArray(sales.promotionId, [...promotionIds])))
       .groupBy(sales.promotionId)
     const heldRows = await currentExecutor()
       .select({
-        promotionId: sql<number>`(coalesce(${priceQuotes.promotion} ->> 'id', '0'))::int`,
+        promotionId: quotePromotionIdColumn,
         total: count(),
       })
       .from(priceQuotes)
-      .where(and(eq(priceQuotes.status, 'reserved'), quotePromotionIdIn(promotionIds)))
-      .groupBy(sql`(coalesce(${priceQuotes.promotion} ->> 'id', '0'))::int`)
+      .where(and(eq(priceQuotes.status, 'reserved'), inArray(quotePromotionIdColumn, [...promotionIds])))
+      .groupBy(quotePromotionIdColumn)
     for (const row of [...soldRows, ...heldRows]) {
       if (row.promotionId === null) continue
       uses.set(row.promotionId, { ...uses.get(row.promotionId)!, total: uses.get(row.promotionId)!.total + row.total })
