@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { DomainError } from './errors/domain-error'
 import {
+  buildLogoKey,
   DEFAULT_SHOP_SETTINGS,
   SHOP_TYPES,
   ShopSettingsEntity,
@@ -30,7 +31,31 @@ describe('ShopSettingsEntity', () => {
       modifiersEnabled: true,
       promptpayMode: 'bank',
       promptpayTarget: null,
+      receiptPrinterIp: null,
+      receiptPrinterPort: 9100,
+      receiptPrinterEnabled: false,
+      cashDrawerEnabled: false,
+      logoKey: null,
+      pointsEnabled: false,
+      pointsEarnSatang: 2500,
+      pointsRedeemSatang: 100,
+      pointsMinRedeem: 10,
     })
+  })
+
+  test('a logo key has the shape the upload makes, or the shop has no logo', () => {
+    expect(settings({ logoKey: 'logo/3f2c9a1e-7b4d-4c1a-9e2f-0a1b2c3d4e5f.webp' }).logoKey).toBe('logo/3f2c9a1e-7b4d-4c1a-9e2f-0a1b2c3d4e5f.webp')
+    for (const logoKey of ['logo/../../etc/passwd.png', 'products/1/a.png', 'logo/a.gif', 'logo/.png', '/logo/a.png'])
+      expect(() => settings({ logoKey })).toThrow(DomainError)
+  })
+
+  test('a built logo key is one the entity accepts', () => {
+    expect(settings({ logoKey: buildLogoKey('3f2c9a1e-7b4d', 'webp') }).logoKey).toBe('logo/3f2c9a1e-7b4d.webp')
+  })
+
+  test('a shop saved before logos existed has no logo', () => {
+    const { logoKey: _logoKey, ...old } = DEFAULT_SHOP_SETTINGS
+    expect(new ShopSettingsEntity(old as ShopSettingsProps).logoKey).toBeNull()
   })
 
   test.each<[string, Partial<ShopSettingsProps>]>([
@@ -126,6 +151,56 @@ describe('ShopSettingsEntity', () => {
       const changed = settings().with({ promptpayMode: 'static', promptpayTarget: '0812345678' })
 
       expect(changed.toSnapshot()).toEqual({ ...DEFAULT_SHOP_SETTINGS, promptpayMode: 'static', promptpayTarget: '0812345678' })
+    })
+  })
+
+  describe('lan printer', () => {
+    test('the default is browser printing with no printer set up', () => {
+      expect(DEFAULT_SHOP_SETTINGS.receiptPrinterIp).toBeNull()
+      expect(DEFAULT_SHOP_SETTINGS.receiptPrinterPort).toBe(9100)
+      expect(DEFAULT_SHOP_SETTINGS.receiptPrinterEnabled).toBe(false)
+      expect(DEFAULT_SHOP_SETTINGS.cashDrawerEnabled).toBe(false)
+    })
+
+    test('an enabled printer with an IP and the drawer survives with() and toSnapshot()', () => {
+      const changed = settings().with({
+        receiptPrinterIp: '192.168.1.50',
+        receiptPrinterEnabled: true,
+        cashDrawerEnabled: true,
+      })
+
+      expect(changed.toSnapshot()).toEqual({
+        ...DEFAULT_SHOP_SETTINGS,
+        receiptPrinterIp: '192.168.1.50',
+        receiptPrinterEnabled: true,
+        cashDrawerEnabled: true,
+      })
+    })
+
+    test.each<[string, Partial<ShopSettingsProps>]>([
+      ['a printer host with spaces', { receiptPrinterIp: '192.168.1. 50' }],
+      ['a printer host with a scheme', { receiptPrinterIp: 'http://printer' }],
+      ['a printer host over 45 characters', { receiptPrinterIp: `${'a'.repeat(40)}.local` }],
+      ['a printer port of 0', { receiptPrinterPort: 0 }],
+      ['a printer port above 65535', { receiptPrinterPort: 65536 }],
+      ['a fractional printer port', { receiptPrinterPort: 9100.5 }],
+      ['a non-boolean printer switch', { receiptPrinterEnabled: 'yes' as never }],
+      ['an enabled printer with no IP', { receiptPrinterEnabled: true }],
+      ['a drawer without the printer on', { receiptPrinterIp: '192.168.1.50', cashDrawerEnabled: true }],
+    ])('rejects %s', (_label, overrides) => {
+      expect(() => settings(overrides)).toThrow(
+        expect.objectContaining({ code: 'INVALID_SHOP_SETTINGS' }),
+      )
+    })
+
+    test.each([
+      { receiptPrinterIp: '192.168.1.50' },
+      { receiptPrinterIp: 'printer.local', receiptPrinterPort: 9101 },
+      { receiptPrinterIp: '192.168.1.50', receiptPrinterPort: 1 },
+      { receiptPrinterIp: '192.168.1.50', receiptPrinterPort: 65535 },
+      { receiptPrinterIp: null },
+    ])('accepts the printer value %p', (overrides) => {
+      expect(() => settings(overrides)).not.toThrow()
     })
   })
 

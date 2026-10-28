@@ -36,6 +36,8 @@ async function serve(request: Request, env: Env, ctx: ExecutionContext, key: str
   object.writeHttpMetadata(headers)
   headers.set('etag', object.httpEtag)
   headers.set('cache-control', CACHE_CONTROL)
+  // Images are public. Reads must be allowed cross-origin so the web can draw the shop logo into a PDF or a printer bitmap.
+  headers.set('access-control-allow-origin', '*')
 
   // No body means the client's copy is still current (If-None-Match matched).
   if (!('body' in object)) return new Response(null, { status: 304, headers })

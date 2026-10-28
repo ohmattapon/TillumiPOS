@@ -28,6 +28,15 @@ const columns = {
   modifiersEnabled: shopSettings.modifiersEnabled,
   promptpayMode: shopSettings.promptpayMode,
   promptpayTarget: shopSettings.promptpayTarget,
+  receiptPrinterIp: shopSettings.receiptPrinterIp,
+  receiptPrinterPort: shopSettings.receiptPrinterPort,
+  receiptPrinterEnabled: shopSettings.receiptPrinterEnabled,
+  cashDrawerEnabled: shopSettings.cashDrawerEnabled,
+  logoKey: shopSettings.logoKey,
+  pointsEnabled: shopSettings.pointsEnabled,
+  pointsEarnSatang: shopSettings.pointsEarnSatang,
+  pointsRedeemSatang: shopSettings.pointsRedeemSatang,
+  pointsMinRedeem: shopSettings.pointsMinRedeem,
 }
 
 @injectable()

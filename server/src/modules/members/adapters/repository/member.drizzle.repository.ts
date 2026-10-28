@@ -35,7 +35,8 @@ export class DrizzleMemberRepository implements IMemberRepository {
   }
 
   async create(entity: MemberEntity) {
-    const { id: _id, code: _code, ...values } = entity.toSnapshot()
+    // `pointsBalance` stays out: only the points ledger moves a member's balance.
+    const { id: _id, code: _code, pointsBalance: _pointsBalance, ...values } = entity.toSnapshot()
     try {
       const [row] = await currentExecutor().insert(members).values(values).returning()
       return new MemberEntity(row!)
@@ -46,7 +47,8 @@ export class DrizzleMemberRepository implements IMemberRepository {
   }
 
   async update(entity: MemberEntity) {
-    const { id, code: _code, createdAt: _createdAt, ...values } = entity.toSnapshot()
+    // `pointsBalance` stays out: only the points ledger moves a member's balance.
+    const { id, code: _code, createdAt: _createdAt, pointsBalance: _pointsBalance, ...values } = entity.toSnapshot()
     try {
       const [row] = await currentExecutor().update(members).set(values).where(eq(members.id, id)).returning()
       if (!row) throw new DomainNotFoundError('ไม่พบสมาชิก', 'MEMBER_NOT_FOUND')

@@ -16,6 +16,7 @@ export const mockSalesReportRepository = (): Mocked<ISalesReportRepository> => (
   overview: mock<ISalesReportRepository['overview']>(),
   products: mock<ISalesReportRepository['products']>(),
   branches: mock<ISalesReportRepository['branches']>(),
+  promotions: mock<ISalesReportRepository['promotions']>(),
 })
 import type { IBranchRepository } from '../modules/branches/applications/ports/branch.repository'
 import type { ICategoryRepository } from '../modules/categories/applications/ports/category.repository'
@@ -163,6 +164,12 @@ export const mockQrPaymentGateway = (): Mocked<IQrPaymentGateway> => ({
 
 export const mockClock = (now: Date) => ({ now: mock(() => now) })
 
+/** Hands out id-1, id-2, ... so a test knows the key an upload will get. */
+export const mockIdGenerator = () => {
+  let next = 0
+  return { newId: mock(() => `id-${++next}`) }
+}
+
 export const mockQrPaymentClaims = (): Mocked<IQrPaymentClaims> => ({
   isRequired: mock<IQrPaymentClaims['isRequired']>(async () => false),
   assertClaimable: mock<IQrPaymentClaims['assertClaimable']>(async () => {}),
@@ -212,6 +219,7 @@ export const mockShiftRepository = (): Mocked<IShiftRepository> => ({
   update: mock<IShiftRepository['update']>(),
   cashDeltas: mock<IShiftRepository['cashDeltas']>(),
   addCashEntry: mock<IShiftRepository['addCashEntry']>(),
+  hasCashRefund: mock<IShiftRepository['hasCashRefund']>(),
   listCashEntries: mock<IShiftRepository['listCashEntries']>(),
 })
 
@@ -279,10 +287,13 @@ export const mockFirstRunGuard = (): Mocked<IFirstRunGuard> => ({
 })
 
 import type { IMemberRepository } from '../modules/members/applications/ports/member.repository'
+import type { IMemberPoints } from '../modules/members/applications/ports/member-points.port'
 import type { ISlideRepository } from '../modules/display-slides/applications/ports/slide.repository'
 import type { IPromotionRepository } from '../modules/promotions/applications/ports/promotion.repository'
 import type { IPriceQuoteRepository } from '../modules/quotes/applications/ports/price-quote.repository'
 import type { IQuoteClaims } from '../modules/quotes/applications/ports/quote-claims.port'
+import type { ICheckoutPoints } from '../modules/sales/applications/ports/checkout-points.port'
+import type { IQuotePoints } from '../modules/quotes/applications/ports/quote-points.port'
 import type { IPromotionCatalog } from '../modules/quotes/applications/ports/promotion-catalog.port'
 import type { IOrderQuoteSource } from '../modules/quotes/applications/ports/order-quote-source.port'
 export const mockPromotionRepository = (): Mocked<IPromotionRepository> => ({
@@ -324,8 +335,40 @@ export const mockQuoteClaims = (): Mocked<IQuoteClaims> => ({
   cancelByReference: mock<IQuoteClaims['cancelByReference']>(async () => {}),
 })
 
+/** The points a bill gives and takes: no balance by default, and every movement answers what is left. */
+export const mockCheckoutPoints = (): Mocked<ICheckoutPoints> => ({
+  balanceOf: mock<ICheckoutPoints['balanceOf']>(async () => 0),
+  lockMember: mock<ICheckoutPoints['lockMember']>(async () => {}),
+  record: mock<ICheckoutPoints['record']>(async () => ({ balanceAfter: 0 })),
+  findQuoteRedemption: mock<ICheckoutPoints['findQuoteRedemption']>(async () => null),
+})
+
+/** The points a quote pins: a member starts with none, and the row is locked without a check. */
+export const mockQuotePoints = (): Mocked<IQuotePoints> => ({
+  balanceOf: mock<IQuotePoints['balanceOf']>(async () => 0),
+  lockMember: mock<IQuotePoints['lockMember']>(async () => {}),
+  record: mock<IQuotePoints['record']>(async () => ({ balanceAfter: 0 })),
+  findQuoteRedemption: mock<IQuotePoints['findQuoteRedemption']>(async () => null),
+})
+
+/** Our own ledger: an empty history and a movement that leaves the balance where it is. */
+export const mockMemberPoints = (): Mocked<IMemberPoints> => ({
+  record: mock<IMemberPoints['record']>(async () => ({ balanceAfter: 0 })),
+  lockMember: mock<IMemberPoints['lockMember']>(async () => {}),
+  listMovements: mock<IMemberPoints['listMovements']>(async () => ({ items: [], total: 0 })),
+})
+
 export const mockPromotionCatalog = (): Mocked<IPromotionCatalog> => ({
   activePromotions: mock<IPromotionCatalog['activePromotions']>(async () => []),
+})
+
+import type { IPromotionUsage } from '../modules/quotes/applications/ports/promotion-usage.port'
+
+/** Every promotion is unlimited and unlocked unless a test says otherwise. */
+export const mockPromotionUsage = (): Mocked<IPromotionUsage> => ({
+  countUses: mock<IPromotionUsage['countUses']>(async () => ({ total: 0, byMember: 0 })),
+  countMany: mock<IPromotionUsage['countMany']>(async () => new Map()),
+  lockForUse: mock<IPromotionUsage['lockForUse']>(async () => null),
 })
 
 export const mockOrderQuoteSource = (): Mocked<IOrderQuoteSource> => ({
@@ -354,6 +397,22 @@ export const mockPinGuard = (): Mocked<IPinGuard> => {
       return 'ok' as const
     }),
     recordSuccess: mock((userId: number) => { attempts.delete(userId) }),
+  }
+}
+
+import type { ILoginAttemptGuard } from '../modules/auth/applications/ports/login-attempt-guard.port'
+
+/** Counts attempts per name like the real guard (the 5th locks), without a clock: a lock lasts for the whole test. */
+export const mockLoginAttemptGuard = (): Mocked<ILoginAttemptGuard> => {
+  const attempts = new Map<string, number>()
+  return {
+    begin: mock((username: string) => {
+      const count = attempts.get(username) ?? 0
+      if (count >= 5) return 'locked' as const
+      attempts.set(username, count + 1)
+      return 'ok' as const
+    }),
+    recordSuccess: mock((username: string) => { attempts.delete(username) }),
   }
 }
 

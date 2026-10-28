@@ -41,3 +41,8 @@ export function scopeEntries(
     return { id, name: item.name, status: item.isActive ? 'active' : 'inactive' }
   })
 }
+
+/** A product that is gone answers 404 at once. Reading the error by its shape keeps this file free of the API client. */
+export function isGone(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && (error as { status?: unknown }).status === 404
+}

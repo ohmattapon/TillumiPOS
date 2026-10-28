@@ -1,4 +1,5 @@
 import { DomainError } from './errors/domain-error'
+import { assertValidPointsRule, type PointsRule } from './member-points'
 import { VAT_MODES, type VatMode } from './pricing'
 
 export const LOCALES = ['th', 'en'] as const
@@ -20,6 +21,17 @@ export type PromptPayMode = (typeof PROMPTPAY_MODES)[number]
 export function isPromptPayTarget(value: string): boolean {
   return /^\d+$/.test(value) && (value.length === 13 || (value.length === 10 && value.startsWith('0')))
 }
+
+/** A LAN printer address: an IPv4 address or a local hostname (letters, digits, dots, hyphens). */
+export function isPrinterHost(value: string): boolean {
+  return value.length >= 1 && value.length <= 45 && /^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$/.test(value)
+}
+
+/** The one shape a stored logo key has: `logo/<uuid>.<ext>`. The upload use case produces it; nothing else is accepted. */
+export const isLogoKey = (value: string) => /^logo\/[A-Za-z0-9-]{1,64}\.(jpg|png|webp)$/.test(value)
+
+/** The storage key of a new logo: a fresh id per upload lets browsers cache the picture forever. */
+export const buildLogoKey = (id: string, extension: string) => `logo/${id}.${extension}`
 
 /** The kinds of shop first-run setup asks about. Only the features they turn on are stored, not the type. */
 export const SHOP_TYPES = ['cafe', 'restaurant', 'retail', 'other'] as const
@@ -71,6 +83,24 @@ export interface ShopSettingsProps {
   promptpayMode: PromptPayMode
   /** The shop's own PromptPay identifier for static QR; null means it is not set up. */
   promptpayTarget: string | null
+  /** LAN address of the thermal printer; null means it is not set up. */
+  receiptPrinterIp: string | null
+  /** TCP port the printer listens on; 9100 is the ESC/POS default. */
+  receiptPrinterPort: number
+  /** Print through the LAN printer instead of the browser. Needs an IP. */
+  receiptPrinterEnabled: boolean
+  /** Kick the drawer through the printer after printing. Needs the printer on. */
+  cashDrawerEnabled: boolean
+  /** Storage key of the logo printed at the top of receipts; null means no logo. Changed only by the logo commands. */
+  logoKey: string | null
+  /** Whether members earn and redeem points. Off until the owner sets a rule. */
+  pointsEnabled: boolean
+  /** Satang paid that earns one point: 2500 means one point for every 25 baht. */
+  pointsEarnSatang: number
+  /** What one point is worth when redeemed, in satang. */
+  pointsRedeemSatang: number
+  /** The smallest number of points a cart may redeem; 0 keeps small carts from spending points. */
+  pointsMinRedeem: number
 }
 
 /** What a shop that has never been configured runs with. */
@@ -91,6 +121,15 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettingsProps = {
   modifiersEnabled: true,
   promptpayMode: 'bank',
   promptpayTarget: null,
+  receiptPrinterIp: null,
+  receiptPrinterPort: 9100,
+  receiptPrinterEnabled: false,
+  cashDrawerEnabled: false,
+  logoKey: null,
+  pointsEnabled: false,
+  pointsEarnSatang: 2500,
+  pointsRedeemSatang: 100,
+  pointsMinRedeem: 10,
 }
 
 export type ShopSettingsChanges = Partial<ShopSettingsProps>
@@ -124,6 +163,15 @@ export class ShopSettingsEntity {
   public readonly modifiersEnabled: boolean
   public readonly promptpayMode: PromptPayMode
   public readonly promptpayTarget: string | null
+  public readonly receiptPrinterIp: string | null
+  public readonly receiptPrinterPort: number
+  public readonly receiptPrinterEnabled: boolean
+  public readonly cashDrawerEnabled: boolean
+  public readonly logoKey: string | null
+  public readonly pointsEnabled: boolean
+  public readonly pointsEarnSatang: number
+  public readonly pointsRedeemSatang: number
+  public readonly pointsMinRedeem: number
 
   constructor(props: ShopSettingsProps) {
     if (props.shopName.length < 1 || props.shopName.length > 100) throw invalid('ชื่อร้านต้องยาว 1 ถึง 100 ตัวอักษร')
@@ -146,6 +194,26 @@ export class ShopSettingsEntity {
     if (!PROMPTPAY_MODES.includes(props.promptpayMode)) throw invalid('วิธีรับพร้อมเพย์ไม่ถูกต้อง')
     if (props.promptpayTarget !== null && !isPromptPayTarget(props.promptpayTarget))
       throw invalid('ตัวระบุพร้อมเพย์ต้องเป็นเบอร์มือถือ 10 หลักขึ้นต้น 0 หรือเลขบัตร 13 หลัก')
+    if (props.receiptPrinterIp !== null && !isPrinterHost(props.receiptPrinterIp))
+      throw invalid('IP เครื่องพิมพ์ต้องเป็นตัวเลข 4 ชุดคั่นจุด หรือชื่อเครื่องในแลน')
+    if (!Number.isInteger(props.receiptPrinterPort) || props.receiptPrinterPort < 1 || props.receiptPrinterPort > 65535)
+      throw invalid('พอร์ตเครื่องพิมพ์ต้องเป็นจำนวนเต็ม 1 ถึง 65535')
+    if (typeof props.receiptPrinterEnabled !== 'boolean' || typeof props.cashDrawerEnabled !== 'boolean')
+      throw invalid('การเปิดปิดเครื่องพิมพ์และลิ้นชักต้องเป็นค่าจริงหรือเท็จ')
+    if (props.receiptPrinterEnabled && props.receiptPrinterIp === null)
+      throw invalid('เปิดพิมพ์ผ่านแลนต้องกรอก IP เครื่องพิมพ์ก่อน')
+    if (props.cashDrawerEnabled && !props.receiptPrinterEnabled)
+      throw invalid('เปิดลิ้นชักต้องเปิดพิมพ์ผ่านแลนก่อน เพราะลิ้นชักเตะผ่านเครื่องพิมพ์')
+    // A shop saved before logos existed has no value at all, which means no logo.
+    const logoKey = props.logoKey ?? null
+    if (logoKey !== null && !isLogoKey(logoKey)) throw invalid('คีย์โลโก้ไม่ถูกต้อง')
+    if (typeof props.pointsEnabled !== 'boolean') throw invalid('การเปิดปิดแต้มสมาชิกต้องเป็นค่าจริงหรือเท็จ')
+    const pointsRule: PointsRule = {
+      earnSatang: props.pointsEarnSatang,
+      redeemSatang: props.pointsRedeemSatang,
+      minRedeem: props.pointsMinRedeem,
+    }
+    assertValidPointsRule(pointsRule)
 
     this.shopName = props.shopName
     this.taxId = props.taxId
@@ -163,6 +231,15 @@ export class ShopSettingsEntity {
     this.modifiersEnabled = props.modifiersEnabled
     this.promptpayMode = props.promptpayMode
     this.promptpayTarget = props.promptpayTarget
+    this.receiptPrinterIp = props.receiptPrinterIp
+    this.receiptPrinterPort = props.receiptPrinterPort
+    this.receiptPrinterEnabled = props.receiptPrinterEnabled
+    this.cashDrawerEnabled = props.cashDrawerEnabled
+    this.logoKey = logoKey
+    this.pointsEnabled = props.pointsEnabled
+    this.pointsEarnSatang = pointsRule.earnSatang
+    this.pointsRedeemSatang = pointsRule.redeemSatang
+    this.pointsMinRedeem = pointsRule.minRedeem
   }
 
   /**
@@ -197,6 +274,15 @@ export class ShopSettingsEntity {
       modifiersEnabled: this.modifiersEnabled,
       promptpayMode: this.promptpayMode,
       promptpayTarget: this.promptpayTarget,
+      receiptPrinterIp: this.receiptPrinterIp,
+      receiptPrinterPort: this.receiptPrinterPort,
+      receiptPrinterEnabled: this.receiptPrinterEnabled,
+      cashDrawerEnabled: this.cashDrawerEnabled,
+      logoKey: this.logoKey,
+      pointsEnabled: this.pointsEnabled,
+      pointsEarnSatang: this.pointsEarnSatang,
+      pointsRedeemSatang: this.pointsRedeemSatang,
+      pointsMinRedeem: this.pointsMinRedeem,
     }
   }
 }

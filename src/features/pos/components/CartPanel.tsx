@@ -16,6 +16,7 @@ import { OrderQrHold } from './OrderQrHold'
 import { useCartActions } from '../hooks/use-cart-actions'
 import type { PricedLine } from '../lib/cart'
 import { noteToSave } from '../lib/note'
+import { canSaveAsOrder } from '../lib/save-order'
 import { useCartStore } from '../store/cart.store'
 import { CartMember } from './CartMember'
 import { OrderTools } from './OrderTools'
@@ -29,6 +30,8 @@ interface Props {
   /** side: the wide-screen panel. sheet: the same cart, shown from the bottom on a small screen. */
   variant?: 'side' | 'sheet'
   onClose?: () => void
+  /** Why the quote refused the coupon code, shown under the field. */
+  couponError?: string | null
 }
 
 /**
@@ -70,7 +73,60 @@ function LineNote({ orderId, lineId, line }: { orderId: number; lineId: number; 
   )
 }
 
-export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant = 'side', onClose }: Props) {
+/**
+ * The coupon code. What is typed is kept here until it is sent, so the quote is asked for once
+ * per code rather than once per keystroke.
+ */
+function CouponField({ disabled, error }: { disabled: boolean; error: string | null }) {
+  const { t } = useTranslation('pos')
+  const code = useCartStore((state) => state.couponCode)
+  const setCouponCode = useCartStore((state) => state.setCouponCode)
+  const [draft, setDraft] = useState<string | null>(null)
+  const apply = () => {
+    setCouponCode(draft ?? '')
+    setDraft(null)
+  }
+
+  return (
+    <div className="space-y-1">
+      {code !== '' ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-accent px-3 py-1 text-sm text-accent-foreground">
+          <span className="min-w-0 truncate font-medium">{t('cart.couponApplied', { code })}</span>
+          <Button variant="ghost" className="h-11 px-2" onClick={() => setCouponCode('')}>
+            {t('cart.couponRemove')}
+          </Button>
+        </div>
+      ) : draft === null ? (
+        <Button variant="outline" className="h-11 w-full" disabled={disabled} onClick={() => setDraft('')}>
+          <Tag />
+          {t('cart.couponAdd')}
+        </Button>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Input
+            className="h-11 flex-1 bg-background"
+            aria-label={t('cart.couponAdd')}
+            placeholder={t('cart.couponPlaceholder')}
+            maxLength={20}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') apply()
+            }}
+          />
+          <Button className="h-11 shrink-0" onClick={apply}>{t('cart.couponUse')}</Button>
+          <Button variant="ghost" className="size-11 shrink-0" aria-label={t('cart.couponCancel')} onClick={() => setDraft(null)}>
+            <X />
+          </Button>
+        </div>
+      )}
+      {disabled && <p className="text-xs text-muted-foreground">{t('cart.couponNotWithDiscount')}</p>}
+      {error !== null && <p role="alert" className="text-xs text-destructive">{error}</p>}
+    </div>
+  )
+}
+
+export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant = 'side', onClose, couponError = null }: Props) {
   const { t } = useTranslation('pos')
   const { money, currency } = useFormat()
   const { vatMode, vatRateBp } = useSettings()
@@ -84,6 +140,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
   const isOrder = cart.orderId !== null
   const tables = useQuery(tablesQuery)
   const tableName = tables.data?.find((table) => table.id === cart.order?.tableId)?.name
+  const hasPackLine = storedLines.length > 0 && !canSaveAsOrder(storedLines)
 
   return (
     <aside
@@ -123,12 +180,13 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
           <li className="px-4 py-16 text-center text-sm text-muted-foreground">{t('cart.empty')}</li>
         )}
         {cart.lines.map((line) => {
-          const { lineKey, lineId, name, unitPriceSatang, stockQty, quantity, lineTotalSatang, exceedsStock, options, unavailable } = line
+          const { lineKey, lineId, name, unitPriceSatang, stockQty, quantity, lineTotalSatang, exceedsStock, options, unavailable, packSize } = line
           return (
           <li key={lineKey} className="space-y-2 px-4 py-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 space-y-1">
                 <p className="text-base leading-snug font-medium">{name}</p>
+                {packSize > 1 && <p className="text-xs text-muted-foreground">{t('cart.pack', { size: packSize })}</p>}
               </div>
               <p className="shrink-0 text-sm font-semibold tabular-nums">{money.plain(lineTotalSatang)}</p>
             </div>
@@ -241,6 +299,15 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
             )}
           </>
         )}
+        {/* A coupon is pinned by a quote, so it is offered only while the cart is priced by one. */}
+        {!isOrder && <CouponField disabled={discount.trim() !== ''} error={couponError} />}
+        {/* The points the member spends come off after the promotion or the typed discount, as the quote prices them. */}
+        {cart.pointsDiscountSatang > 0 && (
+          <p className="flex justify-between gap-4 text-sm text-muted-foreground">
+            <span>{t('cart.pointsDiscount', { points: cart.pointsRedeemed })}</span>
+            <span className="tabular-nums">-{money.format(cart.pointsDiscountSatang)}</span>
+          </p>
+        )}
         {/* When prices already include VAT there is nothing to add; only an added tax is shown here. */}
         {vatMode === 'exclusive' && (
           <p className="flex justify-between text-sm text-muted-foreground">
@@ -253,10 +320,13 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
           <span className="text-3xl font-semibold tabular-nums">{money.format(cart.totalSatang)}</span>
         </p>
         {!isOrder && (
-          <Button variant="outline" className="h-11 w-full" disabled={cart.lines.length === 0 || !cart.productsReady} onClick={onSaveOrder}>
-            <ClipboardList />
-            {t('cart.saveOrder')}
-          </Button>
+          <>
+            <Button variant="outline" className="h-11 w-full" disabled={!canSaveAsOrder(storedLines) || !cart.productsReady} onClick={onSaveOrder}>
+              <ClipboardList />
+              {t('cart.saveOrder')}
+            </Button>
+            {hasPackLine && <p className="text-xs text-muted-foreground">{t('cart.saveOrderNoPacks')}</p>}
+          </>
         )}
         <Button className="h-14 w-full gap-3 text-lg" disabled={!cart.canPay || !paymentAvailable} onClick={onPay}>
           {t('cart.pay')}

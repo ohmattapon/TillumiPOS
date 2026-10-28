@@ -11,10 +11,12 @@ interface Props {
   onPay: () => void
   onSaveOrder: () => void
   paymentAvailable?: boolean
+  /** Why the quote refused the coupon code, shown under the field in the sheet. */
+  couponError?: string | null
 }
 
 /** Below 1024px: the cart's total and the pay button stay under the thumb; a tap opens the whole cart. */
-export function CartBar({ onPay, onSaveOrder, paymentAvailable = true }: Props) {
+export function CartBar({ onPay, onSaveOrder, paymentAvailable = true, couponError = null }: Props) {
   const { t } = useTranslation('pos')
   const { money } = useFormat()
   const cart = useCart()
@@ -49,6 +51,7 @@ export function CartBar({ onPay, onSaveOrder, paymentAvailable = true }: Props) 
               onSaveOrder()
             }}
             paymentAvailable={paymentAvailable}
+            couponError={couponError}
           />
         </SheetContent>
       </Sheet>

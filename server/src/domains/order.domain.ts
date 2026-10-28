@@ -75,32 +75,34 @@ function assertQuantity(quantity: number) {
 /** The identity of a line from its product and the stored key of its options. */
 export const identityOf = (productId: number, optionsKey: string) => `${productId}:${optionsKey}`
 
-/** The same product with the same options is the same line. */
+/**
+ * The same product with the same options is the same item: its lines share one price even when their
+ * notes differ.
+ */
 export const lineIdentity = (productId: number, options: readonly LineOption[]) =>
   identityOf(productId, lineKey(options))
 
-function cleanNote(note: string | null): string | null {
-  const trimmed = note?.trim() || null
-  if (trimmed !== null && trimmed.length > MAX_NOTE_LENGTH)
-    throw invalid(`หมายเหตุต้องไม่เกิน ${MAX_NOTE_LENGTH} ตัวอักษร`)
-  return trimmed
-}
+/** The same product with the same options and the same note is the same line. */
+const identity = (item: OrderItem) => `${lineIdentity(item.productId, item.options)}\u0000${item.note ?? ''}`
 
-const identity = (item: OrderItem) => lineIdentity(item.productId, item.options)
-
-/** The lines of an order, with repeated products and options merged into the first line of each. */
+/**
+ * The lines of an order, with repeated products, options and notes merged into the first line of each.
+ * A note belongs to its own line, so it never moves onto another line. Every line of one item keeps the
+ * price of the item's first line, because the checkout merges the item's lines and charges that price.
+ */
 function mergeLines(items: readonly OrderItem[]): OrderItem[] {
-  const merged = new Map<string, OrderItem>()
+  const priceOfItem = new Map<string, number>()
   for (const item of items) {
     assertQuantity(item.quantity)
-    const key = identity(item)
+    const itemKey = lineIdentity(item.productId, item.options)
+    if (!priceOfItem.has(itemKey)) priceOfItem.set(itemKey, item.unitPriceSatang)
+  }
+  const merged = new Map<string, OrderItem>()
+  for (const item of items) {
+    const priced = { ...item, unitPriceSatang: priceOfItem.get(lineIdentity(item.productId, item.options))! }
+    const key = identity(priced)
     const existing = merged.get(key)
-    merged.set(
-      key,
-      existing
-        ? { ...existing, quantity: existing.quantity + item.quantity, note: existing.note ?? item.note }
-        : { ...item },
-    )
+    merged.set(key, existing ? { ...existing, quantity: existing.quantity + item.quantity } : priced)
   }
   const lines = [...merged.values()]
   lines.forEach((line) => assertQuantity(line.quantity))
@@ -108,8 +110,18 @@ function mergeLines(items: readonly OrderItem[]): OrderItem[] {
   return lines
 }
 
-const plainLineOf = (productId: number) => (item: OrderItem) => item.productId === productId && item.options.length === 0
+/** The first line of a product without options, which is the line the routes by productId edit. */
+const plainLineOf = (items: readonly OrderItem[], productId: number) =>
+  items.find((item) => item.productId === productId && item.options.length === 0)
+
 const lineWithId = (lineId: number) => (item: OrderItem) => item.lineId === lineId
+
+function cleanNote(note: string | null): string | null {
+  const trimmed = note?.trim() || null
+  if (trimmed !== null && trimmed.length > MAX_NOTE_LENGTH)
+    throw invalid(`หมายเหตุต้องไม่เกิน ${MAX_NOTE_LENGTH} ตัวอักษร`)
+  return trimmed
+}
 
 /**
  * A bill that is still being built. It is edited while open and closed once: paid (it then
@@ -172,8 +184,9 @@ export class OrderEntity {
   }
 
   /**
-   * Puts a product on the order. The same product with the same options gains the quantity and keeps
-   * the price it was quoted. `product.unitPriceSatang` is the unit price including the options.
+   * Puts a product on the order. The same product with the same options and the same note (a new line
+   * has none) gains the quantity. `product.unitPriceSatang` is the unit price including the options;
+   * every line of one item keeps the price of that item's first line.
    */
   addItem(product: OrderedProduct, quantity: number, options: readonly LineOption[] = []): OrderEntity {
     this.assertOpen()
@@ -183,9 +196,12 @@ export class OrderEntity {
     })
   }
 
-  /** Sets how many of a product, without options, are ordered. */
+  /** Sets how many of a product, without options, are ordered: its first such line. */
   setQuantity(productId: number, quantity: number): OrderEntity {
-    return this.setQuantityOf(plainLineOf(productId), quantity)
+    this.assertOpen()
+    // Matched by the line itself, because the lines of an order that has not been stored yet share lineId 0.
+    const line = this.requirePlainLine(productId)
+    return this.setQuantityOf((item) => item === line, quantity)
   }
 
   /** Sets how many of one line are ordered, whatever options it has. */
@@ -198,17 +214,29 @@ export class OrderEntity {
     this.assertOpen()
     const value = cleanNote(note)
     this.requireItem(lineWithId(lineId))
-    return this.change({ items: this.items.map((item) => (item.lineId === lineId ? { ...item, note: value } : item)) })
+    return this.change({
+      items: mergeLines(this.items.map((item) => (item.lineId === lineId ? { ...item, note: value } : item))),
+    })
   }
 
-  /** How many units of each line the order holds, by line identity (see lineIdentity). */
+  /**
+   * How many units of each item the order holds, by line identity (see lineIdentity): the quantities
+   * of every note of that item added up.
+   */
   quantitiesByLine(): Map<string, number> {
-    return new Map(this.items.map((item) => [identity(item), item.quantity]))
+    const quantities = new Map<string, number>()
+    for (const item of this.items) {
+      const key = lineIdentity(item.productId, item.options)
+      quantities.set(key, (quantities.get(key) ?? 0) + item.quantity)
+    }
+    return quantities
   }
 
-  /** Takes the line of a product without options off the order. */
+  /** Takes the first line of a product without options off the order. */
   removeItem(productId: number): OrderEntity {
-    return this.removeWhere(plainLineOf(productId))
+    this.assertOpen()
+    const line = this.requirePlainLine(productId)
+    return this.removeWhere((item) => item === line)
   }
 
   removeLine(lineId: number): OrderEntity {
@@ -222,8 +250,9 @@ export class OrderEntity {
   }
 
   /**
-   * Takes the lines of another open order onto this one. A line of the same product and options adds
-   * to this order's line and keeps the price quoted here. Call markMerged on the source afterwards.
+   * Takes the lines of another open order onto this one. A line of the same product, options and note
+   * adds to this order's line; a different note stays a line of its own. Every line of one item keeps
+   * the price quoted here. Call markMerged on the source afterwards.
    */
   absorb(source: OrderEntity): OrderEntity {
     this.assertOpen()
@@ -354,6 +383,13 @@ export class OrderEntity {
     this.assertOpen()
     this.requireItem(match)
     return this.change({ items: this.items.filter((item) => !match(item)) })
+  }
+
+  /** The first line of a product without options: the one the routes by productId edit. */
+  private requirePlainLine(productId: number): OrderItem {
+    const line = plainLineOf(this.items, productId)
+    if (!line) throw new DomainNotFoundError('ไม่พบสินค้านี้ในออเดอร์', 'ORDER_ITEM_NOT_FOUND')
+    return line
   }
 
   private requireItem(match: (item: OrderItem) => boolean): void {

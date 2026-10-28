@@ -7,6 +7,8 @@ import { UpdateMemberUseCase } from '../../applications/usecases/update-member.u
 import { GetMemberUseCase } from '../../applications/usecases/get-member.usecase'
 import { ListMembersUseCase } from '../../applications/usecases/list-members.usecase'
 import { GetMemberSalesHistoryUseCase } from '../../applications/usecases/get-member-sales-history.usecase'
+import { AdjustMemberPointsUseCase } from '../../applications/usecases/adjust-member-points.usecase'
+import { ListMemberPointsUseCase } from '../../applications/usecases/list-member-points.usecase'
 import { memberSchemas } from './schemas/member.schema'
 
 @injectable()
@@ -17,6 +19,8 @@ export class MemberElysiaController {
     @inject(GetMemberUseCase) private readonly getMember: GetMemberUseCase,
     @inject(ListMembersUseCase) private readonly listMembers: ListMembersUseCase,
     @inject(GetMemberSalesHistoryUseCase) private readonly getHistory: GetMemberSalesHistoryUseCase,
+    @inject(AdjustMemberPointsUseCase) private readonly adjustPoints: AdjustMemberPointsUseCase,
+    @inject(ListMemberPointsUseCase) private readonly listPoints: ListMemberPointsUseCase,
   ) {}
 
   getRoutes() {
@@ -36,6 +40,18 @@ export class MemberElysiaController {
       })
       .get('/:id/sales', async ({ params, query, branch }) => this.getHistory.execute(params.id, query, (await branch()).id), {
         auth: true, params: idParams, query: memberSchemas.historyQuery, response: memberSchemas.history, detail: { summary: 'ประวัติซื้อของสมาชิกในสาขาที่เลือก' },
+      })
+      .get('/:id/points', async ({ params, query }) => this.listPoints.execute(params.id, query), {
+        auth: true, params: idParams, query: memberSchemas.pointsQuery, response: page(memberSchemas.pointMovement), detail: { summary: 'ประวัติแต้มของสมาชิก' },
+      })
+      .post('/:id/points/adjustments', async ({ params, body, user, branch }) => this.adjustPoints.execute(
+        params.id, body, user, (await branch()).id,
+      ), {
+        auth: { can: 'members.points_adjust' },
+        params: idParams,
+        body: memberSchemas.adjustPoints,
+        response: memberSchemas.adjustResult,
+        detail: { summary: 'ปรับแต้มสมาชิกด้วยมือ' },
       })
   }
 }

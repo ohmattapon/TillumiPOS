@@ -1,5 +1,6 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
+import type { PointsRule } from '@pos/api/points'
 import { memberQuery } from '@/features/members'
 import { modifierGroupsQuery } from '@/features/modifiers'
 import { orderQuery } from '@/features/orders'
@@ -7,6 +8,8 @@ import { promotionLines, useBestPromotion, useProductPromotions } from '@/featur
 import { productQuery } from '@/features/products'
 import { useFormat, useSettings } from '@/features/settings'
 import { priceCart, priceOrder, type PricingOptions } from '../lib/cart'
+import { orderIsGone } from '../lib/order-gone'
+import { maxRedeemPoints } from '../lib/points'
 import { useCartStore } from '../store/cart.store'
 
 /**
@@ -18,8 +21,13 @@ export function useCart() {
   const discount = useCartStore((state) => state.discount)
   const orderId = useCartStore((state) => state.orderId)
   const localMemberId = useCartStore((state) => state.memberId)
+  const requestedPoints = useCartStore((state) => state.redeemPoints)
   const clear = useCartStore((state) => state.clear)
   const declined = useCartStore((state) => state.promotionDeclined)
+  // A coupon is pinned by a quote, and a quote cannot carry a typed discount, so a typed discount
+  // wins and the code waits until it is cleared.
+  const storedCoupon = useCartStore((state) => state.couponCode)
+  const couponCode = discount.trim() === '' ? storedCoupon : ''
   const order = useQuery({ ...orderQuery(orderId ?? 0), enabled: orderId !== null })
   const memberId = orderId === null ? localMemberId : order.data?.memberId ?? null
   const member = useQuery({ ...memberQuery(memberId ?? 0), enabled: memberId !== null, staleTime: 0, refetchInterval: 15_000 })
@@ -28,7 +36,7 @@ export function useCart() {
   // The basket reads only its own products, independently of the page being browsed.
   const products = useQueries({ queries: ids.map(productQuery) })
   const modifiers = useQuery(modifierGroupsQuery)
-  const { vatMode, vatRateBp } = useSettings()
+  const { vatMode, vatRateBp, pointsEnabled, pointsEarnSatang, pointsRedeemSatang, pointsMinRedeem } = useSettings()
   const { money } = useFormat()
 
   // Only options that can still be chosen; a cart line with any other option is flagged as unavailable.
@@ -48,13 +56,25 @@ export function useCart() {
   ))
 
   // The order was paid or cancelled elsewhere (another till, another tab), or no longer exists.
-  const gone = orderId !== null && (order.isError || (order.data !== undefined && order.data.status !== 'open'))
+  const gone = orderId !== null && orderIsGone({ error: order.error, data: order.data })
   useEffect(() => {
     if (gone) clear()
   }, [gone, clear])
 
+  const pointsRule: PointsRule = {
+    earnSatang: pointsEarnSatang,
+    redeemSatang: pointsRedeemSatang,
+    minRedeem: pointsMinRedeem,
+  }
+  // Only the one-step cart redeems points, and only for a member the shop has switched points on for.
+  const balance = member.data?.pointsBalance ?? 0
+  const canRedeemPoints = pointsEnabled && orderId === null && member.data !== undefined
+  const points = canRedeemPoints
+    ? { requested: requestedPoints, balance, rule: pointsRule }
+    : null
+
   const price = (promotion: PricingOptions['promotion']) => {
-    const options: PricingOptions = { vatMode, vatRateBp, parseAmount: money.parse, promotion }
+    const options: PricingOptions = { vatMode, vatRateBp, parseAmount: money.parse, promotion, points }
     return orderId === null
       ? priceCart(lines, productsById, discount, options, optionsById)
       : priceOrder(order.data?.items ?? [], productsById, discount, options)
@@ -65,20 +85,29 @@ export function useCart() {
   const best = useBestPromotion({ subtotalSatang: base.subtotalSatang, hasMember: memberId !== null, lines: cartLines })
   const productPromotions = useProductPromotions(cartLines)
   const priced = best && !declined ? price(best) : base
-  // A pinned price is used when a promotion applies, or when no discount is typed. A typed discount is
-  // never sent with a quote (the quote would drop it), so such a cart is sold the one-step way instead.
-  const usesQuote = !declined && (best !== null || base.discountSatang === 0)
+  // A pinned price is used when a promotion applies, when points are redeemed, or when a coupon is
+  // typed. A typed discount is never sent with a quote (the quote would drop it), so such a cart is
+  // sold the one-step way instead.
+  const usesQuote =
+    !declined && (best !== null || base.discountSatang === 0 || couponCode !== '' || priced.pointsRedeemed > 0)
 
   const productsReady = products.every((result) => result.isSuccess && result.data.isActive)
+  const payableSatang = priced.subtotalSatang - priced.discountSatang
   return {
     ...priced, canPay: priced.canPay && productsReady && memberReady, productsReady,
     isLoadingProducts: products.some((result) => result.isPending),
     productError: products.find((result) => result.error)?.error,
     hasUnavailableProducts: products.some((result) => result.data && !result.data.isActive),
     orderId, order: order.data, memberId, member: member.data, memberError: member.error,
+    canRedeemPoints,
+    redeemPoints: requestedPoints,
+    pointsBalance: balance,
+    /** What the "สูงสุด" button fills in: the bill and the balance both cap it. */
+    maxRedeemPoints: canRedeemPoints ? maxRedeemPoints(payableSatang, balance, pointsRule) : 0,
     availablePromotion: best,
     productPromotions,
     promotionDeclined: declined,
+    couponCode,
     usesQuote,
   }
 }

@@ -3,7 +3,12 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 interface Style { [key: string]: string }
 const style = (): Style => ({})
 
-let canvas = { width: 300, height: 600 }
+interface TestCanvas {
+  width: number
+  height: number
+  getContext?: () => { getImageData: () => { data: Uint8ClampedArray } }
+}
+let canvas: TestCanvas = { width: 300, height: 600 }
 let rendered: { options: Record<string, unknown> | null } = { options: null }
 const pdfs: { options: Record<string, unknown>; image: unknown[]; saved: string | null }[] = []
 
@@ -26,6 +31,7 @@ mock.module('jspdf', () => ({
 }))
 
 const { downloadReceiptPdf } = await import('./download-receipt-pdf')
+const { rasterizeReceipt } = await import('./rasterize-receipt')
 
 const globals = globalThis as { document?: unknown }
 const nativeDocument = globals.document
@@ -88,5 +94,59 @@ describe('downloadReceiptPdf', () => {
     onclone({ documentElement: { style: style() }, body: null }, cloned)
 
     expect(cloned.style.fontSize).toBe('14px')
+  })
+})
+
+describe('rasterizeReceipt rendering', () => {
+  const renderedPixels = () => {
+    canvas = {
+      width: 2, height: 1,
+      getContext: () => ({ getImageData: () => ({ data: new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255]) }) }),
+    }
+  }
+
+  test('waits for fonts and renders printer dots without changing the source element', async () => {
+    renderedPixels()
+    rendered = { options: null }
+    let fontsReady!: () => void
+    globals.document = { fonts: { ready: new Promise<void>((resolve) => { fontsReady = resolve }) } }
+    const original = { style: { color: 'theme-color' } } as unknown as HTMLElement
+    const pending = rasterizeReceipt(original, 58)
+    await Promise.resolve()
+    expect(rendered.options).toBeNull()
+    fontsReady()
+    const bitmap = await pending
+    expect(bitmap).toMatchObject({ widthDots: 384, heightDots: 1 })
+    expect(bitmap.bits).toHaveLength(384)
+    expect(bitmap.bits.slice(191, 193)).toEqual([true, false])
+    expect(original.style.color).toBe('theme-color')
+    expect(rendered.options).toMatchObject({ scale: 1, backgroundColor: '#ffffff', logging: false })
+  })
+
+  test.each([58, 80] as const)('uses print-safe clone colors and the %smm printer width', async (paperMm) => {
+    renderedPixels()
+    await rasterizeReceipt(receipt, paperMm)
+    const child = { style: style() }
+    const cloned = { style: style(), querySelectorAll: () => [child] }
+    const clonedDocument = { documentElement: { style: style() }, body: { style: style() } }
+    const onclone = rendered.options!.onclone as (document: unknown, element: unknown) => void
+    onclone(clonedDocument, cloned)
+    expect(cloned.style).toMatchObject({
+      width: paperMm === 58 ? '384px' : '576px', maxWidth: 'none', boxSizing: 'border-box',
+      fontSize: paperMm === 58 ? '11px' : '14px', backgroundColor: '#ffffff', color: '#000000',
+      borderColor: '#9ca3af', outlineColor: '#000000',
+    })
+    expect(child.style).toEqual({ color: '#000000', borderColor: '#9ca3af', outlineColor: '#000000', textDecorationColor: '#000000' })
+    expect(clonedDocument.documentElement.style.backgroundColor).toBe('#ffffff')
+    expect(clonedDocument.body.style.backgroundColor).toBe('#ffffff')
+  })
+
+  test('renders a clone without a body or child elements', async () => {
+    renderedPixels()
+    await rasterizeReceipt(receipt, 80)
+    const onclone = rendered.options!.onclone as (document: unknown, element: unknown) => void
+    const cloned = { style: style(), querySelectorAll: () => [] }
+    expect(() => onclone({ documentElement: { style: style() }, body: null }, cloned)).not.toThrow()
+    expect(cloned.style.width).toBe('576px')
   })
 })

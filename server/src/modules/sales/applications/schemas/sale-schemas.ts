@@ -17,6 +17,8 @@ export const completeSaleSchema = z.object({
         productId: z.number().int(),
         quantity: z.number().int().min(1),
         options: z.array(z.number().int().positive()).max(40).optional(),
+        /** The pack sold; quantity then counts packs. */
+        packId: z.number().int().positive().optional(),
       }),
     )
     .min(1),

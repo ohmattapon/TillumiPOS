@@ -1,5 +1,9 @@
 import type { Order, Product } from '@pos/api/types'
+import type { ProductPack } from '@pos/api/packs'
+import { packUnitPriceSatang } from '@pos/api/packs'
 import { calculateTotals, type VatMode } from '@pos/api/pricing'
+import { pointsDiscountSatang as discountOf, type PointsRule } from '@pos/api/points'
+import { appliedRedeemPoints } from './points'
 import type { CartLine } from '../store/cart.store'
 
 export interface PricedLine {
@@ -16,6 +20,10 @@ export interface PricedLine {
   options: { name: string; priceSatang: number }[]
   /** The ids of the options chosen; what a sale or an order is sent. */
   optionIds: number[]
+  /** The pack the line sells; null when it sells single pieces. A pack line carries no options. */
+  packId: number | null
+  /** How many pieces one unit of the line holds: the pack's size, or 1. */
+  packSize: number
   /** More than the shop has: the sale would be refused. The stock is the product's, shared by its lines. */
   exceedsStock: boolean
   /** What is on the shelf, for the message shown when the line asks for more. */
@@ -35,6 +43,10 @@ export interface PricedCart {
   isDiscountValid: boolean
   /** The promotion that gives this discount; it replaces a typed discount. Null when there is none. */
   promotion: { id: number; name: string; discountSatang: number } | null
+  /** The points this cart spends; 0 when the member spends none. */
+  pointsRedeemed: number
+  /** What those points take off the bill, on top of the promotion or the typed discount. */
+  pointsDiscountSatang: number
   /** VAT charged on this cart, whether included in the total or added on top. */
   vatSatang: number
   /** What the customer owes: exactly what the server will charge. */
@@ -49,6 +61,11 @@ export interface PricingOptions {
   parseAmount: (input: string) => number | null
   /** The promotion the till will be given. It sets the discount, so a typed one is ignored. */
   promotion?: { id: number; name: string; discountSatang: number } | null
+  /**
+   * The points the cashier asked to redeem and what the bill may absorb. A request the shop's
+   * rules would refuse is left out, so the preview matches the quote the server returns.
+   */
+  points?: { requested: number; balance: number; rule: PointsRule } | null
 }
 
 /** What the till needs to know about an option to price it. */
@@ -61,10 +78,18 @@ export interface CartOption {
 const exceeds = (product: Product | undefined, quantity: number) =>
   product !== undefined && product.trackStock && quantity > product.stockQty
 
-/** How many of each product the lines ask for in all: stock is shared by a product's lines. */
-function demandByProduct(lines: readonly { productId: number; quantity: number }[]) {
+/** The pack the line sells, when the product still lists it. */
+const packOf = (product: Product | undefined, packId: number | undefined): ProductPack | undefined =>
+  packId === undefined ? undefined : product?.packs.find((pack) => pack.id === packId)
+
+/**
+ * How many pieces of each product the lines ask for in all: stock is counted in pieces, and a
+ * product's lines share it, whether they sell packs or single pieces.
+ */
+function demandByProduct(lines: readonly { productId: number; quantity: number; packSize?: number }[]) {
   const demand = new Map<number, number>()
-  for (const { productId, quantity } of lines) demand.set(productId, (demand.get(productId) ?? 0) + quantity)
+  for (const { productId, quantity, packSize = 1 } of lines)
+    demand.set(productId, (demand.get(productId) ?? 0) + quantity * packSize)
   return demand
 }
 
@@ -81,13 +106,25 @@ export function priceCart(
   options: PricingOptions,
   optionsById: ReadonlyMap<number, CartOption> = new Map(),
 ): PricedCart {
-  const demand = demandByProduct(lines)
+  const demand = demandByProduct(
+    lines.map((line) => ({
+      productId: line.productId,
+      quantity: line.quantity,
+      packSize: packOf(products.get(line.productId), line.packId)?.size ?? 1,
+    })),
+  )
   const priced: PricedLine[] = []
-  for (const { key, productId, optionIds, quantity } of lines) {
+  for (const { key, productId, optionIds, packId, quantity } of lines) {
     const product = products.get(productId)
     if (!product) continue
-    const chosen = optionIds.flatMap((id) => optionsById.get(id) ?? [])
-    const unitPriceSatang = product.priceSatang + chosen.reduce((total, option) => total + option.priceSatang, 0)
+    const pack = packOf(product, packId)
+    // A pack that has been disabled since it was put in the cart cannot be sold any more.
+    const sellable = pack?.isActive === true ? pack : undefined
+    const chosen = sellable ? [] : optionIds.flatMap((id) => optionsById.get(id) ?? [])
+    const optionsSatang = chosen.reduce((total, option) => total + option.priceSatang, 0)
+    const unitPriceSatang = sellable
+      ? packUnitPriceSatang(product.priceSatang, sellable)
+      : product.priceSatang + optionsSatang
     priced.push({
       lineKey: key,
       lineId: null,
@@ -98,9 +135,11 @@ export function priceCart(
       lineTotalSatang: unitPriceSatang * quantity,
       options: chosen.map(({ name, priceSatang }) => ({ name, priceSatang })),
       optionIds: [...optionIds],
+      packId: packId ?? null,
+      packSize: pack?.size ?? 1,
       exceedsStock: exceeds(product, demand.get(productId) ?? quantity),
       stockQty: product.stockQty,
-      unavailable: chosen.length !== optionIds.length,
+      unavailable: packId === undefined ? chosen.length !== optionIds.length : sellable === undefined,
       note: null,
     })
   }
@@ -130,6 +169,9 @@ export function priceOrder(
       lineTotalSatang: item.unitPriceSatang * item.quantity,
       options: item.options.map(({ name, priceSatang }) => ({ name, priceSatang })),
       optionIds: item.options.map((option) => option.optionId),
+      // An order never carries a pack: the till sells packs in the one-step cart only.
+      packId: null,
+      packSize: 1,
       exceedsStock: exceeds(product, demand.get(item.productId) ?? item.quantity),
       stockQty: product?.stockQty ?? 0,
       unavailable: false,
@@ -142,7 +184,7 @@ export function priceOrder(
 function summarize(
   priced: PricedLine[],
   discountInput: string,
-  { vatMode, vatRateBp, parseAmount, promotion = null }: PricingOptions,
+  { vatMode, vatRateBp, parseAmount, promotion = null, points = null }: PricingOptions,
 ): PricedCart {
   const subtotalSatang = priced.reduce((sum, line) => sum + line.lineTotalSatang, 0)
   const itemCount = priced.reduce((sum, line) => sum + line.quantity, 0)
@@ -155,7 +197,20 @@ function summarize(
     : isDiscountValid
       ? typed
       : 0
-  const { vatSatang, totalSatang } = calculateTotals({ subtotalSatang, discountSatang, vatMode, vatRateBp })
+  // Points are asked for against what is left to pay, after the promotion or the typed discount,
+  // and they stack on top of it, exactly as the quote prices them. A typed discount can never reach
+  // the quote, so the till does not redeem points beside one.
+  const pointsRedeemed =
+    points !== null && (promotion !== null || discountInput.trim() === '')
+      ? appliedRedeemPoints(points.requested, subtotalSatang - discountSatang, points.balance, points.rule)
+      : 0
+  const pointsDiscount = points !== null ? discountOf(pointsRedeemed, points.rule) : 0
+  const { vatSatang, totalSatang } = calculateTotals({
+    subtotalSatang,
+    discountSatang: discountSatang + pointsDiscount,
+    vatMode,
+    vatRateBp,
+  })
 
   return {
     lines: priced,
@@ -164,6 +219,8 @@ function summarize(
     discountSatang,
     isDiscountValid,
     promotion,
+    pointsRedeemed,
+    pointsDiscountSatang: pointsDiscount,
     vatSatang,
     totalSatang,
     canPay:

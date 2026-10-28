@@ -7,13 +7,15 @@ export const createQrPaymentSchema = z.object({
 })
 
 /**
- * What SCB posts when a payment arrives. Only the reference is used, to know which QR to check:
- * the rest is untrusted, so nothing in the body is ever treated as proof of payment.
+ * What KBank posts when a payment arrives. Only the reference is used, to know which QR to check:
+ * the rest is untrusted, so nothing in the body is ever treated as proof of payment. KBank signs
+ * nothing on this call (the community SDK validates only the method and content type), so a forged
+ * callback changes nothing: the payment is marked paid only if KBank's own inquiry confirms it.
+ * Field name follows the QR API vocabulary (partnerTxnUid is the id our create call sent).
  */
-export const scbConfirmationSchema = z
+export const kbankConfirmationSchema = z
   .object({
-    billPaymentRef1: z.string().optional(),
-    transactionId: z.string().optional(),
+    partnerTxnUid: z.string().optional(),
   })
   .passthrough()
 

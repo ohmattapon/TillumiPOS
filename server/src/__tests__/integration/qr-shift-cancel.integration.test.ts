@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { fakeScb, SCB_ENV_KEYS } from '../../../test/scb-server'
+import { fakeKbank, KBANK_ENV_KEYS } from '../../../test/kbank-server'
 import { ok, resetDatabase, signIn, type Session } from '../../../test/harness'
 
 const previousMode = Bun.env.CHECKOUT_MODE
@@ -10,8 +10,8 @@ let shiftId: number
 beforeEach(async () => {
   Bun.env.CHECKOUT_MODE = 'shifts'
   await resetDatabase()
-  fakeScb.reset()
-  fakeScb.enableIn(Bun.env)
+  fakeKbank.reset()
+  fakeKbank.enableIn(Bun.env)
   const owner = await signIn('owner')
   cashier = await signIn('cashier')
   const registerId = ok(await owner.apiV2.registers.get()).items[0]!.id
@@ -19,7 +19,7 @@ beforeEach(async () => {
 })
 
 afterEach(() => {
-  for (const name of SCB_ENV_KEYS) delete Bun.env[name]
+  for (const name of KBANK_ENV_KEYS) delete Bun.env[name]
   if (previousMode === undefined) delete Bun.env.CHECKOUT_MODE
   else Bun.env.CHECKOUT_MODE = previousMode
 })
@@ -35,7 +35,7 @@ describe('giving up on a QR in shift mode', () => {
 
   test('a QR that was already paid cannot be cancelled', async () => {
     const qr = ok(await cashier.apiV2.payments.qr.post({ amountSatang: 5000, shiftId }, key()))
-    fakeScb.pay(qr.reference)
+    fakeKbank.pay(qr.reference)
 
     const refused = await cashier.apiV2.payments.qr({ id: qr.id }).cancel.post()
 

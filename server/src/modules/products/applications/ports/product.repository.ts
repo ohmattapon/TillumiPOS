@@ -32,9 +32,9 @@ export interface IProductRepository {
    * unit of work ends. Missing ids are simply absent from the result.
    */
   findManyForUpdate(ids: number[], branchId: number): Promise<ProductEntity[]>
-  /** Throws DomainConflictError: DUPLICATE for a taken SKU or barcode, IN_USE for an unknown category. */
+  /** Throws DomainConflictError: DUPLICATE for a taken SKU or barcode, BARCODE_TAKEN for a barcode another product or pack uses, PACK_NOT_FOUND for a foreign pack id, IN_USE for an unknown category. */
   create(entity: ProductEntity, branchId: number): Promise<ProductEntity>
-  /** Overwrites the editable fields. Stock and image are untouched; same conflicts as create. */
+  /** Overwrites the editable fields and syncs the pack set. Stock and image are untouched; same conflicts as create, plus PACK_IN_USE for deleting a sold pack. */
   update(entity: ProductEntity, branchId: number): Promise<ProductEntity>
   /** Adds `delta` to the branch's stock and returns the new balance, or null when the product does not track stock. */
   adjustStock(id: number, branchId: number, delta: number): Promise<number | null>

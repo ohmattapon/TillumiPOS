@@ -16,6 +16,7 @@ import './audit/audit.module'
 import './sales/sales.module'
 import './orders/orders.module'
 import './qr-payments/qr-payments.module'
+import './receipt-printer/receipt-printer.module'
 import './settings/settings.module'
 
 import './members/members.module'

@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { priceQuotes } from '../../infrastructure/database/schema/price-quotes'
 import { qrPayments } from '../../infrastructure/database/schema/qr-payments'
 import { db } from '../../libs/db'
-import { fakeScb, SCB_ENV_KEYS } from '../../../test/scb-server'
+import { fakeKbank, KBANK_ENV_KEYS } from '../../../test/kbank-server'
 import { ok, resetDatabase, seedProduct, signIn, type Session } from '../../../test/harness'
 
 let owner: Session
@@ -11,14 +11,14 @@ let cashier: Session
 
 beforeEach(async () => {
   await resetDatabase()
-  fakeScb.reset()
-  fakeScb.enableIn(Bun.env)
+  fakeKbank.reset()
+  fakeKbank.enableIn(Bun.env)
   owner = await signIn('owner')
   cashier = await signIn('cashier')
 })
 
 afterEach(() => {
-  for (const key of SCB_ENV_KEYS) delete Bun.env[key]
+  for (const key of KBANK_ENV_KEYS) delete Bun.env[key]
 })
 
 const cash = (amountSatang: number) => [{ method: 'cash' as const, amountSatang }]
@@ -40,7 +40,7 @@ const createQr = async (amountSatang: number, quoteId?: number) =>
 
 /** The customer pays at the bank and the till's next poll sees it. */
 async function customerPays(payment: { id: number; reference: string }) {
-  fakeScb.pay(payment.reference)
+  fakeKbank.pay(payment.reference)
   await db.update(qrPayments).set({ lastCheckedAt: null }).where(eq(qrPayments.id, payment.id))
   return ok(await cashier.api.payments.qr({ id: payment.id }).get())
 }
@@ -160,7 +160,7 @@ describe('a QR made from a quote', () => {
     const tooMuch = await cashier.api.payments.qr.post({ amountSatang: 4501, quoteId: quote.id })
     expect(tooMuch.status).toBe(409)
     expect(tooMuch.error?.value).toMatchObject({ code: 'QUOTE_AMOUNT_MISMATCH' })
-    expect(fakeScb.created.size).toBe(0)
+    expect(fakeKbank.created.size).toBe(0)
     expect(await statusOf(quote.id)).toBe('open')
 
     const qr = await createQr(3000, quote.id)

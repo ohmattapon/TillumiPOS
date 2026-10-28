@@ -135,7 +135,17 @@ Every operation is a use case that is exactly one of a command or a query, and t
 - A modifier group is created once and attached to many products, shared by all branches. A modifier option can be disabled but not deleted.
 - The selection rules (required, maximum count, duplicates, not in the product's group, disabled) live in `resolveLineOptions` in `domains/modifier.domain.ts` only. Both orders and `SaleCheckout` call it through the `ILineOptionsResolver` port, and the web uses the same function through `@pos/api/modifiers`.
 - An order or bill line is a product + a set of options (`options` is a snapshot). `unitPriceSatang` already includes the option prices, and the bill's `unitCostSatang` includes the option costs. Never change the `calculateTotals` formula. The cost of an option does not appear in order and bill responses.
-- Stock is checked against the product's total, not per line. An order line is edited by `lineId` (the repository compares lines, it does not delete and re-insert). The route by `productId` is for lines without options only.
+- An order line is a product + a set of options + a note: the same product and options with different notes are separate lines, so adding a plain unit never takes another line's note and merging bills keeps every note. Every line of the same product and options in one order has the price of that item's first line, because `SaleCheckout` merges them and charges that price. Both rules live in `mergeLines` in `domains/order.domain.ts` only, and `order_items` is unique on (order, product, options key, note) with `NULLS NOT DISTINCT`. Editing a note so that it matches another line merges the two into the first one.
+- Stock is checked against the product's total, not per line. An order line is edited by `lineId` (the repository compares lines, it does not delete and re-insert). The route by `productId` is for lines without options only and edits the first such line.
+
+### Product packs (products, sales, stock)
+
+- A pack (`product_packs`) lets one product be sold and received in a fixed number of pieces, for example a carton of 12 bottles. A product has at most `MAX_PACKS_PER_PRODUCT` (10) packs, each with a barcode, a size of 2 to 9999 pieces and an optional price. `priceSatang: null` means the pack sells for `size × the product price`; that rule lives in `packUnitPriceSatang` and `packUnitCostSatang` in `domains/product-pack.ts` only, and the web uses the same functions through `@pos/api/packs`.
+- A pack barcode and a product barcode share one namespace, so scanning either one finds the product. `ProductDrizzleRepository.assertBarcodesFree` checks both under advisory lock `731_092_448`, in statements taken after the lock, and answers `BARCODE_TAKEN` when a barcode is already used; one barcode never resolves to two products.
+- A pack is an alternative to options, never combined with them: a line that names a pack and options answers `PACK_WITH_OPTIONS` (`assertPackHasNoOptions`). A disabled pack refuses a new sale (`PACK_INACTIVE`), and a pack that history points at cannot be deleted, because the foreign-key violation becomes `PACK_IN_USE`; it is disabled instead.
+- A bill line stores `packId` (`null` once the pack row is gone, so the bill still prints) and `packSize`, keeps the pack's own unit price and costs `size × the product's unit cost`. Stock always moves in pieces: a pack line moves `quantity × packSize`, a void returns the same amount, and a receipt is converted to pieces before the ledger is written.
+- A quote pins the pack: `packId`, `packSize` and the unit price are stored, and a pack line never merges with a piece line of the same product (`keyOf` uses `packId ?? 0`). An order carries no packs; `order-quote-source.ts` forces `packId: null, packSize: 1`, and the sales page does not let a cart that holds a pack be saved as an open order (`canSaveAsOrder` in `features/pos/lib/save-order.ts`).
+- Receiving by pack sends the same `packId` to the inventory and stock-receipt payloads, where `quantity` then counts packs. `receiptPieces` multiplies once for the whole line and rejects a piece count above `POSTGRES_INT_MAX`, and the note reads `รับ {quantity} ลัง ({barcode}) = {pieces} ชิ้น` (`packReceiptNote`).
 
 ### Promotions and pinned prices (promotions, quotes)
 
@@ -144,9 +154,25 @@ Every operation is a use case that is exactly one of a command or a query, and t
 - A quote (`price_quotes`) is a cart that the server has priced and pinned: the lines, unit prices, member, promotion, discount, `vatMode`, `vatRateBp` and the grand total. A bill sold with a `quoteId` uses all of these values, even if the promotion has since been disabled, a product price changed or the tax edited. A request that does not send a `quoteId` must behave exactly as before.
 - An `open` quote expires with time (15 minutes), but a quote reserved by a QR (`reserved`) does not expire until the QR is used, cancelled or dismissed, so that money that arrives late still gets a bill at the original amount. Never add a path that releases a reserved quote without going through QR cancellation or dismissal.
 - A sale with a quote checks that the member is enabled when the quote is created and does not check again at payment, because the money may already have been paid. A QR reserved by a quote cannot be used with a request that does not send a `quoteId` (`QUOTE_REQUIRED` with `params.quoteId`).
-- Lock order when selling: order → QR payment record → quote → member → product. A command that cancels or dismisses a QR locks the QR first and only then touches the quote.
+- Lock order when selling: order → QR payment record → quote → promotion → member → product. The promotion row is locked by `lockForUse` before its uses are counted. A command that cancels or dismisses a QR locks the QR first and only then touches the quote.
 - An order whose quote is reserved by a QR cannot be edited (`ORDER_LOCKED_BY_QR_PAYMENT`), checked in one place, the `save` of `GuardedOrderRepository`
 - `GET /api/v1/quotes/{id}` is a pure query. It must not extend the expiry or write data.
+- Usage limits (`maxUses`, `maxUsesPerMember`) live on the promotion but are enforced in the quotes module (`IPromotionUsage`): a full promotion is not offered when a quote is made, and paying out of a quote answers `PROMOTION_LIMIT_REACHED` under the promotion's row lock. A quote a QR holds spent its slot when it was reserved and is never re-checked, and voiding a bill gives the slot back (counted sales are `completed` only).
+- A coupon code (`couponCode`) on a promotion is used only when the cashier types it: `evaluatePromotion` never picks a coupon by itself, and `CreateQuoteUseCase` pins the typed code in `price_quotes.coupon_code`, so the bill keeps the code it was sold under. The code is trimmed and upper-cased by `normalizeCouponCode` and must match `COUPON_CODE_PATTERN` (3 to 20 of A-Z, 0-9 and `-`), and `upper(coupon_code)` is unique, so a second promotion with the same code answers `COUPON_CODE_TAKEN`. A code no active promotion holds answers `COUPON_NOT_FOUND`, and one that cannot apply to this cart answers `COUPON_NOT_APPLICABLE` with `params.reason` (`not_running`, `min_subtotal`, `members_only`, `exhausted`, `not_eligible`). A coupon that applies still loses to an automatic promotion that discounts more.
+- A bundle is `kind: 'bundle'` with `buyQuantity` and `freeQuantity` (1 to 99) and a `value` of 0, and it must name a `scope`, because the free items come from the lines in that scope. Its discount is the total of the cheapest `freeQuantity` of every `buy + free` group, walking the in-scope non-pack lines by unit price descending in one pass, and the formula lives in `domains/promotion.domain.ts` only. A bundle with a typed value, a quantity out of range or no scope answers `INVALID_PROMOTION`.
+- A coupon is a promise the quote makes, so it exists only in the one-step cart: an open order has no quote and never sends `couponCode`. The till keeps a typed discount and a coupon apart, because a quote cannot pin a typed discount.
+- `GET /api/v1/sales/reports/promotions` reads the promotion snapshot stored on the bill and never the promotion table: voided bills are excluded, the name is the one on the latest sale of the range, and the rows are sorted by discount descending and then by promotion id. Net sales are bill totals net of VAT.
+
+### Member points (members, sales, quotes)
+
+- The rule lives on the shop settings: `pointsEnabled`, `pointsEarnSatang` (the amount paid that earns one point), `pointsRedeemSatang` (what one point is worth) and `pointsMinRedeem`. The formulas (`pointsEarned`, `maxRedeemable`, `pointsDiscountSatang`, `assertRedeemable`, `voidEarnPoints`) live in `domains/member-points.ts` only, and the web uses the same functions through `@pos/api/points`.
+- The balance is `members.points_balance`, and it moves only through the `member_point_movements` ledger (`earn`, `redeem`, `void_earn`, `void_redeem`, `adjust`). The table is append-only: a mistake is corrected by a new movement, never by editing or deleting one. Never write the balance directly; `IMemberPoints.record` writes the movement and the balance in the caller's unit of work, and it refuses a balance below zero (`POINTS_NOT_ENOUGH`). `(sale_id, kind)` is unique, so the same bill cannot earn or return its points twice (`POINTS_ALREADY_RECORDED`).
+- Points stack on top of either a promotion or a typed discount, while a promotion and a typed discount still never stack. The points discount is added to the quote's `discountSatang` and `calculateTotals` runs on the sum, so never change `calculateTotals` to handle points. A receipt shows the points as information, because the discount line already includes them.
+- Points are redeemed only through a quote: `redeemPoints` on the quote input, priced by `PriceQuoteEntity`, so the total charged is always the pinned one. An open order never redeems points, because an order has no quote.
+- A quote that a QR reserves holds its points (`QuoteClaims.holdPoints`) until the QR is used, cancelled or dismissed, so money that arrives late still finds the points there; cancelling or releasing the reservation returns them (`returnPoints`).
+- Voiding a bill returns the points it redeemed first, then takes back the points it earned up to what the member still has. When they have already been spent, the movement stops at zero and records the shortfall in its `reason`.
+- A member with points the shop has switched off keeps them; they are only unusable. Adjusting a balance by hand is the command `POST /members/{id}/points/adjustments` behind `members.points_adjust`, and it is audited as `member.points_adjusted`.
+- The till offers the redeem field only for the one-step cart and never beside a typed discount, because a quote cannot pin a typed discount. The member page lists the movements through `GET /members/{id}/points`.
 
 ### Tables (tables)
 
@@ -458,7 +484,7 @@ The repo is one package (`package.json` at the root holds the API and the web), 
 - `workers/media`: a Cloudflare Worker that stores product images in R2
 - `workers/cloud`: a Cloudflare Worker that runs the Docker image (API and web) in one Cloudflare Container, see `docs/cloudflare.md`
 - `Dockerfile`, `docker-compose.yml`, `docker-compose.dev.yml`, `Caddyfile`, `docker/entrypoint.sh`, `scripts/`: the install kit for shops (the guide for installers is `docs/install.md`), per the section "Installation and first-run setup"
-- `LICENSE`: AGPL-3.0
+- `LICENSE` and `NOTICE`: Apache-2.0
 - `DESIGN.md`: the design system of the web pages (colors, typography, components and interaction rules). Read it before changing or adding a screen.
 - `docs/superpowers`: `roadmap.md`, design documents in `specs/` and implementation plans in `plans/`
 
@@ -494,3 +520,14 @@ Run from the root of the repo:
 - The receipt header (shop name, tax id, branch name, address, phone number) is stored on the bill at sale time in `SaleCheckout`. New bills take the address and phone from shop settings and store no branch name. A receipt must be shown from the values on the bill, and current data is used only for old bills whose values are null (see `receiptHeading` in `src/features/sales/lib`).
 - Stock changes only through the `IStockLedger` port of the `inventory` module, and every change must have a movement record with the branch
 - Before saying that work is done, `bun run typecheck` and `bun run test` must pass
+
+## Reporting finished work
+
+When you finish a task that changed code, the final report to the project owner explains the change in brief, in the language the owner writes in. For each change, write a short entry (a few sentences, not a line-by-line walkthrough) with:
+
+- **What changed:** the file or the behavior, linked where possible.
+- **Why this way:** the reason for the approach you chose, such as the rule it follows, the bug it prevents or the constraint it respects.
+- **Not chosen:** the main alternative you considered and why you did not use it. Leave this out when there was no real alternative.
+- **Risk:** anything the change could affect that you did not verify. Leave this out when there is none.
+
+Keep it to what the owner needs to review the change. Do not restate the diff, and do not explain code that you did not change.

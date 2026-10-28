@@ -17,10 +17,10 @@ const codeOf = (action: () => unknown): string | undefined => {
 const now = new Date('2026-10-15T05:00:00Z')
 const option = { groupId: 1, groupName: 'ท็อปปิง', optionId: 7, name: 'ไข่มุก', priceSatang: 500, costSatang: 200 }
 const input = (overrides: Partial<NewPriceQuote> = {}): NewPriceQuote => ({
-  branchId: 1, memberId: null, member: null, orderId: null,
+  branchId: 1, memberId: null, member: null, orderId: null, couponCode: null,
   lines: [
-    { productId: 1, productName: 'ชาไทย', sku: 'T1', unitPriceSatang: 4500, quantity: 2, options: [option] },
-    { productId: 2, productName: 'เค้ก', sku: 'C1', unitPriceSatang: 6000, quantity: 1, options: [] },
+    { productId: 1, productName: 'ชาไทย', sku: 'T1', unitPriceSatang: 4500, quantity: 2, options: [option], packId: null, packSize: 1 },
+    { productId: 2, productName: 'เค้ก', sku: 'C1', unitPriceSatang: 6000, quantity: 1, options: [], packId: null, packSize: 1 },
   ],
   promotion: null, vatMode: 'inclusive', vatRateBp: 700, createdById: 3, ...overrides,
 })
@@ -30,14 +30,45 @@ const stored = (overrides: Partial<PriceQuoteProps> = {}) =>
   })
 const request = (overrides: Partial<QuoteRequest> = {}): QuoteRequest => ({
   branchId: 1, memberId: null, orderId: null,
-  lines: [{ productId: 2, optionIds: [], quantity: 1 }, { productId: 1, optionIds: [7], quantity: 2 }],
+  lines: [
+    { productId: 2, optionIds: [], quantity: 1, packId: null },
+    { productId: 1, optionIds: [7], quantity: 2, packId: null },
+  ],
   ...overrides,
+})
+
+describe('quote lines with packs', () => {
+  const packLine = {
+    productId: 1, productName: 'ชาไทย', sku: 'T1', unitPriceSatang: 10000, quantity: 2, options: [],
+    packId: 5, packSize: 6,
+  }
+  const saleFor = (lines: QuoteRequest['lines']): QuoteRequest => ({ branchId: 1, memberId: null, orderId: null, lines })
+
+  test('a pack line never matches the same product sold by the piece', () => {
+    const quote = stored({ lines: [packLine] })
+    expect(quote.matches(saleFor([{ productId: 1, optionIds: [], quantity: 2, packId: null }]))).toBe(false)
+  })
+
+  test('a pack line matches the same pack', () => {
+    const quote = stored({ lines: [packLine] })
+    expect(quote.matches(saleFor([{ productId: 1, optionIds: [], quantity: 2, packId: 5 }]))).toBe(true)
+  })
+
+  test('a stored row from before packs reads as pieces', () => {
+    const row = JSON.parse(JSON.stringify({
+      ...PriceQuoteEntity.price(input(), now), id: 11, status: 'open', qrReference: null, saleId: null, createdAt: now,
+    }))
+    delete row.lines[0].packId
+    delete row.lines[0].packSize
+    const quote = new PriceQuoteEntity(row)
+    expect(quote.lines[0]).toMatchObject({ packId: null, packSize: 1 })
+  })
 })
 const after = (ms: number) => new Date(now.getTime() + ms)
 
 describe('pricing a quote', () => {
   test('a basket worth more than the system can carry is refused, before and after VAT', () => {
-    const line = (unitPriceSatang: number) => ({ productId: 1, productName: 'ทอง', sku: 'G1', unitPriceSatang, quantity: 1, options: [] })
+    const line = (unitPriceSatang: number) => ({ productId: 1, productName: 'ทอง', sku: 'G1', unitPriceSatang, quantity: 1, options: [], packId: null, packSize: 1 })
 
     expect(codeOf(() => PriceQuoteEntity.price(input({ lines: [line(MAX_AMOUNT_SATANG + 1)] }), now))).toBe('AMOUNT_TOO_LARGE')
     expect(codeOf(() => PriceQuoteEntity.price(input({ lines: [line(MAX_AMOUNT_SATANG)], vatMode: 'exclusive' }), now))).toBe('AMOUNT_TOO_LARGE')
@@ -72,7 +103,7 @@ describe('pricing a quote', () => {
 describe('matching a request', () => {
   test('same branch, member and lines in any order match; repeated lines add up', () => {
     expect(stored().matches(request())).toBe(true)
-    const split = request({ lines: [{ productId: 1, optionIds: [7], quantity: 1 }, { productId: 2, optionIds: [], quantity: 1 }, { productId: 1, optionIds: [7], quantity: 1 }] })
+    const split = request({ lines: [{ productId: 1, optionIds: [7], quantity: 1, packId: null }, { productId: 2, optionIds: [], quantity: 1, packId: null }, { productId: 1, optionIds: [7], quantity: 1, packId: null }] })
     expect(stored().matches(split)).toBe(true)
   })
 
@@ -80,9 +111,9 @@ describe('matching a request', () => {
     const quote = stored()
     expect(quote.matches(request({ branchId: 2 }))).toBe(false)
     expect(quote.matches(request({ memberId: 5 }))).toBe(false)
-    expect(quote.matches(request({ lines: [{ productId: 2, optionIds: [], quantity: 1 }, { productId: 1, optionIds: [7], quantity: 3 }] }))).toBe(false)
-    expect(quote.matches(request({ lines: [{ productId: 2, optionIds: [], quantity: 1 }, { productId: 1, optionIds: [], quantity: 2 }] }))).toBe(false)
-    expect(quote.matches(request({ lines: [{ productId: 2, optionIds: [], quantity: 1 }] }))).toBe(false)
+    expect(quote.matches(request({ lines: [{ productId: 2, optionIds: [], quantity: 1, packId: null }, { productId: 1, optionIds: [7], quantity: 3, packId: null }] }))).toBe(false)
+    expect(quote.matches(request({ lines: [{ productId: 2, optionIds: [], quantity: 1, packId: null }, { productId: 1, optionIds: [], quantity: 2, packId: null }] }))).toBe(false)
+    expect(quote.matches(request({ lines: [{ productId: 2, optionIds: [], quantity: 1, packId: null }] }))).toBe(false)
   })
 
   test("an order quote matches only its own order, and a cart quote only a one-step sale", () => {

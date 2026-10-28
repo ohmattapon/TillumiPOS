@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MAX_PACKS_PER_PRODUCT } from '../../../../domains/product-pack'
 import { PRODUCT_TYPES } from '../../../../domains/product.domain'
 
 const fields = {
@@ -13,6 +14,16 @@ const fields = {
   isActive: z.boolean(),
 }
 
+// Range rules (size, price, barcode length) live in the domain; only the shape and the count bound are checked here.
+const pack = z.object({
+  id: z.number().int().positive().optional(),
+  barcode: z.string().min(1).max(64),
+  size: z.number().int(),
+  priceSatang: z.number().int().nullable(),
+  isActive: z.boolean().optional(),
+})
+const packs = z.array(pack).max(MAX_PACKS_PER_PRODUCT)
+
 // z.object() drops unknown keys, so stock, image and id can never be set through these.
 export const createProductSchema = z.object({
   sku: fields.sku.optional(),
@@ -23,9 +34,10 @@ export const createProductSchema = z.object({
   productType: fields.productType.optional(),
   costSatang: fields.costSatang.optional(),
   trackStock: fields.trackStock.optional(),
+  packs: packs.optional(),
 })
 
-export const updateProductSchema = z.object(fields).partial()
+export const updateProductSchema = z.object({ ...fields, packs }).partial()
 
 export const listProductsSchema = z.object({
   q: z.string().optional(),

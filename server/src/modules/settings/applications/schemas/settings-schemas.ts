@@ -11,6 +11,10 @@ const optionalText = (max: number) =>
     .nullable()
     .transform((value) => (value === '' ? null : value))
 
+// A LAN printer address is digits, dots, hyphens and letters (IPv4 or a local hostname); the entity owns the rule.
+const optionalPrinterHost = optionalText(45).refine((value) => value === null || /^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$/.test(value), {
+  message: 'receiptPrinterIp must be an IPv4 address or a local hostname',
+})
 // A PromptPay identifier is digits only; the entity decides which lengths are valid.
 const optionalPromptPayTarget = z
   .string()
@@ -38,5 +42,13 @@ export const updateShopSettingsSchema = z
     modifiersEnabled: z.boolean(),
     promptpayMode: z.enum(PROMPTPAY_MODES),
     promptpayTarget: optionalPromptPayTarget,
+    receiptPrinterIp: optionalPrinterHost,
+    receiptPrinterPort: z.number().int().min(1).max(65535),
+    receiptPrinterEnabled: z.boolean(),
+    cashDrawerEnabled: z.boolean(),
+    pointsEnabled: z.boolean(),
+    pointsEarnSatang: z.number().int().min(100),
+    pointsRedeemSatang: z.number().int().min(1),
+    pointsMinRedeem: z.number().int().min(1),
   })
   .partial()

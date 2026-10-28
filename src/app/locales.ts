@@ -1,7 +1,7 @@
 const th = {
   groups: {
     sales: 'งานขาย',
-    manage: 'จัดการ',
+    manage: 'ข้อมูลหลัก',
   },
   nav: {
     sell: 'ขายสินค้า',
@@ -44,7 +44,7 @@ const th = {
 const en = {
   groups: {
     sales: 'Sales',
-    manage: 'Manage',
+    manage: 'Master data',
   },
   nav: {
     sell: 'Sell',

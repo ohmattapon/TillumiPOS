@@ -196,6 +196,9 @@ function Lines({ lines, money }: { lines: DisplayLine[]; money: Money }) {
         <li key={index} className={cn('flex items-baseline gap-[2vh] px-[2.5vh] py-[1.6vh]', size.row)}>
           <div className="min-w-0 flex-1">
             <p className="line-clamp-2 font-medium">{line.name}</p>
+            {line.packLabel !== undefined && (
+              <p className={cn('line-clamp-1 text-muted-foreground', size.label)}>{line.packLabel}</p>
+            )}
             {line.options.length > 0 && (
               <p className={cn('line-clamp-1 text-muted-foreground', size.label)}>{line.options.join(' · ')}</p>
             )}

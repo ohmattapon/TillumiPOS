@@ -1,4 +1,6 @@
-export type PromotionKind = 'fixed' | 'percent'
+import { COUPON_CODE_PATTERN, MAX_BUNDLE_QUANTITY, normalizeCouponCode } from '@pos/api/promotions'
+
+export type PromotionKind = 'fixed' | 'percent' | 'bundle'
 export type PromotionAudience = 'everyone' | 'members'
 
 /** What the owner has typed into the promotion form, as text; `toBody` turns it into what the API takes. */
@@ -7,6 +9,14 @@ export interface PromotionForm {
   kind: PromotionKind
   /** Baht for a fixed promotion, percent for a percent one. */
   value: string
+  /** How many the customer buys, and how many of those are free, for a bundle. */
+  buyQuantity: string
+  freeQuantity: string
+  /** A coupon has to be typed at the till to apply; empty runs the promotion on its own. */
+  couponCode: string
+  /** How many times it may be used in all, and by one member. Empty is no limit. */
+  maxUses: string
+  maxUsesPerMember: string
   maxDiscount: string
   minSubtotal: string
   /** Civil dates, `YYYY-MM-DD`, or empty. */
@@ -21,7 +31,8 @@ export interface PromotionForm {
 }
 
 export const emptyPromotionForm: PromotionForm = {
-  name: '', kind: 'percent', value: '', maxDiscount: '', minSubtotal: '', startsOn: '', endsOn: '',
+  name: '', kind: 'percent', value: '', buyQuantity: '', freeQuantity: '', couponCode: '',
+  maxUses: '', maxUsesPerMember: '', maxDiscount: '', minSubtotal: '', startsOn: '', endsOn: '',
   weekdays: [], windowStart: '', windowEnd: '', audience: 'everyone', isActive: true,
 }
 
@@ -35,6 +46,11 @@ export interface PromotionBody {
   name: string
   kind: PromotionKind
   value: number
+  buyQuantity: number | null
+  freeQuantity: number | null
+  couponCode: string | null
+  maxUses: number | null
+  maxUsesPerMember: number | null
   maxDiscountSatang: number | null
   minSubtotalSatang: number
   startsOn: string | null
@@ -46,7 +62,15 @@ export interface PromotionBody {
   isActive: boolean
 }
 
-export type FormProblem = 'name' | 'value' | 'maxDiscount' | 'minSubtotal' | 'dates' | 'window'
+export type FormProblem =
+  | 'name' | 'value' | 'buyQuantity' | 'freeQuantity' | 'couponCode' | 'maxUses' | 'maxUsesPerMember'
+  | 'maxDiscount' | 'minSubtotal' | 'dates' | 'window'
+
+/** A whole number typed into a count field, or null when it is blank or not a number. */
+function typedCount(input: string): number | null {
+  const trimmed = input.trim()
+  return /^\d{1,6}$/.test(trimmed) ? Number(trimmed) : null
+}
 
 /** `12.5` is 1250 basis points. Two decimals at most, from 0.01 to 100. */
 export function percentToBp(input: string): number | null {
@@ -85,8 +109,29 @@ export function toBody(
   const name = form.name.trim()
   if (name.length < 1 || name.length > 80) problems.push('name')
 
-  const value = form.kind === 'percent' ? percentToBp(form.value) : amounts.parse(form.value)
-  if (value === null || value < 1) problems.push('value')
+  // A bundle has no typed value: its discount is the free items the buy/free fields name.
+  const bundle = form.kind === 'bundle'
+  const value = bundle ? 0 : form.kind === 'percent' ? percentToBp(form.value) : amounts.parse(form.value)
+  if (!bundle && (value === null || value < 1)) problems.push('value')
+
+  const buyQuantity = bundle ? typedCount(form.buyQuantity) : null
+  const freeQuantity = bundle ? typedCount(form.freeQuantity) : null
+  const badQuantity = (quantity: number | null) => quantity === null || quantity < 1 || quantity > MAX_BUNDLE_QUANTITY
+  if (bundle && badQuantity(buyQuantity)) problems.push('buyQuantity')
+  if (bundle && badQuantity(freeQuantity)) problems.push('freeQuantity')
+
+  // The code is stored upper-case, so the same coupon is the same code however it was typed.
+  const typedCode = normalizeCouponCode(form.couponCode)
+  if (typedCode !== '' && !COUPON_CODE_PATTERN.test(typedCode)) problems.push('couponCode')
+
+  const maxUses = form.maxUses.trim() === '' ? null : typedCount(form.maxUses)
+  if (form.maxUses.trim() !== '' && (maxUses === null || maxUses < 1)) problems.push('maxUses')
+
+  // Only a members-only promotion can be limited per member, so what was typed before the audience
+  // changed is dropped rather than sent as a limit the API would refuse.
+  const perMemberTyped = form.audience === 'members' && form.maxUsesPerMember.trim() !== ''
+  const maxUsesPerMember = perMemberTyped ? typedCount(form.maxUsesPerMember) : null
+  if (perMemberTyped && (maxUsesPerMember === null || maxUsesPerMember < 1)) problems.push('maxUsesPerMember')
 
   // A cap belongs to percent promotions only; what was typed before the kind changed is dropped.
   const typedCap = form.kind === 'percent' && form.maxDiscount.trim() !== ''
@@ -111,6 +156,11 @@ export function toBody(
       name,
       kind: form.kind,
       value: value!,
+      buyQuantity: bundle ? buyQuantity : null,
+      freeQuantity: bundle ? freeQuantity : null,
+      couponCode: typedCode === '' ? null : typedCode,
+      maxUses,
+      maxUsesPerMember,
       maxDiscountSatang: maxDiscount,
       minSubtotalSatang: minSubtotal!,
       startsOn: form.startsOn === '' ? null : form.startsOn,
@@ -130,6 +180,11 @@ export function fromPromotion(
     name: string
     kind: PromotionKind
     value: number
+    buyQuantity?: number | null
+    freeQuantity?: number | null
+    couponCode?: string | null
+    maxUses?: number | null
+    maxUsesPerMember?: number | null
     maxDiscountSatang: number | null
     minSubtotalSatang: number
     startsOn: string | null
@@ -145,7 +200,19 @@ export function fromPromotion(
   return {
     name: promotion.name,
     kind: promotion.kind,
-    value: promotion.kind === 'percent' ? bpToPercent(promotion.value) : amounts.toInput(promotion.value),
+    value:
+      promotion.kind === 'bundle'
+        ? ''
+        : promotion.kind === 'percent'
+          ? bpToPercent(promotion.value)
+          : amounts.toInput(promotion.value),
+    // The count of a bundle, and the limits, came with Task 5 of the plan; a stored promotion
+    // that has none shows empty fields.
+    buyQuantity: promotion.buyQuantity == null ? '' : String(promotion.buyQuantity),
+    freeQuantity: promotion.freeQuantity == null ? '' : String(promotion.freeQuantity),
+    couponCode: promotion.couponCode ?? '',
+    maxUses: promotion.maxUses == null ? '' : String(promotion.maxUses),
+    maxUsesPerMember: promotion.maxUsesPerMember == null ? '' : String(promotion.maxUsesPerMember),
     maxDiscount: promotion.maxDiscountSatang === null ? '' : amounts.toInput(promotion.maxDiscountSatang),
     minSubtotal: promotion.minSubtotalSatang === 0 ? '' : amounts.toInput(promotion.minSubtotalSatang),
     startsOn: promotion.startsOn ?? '',

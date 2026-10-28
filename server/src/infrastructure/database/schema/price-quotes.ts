@@ -1,6 +1,8 @@
 import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 import type { QuoteLine } from '../../../domains/price-quote.domain'
 import type { SaleMember, SalePromotion } from '../../../domains/sale.domain'
+import type { PointsRule } from '../../../domains/member-points'
 import { id, timestamps } from '../columns'
 import { branches } from './branches'
 import { members } from './members'
@@ -25,12 +27,18 @@ export const priceQuotes = pgTable(
     orderId: integer().references(() => orders.id),
     lines: jsonb().$type<QuoteLine[]>().notNull(),
     promotion: jsonb().$type<SalePromotion>(),
+    // The coupon code typed when the quote was priced; null when no coupon was typed.
+    couponCode: text(),
     subtotalSatang: integer().notNull(),
     discountSatang: integer().notNull().default(0),
     vatMode: vatMode().notNull(),
     vatRateBp: integer().notNull(),
     vatSatang: integer().notNull(),
     totalSatang: integer().notNull(),
+    // Points this cart pinned: a sale made from it redeems them at this rate, whatever the shop changes since.
+    pointsRedeemed: integer().notNull().default(0),
+    pointsDiscountSatang: integer().notNull().default(0),
+    pointsRule: jsonb().$type<PointsRule>(),
     status: quoteStatus().notNull().default('open'),
     qrReference: text(),
     saleId: integer().references(() => sales.id),
@@ -44,5 +52,7 @@ export const priceQuotes = pgTable(
     uniqueIndex('price_quotes_qr_reference_unique').on(table.qrReference),
     uniqueIndex('price_quotes_sale_id_unique').on(table.saleId),
     index('price_quotes_order_status_idx').on(table.orderId, table.status),
+    // Speeds up usage-limit counting, which hashes into the promotion snapshot's id on every paid quote.
+    index('price_quotes_promotion_id_idx').on(sql`(${table.promotion} ->> 'id')`),
   ],
 )
