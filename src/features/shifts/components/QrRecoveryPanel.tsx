@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { PaginationBar } from '@/components/PaginationBar'
 import { useListPagination } from '@/hooks/use-list-pagination'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { useFormat } from '@/features/settings'
 import { unclaimedQrQuery, unresolvedQrAttemptsQuery, useDismissQrPayment, useResolveQrAttempt } from '../api'
 
@@ -29,9 +31,8 @@ export function QrRecoveryPanel({ isOwner }: { isOwner: boolean }) {
   const payments = unclaimed.data?.items ?? []
   if (attempts.data?.total === 0 && unclaimed.data?.total === 0 && !attempts.error && !unclaimed.error && attemptPaging.page === 0 && paymentPaging.page === 0) return null
 
-  const confirmDismiss = (event: FormEvent) => {
-    event.preventDefault()
-    if (!dismissing) return
+  const confirmDismiss = () => {
+    if (!dismissing || dismissing.reason.trim() === '') return
     dismiss.mutate(
       { id: dismissing.id, reason: dismissing.reason.trim() },
       {
@@ -43,6 +44,7 @@ export function QrRecoveryPanel({ isOwner }: { isOwner: boolean }) {
       },
     )
   }
+  const dismissingPayment = payments.find((payment) => payment.id === dismissing?.id)
 
   return (
     <section className="mx-auto w-full max-w-3xl space-y-4 rounded-xl border border-amber-300 bg-card p-5">
@@ -101,42 +103,43 @@ export function QrRecoveryPanel({ isOwner }: { isOwner: boolean }) {
                       {payment.paidAt ? ` · ${date.dateTime(payment.paidAt)}` : ''} · {payment.reference}
                     </p>
                   </div>
-                  {isOwner && dismissing?.id !== payment.id && (
+                  {isOwner && (
                     <Button variant="outline" className="h-10" onClick={() => setDismissing({ id: payment.id, reason: '' })}>
                       {t('qr.dismiss')}
                     </Button>
                   )}
                 </div>
-                {dismissing?.id === payment.id && (
-                  <form onSubmit={confirmDismiss} className="flex flex-wrap items-center gap-2">
-                    <Input
-                      className="h-10 min-w-48 flex-1"
-                      value={dismissing.reason}
-                      onChange={(event) => setDismissing({ id: payment.id, reason: event.target.value })}
-                      placeholder={t('qr.dismissPlaceholder')}
-                      aria-label={t('qr.dismissReason')}
-                      maxLength={500}
-                      required
-                      autoFocus
-                    />
-                    <Button type="button" variant="outline" className="h-10" onClick={() => setDismissing(null)}>
-                      {t('qr.keep')}
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="destructive"
-                      className="h-10"
-                      disabled={dismissing.reason.trim() === '' || dismiss.isPending}
-                    >
-                      {t('qr.confirmDismiss')}
-                    </Button>
-                  </form>
-                )}
               </li>
             ))}
           </ul>
           <PaginationBar {...paymentPaging} total={unclaimed.data?.total} isLoading={unclaimed.isFetching || dismiss.isPending} onPageChange={(page) => { setDismissing(null); paymentPaging.setPage(page) }} />
         </div>
+      )}
+      {dismissing && (
+        <ConfirmDialog
+          open
+          onOpenChange={(open) => { if (!open) setDismissing(null) }}
+          title={t('qr.dismiss')}
+          description={dismissingPayment ? money.format(dismissingPayment.amountSatang) : undefined}
+          confirmLabel={t('qr.confirmDismiss')}
+          cancelLabel={t('qr.keep')}
+          destructive
+          pending={dismiss.isPending}
+          confirmDisabled={dismissing.reason.trim() === ''}
+          onConfirm={confirmDismiss}
+        >
+          <div className="grid gap-2">
+            <Label htmlFor="qr-dismiss-reason">{t('qr.dismissReason')}</Label>
+            <Textarea
+              id="qr-dismiss-reason"
+              value={dismissing.reason}
+              onChange={(event) => setDismissing({ id: dismissing.id, reason: event.target.value })}
+              placeholder={t('qr.dismissPlaceholder')}
+              maxLength={500}
+              autoFocus
+            />
+          </div>
+        </ConfirmDialog>
       )}
     </section>
   )
