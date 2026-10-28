@@ -1,11 +1,14 @@
 import { inject, injectable } from 'tsyringe'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
-import { memberRepositoryToken, type IMemberRepository } from '../../../members/applications/ports/member.repository'
+import { checkoutMembersToken, type ICheckoutMembers } from '../ports/checkout-members.port'
+import { checkoutPointsToken, type ICheckoutPoints } from '../ports/checkout-points.port'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { lineKey, type LineOption } from '../../../../domains/modifier.domain'
+import { pointsEarned, type PointsRule } from '../../../../domains/member-points'
 import type { PriceQuoteEntity, QuoteRequestLine } from '../../../../domains/price-quote.domain'
 import { SaleEntity, type SaleMember } from '../../../../domains/sale.domain'
+import { assertPackHasNoOptions, packUnitPriceSatang } from '../../../../domains/product-pack'
 import { stockLedgerToken } from '../../../inventory/applications/ports/stock-ledger.port'
 import { lineOptionsResolverToken } from '../../../modifiers/applications/ports/line-options-resolver.port'
 import type { ILineOptionsResolver } from '../../../modifiers/applications/ports/line-options-resolver.port'
@@ -35,6 +38,7 @@ const toQuoteLine = (line: CheckoutLine): QuoteRequestLine => ({
   productId: line.productId,
   optionIds: line.options ? line.options.map((option) => option.optionId) : [...(line.optionIds ?? [])],
   quantity: line.quantity,
+  packId: line.packId ?? null,
 })
 
 @injectable()
@@ -48,7 +52,8 @@ export class SaleCheckout implements ISaleCheckout {
     @inject(TOKENS.CheckoutPolicy) private readonly checkoutPolicy: ICheckoutPolicy,
     @inject(TOKENS.ShiftLedger) private readonly shiftLedger: IShiftLedger,
     @inject(lineOptionsResolverToken) private readonly lineOptions: ILineOptionsResolver,
-    @inject(memberRepositoryToken) private readonly members: IMemberRepository,
+    @inject(checkoutMembersToken) private readonly members: ICheckoutMembers,
+    @inject(checkoutPointsToken) private readonly points: ICheckoutPoints,
     @inject(quoteClaimsToken) private readonly quotes: IQuoteClaims,
   ) {}
 
@@ -79,6 +84,9 @@ export class SaleCheckout implements ISaleCheckout {
       claimed = await this.claimQrPayments(payments, branch.id, null)
     }
 
+    // Read inside the caller's unit of work, so the sale is priced with the settings in force when it is recorded.
+    const shop = await this.settings.get()
+
     // Member lock precedes product locks, and the caller has already locked an order if present.
     // A quote carries its member: they were checked when the price was pinned, and the money may already
     // be paid, so a member who was switched off since does not stop the sale.
@@ -93,6 +101,20 @@ export class SaleCheckout implements ISaleCheckout {
       member = selectedMember ? { id: selectedMember.id, code: selectedMember.code, name: selectedMember.name } : null
     }
 
+    // Points are read under the member row, so the balance cannot move between the check and the ledger.
+    // A quote names its member without locking them, so take the lock here when points are in play; the
+    // lock checks nothing, so a member who was switched off since the price was pinned still pays.
+    if (member && quote && (quote.pointsRedeemed > 0 || shop.pointsEnabled))
+      await this.members.findByIdForUpdate(member.id)
+    // A QR reserved by the quote already took its points when the QR was made. A quote that was never
+    // reserved, or one whose QR was released, still holds nothing, so the sale takes them now.
+    const redeemPoints = quote ? quote.pointsRedeemed : 0
+    const pointsHeld = quote && redeemPoints > 0 ? await this.points.findQuoteRedemption(quote.id) : null
+    const takingPoints = member !== null && redeemPoints > 0 && pointsHeld === null
+    const balanceBefore = member ? await this.points.balanceOf(member.id) : 0
+    if (takingPoints && balanceBefore < redeemPoints)
+      throw new DomainConflictError('แต้มคงเหลือไม่พอ', 'POINTS_NOT_ENOUGH')
+
     // Lines are the product with its options: the same choice repeated is merged, a Map keeps the order
     // they were added, and the first quoted price of a line wins.
     interface WantedLine {
@@ -100,12 +122,16 @@ export class SaleCheckout implements ISaleCheckout {
       options: LineOption[]
       quantity: number
       quotedUnitPriceSatang: number | undefined
+      /** The pack sold, if the line is packs; a quote pins the pack id for lookup only. */
+      packId: number | undefined
+      /** A quote's pinned size and price: sold as pinned even when the pack changed since. */
+      pinnedPack: { size: number; unitPriceSatang: number } | undefined
     }
     const wanted = new Map<string, WantedLine>()
     if (quote) {
       // The quote has the options and the price of every line; nothing is resolved or priced again.
       for (const line of quote.lines) {
-        const key = `${line.productId}:${lineKey(line.options)}`
+        const key = `${line.productId}:${lineKey(line.options)}:${line.packId ?? ''}`
         const existing = wanted.get(key)
         if (existing) existing.quantity += line.quantity
         else
@@ -114,24 +140,29 @@ export class SaleCheckout implements ISaleCheckout {
             options: [...line.options],
             quantity: line.quantity,
             quotedUnitPriceSatang: line.unitPriceSatang,
+            // The pinned pack id is for lookup only: the size and price below always win.
+            packId: line.packId ?? undefined,
+            pinnedPack: line.packId === null
+              ? undefined
+              : { size: line.packSize, unitPriceSatang: line.unitPriceSatang },
           })
       }
     } else {
       for (const line of requested) {
+        // A pack line is packs, never options: the bank of options stays shut when a pack is named.
+        assertPackHasNoOptions(line.packId !== undefined, (line.options?.length ?? 0) + (line.optionIds?.length ?? 0))
         // An order has already resolved its options and quoted a price; a one-step sale is resolved here.
         const options = line.options
           ? [...line.options]
           : (await this.lineOptions.resolve(line.productId, line.optionIds ?? [])).options
-        const key = `${line.productId}:${lineKey(options)}`
+        // The same pack repeated is merged; pieces and packs of one product never are.
+        const key = `${line.productId}:${lineKey(options)}:${line.packId ?? ''}`
         const existing = wanted.get(key)
         if (existing) existing.quantity += line.quantity
         else
-          wanted.set(key, { productId: line.productId, options, quantity: line.quantity, quotedUnitPriceSatang: line.unitPriceSatang })
+          wanted.set(key, { productId: line.productId, options, quantity: line.quantity, quotedUnitPriceSatang: line.unitPriceSatang, packId: line.packId, pinnedPack: undefined })
       }
     }
-
-    // Read inside the caller's unit of work, so the sale is priced with the settings in force when it is recorded.
-    const shop = await this.settings.get()
 
     // Stock is the product's, whichever options the lines have, so it is checked for the total.
     const quantities = new Map<number, number>()
@@ -141,21 +172,50 @@ export class SaleCheckout implements ISaleCheckout {
     // Locked until the sale commits, so two tills cannot sell the same last unit.
     const locked = await this.products.findManyForUpdate([...quantities.keys()], branch.id)
     const productsById = new Map(locked.map((product) => [product.id, product]))
-    for (const [productId, quantity] of quantities) {
+    // Checked product by product in cart order, so the first product with a problem is the one reported.
+    // A pack line moves its pieces, so its pack is resolved from the locked product and demand is in pieces.
+    const packByKey = new Map<string, { id: number | null; size: number; unitPriceSatang: number }>()
+    const linesByProduct = new Map<number, { key: string; line: WantedLine }[]>()
+    for (const [key, line] of wanted) {
+      const group = linesByProduct.get(line.productId) ?? []
+      group.push({ key, line })
+      linesByProduct.set(line.productId, group)
+    }
+    for (const [productId, group] of linesByProduct) {
       const product = productsById.get(productId)
       if (!product) throw new DomainError('ไม่พบสินค้ารหัส ' + productId, 'PRODUCT_NOT_FOUND', { productId })
-      product.assertSellable(quantity)
+      let demand = 0
+      for (const { key, line } of group) {
+        // A pinned pack sells at its pinned size and price whatever the pack became since: disabled and
+        // deleted packs still sell, and a deleted one keeps no id (the sale item must not point at it).
+        if (line.pinnedPack) {
+          const pack = line.packId === undefined ? undefined : product.findPack(line.packId)
+          packByKey.set(key, {
+            id: pack ? (line.packId ?? null) : null,
+            size: line.pinnedPack.size,
+            unitPriceSatang: line.pinnedPack.unitPriceSatang,
+          })
+          demand += line.quantity * line.pinnedPack.size
+          continue
+        }
+        const pack = line.packId === undefined ? undefined : product.packForSale(line.packId)
+        if (pack) packByKey.set(key, { id: pack.id, size: pack.size, unitPriceSatang: packUnitPriceSatang(product.priceSatang, pack) })
+        demand += line.quantity * (pack?.size ?? 1)
+      }
+      product.assertSellable(demand)
     }
 
-    const lines = [...wanted.values()].map((line) => {
+    const lines = [...wanted.entries()].map(([key, line]) => {
       const product = productsById.get(line.productId)!
-      if (line.quotedUnitPriceSatang === undefined) return { product, quantity: line.quantity, options: line.options }
+      const pack = packByKey.get(key)
+      if (line.quotedUnitPriceSatang === undefined) return { product, quantity: line.quantity, options: line.options, pack }
       // The quote includes the options and the entity adds them back, so the product carries the base price.
       const optionsPrice = line.options.reduce((total, option) => total + option.priceSatang, 0)
       return {
         product: product.with({ priceSatang: line.quotedUnitPriceSatang - optionsPrice }),
         quantity: line.quantity,
         options: line.options,
+        pack,
       }
     })
 
@@ -184,8 +244,54 @@ export class SaleCheckout implements ISaleCheckout {
     if (quote && priced.totalSatang !== quote.totalSatang)
       throw new DomainConflictError('ยอดไม่ตรงกับราคาที่ตรึงไว้ กรุณาขอราคาใหม่', 'QUOTE_MISMATCH')
 
+    // The quote pinned the rule it was priced under, and that rule wins over one the shop changed since.
+    const pointsRule: PointsRule = quote?.pointsRule ?? {
+      earnSatang: shop.pointsEarnSatang,
+      redeemSatang: shop.pointsRedeemSatang,
+      minRedeem: shop.pointsMinRedeem,
+    }
+    // Points are earned on what was paid, and only while the shop still uses them.
+    const earned = member !== null && shop.pointsEnabled ? pointsEarned(priced.totalSatang, pointsRule) : 0
+    const pointsDiscount = quote ? quote.pointsDiscountSatang : 0
+
     // Taken only after every rule has passed; it still rolls back with the sale if a later step fails.
-    const sale = await this.sales.create(priced, await this.sales.nextReceiptNo(branch))
+    const sale = await this.sales.create(
+      {
+        ...priced,
+        pointsEarned: earned,
+        pointsRedeemed: redeemPoints,
+        pointsDiscountSatang: pointsDiscount,
+        // The rule is only worth keeping when it moved something.
+        pointsRule: earned > 0 || redeemPoints > 0 ? pointsRule : null,
+        // The member row is locked above, so what is left is arithmetic rather than another read.
+        pointsBalanceAfter: member
+          ? balanceBefore - (takingPoints ? redeemPoints : 0) + earned
+          : null,
+      },
+      await this.sales.nextReceiptNo(branch),
+    )
+
+    // The ledger moves inside the sale's unit of work, so a sale that fails leaves no points behind.
+    if (member && takingPoints)
+      await this.points.record({
+        memberId: member.id,
+        kind: 'redeem',
+        points: -redeemPoints,
+        saleId: sale.id,
+        quoteId: quote!.id,
+        reason: null,
+        actorId: cashier.id,
+      })
+    if (member && earned > 0)
+      await this.points.record({
+        memberId: member.id,
+        kind: 'earn',
+        points: earned,
+        saleId: sale.id,
+        quoteId: null,
+        reason: null,
+        actorId: cashier.id,
+      })
 
     for (const { id } of claimed ?? []) await this.qrPayments.consume(id, sale.id)
     if (quote) await this.quotes.consume(quote, sale.id)
@@ -195,7 +301,8 @@ export class SaleCheckout implements ISaleCheckout {
         branchId: branch.id,
         productId: item.productId,
         type: 'sale',
-        quantity: -item.quantity,
+        // A pack line moves its pieces.
+        quantity: -item.quantity * item.packSize,
         reference: sale.receiptNo,
         userId: cashier.id,
       })
@@ -229,7 +336,7 @@ export class SaleCheckout implements ISaleCheckout {
 
     for (const payment of payments) {
       if (payment.qrPaymentId === undefined) {
-        if (payment.method === 'promptpay' && this.qrPayments.isRequired())
+        if (payment.method === 'promptpay' && (await this.qrPayments.isRequired()))
           throw new DomainError('การชำระด้วยพร้อมเพย์ต้องรอธนาคารยืนยันก่อน', 'QR_PAYMENT_REQUIRED')
         continue
       }

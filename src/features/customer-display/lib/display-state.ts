@@ -17,21 +17,33 @@ const MAX_OPTIONS = 20
 const MAX_TEXT = 200
 const MAX_SESSION = 64
 const MAX_QR_IMAGE = 200_000
+/** A PromptPay payload is about 100 characters; this leaves room without letting a message grow the screen's work. */
+const MAX_QR_PAYLOAD = 512
+// The characters of an EMV QR: printable ASCII. The screen draws it as a picture, never as markup.
+const QR_PAYLOAD = /^[\x20-\x7e]+$/
 
 /** What the customer may see of one line: what is printed on the receipt, nothing else. */
 export interface DisplayLine {
   name: string
   options: string[]
+  /** The pack this line was sold as, in the shop's language, when it is not a single piece. */
+  packLabel?: string
   quantity: number
   lineTotalSatang: number
 }
 
-export interface DisplayQr {
-  /** Base64 PNG, as the bank returned it. */
-  image: string
-  /** ISO time the QR stops being payable. */
-  expiresAt: string
-}
+/** A QR the customer can scan: the bank's picture, or the text of a static PromptPay QR that the screen draws itself. */
+export type DisplayQr =
+  | {
+      /** Base64 PNG, as the bank returned it. */
+      image: string
+      /** ISO time the QR stops being payable. */
+      expiresAt: string
+    }
+  | {
+      /** The PromptPay payload with the bill amount in it. Static QRs do not expire: the bank is never asked. */
+      payload: string
+    }
 
 export type DisplayState =
   | { kind: 'idle' }
@@ -79,11 +91,13 @@ const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/
 
 function parseLine(raw: unknown): DisplayLine | null {
   if (!isRecord(raw)) return null
-  const { name, options, quantity, lineTotalSatang } = raw
+  const { name, options, packLabel, quantity, lineTotalSatang } = raw
   if (!isText(name) || !Array.isArray(options) || options.length > MAX_OPTIONS) return null
   if (!options.every((option) => isText(option))) return null
+  if (packLabel !== undefined && !isText(packLabel, 40)) return null
   if (!isWhole(quantity) || quantity < 1 || !isWhole(lineTotalSatang)) return null
-  return { name, options: options as string[], quantity, lineTotalSatang }
+  const line: DisplayLine = { name, options: options as string[], quantity, lineTotalSatang }
+  return packLabel === undefined ? line : { ...line, packLabel }
 }
 
 function parseLines(raw: unknown): DisplayLine[] | null {
@@ -101,7 +115,13 @@ function parseLines(raw: unknown): DisplayLine[] | null {
 function parseQr(raw: unknown): DisplayQr | null | undefined {
   if (raw === null) return null
   if (!isRecord(raw)) return undefined
-  const { image, expiresAt } = raw
+  const { image, expiresAt, payload } = raw
+  if (payload !== undefined) {
+    // A QR is one kind or the other, so the screen never has to choose between two.
+    if (image !== undefined || expiresAt !== undefined) return undefined
+    if (typeof payload !== 'string' || payload.length > MAX_QR_PAYLOAD || !QR_PAYLOAD.test(payload)) return undefined
+    return { payload }
+  }
   // The image goes into a data: URL, so only plain base64 may pass.
   if (typeof image !== 'string' || image.length > MAX_QR_IMAGE || !BASE64.test(image)) return undefined
   if (typeof expiresAt !== 'string' || !Number.isFinite(Date.parse(expiresAt))) return undefined

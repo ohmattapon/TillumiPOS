@@ -4,11 +4,10 @@ import { useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { LoginPage, meQuery, useLogout, useAuthorization } from '@/features/auth'
-import { RolesPage } from '@/features/roles'
 import { AuditPage } from '@/features/audit'
 import { CategoriesPage } from '@/features/categories'
-import { KitchenBoardPage, KitchenStationsPage } from '@/features/kitchen'
 import { CustomerDisplayPage, isCustomerScreenPath } from '@/features/customer-display'
+import { DisplaySlidesPage } from '@/features/display-slides'
 import { MembersPage, MemberDetailsPage } from '@/features/members'
 import { PromotionsPage } from '@/features/promotions'
 import { ModifiersPage } from '@/features/modifiers'
@@ -16,10 +15,11 @@ import { SetupPage, setupStatusQuery } from '@/features/setup'
 import { TablesPage } from '@/features/tables'
 import { clearCart, FloorPage, PosPage } from '@/features/pos'
 import { ProductsPage } from '@/features/products'
+import { StockReceiptsPage, StockReceiptDraftPage } from '@/features/stock-receipts'
 import { TodayPage } from '@/features/sales'
 import { ReportsPage } from '@/features/reports'
 import { FeatureRoute, SettingsPage, useSettings } from '@/features/settings'
-import { UsersPage } from '@/features/users'
+import { TeamPage } from '@/features/users'
 import { ShiftsPage, useRegisterSelectionStore } from '@/features/shifts'
 import { AppSidebar } from './AppSidebar'
 import { AppSkeleton } from './AppSkeleton'
@@ -49,19 +49,19 @@ function Shell({ user }: { user: User }) {
           <Route path="today" element={<TodayPage isOwner={can('reports.read')} />} />
           {can('reports.read') && <Route path="reports" element={<ReportsPage />} />}
           {(can('products.write') || can('inventory.receive') || can('inventory.adjust')) && <Route path="products" element={<ProductsPage />} />}
+          {can('inventory.receive') && <Route path="stock-receipts" element={<StockReceiptsPage />} />}
+          {can('inventory.receive') && <Route path="stock-receipts/new" element={<StockReceiptDraftPage />} />}
           {can('categories.write') && <Route path="categories" element={<CategoriesPage />} />}
           {can('modifiers.write') && <Route path="modifiers" element={<FeatureRoute feature="modifiers"><ModifiersPage /></FeatureRoute>} />}
           {can('tables.write') && <Route path="tables" element={<FeatureRoute feature="tables"><TablesPage /></FeatureRoute>} />}
-          {can('users.manage') && <Route path="users" element={<UsersPage />} />}
+          {(can('users.manage') || can('roles.manage')) && <Route path="users" element={<TeamPage />} />}
           {can('settings.write') && <Route path="settings" element={<SettingsPage />} />}
-          {can('roles.manage') && <Route path="roles" element={<RolesPage />} />}
           {can('audit.read') && <Route path="audit" element={<AuditPage />} />}
           <Route path="members" element={<MembersPage />} />
           <Route path="members/:id" element={<MemberDetailsPage />} />
           <Route path="promotions" element={<PromotionsPage />} />
+          {can('promotions.write') && <Route path="display-slides" element={<DisplaySlidesPage />} />}
           <Route path="shifts" element={<ShiftsPage />} />
-          <Route path="kitchen" element={<FeatureRoute feature="kitchen"><KitchenBoardPage /></FeatureRoute>} />
-          {can('kitchen.write') && <Route path="kitchen-stations" element={<FeatureRoute feature="kitchen"><KitchenStationsPage /></FeatureRoute>} />}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </SidebarInset>

@@ -4,12 +4,13 @@ import { authLocales } from '@/features/auth'
 import { rolesLocales } from '@/features/roles'
 import { auditLocales } from '@/features/audit'
 import { categoriesLocales } from '@/features/categories'
-import { kitchenLocales } from '@/features/kitchen'
 import { customerDisplayLocales } from '@/features/customer-display'
+import { displaySlidesLocales } from '@/features/display-slides'
 import { membersLocales } from '@/features/members'
 import { promotionsLocales } from '@/features/promotions'
 import { modifiersLocales } from '@/features/modifiers'
 import { posLocales } from '@/features/pos'
+import { stockReceiptsLocales } from '@/features/stock-receipts'
 import { productsLocales } from '@/features/products'
 import { salesLocales } from '@/features/sales'
 import { reportsLocales } from '@/features/reports'
@@ -36,14 +37,15 @@ export const resources = {
     audit: auditLocales.th,
     categories: categoriesLocales.th,
     customerDisplay: customerDisplayLocales.th,
+    displaySlides: displaySlidesLocales.th,
     modifiers: modifiersLocales.th,
-    kitchen: kitchenLocales.th,
     members: membersLocales.th,
     promotions: promotionsLocales.th,
     tables: tablesLocales.th,
     users: usersLocales.th,
     pos: posLocales.th,
     products: productsLocales.th,
+    stockReceipts: stockReceiptsLocales.th,
     sales: salesLocales.th,
     reports: reportsLocales.th,
     settings: settingsLocales.th,
@@ -58,14 +60,15 @@ export const resources = {
     audit: auditLocales.en,
     categories: categoriesLocales.en,
     customerDisplay: customerDisplayLocales.en,
+    displaySlides: displaySlidesLocales.en,
     modifiers: modifiersLocales.en,
-    kitchen: kitchenLocales.en,
     members: membersLocales.en,
     promotions: promotionsLocales.en,
     tables: tablesLocales.en,
     users: usersLocales.en,
     pos: posLocales.en,
     products: productsLocales.en,
+    stockReceipts: stockReceiptsLocales.en,
     sales: salesLocales.en,
     reports: reportsLocales.en,
     settings: settingsLocales.en,

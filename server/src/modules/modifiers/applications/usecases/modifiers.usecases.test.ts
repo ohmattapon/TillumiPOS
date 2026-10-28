@@ -3,6 +3,7 @@ import { ZodError } from 'zod'
 import { makeModifierGroup, makeModifierOption, makeProduct } from '../../../../__tests__/factories'
 import { mockModifierRepository, mockProductRepository, mockUnitOfWork } from '../../../../__tests__/mocks'
 import { LineOptionsResolver } from '../services/line-options-resolver'
+import { GroupDefaults } from '../services/group-defaults'
 import { CreateModifierGroupUseCase } from './create-modifier-group.usecase'
 import { CreateModifierOptionUseCase } from './create-modifier-option.usecase'
 import { ListModifierGroupsUseCase } from './list-modifier-groups.usecase'
@@ -19,6 +20,16 @@ beforeEach(() => {
   repo.createOption.mockImplementation(async (entity) => entity)
   repo.updateOption.mockImplementation(async (entity) => entity)
 })
+
+const makeCreateOption = () => {
+  const unitOfWork = mockUnitOfWork()
+  return { useCase: new CreateModifierOptionUseCase(repo, new GroupDefaults(repo), unitOfWork), unitOfWork }
+}
+
+const makeUpdateOption = () => {
+  const unitOfWork = mockUnitOfWork()
+  return { useCase: new UpdateModifierOptionUseCase(repo, new GroupDefaults(repo), unitOfWork), unitOfWork }
+}
 
 describe('ListModifierGroupsUseCase', () => {
   test('lists every group with its options and products', async () => {
@@ -81,7 +92,7 @@ describe('CreateModifierOptionUseCase', () => {
   test('adds an option to a group with its price and cost', async () => {
     repo.findGroupById.mockResolvedValue(makeModifierGroup({ id: 3 }))
 
-    const created = await new CreateModifierOptionUseCase(repo).execute(3, { name: 'ไข่มุก', priceSatang: 1000, costSatang: 400 })
+    const created = await makeCreateOption().useCase.execute(3, { name: 'ไข่มุก', priceSatang: 1000, costSatang: 400 })
 
     expect(created.toSnapshot()).toEqual({
       id: 0,
@@ -91,26 +102,27 @@ describe('CreateModifierOptionUseCase', () => {
       costSatang: 400,
       sortOrder: 0,
       isActive: true,
+      isDefault: false,
     })
   })
 
   test('is free when no price is given', async () => {
     repo.findGroupById.mockResolvedValue(makeModifierGroup({ id: 3 }))
 
-    const created = await new CreateModifierOptionUseCase(repo).execute(3, { name: 'หวานน้อย' })
+    const created = await makeCreateOption().useCase.execute(3, { name: 'หวานน้อย' })
 
     expect(created).toMatchObject({ priceSatang: 0, costSatang: 0 })
   })
 
   test('a negative price is rejected before any read or write', async () => {
-    await expect(new CreateModifierOptionUseCase(repo).execute(3, { name: 'x', priceSatang: -1 })).rejects.toBeInstanceOf(ZodError)
+    await expect(makeCreateOption().useCase.execute(3, { name: 'x', priceSatang: -1 })).rejects.toBeInstanceOf(ZodError)
     expect(repo.findGroupById).not.toHaveBeenCalled()
   })
 
   test('an unknown group is not found', async () => {
     repo.findGroupById.mockResolvedValue(null)
 
-    await expect(new CreateModifierOptionUseCase(repo).execute(9, { name: 'x' })).rejects.toMatchObject({
+    await expect(makeCreateOption().useCase.execute(9, { name: 'x' })).rejects.toMatchObject({
       code: 'MODIFIER_GROUP_NOT_FOUND',
     })
   })
@@ -120,7 +132,7 @@ describe('UpdateModifierOptionUseCase', () => {
   test('changes the price and deactivates, leaving the rest', async () => {
     repo.findOptionById.mockResolvedValue(makeModifierOption({ id: 10, groupId: 3, priceSatang: 500 }))
 
-    const updated = await new UpdateModifierOptionUseCase(repo).execute(10, { priceSatang: 700, isActive: false })
+    const updated = await makeUpdateOption().useCase.execute(10, { priceSatang: 700, isActive: false })
 
     expect(updated.toSnapshot()).toMatchObject({ id: 10, groupId: 3, name: 'หวานน้อย', priceSatang: 700, isActive: false })
   })
@@ -128,9 +140,77 @@ describe('UpdateModifierOptionUseCase', () => {
   test('an unknown option is not found', async () => {
     repo.findOptionById.mockResolvedValue(null)
 
-    await expect(new UpdateModifierOptionUseCase(repo).execute(9, { name: 'x' })).rejects.toMatchObject({
+    await expect(makeUpdateOption().useCase.execute(9, { name: 'x' })).rejects.toMatchObject({
       code: 'MODIFIER_OPTION_NOT_FOUND',
     })
+  })
+})
+
+describe('one default per group', () => {
+  const groupWithDefaults = {
+    group: makeModifierGroup({ id: 3 }),
+    options: [
+      makeModifierOption({ id: 10, groupId: 3, isDefault: true }),
+      makeModifierOption({ id: 11, groupId: 3, name: 'หวานปกติ' }),
+    ],
+    productIds: [],
+  }
+
+  test('a new option marked as the default takes it from the others in the group', async () => {
+    repo.findGroupById.mockResolvedValue(makeModifierGroup({ id: 3 }))
+    repo.findGroupView.mockResolvedValue(groupWithDefaults)
+
+    const created = await makeCreateOption().useCase.execute(3, { name: 'หวานปกติ', isDefault: true })
+
+    expect(created.isDefault).toBe(true)
+    expect(repo.updateOption.mock.calls.map(([option]) => option.toSnapshot())).toEqual([
+      expect.objectContaining({ id: 10, isDefault: false }),
+    ])
+  })
+
+  test('an option created without the flag leaves the group alone', async () => {
+    repo.findGroupById.mockResolvedValue(makeModifierGroup({ id: 3 }))
+
+    await makeCreateOption().useCase.execute(3, { name: 'หวานน้อย' })
+
+    expect(repo.findGroupView).not.toHaveBeenCalled()
+    expect(repo.updateOption).not.toHaveBeenCalled()
+  })
+
+  test('an option made the default clears the sibling, and one that is not writes alone', async () => {
+    repo.findOptionById.mockResolvedValue(makeModifierOption({ id: 11, groupId: 3, name: 'หวานปกติ' }))
+    repo.findGroupView.mockResolvedValue(groupWithDefaults)
+
+    const updated = await makeUpdateOption().useCase.execute(11, { isDefault: true })
+
+    expect(updated.isDefault).toBe(true)
+    expect(repo.updateOption.mock.calls.map(([option]) => option.toSnapshot())).toEqual([
+      expect.objectContaining({ id: 11, isDefault: true }),
+      expect.objectContaining({ id: 10, isDefault: false }),
+    ])
+  })
+
+  test('unsetting the flag leaves the other options untouched', async () => {
+    repo.findOptionById.mockResolvedValue(makeModifierOption({ id: 10, groupId: 3, isDefault: true }))
+
+    const updated = await makeUpdateOption().useCase.execute(10, { isDefault: false })
+
+    expect(updated.isDefault).toBe(false)
+    expect(repo.findGroupView).not.toHaveBeenCalled()
+    expect(repo.updateOption).toHaveBeenCalledTimes(1)
+  })
+
+  test('both commands write inside one unit of work', async () => {
+    repo.findGroupById.mockResolvedValue(makeModifierGroup({ id: 3 }))
+    repo.findOptionById.mockResolvedValue(makeModifierOption({ id: 10, groupId: 3 }))
+    const created = makeCreateOption()
+    const updated = makeUpdateOption()
+
+    await created.useCase.execute(3, { name: 'หวานน้อย' })
+    await updated.useCase.execute(10, { priceSatang: 500 })
+
+    expect(created.unitOfWork.run).toHaveBeenCalledTimes(1)
+    expect(updated.unitOfWork.run).toHaveBeenCalledTimes(1)
   })
 })
 

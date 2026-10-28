@@ -20,7 +20,9 @@ export interface IShiftRepository {
   list(query: ShiftListQuery): Promise<Page<ShiftEntity>>
   update(shift: ShiftEntity): Promise<ShiftEntity>
   cashDeltas(shiftId: number): Promise<readonly { amountSatang: number }[]>
+  /** Throws SALE_ALREADY_REFUNDED when another refund of the same sale wins the race to the unique index. */
   addCashEntry(entry: ShiftCashEntryEntity): Promise<ShiftCashEntryEntity>
+  hasCashRefund(saleId: number): Promise<boolean>
   listCashEntries(shiftId: number, limit: number, offset: number): Promise<Page<ShiftCashEntryEntity>>
 }
 

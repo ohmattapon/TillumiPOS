@@ -25,8 +25,27 @@ export const shopSettings = pgTable(
     homeView: shopHomeView().notNull().default('till'),
     // Which screens the web shows. True by default so a shop set up before these existed keeps them all.
     tablesEnabled: boolean().notNull().default(true),
-    kitchenEnabled: boolean().notNull().default(true),
     modifiersEnabled: boolean().notNull().default(true),
+    // How a PromptPay payment is taken; the bank flow stays the default for existing shops.
+    promptpayMode: text().notNull().default('bank'),
+    // The shop's own PromptPay identifier for static QR; null means it is not set up.
+    promptpayTarget: text(),
+    // LAN thermal printer (ESC/POS over TCP); null IP means it is not set up.
+    receiptPrinterIp: text(),
+    receiptPrinterPort: integer().notNull().default(9100),
+    // Off by default so existing shops keep printing through the browser until they set an IP.
+    receiptPrinterEnabled: boolean().notNull().default(false),
+    // The drawer kicks through the printer, so it needs the printer on.
+    cashDrawerEnabled: boolean().notNull().default(false),
+    // Storage key of the logo printed at the top of receipts; null means no logo.
+    logoKey: text(),
+    // Off by default: a shop that has not set a rule earns and redeems nothing.
+    pointsEnabled: boolean().notNull().default(false),
+    // Baht per point, in satang: 2500 means one point for every 25 baht paid.
+    pointsEarnSatang: integer().notNull().default(2500),
+    // What one point is worth when redeemed, in satang.
+    pointsRedeemSatang: integer().notNull().default(100),
+    pointsMinRedeem: integer().notNull().default(10),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [check('shop_settings_single_row', sql`${table.id} = 1`)],

@@ -1,6 +1,7 @@
 import 'reflect-metadata'
 import { describe, expect, test } from 'bun:test'
 import { PromotionEntity } from '../../../../domains/promotion.domain'
+import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { mockClock, mockPromotionRepository } from '../../../../__tests__/mocks'
 import { CreatePromotionUseCase } from './create-promotion.usecase'
 import { GetPromotionUseCase } from './get-promotion.usecase'
@@ -11,7 +12,8 @@ const now = new Date('2026-10-15T12:00:00Z')
 const existing = new PromotionEntity({
   id: 1, name: 'ลด 10%', kind: 'percent', value: 1000, maxDiscountSatang: 100, minSubtotalSatang: 0,
   startsOn: null, endsOn: null, weekdays: null, windowStartMinute: null, windowEndMinute: null,
-  audience: 'everyone', isActive: true, createdAt: now, updatedAt: now,
+  audience: 'everyone', isActive: true, scope: null, imageKey: null, createdAt: now, updatedAt: now,
+  couponCode: null, buyQuantity: null, freeQuantity: null, maxUses: null, maxUsesPerMember: null,
 })
 
 function setup() {
@@ -42,8 +44,29 @@ describe('CreatePromotionUseCase', () => {
     expect(created.toSnapshot()).toMatchObject({
       id: 2, name: 'ลดเงินสด', kind: 'fixed', value: 2000, maxDiscountSatang: null, minSubtotalSatang: 0,
       startsOn: null, endsOn: null, weekdays: null, windowStartMinute: null, windowEndMinute: null,
-      audience: 'everyone', isActive: true, createdAt: now, updatedAt: now,
+      audience: 'everyone', isActive: true, imageKey: null, createdAt: now, updatedAt: now,
     })
+  })
+
+  test('a promotion limited to products and categories keeps them sorted, and an empty scope is the whole bill', async () => {
+    const { repo, clock } = setup()
+    const useCase = new CreatePromotionUseCase(repo, clock)
+    const scoped = await useCase.execute(
+      { name: 'กาแฟลด 10%', kind: 'percent', value: 1000, scope: { productIds: [9, 3, 9], categoryIds: [2] } },
+      { role: 'owner' },
+    )
+    expect(scoped.scope).toEqual({ productIds: [3, 9], categoryIds: [2] })
+    const whole = await useCase.execute({ name: 'ทั้งบิล', kind: 'fixed', value: 100, scope: { productIds: [], categoryIds: [] } }, { role: 'owner' })
+    expect(whole.scope).toBeNull()
+    expect((await useCase.execute({ name: 'ไม่ระบุ', kind: 'fixed', value: 100 }, { role: 'owner' })).scope).toBeNull()
+  })
+
+  test('refuses a scope with ids that are not positive whole numbers', async () => {
+    const { repo, clock } = setup()
+    const useCase = new CreatePromotionUseCase(repo, clock)
+    await expect(useCase.execute({ name: 'x', kind: 'fixed', value: 100, scope: { productIds: [0], categoryIds: [] } }, { role: 'owner' })).rejects.toThrow()
+    await expect(useCase.execute({ name: 'x', kind: 'fixed', value: 100, scope: { productIds: [], categoryIds: [1.5] } }, { role: 'owner' })).rejects.toThrow()
+    expect(repo.create).not.toHaveBeenCalled()
   })
 
   test('refuses a cashier before anything is written', async () => {
@@ -52,6 +75,42 @@ describe('CreatePromotionUseCase', () => {
       new CreatePromotionUseCase(repo, clock).execute({ name: 'x', kind: 'fixed', value: 1 }, { role: 'cashier' }),
     ).rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'promotions.write' } })
     expect(repo.create).not.toHaveBeenCalled()
+  })
+
+  test('creates a bundle promotion', async () => {
+    const { repo, clock } = setup()
+    const created = await new CreatePromotionUseCase(repo, clock).execute(
+      {
+        name: 'ซื้อ 2 แถม 1', kind: 'bundle', value: 0, buyQuantity: 2, freeQuantity: 1,
+        scope: { productIds: [3], categoryIds: [] },
+      },
+      { role: 'owner' },
+    )
+    expect(created.toSnapshot()).toMatchObject({
+      kind: 'bundle', value: 0, buyQuantity: 2, freeQuantity: 1, maxUses: null, maxUsesPerMember: null,
+    })
+  })
+
+  test('creates a coupon promotion and stores the code upper-case', async () => {
+    const { repo, clock } = setup()
+    const created = await new CreatePromotionUseCase(repo, clock).execute(
+      { name: 'คูปอง', kind: 'percent', value: 1000, couponCode: '  summer10  ' },
+      { role: 'owner' },
+    )
+    expect(created.toSnapshot()).toMatchObject({ couponCode: 'SUMMER10', buyQuantity: null, freeQuantity: null })
+  })
+
+  test('refuses a duplicate coupon code', async () => {
+    const { repo, clock } = setup()
+    repo.create.mockImplementation(async () => {
+      throw new DomainConflictError('รหัสคูปองนี้ถูกใช้แล้ว', 'COUPON_CODE_TAKEN')
+    })
+    await expect(
+      new CreatePromotionUseCase(repo, clock).execute(
+        { name: 'x', kind: 'percent', value: 1000, couponCode: 'SUMMER10' },
+        { role: 'owner' },
+      ),
+    ).rejects.toMatchObject({ code: 'COUPON_CODE_TAKEN' })
   })
 
   test('refuses what the rules refuse', async () => {
@@ -74,6 +133,16 @@ describe('UpdatePromotionUseCase', () => {
     )
     expect(calls).toEqual(['uow', 'lock', 'write'])
     expect(updated.toSnapshot()).toMatchObject({ id: 1, name: 'ลด 10%', isActive: false, maxDiscountSatang: null, updatedAt: now })
+  })
+
+  test('sets, keeps and clears the scope: missing keeps it, null makes it the whole bill', async () => {
+    const { repo, clock, uow } = setup()
+    const useCase = new UpdatePromotionUseCase(repo, uow, clock)
+    const scoped = await useCase.execute(1, { scope: { productIds: [5], categoryIds: [] } }, { role: 'owner' })
+    expect(scoped.scope).toEqual({ productIds: [5], categoryIds: [] })
+    repo.findByIdForUpdate.mockImplementation(async () => scoped)
+    expect((await useCase.execute(1, { name: 'ลด 10% กาแฟ' }, { role: 'owner' })).scope).toEqual({ productIds: [5], categoryIds: [] })
+    expect((await useCase.execute(1, { scope: null }, { role: 'owner' })).scope).toBeNull()
   })
 
   test('a cashier cannot edit, and an unknown promotion is not found', async () => {

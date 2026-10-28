@@ -39,7 +39,7 @@ export function QrPaymentPanel({ qr, isSaving, onRegenerate }: { qr: ReturnType<
         <p role="alert" className="text-sm text-destructive">
           {t('payment.qr.failed')}: {qr.createError.message}
         </p>
-        <Button type="button" variant="outline" className="h-10" onClick={onRegenerate}>
+        <Button type="button" variant="outline" className="h-11" onClick={onRegenerate}>
           <RefreshCw />
           {t('payment.qr.regenerate')}
         </Button>
@@ -65,7 +65,7 @@ export function QrPaymentPanel({ qr, isSaving, onRegenerate }: { qr: ReturnType<
       {expired ? (
         <>
           <p className="text-sm font-medium text-destructive">{t('payment.qr.expired')}</p>
-          <Button type="button" variant="outline" className="h-10" onClick={onRegenerate}>
+          <Button type="button" variant="outline" className="h-11" onClick={onRegenerate}>
             <RefreshCw />
             {t('payment.qr.regenerate')}
           </Button>

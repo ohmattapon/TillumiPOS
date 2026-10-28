@@ -22,9 +22,13 @@ export class OrderQuoteSource implements IOrderQuoteSource {
     return {
       id: order.id,
       memberId: order.memberId,
-      items: order.items.map(({ productId, productName, sku, unitPriceSatang, quantity, options }) => ({
-        productId, productName, sku, unitPriceSatang, quantity, options: [...options],
-      })),
+      items: order.items.map(
+        ({ productId, productName, sku, unitPriceSatang, quantity, options }): QuotedOrder['items'][number] => ({
+          productId, productName, sku, unitPriceSatang, quantity, options: [...options],
+          // Orders carry no packs: a quote of an order is always pieces.
+          packId: null, packSize: 1,
+        }),
+      ),
     }
   }
 }

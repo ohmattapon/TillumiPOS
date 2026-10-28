@@ -1,6 +1,7 @@
 import type { Category, Product } from '@pos/api/types'
+import { packUnitPriceSatang } from '@pos/api/packs'
 import { useQuery } from '@tanstack/react-query'
-import { ImagePlus, Trash2 } from 'lucide-react'
+import { ImagePlus, Plus, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -8,13 +9,17 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Field, FieldLabel } from '@/components/ui/field'
 import { Switch } from '@/components/ui/switch'
 import { ProductImage } from './ProductImage'
 import { modifierGroupsQuery } from '@/features/modifiers'
 import { useCan } from '@/features/auth'
 import { useFeatures, useFormat, useSettings } from '@/features/settings'
-import { imageStorageQuery, useSaveProduct } from '../api'
+import { imageStorageQuery } from '@/features/settings'
+import { productsQuery, useSaveProduct } from '../api'
+import { CAFE_SKU_PREFIX, CAFE_SKU_SCAN_LIMIT, nextCafeSku } from '../lib/cafe-sku'
+import { MAX_PACKS, toPackInput, toPackRows, type PackRow } from '../lib/packs'
 
 // Radix Select cannot use an empty string as an item value.
 const NO_CATEGORY = 'none'
@@ -22,11 +27,13 @@ const NO_CATEGORY = 'none'
 interface Props {
   /** Omit to create a new product. */
   product?: Product
+  initialType?: Product['productType']
   categories: Category[]
+  onSaved: (product: Product) => void
   onClose: () => void
 }
 
-export function ProductFormDialog({ product, categories, onClose }: Props) {
+export function ProductFormDialog({ product, initialType = 'normal', categories, onSaved, onClose }: Props) {
   const { modifiers: showModifiers } = useFeatures()
   const canEditModifiers = useCan('modifiers.write') && showModifiers
   const { t } = useTranslation('products')
@@ -34,6 +41,7 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
   const { money, currency } = useFormat()
   const { vatMode } = useSettings()
   const [form, setForm] = useState({
+    productType: product?.productType ?? initialType,
     sku: product?.sku ?? '',
     barcode: product?.barcode ?? '',
     name: product?.name ?? '',
@@ -43,6 +51,26 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
     trackStock: product?.trackStock ?? true,
   })
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm({ ...form, [key]: value })
+
+  // The packs this product is sold in; each row is typed as text until the form is saved.
+  const [packs, setPacks] = useState<PackRow[]>(() => toPackRows(product?.packs ?? [], money.toInput))
+  const [packError, setPackError] = useState<{ error: 'size' | 'price'; index: number } | null>(null)
+  const setPack = (index: number, patch: Partial<PackRow>) =>
+    setPacks((current) => current.map((row, position) => (position === index ? { ...row, ...patch } : row)))
+
+  // A café product added from the café button starts on the next free CAFE-### code,
+  // which the owner may still overwrite; the server's unique SKU stays the authority.
+  const creatingCafe = product === undefined && initialType === 'cafe'
+  const cafeSkuFilters = { q: CAFE_SKU_PREFIX, includeInactive: true, limit: CAFE_SKU_SCAN_LIMIT }
+  const cafeProducts = useQuery({ ...productsQuery(cafeSkuFilters), enabled: creatingCafe })
+  const nextSku = cafeProducts.data ? nextCafeSku(cafeProducts.data.items.map((item) => item.sku)) : null
+  const skuPrefilled = useRef(false)
+  useEffect(() => {
+    if (!creatingCafe || !nextSku || skuPrefilled.current) return
+    skuPrefilled.current = true
+    // Fill only the untouched, empty field so nothing the owner typed is overwritten.
+    setForm((current) => (current.sku === '' ? { ...current, sku: nextSku } : current))
+  }, [creatingCafe, nextSku])
 
   const groups = useQuery(modifierGroupsQuery).data ?? []
   // The groups already offered on this product; until the owner touches them, what is stored.
@@ -77,6 +105,12 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (priceSatang === null || costSatang === null) return
+    const packInput = toPackInput(packs, money.parse)
+    if ('error' in packInput) {
+      setPackError(packInput)
+      return
+    }
+    setPackError(null)
     save.mutate(
       {
         id: product?.id,
@@ -84,18 +118,22 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
         // Only sent once the list has loaded, so a slow request never clears what a product offers.
         modifierGroupIds: canEditModifiers && groups.length > 0 ? chosenGroupIds : undefined,
         input: {
-          sku: form.sku.trim(),
+          productType: form.productType,
+          sku: product ? form.sku.trim() : form.sku.trim() || undefined,
           name: form.name.trim(),
           barcode: form.barcode.trim() || null,
           categoryId: form.categoryId === NO_CATEGORY ? null : Number(form.categoryId),
           priceSatang,
           costSatang,
           trackStock: form.trackStock,
+          // A stored product always sends the list so removing a pack applies; a new one with none sends nothing.
+          packs: product || packInput.packs.length > 0 ? packInput.packs : undefined,
         },
       },
       {
         onSuccess: (saved) => {
           toast.success(t(product ? 'toast.updated' : 'toast.created', { name: saved.name }))
+          onSaved(saved)
           onClose()
         },
       },
@@ -149,9 +187,26 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
               <Label htmlFor="product-name">{t('form.name')}</Label>
               <Input id="product-name" className="h-10" value={form.name} onChange={(event) => set('name', event.target.value)} required autoFocus />
             </div>
+            <Field className="col-span-2">
+              <FieldLabel htmlFor="product-type">{t('form.productType')}</FieldLabel>
+              <Select value={form.productType} onValueChange={(value) => {
+                if (value === 'normal' || value === 'cafe') set('productType', value)
+              }}>
+                <SelectTrigger id="product-type" className="h-11! w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="normal" className="min-h-11">{t('types.normal')}</SelectItem>
+                    <SelectItem value="cafe" className="min-h-11">{t('types.cafe')}</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
             <div className="space-y-2">
               <Label htmlFor="product-sku">{t('form.sku')}</Label>
-              <Input id="product-sku" className="h-10" value={form.sku} onChange={(event) => set('sku', event.target.value)} required />
+              <Input id="product-sku" className="h-11" value={form.sku} onChange={(event) => set('sku', event.target.value)} required={!!product} maxLength={64} placeholder={product ? undefined : t('form.skuAuto')} aria-describedby={product ? undefined : 'product-sku-hint'} />
+              {!product && <p id="product-sku-hint" className="text-xs text-muted-foreground">{t(creatingCafe ? 'form.cafeSkuAuto' : 'form.skuAutoHint')}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-barcode">{t('form.barcode')}</Label>
@@ -197,6 +252,84 @@ export function ProductFormDialog({ product, categories, onClose }: Props) {
                 </SelectContent>
               </Select>
             </div>
+            <fieldset className="col-span-2 space-y-3 rounded-lg border p-3">
+              <legend className="px-1 text-sm font-medium">{t('form.packs')}</legend>
+              <p className="text-xs text-muted-foreground">{t('form.packsHint')}</p>
+              {packs.map((row, index) => {
+                const size = /^\d+$/.test(row.size.trim()) ? Number(row.size) : null
+                const autoPrice =
+                  priceSatang !== null && size !== null && size > 0
+                    ? money.plain(packUnitPriceSatang(priceSatang, { size, priceSatang: null }))
+                    : ''
+                const rowError = packError?.index === index ? packError.error : null
+                return (
+                  <div key={row.id ?? `new-${index}`} className="space-y-2">
+                    <div className="grid grid-cols-[1fr_5rem] gap-2 sm:grid-cols-[1fr_5rem_8rem]">
+                      <Input
+                        className="h-10"
+                        aria-label={t('form.packBarcode')}
+                        placeholder={t('form.packBarcode')}
+                        maxLength={64}
+                        value={row.barcode}
+                        onChange={(event) => setPack(index, { barcode: event.target.value })}
+                      />
+                      <Input
+                        className="h-10 text-right tabular-nums"
+                        inputMode="numeric"
+                        aria-label={t('form.packSize')}
+                        placeholder={t('form.packSize')}
+                        aria-invalid={rowError === 'size'}
+                        value={row.size}
+                        onChange={(event) => setPack(index, { size: event.target.value })}
+                      />
+                      <Input
+                        className="col-span-2 h-10 text-right tabular-nums sm:col-span-1"
+                        inputMode="decimal"
+                        aria-label={t('form.packPrice', { currency })}
+                        placeholder={
+                          autoPrice ? t('form.packAutoPrice', { price: autoPrice }) : t('form.packPrice', { currency })
+                        }
+                        aria-invalid={rowError === 'price'}
+                        value={row.price}
+                        onChange={(event) => setPack(index, { price: event.target.value })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="flex min-h-10 items-center gap-2 text-sm">
+                        <Switch checked={row.isActive} onCheckedChange={(checked) => setPack(index, { isActive: checked })} />
+                        {t('form.packActive')}
+                      </label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-10 text-muted-foreground"
+                        aria-label={t('form.removePack')}
+                        onClick={() => setPacks((current) => current.filter((_, position) => position !== index))}
+                      >
+                        <X />
+                      </Button>
+                    </div>
+                    {rowError && (
+                      <p role="alert" className="text-sm text-destructive">
+                        {t(rowError === 'size' ? 'form.packSizeInvalid' : 'form.packPriceInvalid')}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10"
+                disabled={packs.length >= MAX_PACKS}
+                onClick={() => setPacks([...packs, { barcode: '', size: '', price: '', isActive: true }])}
+              >
+                <Plus />
+                {t('form.addPack')}
+              </Button>
+            </fieldset>
+
             <label className="col-span-2 flex items-center justify-between gap-4 rounded-lg border p-3">
               <span>
                 <span className="block text-sm font-medium">{t('form.trackStock')}</span>

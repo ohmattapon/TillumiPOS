@@ -1,2 +1,21 @@
 # Scripts load the env file they need explicitly. Keep the root .env out of tests.
 env = false
+
+[test]
+# The web's logic (lib/ and store/) must be fully covered. Pages, components and hooks are covered by the
+# browser tests in e2e/, shadcn components are third-party code, and server/ is covered by its own run.
+coverageSkipTestFiles = true
+coverageThreshold = { lines = 1, functions = 1 }
+coveragePathIgnorePatterns = [
+  "server/**",
+  "src/main.tsx",
+  "src/app/**",
+  "src/components/**",
+  "src/hooks/**",
+  "src/locales/**",
+  "src/**/components/**",
+  "src/**/hooks/**",
+  "src/**/api.ts",
+  "src/**/index.ts",
+  "src/**/locales.ts",
+]

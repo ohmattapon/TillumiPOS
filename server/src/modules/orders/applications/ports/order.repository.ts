@@ -25,3 +25,10 @@ export interface IOrderRepository {
 
 const orderRepositoryTokenSymbol: unique symbol = Symbol('IOrderRepository')
 export const orderRepositoryToken = orderRepositoryTokenSymbol.toString()
+
+/**
+ * The raw order store without the QR-hold rule. Only the core decorator
+ * wraps it; nothing else injects this token directly.
+ */
+const orderRepositoryInnerTokenSymbol: unique symbol = Symbol('IOrderRepositoryInner')
+export const orderRepositoryInnerToken = orderRepositoryInnerTokenSymbol.toString()

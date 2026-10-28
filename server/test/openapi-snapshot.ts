@@ -26,8 +26,8 @@ const currentV1 = JSON.stringify(sortKeys(forVersion('v1')), null, 2) + '\n'
 const currentV2 = JSON.stringify(sortKeys(forVersion('v2')), null, 2) + '\n'
 
 if (Bun.argv[2] === 'write') {
-  await Bun.write(v2BaselinePath, currentV2)
-  console.log('OpenAPI v2 baseline written; v1 baseline preserved')
+  await Promise.all([Bun.write(v1BaselinePath, currentV1), Bun.write(v2BaselinePath, currentV2)])
+  console.log('OpenAPI v1 and v2 baselines written')
 } else {
   const [baselineV1, baselineV2] = await Promise.all([Bun.file(v1BaselinePath).text(), Bun.file(v2BaselinePath).text()])
   const canonical = (value: string) => JSON.stringify(sortKeys(JSON.parse(value)))

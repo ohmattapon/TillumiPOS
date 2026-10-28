@@ -6,6 +6,13 @@ const valid = { id: 1, username: 'somchai', displayName: 'สมชาย', role
 const owner = new UserEntity({ ...valid, role: 'owner' })
 
 describe('UserEntity', () => {
+  test('hasPin defaults to false, is in the snapshot and survives with()', () => {
+    expect(new UserEntity(valid).hasPin).toBe(false)
+    const user = new UserEntity({ ...valid, hasPin: true })
+    expect(user.hasPin).toBe(true)
+    expect(user.toSnapshot().hasPin).toBe(true)
+    expect(user.with({ displayName: 'ใหม่' }).hasPin).toBe(true)
+  })
   test('carries a role id without changing the legacy snapshot and supports clearing it', () => {
     expect(new UserEntity(valid).roleId).toBeNull()
     const user = new UserEntity({ ...valid, roleId: 4 })
@@ -13,10 +20,10 @@ describe('UserEntity', () => {
     expect(user.with({ displayName: 'ใหม่' }).roleId).toBe(4)
     expect(user.with({ roleId: 9 }).roleId).toBe(9)
     expect(user.with({ roleId: null }).roleId).toBeNull()
-    expect(user.toSnapshot()).toEqual(valid)
+    expect(user.toSnapshot()).toEqual({ ...valid, hasPin: false })
   })
   test('holds its properties', () => {
-    expect(new UserEntity(valid).toSnapshot()).toEqual(valid)
+    expect(new UserEntity(valid).toSnapshot()).toEqual({ ...valid, hasPin: false })
   })
 
   test.each(['ab', 'x'.repeat(33), 'Somchai', 'som chai', 'สมชาย', ''])('rejects the username %p', (username) => {
@@ -42,7 +49,7 @@ describe('UserEntity', () => {
   test('with() changes only the given fields and never the id or username', () => {
     const changed = new UserEntity(valid).with({ displayName: 'สมชาย ใจดี', role: undefined })
 
-    expect(changed.toSnapshot()).toEqual({ ...valid, displayName: 'สมชาย ใจดี' })
+    expect(changed.toSnapshot()).toEqual({ ...valid, hasPin: false, displayName: 'สมชาย ใจดี' })
   })
 
   describe('wouldStopBeingActiveOwner', () => {

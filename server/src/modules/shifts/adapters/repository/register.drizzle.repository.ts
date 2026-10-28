@@ -53,14 +53,10 @@ export class DrizzleRegisterRepository implements IRegisterRepository {
 
   async update(entity: RegisterEntity) {
     const { id, branchId: _branch, code: _code, ...values } = entity.toSnapshot()
-    try {
-      const [row] = await currentExecutor().update(registers).set(values).where(eq(registers.id, id)).returning(columns)
-      if (!row) throw new DomainNotFoundError('ไม่พบจุดขาย', 'REGISTER_NOT_FOUND')
-      return new RegisterEntity(row)
-    } catch (error) {
-      if (isUniqueViolation(error)) throw duplicateCode()
-      throw error
-    }
+    // The code is not in the SET clause, so this cannot break the unique (branch, code) index.
+    const [row] = await currentExecutor().update(registers).set(values).where(eq(registers.id, id)).returning(columns)
+    if (!row) throw new DomainNotFoundError('ไม่พบจุดขาย', 'REGISTER_NOT_FOUND')
+    return new RegisterEntity(row)
   }
 
   async hasOpenShift(registerId: number) {

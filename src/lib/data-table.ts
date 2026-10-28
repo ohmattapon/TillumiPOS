@@ -11,6 +11,8 @@ export interface Column<T> {
   priority: ColumnPriority
   align?: 'right'
   className?: string
+  /** A width class for the column (set on its header, which is drawn even when there are no rows), so stacked tables line up. */
+  width?: string
 }
 
 declare module '@tanstack/react-table' {

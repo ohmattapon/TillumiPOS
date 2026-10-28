@@ -82,6 +82,17 @@ describe('error responses are RFC 9457 problem details', () => {
 })
 
 describe('lists', () => {
+  test('product type is additive: legacy create defaults normal and filtered lists retain the page contract', async () => {
+    const legacyInput = { sku: 'LEGACY', name: 'Legacy', priceSatang: 100 }
+    const legacy = ok(await owner.api.catalog.products.post(legacyInput))
+    expect(legacy.productType).toBe('normal')
+    const cafeInput = { sku: 'CAFE-NEW', name: 'Cafe', priceSatang: 100, productType: 'cafe' as const }
+    const cafe = ok(await owner.api.catalog.products.post(cafeInput))
+    const query = { productType: 'cafe' as const, limit: 1 }
+    const page = ok(await owner.api.catalog.products.get({ query }))
+    expect(page).toEqual({ items: [cafe], total: 1 })
+    expect(Object.keys(cafe).sort()).toEqual(Object.keys(legacy).sort())
+  })
   test('every list answers { items, total }', async () => {
     const product = await seedProduct(owner, { stock: 3 })
     ok(await owner.api.catalog.categories.post({ name: 'Drinks' }))

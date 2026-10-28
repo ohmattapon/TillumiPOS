@@ -14,7 +14,8 @@ export class CachedProductRepository implements IProductRepository {
   ) {}
 
   findAll(query: IFindProductsQuery) {
-    return this.cache.read('products', cacheKey(query), 30, () => this.source.findAll(query),
+    // The snapshot gained packs; older cache entries without them never hydrate under this key.
+    return this.cache.read('products', `v3:${cacheKey(query)}`, 30, () => this.source.findAll(query),
       (page) => ({ items: page.items.map((row) => row.toSnapshot()), total: page.total }),
       (value) => {
         const page = value as Page<ProductEntityProps>
@@ -23,6 +24,8 @@ export class CachedProductRepository implements IProductRepository {
       })
   }
   findById(id: number, branchId: number) { return this.source.findById(id, branchId) }
+  nextSkuNumber() { return this.source.nextSkuNumber() }
+  skuExists(sku: string) { return this.source.skuExists(sku) }
   findManyForUpdate(ids: number[], branchId: number) { return this.source.findManyForUpdate(ids, branchId) }
   async create(entity: ProductEntity, branchId: number) {
     const saved = await this.source.create(entity, branchId)

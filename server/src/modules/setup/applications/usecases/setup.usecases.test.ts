@@ -8,6 +8,7 @@ import {
   mockRoleDirectory,
   mockSetupCode,
   mockShopSettingsRepository,
+  mockStarterOptionGroups,
   mockUnitOfWork,
   mockUserRepository,
 } from '../../../../__tests__/mocks'
@@ -29,6 +30,7 @@ let code: ReturnType<typeof mockSetupCode>
 let users: ReturnType<typeof mockUserRepository>
 let branches: ReturnType<typeof mockBranchRepository>
 let settings: ReturnType<typeof mockShopSettingsRepository>
+let starterGroups: ReturnType<typeof mockStarterOptionGroups>
 let useCase: CompleteSetupUseCase
 
 beforeEach(() => {
@@ -37,13 +39,14 @@ beforeEach(() => {
   users = mockUserRepository()
   branches = mockBranchRepository()
   settings = mockShopSettingsRepository()
+  starterGroups = mockStarterOptionGroups()
   users.create.mockImplementation(async (user) => makeUser({ ...user.toSnapshot(), id: 1 }))
   branches.findMain.mockResolvedValue(makeBranch({ id: 1, code: 'MAIN', name: 'สาขาหลัก' }))
   branches.update.mockImplementation(async (branch) => branch)
   settings.getForUpdate.mockResolvedValue(new ShopSettingsEntity(DEFAULT_SHOP_SETTINGS))
   settings.save.mockImplementation(async (value) => value)
   useCase = new CompleteSetupUseCase(
-    guard, code, users, branches, settings, mockPasswordHasher(), mockUnitOfWork(), mockRoleDirectory(),
+    guard, code, users, branches, settings, mockPasswordHasher(), mockUnitOfWork(), mockRoleDirectory(), starterGroups,
   )
 })
 
@@ -76,13 +79,27 @@ describe('CompleteSetupUseCase', () => {
     expect(branches.update.mock.calls[0]![0].name).toBe('ร้านกาแฟบ้านสวน')
   })
 
-  test('a retail shop starts with tables, kitchen and modifiers off', async () => {
+  test('asks for the starting options of the chosen kind of shop, and of an unspecified one as "other"', async () => {
+    await useCase.execute({ ...input, shopType: 'cafe' })
+    await useCase.execute(input)
+
+    expect(starterGroups.addFor.mock.calls.map((call) => call[0])).toEqual(['cafe', 'other'])
+  })
+
+  test('when the starting options cannot be added nothing is made, and the code is kept to try again', async () => {
+    starterGroups.addFor.mockRejectedValue(new Error('database down'))
+
+    await expect(useCase.execute({ ...input, shopType: 'cafe' })).rejects.toThrow('database down')
+
+    expect(code.retire).not.toHaveBeenCalled()
+  })
+
+  test('a retail shop starts with tables and modifiers off', async () => {
     await useCase.execute({ ...input, shopType: 'retail' })
 
     expect(settings.save.mock.calls[0]![0].toSnapshot()).toMatchObject({
       shopName: 'ร้านกาแฟบ้านสวน',
       tablesEnabled: false,
-      kitchenEnabled: false,
       modifiersEnabled: false,
       homeView: 'till',
     })
@@ -99,7 +116,6 @@ describe('CompleteSetupUseCase', () => {
 
     expect(settings.save.mock.calls[0]![0].toSnapshot()).toMatchObject({
       tablesEnabled: true,
-      kitchenEnabled: true,
       modifiersEnabled: true,
       homeView: 'till',
     })

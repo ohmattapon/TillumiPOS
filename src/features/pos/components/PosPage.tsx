@@ -1,6 +1,6 @@
 import type { Sale } from '@pos/api/types'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, LayoutGrid, Monitor, MonitorSmartphone, MoreHorizontal } from 'lucide-react'
+import { ClipboardList, LayoutGrid, Monitor, MonitorSmartphone, MoreHorizontal, UserRoundCog } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/PageHeader'
@@ -19,9 +19,10 @@ import {
   PAID_SHOWN_MS,
   PairDisplayDialog,
   useCustomerDisplayPublisher,
+  type DisplayQr,
 } from '@/features/customer-display'
 import { checkoutModeQuery, currentShiftQuery, registersQuery, useRegisterSelectionStore } from '@/features/shifts'
-import { meQuery } from '@/features/auth'
+import { meQuery, SwitchStaffDialog, useLogout } from '@/features/auth'
 import { useNavigate } from 'react-router'
 import type { PaymentInput, PaymentMethod } from '@/lib/money'
 import { useCreateQuote } from '@/features/promotions'
@@ -39,6 +40,7 @@ import { OpenOrdersDialog } from './OpenOrdersDialog'
 import { ProductPicker } from './ProductPicker'
 import { ReceiptDialog } from './ReceiptDialog'
 import { SaveOrderDialog } from './SaveOrderDialog'
+import { newIdempotencyKey } from '@/lib/idempotency-key'
 
 /** The sell screen: pick products, review the cart, take payment, show the receipt. */
 export function PosPage() {
@@ -59,6 +61,10 @@ export function PosPage() {
   const currentShift = useQuery({ ...currentShiftQuery(selectedRegisterId ?? 0), enabled: selectedRegisterId !== undefined })
   const needsShift = checkoutMode.data?.checkoutMode === 'shifts'
   const shiftReady = checkoutMode.data?.checkoutMode === 'legacy' || (needsShift && currentShift.data?.status === 'open')
+  const [isSwitching, setIsSwitching] = useState(false)
+  const handOver = useRegisterSelectionStore((state) => state.handOver)
+  const clearRegisterSelection = useRegisterSelectionStore((state) => state.clear)
+  const logout = useLogout()
   const [isListingOrders, setIsListingOrders] = useState(false)
   const [isChoosingTable, setIsChoosingTable] = useState(false)
   const [isSavingOrder, setIsSavingOrder] = useState(false)
@@ -68,7 +74,7 @@ export function PosPage() {
   const settings = useSettings()
   const features = useFeatures()
   // The bank QR the payment dialog is showing, and the sale just paid, for the customer's screen.
-  const [shownQr, setShownQr] = useState<{ image: string; expiresAt: string } | null>(null)
+  const [shownQr, setShownQr] = useState<DisplayQr | null>(null)
   const [paidSale, setPaidSale] = useState<{ totalSatang: number; changeSatang: number } | null>(null)
 
   // "Paid" stays on the customer's screen for a few seconds, then the idle screen returns.
@@ -84,7 +90,14 @@ export function PosPage() {
       locale: settings.locale,
       currency: settings.currency,
       shopName: settings.shopName,
-      state: toDisplayState({ cart, vatMode: settings.vatMode, isPaying, qr: shownQr, paidSale }),
+      state: toDisplayState({
+        cart,
+        vatMode: settings.vatMode,
+        packLabel: (size) => t('cart.pack', { size }),
+        isPaying,
+        qr: shownQr,
+        paidSale,
+      }),
     },
     { registerId: selectedRegisterId },
   )
@@ -102,8 +115,12 @@ export function PosPage() {
     cart.orderId !== null
       ? { orderId: cart.orderId }
       : {
-          lines: cart.lines.map((line) => ({ productId: line.productId, quantity: line.quantity, options: line.optionIds })),
+          lines: cart.lines.map((line) => ({
+            productId: line.productId, quantity: line.quantity, options: line.optionIds, packId: line.packId ?? undefined,
+          })),
           memberId: cart.memberId,
+          couponCode: cart.couponCode === '' ? undefined : cart.couponCode,
+          redeemPoints: cart.pointsRedeemed,
         }
   // The price is asked again, e.g. after the QR holding it was cancelled. The dialog opens on the method chosen.
   const requote = (method: PaymentMethod) => {
@@ -118,6 +135,19 @@ export function PosPage() {
     setIsPaying(true)
     if (usesQuote) createQuote.mutate(quoteInput())
   }
+  // A coupon is only pinned by a quote, so a new code is priced as soon as it is applied and the
+  // cashier sees whether it can be used before the payment opens.
+  const askedCoupon = useRef<string | null>(null)
+  const couponCode = cart.orderId === null ? cart.couponCode : ''
+  useEffect(() => {
+    if (couponCode === '' || askedCoupon.current === couponCode) {
+      if (couponCode === '') askedCoupon.current = null
+      return
+    }
+    if (!usesQuote || cart.lines.length === 0) return
+    askedCoupon.current = couponCode
+    createQuote.mutate(quoteInput())
+  })
   // The keyboard handler is set up once per `canPay`, so it reads the latest function through a ref.
   const startPaymentRef = useRef(startPayment)
   useEffect(() => {
@@ -152,23 +182,24 @@ export function PosPage() {
     const quoteId = options.arrived ? undefined : quote?.id
     // A pinned price already holds the discount; the till never adds a typed one on top.
     const discountSatang = quote ? 0 : cart.discountSatang
-    paymentCommandKey.current ??= crypto.randomUUID()
+    paymentCommandKey.current ??= newIdempotencyKey()
     // An open order is paid through the order, which sells it at the prices it quoted.
     if (cart.orderId !== null) {
       payOrder.mutate(
         {
-          orderId: cart.orderId, discountSatang, quoteId, payment,
-          ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id, idempotencyKey: paymentCommandKey.current } : {}),
+          orderId: cart.orderId, discountSatang, quoteId, payment, idempotencyKey: paymentCommandKey.current,
+          ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id } : {}),
         },
         paid,
       )
     } else {
       checkout.mutate(
         {
-          items: cart.lines.map((line) => ({ productId: line.productId, quantity: line.quantity, options: line.optionIds })),
-          discountSatang, quoteId, memberId: cart.memberId, payment,
+          items: cart.lines.map((line) => ({
+            productId: line.productId, quantity: line.quantity, options: line.optionIds, packId: line.packId ?? undefined,
+          })),
+          discountSatang, quoteId, memberId: cart.memberId, payment, idempotencyKey: paymentCommandKey.current,
           ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id } : {}),
-          ...(needsShift ? { idempotencyKey: paymentCommandKey.current } : {}),
         },
         paid,
       )
@@ -192,8 +223,15 @@ export function PosPage() {
   return (
     <>
       <PageHeader title={t('title')} highlight={date.longDate(today)} description={t('description')}>
-        {/* Wide screens keep the buttons in the header; smaller screens put the same actions in one menu. */}
-        <div className="hidden items-center gap-2 sm:flex">
+        {/* Wide screens (xl) keep the buttons in the header; a tablet has no room for them beside the title, so it puts the same actions in one menu. */}
+        {me && <span className="hidden max-w-48 truncate text-sm text-muted-foreground xl:inline">{t('header.sellingAs', { name: me.displayName })}</span>}
+        {/* Below xl the "selling as" line does not fit, so the seller's name sits in the switch button itself. */}
+        <Button variant="outline" className="h-11 px-3" onClick={() => setIsSwitching(true)}>
+          <UserRoundCog />
+          {me && <span className="max-w-28 truncate xl:hidden">{me.displayName}</span>}
+          <span className="max-sm:sr-only">{t('header.switchStaff')}</span>
+        </Button>
+        <div className="hidden items-center gap-2 xl:flex">
           {needsShift && (
             <Button variant="outline" className="h-11 px-3" onClick={() => navigate('/shifts')}>
               {shiftReady ? t('shiftReady') : t('shiftRequired')}
@@ -223,7 +261,7 @@ export function PosPage() {
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="size-11 sm:hidden" aria-label={t('moreActions')}>
+            <Button variant="outline" className="size-11 xl:hidden" aria-label={t('moreActions')}>
               <MoreHorizontal />
             </Button>
           </DropdownMenuTrigger>
@@ -264,11 +302,13 @@ export function PosPage() {
           onPay={startPayment}
           onSaveOrder={() => setIsSavingOrder(true)}
           paymentAvailable={shiftReady === true}
+          couponError={couponCode === '' ? null : (createQuote.error?.message ?? null)}
         />
         <CartBar
           onPay={startPayment}
           onSaveOrder={() => setIsSavingOrder(true)}
           paymentAvailable={shiftReady === true}
+          couponError={couponCode === '' ? null : (createQuote.error?.message ?? null)}
         />
       </div>
 
@@ -296,6 +336,12 @@ export function PosPage() {
         />
       )}
 
+      <SwitchStaffDialog
+        open={isSwitching}
+        onOpenChange={setIsSwitching}
+        onSwitched={(newUserId) => handOver(newUserId, selectedRegisterId)}
+        onUsePassword={() => logout.mutate(undefined, { onSuccess: () => { clearCart(); clearRegisterSelection() } })}
+      />
       {receipt && <ReceiptDialog sale={receipt} onClose={closeReceipt} />}
       {isListingOrders && <OpenOrdersDialog onClose={() => setIsListingOrders(false)} />}
       <PairDisplayDialog open={isPairingDisplay} onOpenChange={setIsPairingDisplay} registerId={selectedRegisterId} />

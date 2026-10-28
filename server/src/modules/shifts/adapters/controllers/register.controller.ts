@@ -2,8 +2,10 @@ import { Elysia } from 'elysia'
 import { inject, injectable } from 'tsyringe'
 import { idParams, page } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
-import { CreateRegisterUseCase, ListRegistersUseCase, UpdateRegisterUseCase } from '../../applications/usecases/register.usecases'
-import { GetCurrentShiftUseCase } from '../../applications/usecases/shift-lifecycle.usecases'
+import { CreateRegisterUseCase } from '../../applications/usecases/create-register.usecase'
+import { ListRegistersUseCase } from '../../applications/usecases/list-registers.usecase'
+import { UpdateRegisterUseCase } from '../../applications/usecases/update-register.usecase'
+import { GetCurrentShiftUseCase } from '../../applications/usecases/get-current-shift.usecase'
 import { shiftHttpSchemas } from './schemas/shift.schema'
 
 @injectable()

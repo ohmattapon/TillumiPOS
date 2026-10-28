@@ -61,7 +61,7 @@ function MoveDialog({ order, onClose }: { order: Order; onClose: () => void }) {
           </Button>
         </div>
         <DialogFooter sticky>
-          <Button variant="outline" className="h-10" onClick={onClose}>
+          <Button variant="outline" className="h-11" onClick={onClose}>
             {tc('cancel')}
           </Button>
         </DialogFooter>
@@ -101,7 +101,7 @@ function MergeDialog({ order, onClose }: { order: Order; onClose: () => void }) 
                 {other.label ?? t('orders.untitled', { id: other.id })} · {money.format(other.subtotalSatang)}
               </span>
               <Button
-                className="h-9"
+                className="h-11"
                 disabled={merge.isPending}
                 onClick={() =>
                   merge.mutate(
@@ -124,7 +124,7 @@ function MergeDialog({ order, onClose }: { order: Order; onClose: () => void }) 
         {open.error && <p className="text-sm text-destructive">{open.error.message}</p>}
         <PaginationBar {...paging} total={open.data?.total} isLoading={open.isFetching || merge.isPending} onPageChange={paging.setPage} />
         <DialogFooter sticky>
-          <Button variant="outline" className="h-10" onClick={onClose}>
+          <Button variant="outline" className="h-11" onClick={onClose}>
             {tc('cancel')}
           </Button>
         </DialogFooter>
@@ -197,11 +197,11 @@ function SplitDialog({ order, onClose }: { order: Order; onClose: () => void }) 
         </ul>
         {lines.length > 0 && takenUnits >= units && <p className="text-sm text-destructive">{t('tools.leaveOne')}</p>}
         <DialogFooter sticky>
-          <Button variant="outline" className="h-10" onClick={onClose}>
+          <Button variant="outline" className="h-11" onClick={onClose}>
             {tc('cancel')}
           </Button>
           <Button
-            className="h-10"
+            className="h-11"
             disabled={!canSplit}
             onClick={() =>
               split.mutate(
@@ -236,14 +236,14 @@ export function OrderTools({ order }: { order: Order }) {
     <>
       <div className="flex gap-2 border-b px-4 py-2">
         {tables && (
-          <Button variant="outline" className="h-9 flex-1" onClick={() => setTool('move')}>
+          <Button variant="outline" className="h-11 flex-1" onClick={() => setTool('move')}>
             {t('tools.move')}
           </Button>
         )}
-        <Button variant="outline" className="h-9 flex-1" onClick={() => setTool('merge')}>
+        <Button variant="outline" className="h-11 flex-1" onClick={() => setTool('merge')}>
           {t('tools.merge')}
         </Button>
-        <Button variant="outline" className="h-9 flex-1" disabled={order.itemCount < 2} onClick={() => setTool('split')}>
+        <Button variant="outline" className="h-11 flex-1" disabled={order.itemCount < 2} onClick={() => setTool('split')}>
           {t('tools.split')}
         </Button>
       </div>

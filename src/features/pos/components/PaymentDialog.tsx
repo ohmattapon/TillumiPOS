@@ -7,14 +7,18 @@ import { useListPagination } from '@/hooks/use-list-pagination'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { useFormat } from '@/features/settings'
+import { useFormat, settingsQuery } from '@/features/settings'
 import { unclaimedQrQuery } from '@/features/shifts'
 import type { Quote } from '@/features/promotions'
 import type { PaymentInput, PaymentMethod } from '@/lib/money'
+import type { DisplayQr } from '@/features/customer-display'
 import { cn } from '@/lib/utils'
 import { qrConfigQuery } from '../api'
 import { useQrPayment } from '../hooks/use-qr-payment'
+import { pickDisplayQr } from '../lib/display-qr'
+import { resolveStaticQr } from '../lib/static-qr'
 import { QrPaymentPanel } from './QrPaymentPanel'
+import { StaticQrPanel } from './StaticQrPanel'
 
 const methods: { value: PaymentMethod; icon: LucideIcon }[] = [
   { value: 'cash', icon: Banknote },
@@ -41,10 +45,10 @@ interface Props {
   /** The method the dialog opens on: the one chosen when the price was asked again. */
   initialMethod?: PaymentMethod
   /**
-   * Tells the till which bank QR is showing (or null), so the customer's screen can show the same one.
-   * Called again with null when the QR is paid, replaced or the dialog closes.
+   * Tells the till which QR is showing (or null), so the customer's screen can show the same one: the bank's
+   * QR, or the payload of a static PromptPay QR. Called again with null when the QR is paid, replaced or the dialog closes.
    */
-  onQrChange?: (qr: { image: string; expiresAt: string } | null) => void
+  onQrChange?: (qr: DisplayQr | null) => void
 }
 
 export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfirm, onCancel, shiftId, onRequote, initialMethod = 'cash', onQrChange }: Props) {
@@ -56,18 +60,23 @@ export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfi
 
   // With a bank QR set up, PromptPay is paid by scanning and confirmed by the bank, not by the cashier.
   const qrEnabled = useQuery(qrConfigQuery).data?.enabled === true
-  const usesQr = method === 'promptpay' && qrEnabled
+  // Static PromptPay: the QR is built locally with the bill amount, the bank is never asked,
+  // and the cashier confirms below after checking their banking app (the trust-flow confirm).
+  const settings = useQuery(settingsQuery).data
+  const staticQr = resolveStaticQr(method === 'promptpay' ? settings : undefined, totalSatang)
+  const showStaticQr = staticQr.kind !== 'off'
+  const usesQr = method === 'promptpay' && qrEnabled && !showStaticQr
   const qr = useQrPayment({ amountSatang: totalSatang, quoteId: quote?.id, active: usesQr, shiftId })
 
   // The customer's screen follows the QR on this dialog. It is keyed by the QR's id: a new QR is a new
   // message, and a paid QR (or a closed dialog) clears it.
-  const shownQr = usesQr && qr.issued && !qr.paid ? qr.issued : null
+  const shown = pickDisplayQr({ bank: usesQr && qr.issued && !qr.paid ? qr.issued : null, staticQr })
   useEffect(() => {
-    onQrChange?.(shownQr ? { image: shownQr.image, expiresAt: shownQr.expiresAt.toISOString() } : null)
+    onQrChange?.(shown?.qr ?? null)
     return () => onQrChange?.(null)
     // The callback is a state setter, stable by design; only another QR should send again.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shownQr?.id])
+  }, [shown?.key])
 
   // Money that already arrived for exactly this total and has no sale yet (a late payment, or a sale that
   // failed after the customer paid). Using it means the customer does not pay twice.
@@ -96,7 +105,7 @@ export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfi
   // Non-cash methods always pay the exact total; only cash can be over-tendered.
   const amountSatang = method === 'cash' ? money.parse(received) : totalSatang
   const changeSatang = amountSatang === null ? null : amountSatang - totalSatang
-  const canConfirm = changeSatang !== null && changeSatang >= 0 && !isSubmitting && !usesQr && !qr.isCancelling
+  const canConfirm = changeSatang !== null && changeSatang >= 0 && !isSubmitting && !usesQr && !qr.isCancelling && staticQr.kind !== 'missing-target'
 
   const unit = 10 ** money.fractionDigits
   const quickCash = (quickCashByCurrency[currency] ?? defaultQuickCash).filter((note) => note * unit >= totalSatang)
@@ -156,6 +165,7 @@ export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfi
           </div>
 
           {usesQr && <QrPaymentPanel qr={qr} isSaving={isSubmitting} onRegenerate={() => void reprice('promptpay')} />}
+          {showStaticQr && <StaticQrPanel payload={staticQr.kind === 'ready' ? staticQr.payload : null} amountSatang={totalSatang} />}
           {usesQr && qr.cancelError && <p role="alert" className="text-sm text-destructive">{t('payment.qr.cancelFailed')}</p>}
           {usesQr && !qr.paid && ((unclaimed.data?.total ?? 0) > 0 || qrPaging.page > 0) && (
             <div className="space-y-2 rounded-lg border p-3">
@@ -169,15 +179,15 @@ export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfi
                     </span>
                     {confirmingId === payment.id ? (
                       <span className="flex gap-2">
-                        <Button type="button" variant="outline" className="h-10" onClick={() => setConfirmingId(null)}>
+                        <Button type="button" variant="outline" className="h-11" onClick={() => setConfirmingId(null)}>
                           {tc('cancel')}
                         </Button>
-                        <Button type="button" className="h-10" disabled={isSubmitting || qr.isCancelling} onClick={() => payWithArrivedMoney(payment.id)}>
+                        <Button type="button" className="h-11" disabled={isSubmitting || qr.isCancelling} onClick={() => payWithArrivedMoney(payment.id)}>
                           {t('payment.qr.arrivedConfirm')}
                         </Button>
                       </span>
                     ) : (
-                      <Button type="button" variant="outline" className="h-10" disabled={isSubmitting || qr.isCancelling} onClick={() => setConfirmingId(payment.id)}>
+                      <Button type="button" variant="outline" className="h-11" disabled={isSubmitting || qr.isCancelling} onClick={() => setConfirmingId(payment.id)}>
                         {t('payment.qr.arrivedUse')}
                       </Button>
                     )}

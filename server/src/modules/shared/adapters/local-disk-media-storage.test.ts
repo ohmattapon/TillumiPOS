@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { contentTypeOf, isMediaKey, LocalDiskMediaStorage, MAX_IMAGE_BYTES } from './local-disk-media-storage'
+import { contentTypeOf, isLogoMediaKey, isMediaKey, LocalDiskMediaStorage, logoContentTypeOf, MAX_IMAGE_BYTES } from './local-disk-media-storage'
 
 let directory: string
 let storage: LocalDiskMediaStorage
@@ -42,8 +42,8 @@ describe('LocalDiskMediaStorage', () => {
     expect(await filesUnder()).toEqual([])
   })
 
-  test('a key outside the product image pattern is refused, so nothing can leave the folder', async () => {
-    for (const key of ['../x.png', 'products/1/../../x.png', '/etc/passwd', 'products/1/a.png/../b.png', 'products/x/a.png', 'products/1/a.svg', 'products/1/%2e%2e.png'])
+  test('a key outside the product or promotion image pattern is refused, so nothing can leave the folder', async () => {
+    for (const key of ['../x.png', 'products/1/../../x.png', 'promotions/1/../../x.png', '/etc/passwd', 'products/1/a.png/../b.png', 'products/x/a.png', 'promotions/x/a.png', 'products/1/a.svg', 'promotions/1/a.svg', 'products/1/%2e%2e.png'])
       await expect(storage.put(key, png())).rejects.toMatchObject({ code: 'MEDIA_UNAVAILABLE' })
     expect(await filesUnder()).toEqual([])
   })
@@ -74,5 +74,48 @@ describe('media keys', () => {
     expect(contentTypeOf('products/12/a.webp')).toBe('image/webp')
     expect(isMediaKey('products/12/a.png/')).toBe(false)
     expect(contentTypeOf('x.png')).toBeNull()
+  })
+
+  test('the promotion image pattern is a key, with its content type', () => {
+    expect(isMediaKey('promotions/12/3f2c-aa.jpg')).toBe(true)
+    expect(contentTypeOf('promotions/12/3f2c-aa.jpg')).toBe('image/jpeg')
+    expect(contentTypeOf('promotions/12/a.webp')).toBe('image/webp')
+    expect(contentTypeOf('promotions/12/a.png')).toBe('image/png')
+    expect(isMediaKey('promotions/12/a.png/')).toBe(false)
+    expect(isMediaKey('promotions/12/a.svg')).toBe(false)
+    expect(isMediaKey('promotions/x/a.png')).toBe(false)
+  })
+
+  test('a folder that cannot be written to is reported as unavailable, and nothing is left behind', async () => {
+    const asFile = join(directory, 'not-a-folder')
+    await Bun.write(asFile, 'x')
+    const blocked = new LocalDiskMediaStorage(asFile)
+    const error = spyOn(console, 'error').mockImplementation(() => {})
+
+    try {
+      await expect(blocked.put('products/1/a.png', png())).rejects.toMatchObject({ code: 'MEDIA_UNAVAILABLE' })
+    } finally {
+      error.mockRestore()
+    }
+    expect(await readdir(directory)).toEqual(['not-a-folder'])
+  })
+})
+
+describe('the shop logo key', () => {
+  test('is logo/<id>.<ext>, stored and typed like the other images', async () => {
+    await storage.put('logo/3f2c9a1e-7b4d.png', png(12))
+
+    expect(Bun.file(join(directory, 'logo', '3f2c9a1e-7b4d.png')).size).toBe(12)
+    expect(logoContentTypeOf('logo/3f2c9a1e-7b4d.webp')).toBe('image/webp')
+    expect(storage.urlFor('logo/3f2c9a1e-7b4d.png')).toBe('/media/logo/3f2c9a1e-7b4d.png')
+  })
+
+  test('never lets a key climb out of the folder or take another shape', async () => {
+    for (const key of ['logo/../x.png', 'logo/a/b.png', 'logo/a.gif', '../logo/a.png']) {
+      expect(isLogoMediaKey(key)).toBe(false)
+      expect(logoContentTypeOf(key)).toBeNull()
+    }
+    await expect(storage.put('logo/a/b.png', png())).rejects.toMatchObject({ code: 'MEDIA_UNAVAILABLE' })
+    expect(contentTypeOf('logo/a.png')).toBeNull()
   })
 })

@@ -7,10 +7,11 @@
 // SCB settings, and removes nothing of yours.
 // It drives the Chrome that is already installed, headless.
 import { SQL } from 'bun'
-import { mkdtemp } from 'node:fs/promises'
+import { mkdir, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { chromium, type Browser, type Page } from 'playwright-core'
+import { createCustomerDisplayRequestGuard } from './customer-display-requests'
 
 const DB_ADMIN = 'postgres://pos:pos@localhost:5433/postgres'
 const DB_NAME = 'pos_e2e'
@@ -93,8 +94,13 @@ async function check(name: string, run: () => Promise<void>) {
   }
 }
 
-async function signIn(browser: Browser, username: string, password: string, viewport = { width: 1366, height: 900 }): Promise<Page> {
+/**
+ * `insecureContext` is how a tablet sees the till when it is opened at http://192.168.x.x: the browser only gives
+ * crypto.randomUUID to secure pages (https or localhost), and these checks run on localhost, so it is taken away.
+ */
+async function signIn(browser: Browser, username: string, password: string, viewport = { width: 1366, height: 900 }, insecureContext = false): Promise<Page> {
   const context = await browser.newContext({ viewport, locale: 'th-TH' })
+  if (insecureContext) await context.addInitScript(() => Object.defineProperty(Crypto.prototype, 'randomUUID', { value: undefined, configurable: true }))
   const page = await context.newPage()
   page.setDefaultTimeout(15_000)
   await page.goto(WEB)
@@ -201,8 +207,17 @@ async function runSetupFlow(browser: Browser) {
       }
       if (code === undefined) throw new Error('The API did not print a setup code')
       await page.getByLabel('รหัสตั้งค่า', { exact: true }).fill(code)
-      await page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' }).click()
+      const promptpay = page.getByLabel('พร้อมเพย์สำหรับรับเงิน (ไม่บังคับ)', { exact: true })
+      const submit = page.getByRole('button', { name: 'ตั้งค่าและเข้าสู่ระบบ' })
+      await promptpay.fill('123')
+      if (await submit.isEnabled()) throw new Error('Setup can be sent with a PromptPay number that is not valid')
+      await promptpay.fill('0812345678')
+      await submit.click()
       await page.getByRole('heading', { name: /ขายสินค้า/ }).waitFor()
+      // The number is saved right after setup, by the owner who has just been signed in: the shop takes a static QR.
+      const settings = await (await page.request.get(`${SETUP_WEB}/api/v1/settings`)).json()
+      if (settings.promptpayMode !== 'static' || settings.promptpayTarget !== '0812345678')
+        throw new Error(`The PromptPay number was not saved: ${JSON.stringify([settings.promptpayMode, settings.promptpayTarget])}`)
     })
 
     await check('after a reload the owner is still signed in and the setup page is gone', async () => {
@@ -265,6 +280,13 @@ async function main() {
       await sellOneForCash(owner)
     })
 
+    await check('opened over plain http at the shop IP (no crypto.randomUUID), the till still opens and sells', async () => {
+      const tablet = await signIn(browser, 'admin', OWNER_PASSWORD, { width: 1024, height: 768 }, true)
+      if ((await tablet.evaluate(() => typeof crypto.randomUUID)) !== 'undefined') throw new Error('The check did not take randomUUID away, so it proves nothing')
+      await sellOneForCash(tablet)
+      await tablet.context().close()
+    })
+
     await check('on a phone the cashier sells with the cart bar: open the cart, change the quantity both ways, pay', async () => {
       const phone = await signIn(browser, 'cashier', CASHIER_PASSWORD, { width: 390, height: 844 })
       try {
@@ -289,16 +311,12 @@ async function main() {
       try {
         const bare = await stranger.newPage()
         bare.setDefaultTimeout(15_000)
-        const apiCalls: string[] = []
-        bare.on('request', (request) => {
-          if (new URL(request.url()).pathname.startsWith('/api/')) apiCalls.push(request.url())
-        })
+        const requests = createCustomerDisplayRequestGuard()
+        bare.on('request', (request) => requests.record(request.url()))
         await bare.goto(`${WEB}/customer`)
         await bare.getByText('ยินดีต้อนรับ').waitFor()
-        const unexpected = apiCalls.filter(
-          (url) => !new URL(url).pathname.startsWith('/api/v1/customer-display/sessions'),
-        )
-        if (unexpected.length > 0) throw new Error(`The customer screen called the API: ${unexpected[0]}`)
+        // The screen can open its session/stream and fetch public slides, without asking for till data.
+        requests.assertPublicOnly()
       } finally {
         await stranger.close()
       }
@@ -313,7 +331,7 @@ async function main() {
         await display.getByText('น้ำดื่ม 600 มล.').waitFor()
         await display.getByText('ยอดสุทธิ').waitFor()
         await cashier.getByRole('button', { name: /^ชำระเงิน/ }).click()
-        // Not cash: the checks that close the shift assert exactly what the drawer should hold (฿169.00, and
+        // Not cash: the checks that close the shift assert exactly what the drawer should hold (฿179.00, and
         // a difference of -฿25.00), so this sale must not add to it.
         await cashier.getByRole('button', { name: 'พร้อมเพย์' }).click()
         await cashier.getByRole('button', { name: 'ยืนยันการชำระ' }).click()
@@ -420,6 +438,196 @@ async function main() {
       await option.getByRole('button', { name: 'บันทึก' }).click()
       await owner.getByText('ไข่มุก').first().waitFor()
       await owner.getByText('+10.00').first().waitFor()
+
+      // The option row's own control makes ไข่มุก the group default, and the checkbox shows the save has landed.
+      const setDefault = owner.getByRole('checkbox', { name: 'ตั้ง "ไข่มุก" เป็นค่าเริ่มต้น' })
+      await setDefault.click()
+      for (let attempt = 0; attempt < 40 && !(await setDefault.isChecked()); attempt++) await owner.waitForTimeout(250)
+      if (!(await setDefault.isChecked())) throw new Error('ไข่มุก did not stay the group default')
+    })
+
+    await check('products offer manual creation without the starter menu, including empty results', async () => {
+      await owner.goto(`${WEB}/products`)
+      await owner.getByRole('button', { name: 'เพิ่มสินค้า', exact: true }).waitFor()
+      const starterActions = owner.getByRole('button', { name: /เพิ่มจากเมนูคาเฟ่|นำเข้าเมนู|เลือกชุดเมนู/ })
+      if (await starterActions.count()) throw new Error('The starter menu action is still visible')
+
+      const search = owner.getByRole('textbox', { name: 'ค้นหาสินค้า' })
+      await search.fill('no-such-cafe-product-e2e')
+      await owner.getByText('ไม่พบสินค้า', { exact: true }).locator('visible=true').waitFor()
+      if (await starterActions.count()) throw new Error('Empty results still offer the starter menu')
+      await search.fill('')
+    })
+
+    await check('manual cafe and normal buttons set editable defaults and follow the saved type', async () => {
+      await owner.goto(`${WEB}/products`)
+      const normalTab = owner.getByRole('tab', { name: 'สินค้าทั่วไป', exact: true })
+      await normalTab.waitFor()
+      if (await normalTab.getAttribute('aria-selected') !== 'true') throw new Error('Normal is not the default tab')
+      const cafeButton = owner.getByRole('button', { name: 'เพิ่มเมนูคาเฟ่', exact: true })
+      const normalButton = owner.getByRole('button', { name: 'เพิ่มสินค้า', exact: true })
+      const cafeBox = await cafeButton.boundingBox()
+      const normalBox = await normalButton.boundingBox()
+      if (!cafeBox || !normalBox || cafeBox.x >= normalBox.x) throw new Error('Cafe button must precede normal')
+      await cafeButton.click()
+      const form = owner.getByRole('dialog')
+      try {
+        if (await form.getByLabel('ประเภทสินค้า').innerText() !== 'เมนูคาเฟ่') throw new Error('Cafe default missing')
+        const skuInput = form.getByLabel('รหัสสินค้า (SKU)')
+        // The code arrives with the shop's existing codes, so the field may fill a moment after opening.
+        for (let attempt = 0; attempt < 40 && !/^CAFE-\d{3}$/.test(await skuInput.inputValue()); attempt++) await owner.waitForTimeout(250)
+        const filledSku = await skuInput.inputValue()
+        if (!/^CAFE-\d{3}$/.test(filledSku)) throw new Error(`Cafe form did not prefill a CAFE-### code: ${filledSku}`)
+        await form.getByLabel('ชื่อสินค้า', { exact: true }).fill('E2E manual cafe')
+        await form.getByLabel(/ราคาขาย/).fill('45')
+        await form.getByRole('button', { name: 'บันทึก', exact: true }).click()
+        await form.waitFor({ state: 'detached' })
+        if (await owner.getByRole('tab', { name: 'เมนูคาเฟ่', exact: true }).getAttribute('aria-selected') !== 'true')
+          throw new Error('Save did not select cafe tab')
+        const row = owner.getByRole('row', { name: /E2E manual cafe/ })
+        await row.waitFor()
+        // The server accepted the code the form filled rather than making the owner retype it.
+        if (!(await row.innerText()).includes(filledSku)) throw new Error(`Saved cafe lost the prefilled SKU: ${filledSku}`)
+        await row.getByRole('button', { name: /การทำงานอื่น/ }).click()
+        await owner.getByRole('menuitem', { name: 'แก้ไขสินค้า' }).click()
+        if (await form.getByLabel('ประเภทสินค้า').innerText() !== 'เมนูคาเฟ่') throw new Error('Edit lost saved type')
+        await form.getByLabel('ประเภทสินค้า').click()
+        await owner.getByRole('option', { name: 'สินค้าทั่วไป', exact: true }).click()
+        await form.getByRole('button', { name: 'บันทึก', exact: true }).click()
+        await form.waitFor({ state: 'detached' })
+        if (await normalTab.getAttribute('aria-selected') !== 'true') throw new Error('Move did not select normal tab')
+        await row.waitFor()
+        // Normal creation must stay normal even while the cafe tab is selected.
+        await owner.getByRole('tab', { name: 'เมนูคาเฟ่', exact: true }).click()
+        await normalButton.click()
+        if (await form.getByLabel('ประเภทสินค้า').innerText() !== 'สินค้าทั่วไป') throw new Error('Normal button used active tab')
+        if (await form.getByLabel('รหัสสินค้า (SKU)').inputValue() !== '') throw new Error('Normal creation prefilled an SKU')
+        await form.getByLabel('ชื่อสินค้า', { exact: true }).fill('E2E manual normal')
+        await form.getByLabel('รหัสสินค้า (SKU)').fill('E2E-NORMAL')
+        await form.getByLabel(/ราคาขาย/).fill('20')
+        await form.getByRole('button', { name: 'บันทึก', exact: true }).click()
+        await form.waitFor({ state: 'detached' })
+        if (await normalTab.getAttribute('aria-selected') !== 'true') throw new Error('Normal creation selected cafe')
+        await owner.getByRole('row', { name: /E2E manual normal/ }).waitFor()
+      } finally {
+        if (await form.count()) await form.getByRole('button', { name: 'ยกเลิก', exact: true }).click()
+      }
+    })
+
+    await check('product type scopes status counts, search and empty results without a preset picker', async () => {
+      const activeInput = { sku: 'E2E-CAFE-LOW', name: 'E2E cafe low', productType: 'cafe', priceSatang: 4500, trackStock: true }
+      const inactiveInput = { sku: 'E2E-CAFE-OFF', name: 'E2E cafe inactive', productType: 'cafe', priceSatang: 4500, trackStock: false }
+      const active = await owner.request.post(`${WEB}/api/v1/catalog/products`, { data: activeInput })
+      const inactive = await owner.request.post(`${WEB}/api/v1/catalog/products`, { data: inactiveInput })
+      if (!active.ok() || !inactive.ok()) throw new Error('Cafe fixtures failed')
+      const inactiveProduct = await inactive.json()
+      const disabled = await owner.request.patch(`${WEB}/api/v1/catalog/products/${inactiveProduct.id}`, { data: { isActive: false } })
+      if (!disabled.ok()) throw new Error('Cafe disable failed')
+      await owner.goto(`${WEB}/products`)
+      await owner.getByRole('tab', { name: 'เมนูคาเฟ่', exact: true }).click()
+      await owner.getByRole('tab', { name: 'ทั้งหมด 2', exact: true }).waitFor()
+      await owner.getByRole('tab', { name: 'ใกล้หมด 1', exact: true }).click()
+      await owner.getByRole('row', { name: /E2E cafe low/ }).waitFor()
+      if (await owner.getByRole('row', { name: /E2E cafe inactive|น้ำดื่ม/ }).count()) throw new Error('Low filter leaked')
+      await owner.getByRole('tab', { name: 'ปิดการขาย 1', exact: true }).click()
+      await owner.getByRole('row', { name: /E2E cafe inactive/ }).waitFor()
+      if (await owner.getByRole('row', { name: /E2E cafe low/ }).count()) throw new Error('Inactive filter leaked')
+      const search = owner.getByRole('textbox', { name: 'ค้นหาสินค้า' })
+      await search.fill('no-such-cafe-product-e2e')
+      await owner.getByText('ไม่พบสินค้า', { exact: true }).locator('visible=true').waitFor()
+      if (await owner.getByRole('button', { name: /เพิ่มจากเมนูคาเฟ่|นำเข้าเมนู|เลือกชุดเมนู/ }).count())
+        throw new Error('Empty cafe tab offers presets')
+    })
+
+    await check('type changes reset pagination and cafe controls wrap with 44px targets at each screen size', async () => {
+      const fixtureIds: number[] = []
+      for (let index = 0; index < 21; index++) {
+        const input = { sku: `E2E-PAGE-${index}`, name: `ZZZ paged cafe ${index}`, productType: 'cafe', priceSatang: 4500, trackStock: false }
+        const response = await owner.request.post(`${WEB}/api/v1/catalog/products`, { data: input })
+        if (!response.ok()) throw new Error('Pagination fixture failed')
+        fixtureIds.push((await response.json()).id)
+      }
+      let cleanupFailed = false
+      try {
+        await owner.goto(`${WEB}/products`)
+        await owner.getByRole('tab', { name: 'เมนูคาเฟ่', exact: true }).click()
+        await owner.getByRole('button', { name: 'ถัดไป', exact: true }).click()
+        await owner.getByText('21–23 จาก 23 รายการ', { exact: true }).waitFor()
+        await owner.getByRole('tab', { name: 'สินค้าทั่วไป', exact: true }).click()
+        await owner.getByRole('row', { name: /น้ำดื่ม 600 มล\./ }).waitFor()
+        await owner.getByRole('tab', { name: 'เมนูคาเฟ่', exact: true }).click()
+        await owner.getByText('1–20 จาก 23 รายการ', { exact: true }).waitFor()
+        const output = join(root, 'screenshots')
+        await mkdir(output, { recursive: true })
+        for (const width of [390, 768, 1366]) {
+          const viewport = { width, height: 900 }
+          await owner.setViewportSize(viewport)
+          const cafeButton = owner.getByRole('button', { name: 'เพิ่มเมนูคาเฟ่', exact: true })
+          const normalButton = owner.getByRole('button', { name: 'เพิ่มสินค้า', exact: true })
+          const cafeBox = await cafeButton.boundingBox()
+          const normalBox = await normalButton.boundingBox()
+          if (!cafeBox || !normalBox || cafeBox.height < 44 || normalBox.height < 44) throw new Error('Header targets below 44px')
+          if (width === 390 && cafeBox.y >= normalBox.y) throw new Error('Phone actions did not wrap in order')
+          if (await owner.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Products overflow')
+          await owner.screenshot({ path: join(output, `task4-${width}-cafe-tab.png`), animations: 'disabled' })
+          await cafeButton.click()
+          const typeTrigger = owner.getByRole('dialog').getByLabel('ประเภทสินค้า')
+          await typeTrigger.waitFor()
+          // Clicking waits for the dialog's opening animation to settle before measuring.
+          await typeTrigger.click()
+          // The Select portal hides the underlying dialog from the accessibility tree while open.
+          const triggerBox = await owner.locator('#product-type').boundingBox()
+          if (!triggerBox || triggerBox.height < 44) throw new Error(`Type trigger below 44px at ${width}px`)
+          const normalChoice = owner.getByRole('option', { name: 'สินค้าทั่วไป', exact: true })
+          const cafeChoice = owner.getByRole('option', { name: 'เมนูคาเฟ่', exact: true })
+          await normalChoice.waitFor({ state: 'visible' })
+          await cafeChoice.waitFor({ state: 'visible' })
+          await normalChoice.scrollIntoViewIfNeeded()
+          await cafeChoice.scrollIntoViewIfNeeded()
+          const normalChoiceBox = await normalChoice.boundingBox()
+          const cafeChoiceBox = await cafeChoice.boundingBox()
+          await owner.keyboard.press('Escape')
+          if (!normalChoiceBox || normalChoiceBox.height < 44)
+            throw new Error(`Normal type choice below 44px at ${width}px: ${normalChoiceBox?.height}`)
+          if (!cafeChoiceBox || cafeChoiceBox.height < 44)
+            throw new Error(`Cafe type choice below 44px at ${width}px: ${cafeChoiceBox?.height}`)
+          await owner.screenshot({ path: join(output, `task4-${width}-cafe-form.png`), animations: 'disabled' })
+          await owner.getByRole('dialog').getByRole('button', { name: 'ยกเลิก', exact: true }).click()
+        }
+      } finally {
+        const desktopViewport = { width: 1366, height: 900 }
+        await owner.setViewportSize(desktopViewport)
+        // Paging fixtures must not displace the seeded sell-screen products in later checks.
+        for (const id of fixtureIds) {
+          const response = await owner.request.patch(`${WEB}/api/v1/catalog/products/${id}`, { data: { isActive: false } })
+          if (!response.ok()) cleanupFailed = true
+        }
+      }
+      if (cleanupFailed) throw new Error('Pagination fixture cleanup failed')
+    })
+
+    await check('products.write alone permits manual cafe creation without category or modifier management', async () => {
+      const roleInput = { name: 'E2E product writer', permissions: ['products.write'] }
+      const roleResponse = await owner.request.post(`${WEB}/api/v1/roles`, { data: roleInput })
+      if (!roleResponse.ok()) throw new Error('Writer role failed')
+      const role = await roleResponse.json()
+      const userInput = { username: 'productwriter', password: CASHIER_PASSWORD, displayName: 'Product writer', roleId: role.id }
+      const userResponse = await owner.request.post(`${WEB}/api/v1/users`, { data: userInput })
+      if (!userResponse.ok()) throw new Error('Writer user failed')
+      const writer = await signIn(browser, 'productwriter', CASHIER_PASSWORD)
+      try {
+        await writer.goto(`${WEB}/products`)
+        await writer.getByRole('button', { name: 'เพิ่มเมนูคาเฟ่', exact: true }).click()
+        const form = writer.getByRole('dialog')
+        await form.getByLabel('ชื่อสินค้า', { exact: true }).fill('E2E writer cafe')
+        await form.getByLabel('รหัสสินค้า (SKU)').fill('E2E-WRITER')
+        await form.getByLabel(/ราคาขาย/).fill('30')
+        await form.getByRole('button', { name: 'บันทึก', exact: true }).click()
+        await form.waitFor({ state: 'detached' })
+        await writer.getByRole('row', { name: /E2E writer cafe/ }).waitFor()
+      } finally {
+        await writer.context().close()
+      }
     })
 
     await check('the owner offers the group on a product from the product form', async () => {
@@ -437,7 +645,11 @@ async function main() {
       await owner.goto(WEB)
       await owner.getByRole('button', { name: /น้ำดื่ม 600 มล\./ }).first().click()
       const dialog = owner.getByRole('dialog')
-      await dialog.getByRole('checkbox', { name: /ไข่มุก/ }).click()
+      // ไข่มุก is the group default, so the till must already have it chosen before the cashier touches anything.
+      const topping = dialog.getByRole('checkbox', { name: /ไข่มุก/ })
+      await topping.waitFor()
+      if ((await topping.getAttribute('aria-checked')) !== 'true')
+        throw new Error('The default option was not preselected when the dialog opened')
       await dialog.getByRole('button', { name: 'เพิ่มลงตะกร้า' }).click()
       // The topping is listed under the product in the cart, and the line is 10.00 + 10.00.
       await owner.getByText('+10.00').first().waitFor()
@@ -517,10 +729,10 @@ async function main() {
     await check('the owner starts counting: the report is frozen and shows what the drawer should hold', async () => {
       await owner.getByRole('button', { name: 'เริ่มนับปิดกะ' }).click()
       await owner.getByText(/ยอดที่หยุดไว้ตอนเริ่มนับ/).waitFor()
-      // 100.00 opening + six cash sales of 69.00: four of 10.00 (one of them on a phone),
-      // one of 9.00 (a 10.00 sale with the 10% promotion), one of 20.00 (10.00 and a 10.00 topping).
+      // 100.00 opening + seven cash sales of 79.00: five of 10.00 (one of them on a phone, one on a tablet over plain
+      // http), one of 9.00 (a 10.00 sale with the 10% promotion), one of 20.00 (10.00 and a 10.00 topping).
       await owner.getByText('เงินสดที่ควรมี').first().waitFor()
-      await owner.getByText('฿169.00').first().waitFor()
+      await owner.getByText('฿179.00').first().waitFor()
     })
 
     await check('the other till can no longer take payment once counting has started', async () => {
@@ -534,8 +746,8 @@ async function main() {
     })
 
     await check('a count that differs needs a reason before the shift can be closed', async () => {
-      // Counted 144.00 against an expected 169.00: a difference of -25.00 that needs a reason.
-      await owner.getByLabel('เงินสดที่นับได้').fill('144')
+      // Counted 154.00 against an expected 179.00: a difference of -25.00 that needs a reason.
+      await owner.getByLabel('เงินสดที่นับได้').fill('154')
       const close = owner.getByRole('button', { name: 'ยืนยันปิดกะ' })
       if (!(await close.isDisabled())) throw new Error('Close is enabled without a reason for the difference')
       await owner.getByLabel('เหตุผลของยอดเงินที่ต่างกัน').fill('ทอนเงินผิด')
@@ -556,7 +768,7 @@ async function main() {
 
     await check('the owner adds a user on the users page, and that person can sign in', async () => {
       await owner.goto(`${WEB}/users`)
-      await owner.getByRole('button', { name: 'เพิ่มผู้ใช้' }).click()
+      await owner.getByRole('button', { name: 'เพิ่มผู้ใช้ในบทบาท แคชเชียร์' }).click()
       const form = owner.getByRole('dialog')
       await form.getByLabel('ชื่อผู้ใช้').fill('somsri')
       await form.getByLabel('ชื่อที่แสดงบนใบเสร็จ').fill('สมศรี')
@@ -616,7 +828,7 @@ async function main() {
         const screen = await signIn(browser, 'admin', OWNER_PASSWORD, size)
         try {
           const wide: string[] = []
-          for (const path of ['/', '/sell', '/today', '/shifts', '/products', '/categories', '/modifiers', '/tables', '/users', '/promotions', '/settings', '/roles', '/audit']) {
+          for (const path of ['/', '/sell', '/today', '/shifts', '/products', '/categories', '/modifiers', '/tables', '/users', '/promotions', '/settings', '/audit', '/stock-receipts', '/stock-receipts/new']) {
             await screen.goto(`${WEB}${path}`)
             await screen.waitForLoadState('networkidle')
             const overflow = await screen.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)

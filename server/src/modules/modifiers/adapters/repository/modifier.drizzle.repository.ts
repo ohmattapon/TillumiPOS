@@ -34,6 +34,7 @@ const optionColumns = {
   costSatang: modifierOptions.costSatang,
   sortOrder: modifierOptions.sortOrder,
   isActive: modifierOptions.isActive,
+  isDefault: modifierOptions.isDefault,
 }
 
 // Same code and message the API answers for a duplicate value elsewhere.

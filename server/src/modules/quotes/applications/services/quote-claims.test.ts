@@ -1,20 +1,30 @@
 import 'reflect-metadata'
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { makePriceQuote } from '../../../../__tests__/factories'
-import { mockClock, mockOrderQuoteSource, mockPriceQuoteRepository } from '../../../../__tests__/mocks'
+import {
+  mockClock,
+  mockOrderQuoteSource,
+  mockPriceQuoteRepository,
+  mockPromotionUsage,
+  mockQuotePoints,
+} from '../../../../__tests__/mocks'
 import { QuoteClaims } from './quote-claims'
 
 const now = new Date('2026-10-15T05:05:00Z')
-const cart = { branchId: 1, memberId: null, orderId: null, lines: [{ productId: 1, optionIds: [], quantity: 3 }] }
+const cart = { branchId: 1, memberId: null, orderId: null, lines: [{ productId: 1, optionIds: [], quantity: 3, packId: null }] }
 
 let quotes: ReturnType<typeof mockPriceQuoteRepository>
 let orders: ReturnType<typeof mockOrderQuoteSource>
+let usage: ReturnType<typeof mockPromotionUsage>
+let points: ReturnType<typeof mockQuotePoints>
 let claims: QuoteClaims
 
 beforeEach(() => {
   quotes = mockPriceQuoteRepository()
   orders = mockOrderQuoteSource()
-  claims = new QuoteClaims(quotes, orders, mockClock(now))
+  usage = mockPromotionUsage()
+  points = mockQuotePoints()
+  claims = new QuoteClaims(quotes, orders, mockClock(now), usage, points)
 })
 
 describe('lockForCheckout', () => {
@@ -43,6 +53,66 @@ describe('lockForCheckout', () => {
     await expect(claims.lockForCheckout(5, cart, [])).rejects.toMatchObject({ code: 'QUOTE_MISMATCH' })
     quotes.findByIdForUpdate.mockResolvedValueOnce(makePriceQuote())
     await expect(claims.lockForCheckout(5, { ...cart, orderId: 4 }, [])).rejects.toMatchObject({ code: 'QUOTE_MISMATCH' })
+  })
+})
+
+describe('usage limits', () => {
+  const limited = {
+    id: 1, name: 'ลด 10%', kind: 'percent' as const, value: 1000, maxDiscountSatang: null, discountSatang: 300,
+  }
+  /** The quote carries the limits only through `lockForUse`, the row it locks; these values name them for the reader. */
+  const quoteOf = (limits: Partial<{ maxUses: number | null; maxUsesPerMember: number | null }> = {}, quote: Partial<Parameters<typeof makePriceQuote>[0]> = {}) =>
+    makePriceQuote({ promotion: { ...limited, ...limits }, discountSatang: 300, ...quote })
+
+  test('paying an open quote whose promotion filled up is refused with PROMOTION_LIMIT_REACHED', async () => {
+    quotes.findByIdForUpdate.mockResolvedValue(quoteOf({ maxUses: 1 }))
+    usage.lockForUse.mockResolvedValue({ maxUses: 1, maxUsesPerMember: null })
+    usage.countUses.mockResolvedValue({ total: 1, byMember: 0 })
+    await expect(claims.lockForCheckout(5, cart, [])).rejects.toMatchObject({ code: 'PROMOTION_LIMIT_REACHED' })
+    // The promotion was locked before it was counted, and the quote was counted in total.
+    expect(usage.lockForUse).toHaveBeenCalledWith(1)
+    expect(usage.countUses).toHaveBeenCalledWith(1, null)
+  })
+
+  test('a quote for an unlimited promotion is not counted', async () => {
+    quotes.findByIdForUpdate.mockResolvedValue(quoteOf())
+    expect((await claims.lockForCheckout(5, cart, [])).id).toBe(5)
+    // The row says the promotion has no limit, so there is nothing to count.
+    expect(usage.lockForUse).toHaveBeenCalledWith(1)
+    expect(usage.countUses).not.toHaveBeenCalled()
+  })
+
+  test('per-member limit counts only that member', async () => {
+    const member = { id: 8, code: 'M000008', name: 'ลูกค้าประจำ' }
+    quotes.findByIdForUpdate.mockResolvedValue(quoteOf({ maxUsesPerMember: 3 }, { memberId: 8, member }))
+    usage.lockForUse.mockResolvedValue({ maxUses: null, maxUsesPerMember: 3 })
+    usage.countUses.mockResolvedValue({ total: 10, byMember: 3 })
+    await expect(claims.lockForCheckout(5, { ...cart, memberId: 8 }, [])).rejects.toMatchObject({ code: 'PROMOTION_LIMIT_REACHED' })
+    expect(usage.countUses).toHaveBeenCalledWith(1, 8)
+    // Other members can make up the total: one member having used their share is only their share.
+    usage.countUses.mockResolvedValue({ total: 10, byMember: 2 })
+    expect((await claims.lockForCheckout(5, { ...cart, memberId: 8 }, [])).id).toBe(5)
+  })
+
+  test('reserved quote sells even when the promotion is now full', async () => {
+    quotes.findByIdForUpdate.mockResolvedValue(quoteOf({ maxUses: 1 }, { status: 'reserved' as const, qrReference: 'QRABC' }))
+    usage.lockForUse.mockResolvedValue({ maxUses: 1, maxUsesPerMember: null })
+    usage.countUses.mockResolvedValue({ total: 1, byMember: 0 })
+    const quote = await claims.lockForCheckout(5, cart, ['QRABC'])
+    expect(quote.id).toBe(5)
+    // The money the QR holds may already be at the bank, so its slot is never re-checked.
+    expect(usage.lockForUse).not.toHaveBeenCalled()
+    expect(usage.countUses).not.toHaveBeenCalled()
+  })
+
+  test('reserving a QR for a full promotion is refused, and the quote stays open', async () => {
+    quotes.findById.mockResolvedValue(quoteOf({ maxUses: 1 }))
+    quotes.findByIdForUpdate.mockResolvedValue(quoteOf({ maxUses: 1 }))
+    usage.lockForUse.mockResolvedValue({ maxUses: 1, maxUsesPerMember: null })
+    usage.countUses.mockResolvedValue({ total: 1, byMember: 0 })
+    await expect(claims.reserveForQr(5, { branchId: 1, reference: 'QRABC', amountSatang: 3000 }))
+      .rejects.toMatchObject({ code: 'PROMOTION_LIMIT_REACHED' })
+    expect(quotes.save).not.toHaveBeenCalled()
   })
 })
 
@@ -87,12 +157,12 @@ describe('reserveForQr', () => {
     })
     orders.lockOpenOrder.mockImplementation(async () => {
       steps.push('order')
-      return { id: 9, memberId: null, items: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 1000, quantity: 3, options: [] }] }
+      return { id: 9, memberId: null, items: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 1000, quantity: 3, options: [], packId: null, packSize: 1 }] }
     })
     await claims.reserveForQr(5, claim)
     expect(steps).toEqual(['order', 'quote'])
 
-    orders.lockOpenOrder.mockResolvedValue({ id: 9, memberId: null, items: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 1000, quantity: 4, options: [] }] })
+    orders.lockOpenOrder.mockResolvedValue({ id: 9, memberId: null, items: [{ productId: 1, productName: 'น้ำดื่ม', sku: 'SKU-1', unitPriceSatang: 1000, quantity: 4, options: [], packId: null, packSize: 1 }] })
     await expect(claims.reserveForQr(5, claim)).rejects.toMatchObject({ code: 'QUOTE_MISMATCH' })
   })
 })
@@ -146,5 +216,64 @@ describe('settling a QR', () => {
   test('consuming saves the quote with its sale', async () => {
     await claims.consume(makePriceQuote(), 8)
     expect(quotes.save.mock.calls[0]![0]).toMatchObject({ status: 'consumed', saleId: 8 })
+  })
+})
+
+describe('points while a QR waits', () => {
+  const claim = { branchId: 1, reference: 'QRABC', amountSatang: 3000 }
+  const pointsQuote = (overrides: Parameters<typeof makePriceQuote>[0] = {}) =>
+    makePriceQuote({
+      memberId: 8,
+      member: { id: 8, code: 'M-8', name: 'สมชาย' },
+      pointsRedeemed: 20,
+      pointsDiscountSatang: 2000,
+      pointsRule: { earnSatang: 2500, redeemSatang: 100, minRedeem: 10 },
+      ...overrides,
+    })
+
+  test('reserving a QR takes the points the quote promised', async () => {
+    quotes.findById.mockResolvedValue(pointsQuote())
+    quotes.findByIdForUpdate.mockResolvedValue(pointsQuote())
+    points.balanceOf.mockResolvedValue(20)
+    await claims.reserveForQr(5, claim)
+    expect(points.lockMember).toHaveBeenCalledWith(8)
+    expect(points.record.mock.calls[0]![0]).toMatchObject({ memberId: 8, kind: 'redeem', points: -20, saleId: null, quoteId: 5 })
+  })
+
+  test('reserving with too few points is refused and nothing is held', async () => {
+    quotes.findById.mockResolvedValue(pointsQuote())
+    quotes.findByIdForUpdate.mockResolvedValue(pointsQuote())
+    points.balanceOf.mockResolvedValue(5)
+    await expect(claims.reserveForQr(5, claim)).rejects.toMatchObject({ code: 'POINTS_NOT_ENOUGH' })
+    expect(points.record).not.toHaveBeenCalled()
+    expect(quotes.save).not.toHaveBeenCalled()
+  })
+
+  test('cancelling the QR gives the points back', async () => {
+    quotes.findByQrReferenceForUpdate.mockResolvedValue(pointsQuote({ status: 'reserved', qrReference: 'QRABC' }))
+    await claims.cancelByReference('QRABC')
+    expect(points.record.mock.calls[0]![0]).toMatchObject({ kind: 'void_redeem', points: 20, saleId: null, quoteId: 5 })
+  })
+
+  test('releasing gives them back, and the next QR takes them again', async () => {
+    quotes.findByQrReferenceForUpdate.mockResolvedValue(pointsQuote({ status: 'reserved', qrReference: 'QRABC' }))
+    await claims.releaseByReference('QRABC')
+    expect(points.record.mock.calls[0]![0]).toMatchObject({ kind: 'void_redeem', points: 20 })
+
+    quotes.findById.mockResolvedValue(pointsQuote())
+    quotes.findByIdForUpdate.mockResolvedValue(pointsQuote())
+    points.balanceOf.mockResolvedValue(20)
+    await claims.reserveForQr(5, claim)
+    expect(points.record.mock.calls[1]![0]).toMatchObject({ kind: 'redeem', points: -20 })
+  })
+
+  test('a quote without points never touches the ledger', async () => {
+    quotes.findById.mockResolvedValue(makePriceQuote())
+    quotes.findByIdForUpdate.mockResolvedValue(makePriceQuote())
+    await claims.reserveForQr(5, claim)
+    quotes.findByQrReferenceForUpdate.mockResolvedValue(makePriceQuote({ status: 'reserved', qrReference: 'QRABC' }))
+    await claims.cancelByReference('QRABC')
+    expect(points.lockMember).not.toHaveBeenCalled()
+    expect(points.record).not.toHaveBeenCalled()
   })
 })

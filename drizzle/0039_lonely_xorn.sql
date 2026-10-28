@@ -1,0 +1,1 @@
+CREATE INDEX "price_quotes_promotion_id_idx" ON "price_quotes" USING btree (("promotion" ->> 'id'));

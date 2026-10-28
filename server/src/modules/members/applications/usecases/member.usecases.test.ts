@@ -3,13 +3,15 @@ import { describe, expect, test } from 'bun:test'
 import { MemberEntity } from '../../../../domains/member.domain'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DEFAULT_SHOP_SETTINGS, ShopSettingsEntity } from '../../../../domains/shop-settings.domain'
-import { mockClock, mockMemberRepository, mockShopSettingsRepository } from '../../../../__tests__/mocks'
+import { mockAuditLog, mockClock, mockMemberPoints, mockMemberRepository, mockShopSettingsRepository } from '../../../../__tests__/mocks'
 import type { IMemberSalesHistory, MemberHistoryQuery } from '../ports/member-sales-history.port'
 import { CreateMemberUseCase } from './create-member.usecase'
 import { UpdateMemberUseCase } from './update-member.usecase'
 import { GetMemberUseCase } from './get-member.usecase'
 import { ListMembersUseCase } from './list-members.usecase'
 import { GetMemberSalesHistoryUseCase } from './get-member-sales-history.usecase'
+import { AdjustMemberPointsUseCase } from './adjust-member-points.usecase'
+import { ListMemberPointsUseCase } from './list-member-points.usecase'
 
 const now = new Date('2026-10-15T12:00:00Z')
 const member = new MemberEntity({ id: 1, name: 'เดิม', phone: '0812345678', isActive: true, createdAt: now, updatedAt: now })
@@ -96,5 +98,61 @@ describe('member usecases', () => {
     await expect(usecase.execute(99, {}, 3)).rejects.toMatchObject({ code: 'MEMBER_NOT_FOUND' })
     repo.findById.mockResolvedValue(member.with({ isActive: false }, now))
     await expect(usecase.execute(1, {}, 3)).resolves.toEqual({ items: [], total: 0, summary: { saleCount: 0, totalSatang: 0 } })
+  })
+  test('an owner adjusts points under the member lock and records who did it', async () => {
+    const { repo, uow, calls } = setup()
+    const points = mockMemberPoints()
+    points.record.mockResolvedValue({ balanceAfter: 75 })
+    const audit = mockAuditLog()
+
+    const result = await new AdjustMemberPointsUseCase(repo, points, uow, audit).execute(
+      1, { points: 25, reason: 'ของหาย' }, { ...{ id: 9, role: 'owner' }, displayName: 'เจ้าของ' }, 3,
+    )
+
+    expect(calls).toEqual(['uow', 'lock'])
+    expect(points.lockMember).toHaveBeenCalledWith(1)
+    expect(points.record).toHaveBeenCalledWith({
+      memberId: 1, kind: 'adjust', points: 25, saleId: null, quoteId: null, reason: 'ของหาย', actorId: 9,
+    })
+    expect(audit.record).toHaveBeenCalledWith(
+      { id: 9, name: 'เจ้าของ' },
+      3,
+      expect.objectContaining({ action: 'member.points_adjusted', entityType: 'member', entityId: '1' }),
+    )
+    expect(result).toEqual({ memberId: 1, pointsBalance: 75 })
+  })
+  test('adjusting needs members.points_adjust and a reason, and writes nothing otherwise', async () => {
+    const { repo, uow, calls } = setup()
+    const points = mockMemberPoints()
+    const usecase = new AdjustMemberPointsUseCase(repo, points, uow, mockAuditLog())
+
+    await expect(usecase.execute(1, { points: 25, reason: 'ของหาย' }, { ...{ id: 9, role: 'cashier' }, displayName: 'แคชเชียร์' }, 3))
+      .rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'members.points_adjust' } })
+    for (const input of [{ points: 0, reason: 'ของหาย' }, { points: 25, reason: ' ' }, { points: 1_000_001, reason: 'ของหาย' }])
+      await expect(usecase.execute(1, input, { ...{ id: 9, role: 'owner' }, displayName: 'เจ้าของ' }, 3)).rejects.toThrow()
+    expect(calls).toEqual([])
+    expect(points.record).not.toHaveBeenCalled()
+  })
+  test('an adjustment the ledger cannot make is refused before anything is audited', async () => {
+    const { repo, uow } = setup()
+    const points = mockMemberPoints()
+    const audit = mockAuditLog()
+    points.record.mockRejectedValue(new DomainConflictError('แต้มคงเหลือไม่พอ', 'POINTS_NOT_ENOUGH'))
+
+    await expect(new AdjustMemberPointsUseCase(repo, points, uow, audit).execute(
+      1, { points: -500, reason: 'แก้ไข' }, { ...{ id: 9, role: 'owner' }, displayName: 'เจ้าของ' }, 3,
+    )).rejects.toMatchObject({ code: 'POINTS_NOT_ENOUGH' })
+    expect(audit.record).not.toHaveBeenCalled()
+  })
+  test('points history is paginated and an unknown member is not found', async () => {
+    const { repo } = setup()
+    const points = mockMemberPoints()
+    const usecase = new ListMemberPointsUseCase(repo, points)
+
+    await expect(usecase.execute(1, { limit: 10, offset: 20 })).resolves.toEqual({ items: [], total: 0 })
+    expect(points.listMovements).toHaveBeenCalledWith(1, { limit: 10, offset: 20 })
+    await expect(usecase.execute(1, { limit: 501 })).rejects.toThrow()
+    await expect(usecase.execute(99, {})).rejects.toMatchObject({ code: 'MEMBER_NOT_FOUND' })
+    expect(points.listMovements).toHaveBeenCalledTimes(1)
   })
 })

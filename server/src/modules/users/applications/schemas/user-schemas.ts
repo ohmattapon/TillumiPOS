@@ -29,3 +29,6 @@ export const updateUserSchema = z
     isActive: z.boolean(),
   })
   .partial()
+
+/** Null clears the PIN. The format is a domain rule (assertValidPin), checked by the use case. */
+export const setPinSchema = z.object({ pin: z.string().max(100).nullable() })

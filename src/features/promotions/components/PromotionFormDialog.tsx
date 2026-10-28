@@ -13,12 +13,15 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useFormat, useSettings } from '@/features/settings'
+import { todayIn } from '@/lib/calendar-date'
 import { cn } from '@/lib/utils'
 import { useCreatePromotion, useUpdatePromotion, type Promotion } from '../api'
 import {
-  emptyPromotionForm, fromPromotion, toBody, todayIn, weekdayName,
+  emptyPromotionForm, fromPromotion, toBody, weekdayName,
   type PromotionForm,
 } from '../lib/promotion-form'
+import { emptyScope, scopeOf, scopeToBody, type ScopeSelection } from '../lib/promotion-scope'
+import { PromotionScopePicker } from './PromotionScopePicker'
 
 export function PromotionFormDialog({ promotion, onClose }: { promotion?: Promotion; onClose: () => void }) {
   const { t } = useTranslation('promotions')
@@ -26,6 +29,7 @@ export function PromotionFormDialog({ promotion, onClose }: { promotion?: Promot
   const { money, date, locale, currency } = useFormat()
   const shop = useSettings()
   const [form, setForm] = useState<PromotionForm>(() => (promotion ? fromPromotion(promotion, money) : emptyPromotionForm))
+  const [scope, setScope] = useState<ScopeSelection>(() => (promotion ? scopeOf(promotion) : emptyScope))
   const [today] = useState(() => todayIn(shop.timeZone, new Date()))
   const create = useCreatePromotion()
   const update = useUpdatePromotion()
@@ -45,8 +49,9 @@ export function PromotionFormDialog({ promotion, onClose }: { promotion?: Promot
       toast.success(t(promotion ? 'toast.updated' : 'toast.created', { name: saved.name }))
       onClose()
     }
-    if (promotion) update.mutate({ id: promotion.id, changes: result.body }, { onSuccess: done })
-    else create.mutate(result.body, { onSuccess: done })
+    const body = { ...result.body, scope: scopeToBody(scope) }
+    if (promotion) update.mutate({ id: promotion.id, changes: body }, { onSuccess: done })
+    else create.mutate(body, { onSuccess: done })
   }
 
   return (
@@ -72,26 +77,49 @@ export function PromotionFormDialog({ promotion, onClose }: { promotion?: Promot
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field>
                   <FieldLabel htmlFor="promotion-kind">{t('form.kind')}</FieldLabel>
-                  <Select value={form.kind} onValueChange={(value) => set('kind', value === 'fixed' ? 'fixed' : 'percent')}>
+                  <Select value={form.kind} onValueChange={(value) => set('kind', value === 'fixed' ? 'fixed' : value === 'bundle' ? 'bundle' : 'percent')}>
                     <SelectTrigger id="promotion-kind" className="h-11 w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
                         <SelectItem value="percent">{t('kind.percent')}</SelectItem>
                         <SelectItem value="fixed">{t('kind.fixed')}</SelectItem>
+                        <SelectItem value="bundle">{t('kind.bundle')}</SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field>
-                  <FieldLabel htmlFor="promotion-value">
-                    {form.kind === 'percent' ? t('form.valuePercent') : t('form.valueFixed', { currency })}
-                  </FieldLabel>
-                  <Input
-                    id="promotion-value" inputMode="decimal" className="h-11 text-right tabular-nums"
-                    aria-invalid={problems.includes('value') && form.value !== ''}
-                    value={form.value} onChange={(event) => set('value', event.target.value)}
-                  />
-                </Field>
+                {form.kind === 'bundle' ? (
+                  <>
+                    <Field>
+                      <FieldLabel htmlFor="promotion-buy">{t('form.buyQuantity')}</FieldLabel>
+                      <Input
+                        id="promotion-buy" inputMode="numeric" className="h-11 text-right tabular-nums"
+                        aria-invalid={problems.includes('buyQuantity')}
+                        value={form.buyQuantity} onChange={(event) => set('buyQuantity', event.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">{t('form.bundleHint')}</p>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="promotion-free">{t('form.freeQuantity')}</FieldLabel>
+                      <Input
+                        id="promotion-free" inputMode="numeric" className="h-11 text-right tabular-nums"
+                        aria-invalid={problems.includes('freeQuantity')}
+                        value={form.freeQuantity} onChange={(event) => set('freeQuantity', event.target.value)}
+                      />
+                    </Field>
+                  </>
+                ) : (
+                  <Field>
+                    <FieldLabel htmlFor="promotion-value">
+                      {form.kind === 'percent' ? t('form.valuePercent') : t('form.valueFixed', { currency })}
+                    </FieldLabel>
+                    <Input
+                      id="promotion-value" inputMode="decimal" className="h-11 text-right tabular-nums"
+                      aria-invalid={problems.includes('value') && form.value !== ''}
+                      value={form.value} onChange={(event) => set('value', event.target.value)}
+                    />
+                  </Field>
+                )}
               </div>
 
               {form.kind === 'percent' && (
@@ -105,6 +133,8 @@ export function PromotionFormDialog({ promotion, onClose }: { promotion?: Promot
                   <p className="text-xs text-muted-foreground">{t('form.maxDiscountHint')}</p>
                 </Field>
               )}
+
+              <PromotionScopePicker value={scope} onChange={setScope} />
 
               <Field>
                 <FieldLabel htmlFor="promotion-min">{t('form.minSubtotal', { currency })}</FieldLabel>
@@ -183,6 +213,18 @@ export function PromotionFormDialog({ promotion, onClose }: { promotion?: Promot
               </p>
 
               <Field>
+                <FieldLabel htmlFor="promotion-coupon">{t('form.couponCode')}</FieldLabel>
+                <Input
+                  id="promotion-coupon" maxLength={20} autoCapitalize="characters" className="h-11 uppercase"
+                  aria-invalid={problems.includes('couponCode')}
+                  value={form.couponCode} onChange={(event) => set('couponCode', event.target.value)}
+                />
+                <p className={cn('text-xs', problems.includes('couponCode') ? 'text-destructive' : 'text-muted-foreground')}>
+                  {problems.includes('couponCode') ? t('problems.couponCode') : t('form.couponCodeHint')}
+                </p>
+              </Field>
+
+              <Field>
                 <FieldLabel htmlFor="promotion-audience">{t('form.audience')}</FieldLabel>
                 <Select value={form.audience} onValueChange={(value) => set('audience', value === 'members' ? 'members' : 'everyone')}>
                   <SelectTrigger id="promotion-audience" className="h-11 w-full"><SelectValue /></SelectTrigger>
@@ -194,6 +236,28 @@ export function PromotionFormDialog({ promotion, onClose }: { promotion?: Promot
                   </SelectContent>
                 </Select>
               </Field>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="promotion-max-uses">{t('form.maxUses')}</FieldLabel>
+                  <Input
+                    id="promotion-max-uses" inputMode="numeric" className="h-11 text-right tabular-nums"
+                    aria-invalid={problems.includes('maxUses')}
+                    value={form.maxUses} onChange={(event) => set('maxUses', event.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">{t('form.maxUsesHint')}</p>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="promotion-max-member">{t('form.maxUsesPerMember')}</FieldLabel>
+                  <Input
+                    id="promotion-max-member" inputMode="numeric" className="h-11 text-right tabular-nums"
+                    aria-invalid={problems.includes('maxUsesPerMember')}
+                    disabled={form.audience !== 'members'}
+                    value={form.maxUsesPerMember} onChange={(event) => set('maxUsesPerMember', event.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">{t('form.maxUsesPerMemberHint')}</p>
+                </Field>
+              </div>
 
               <label className="flex h-11 items-center justify-between gap-3 text-sm font-medium">
                 <span>{t('form.isActive')}</span>

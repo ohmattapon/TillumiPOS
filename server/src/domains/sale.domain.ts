@@ -1,8 +1,10 @@
 import { DomainConflictError } from './errors/domain-conflict.error'
 import { DomainError } from './errors/domain-error'
+import type { PointsRule } from './member-points'
 import type { LineOption } from './modifier.domain'
 import { calculateTotals, type VatMode } from './pricing'
 import type { ProductEntity } from './product.domain'
+import { assertPackHasNoOptions, packUnitCostSatang } from './product-pack'
 
 export const PAYMENT_METHODS = ['cash', 'promptpay', 'card'] as const
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
@@ -21,6 +23,10 @@ export interface SaleItem {
   unitCostSatang: number
   quantity: number
   lineTotalSatang: number
+  /** The pack sold, when the line is packs: its id, or null when the pack record is gone. */
+  packId: number | null
+  /** Pieces in one pack; 1 on a piece line. */
+  packSize: number
   /** The options chosen, as they were. Their price and cost are already in the unit price and cost. */
   options: LineOption[]
 }
@@ -61,10 +67,15 @@ const copyMember = (member?: SaleMember | null): SaleMember | null =>
 export interface SalePromotion {
   id: number
   name: string
-  kind: 'fixed' | 'percent'
+  kind: 'fixed' | 'percent' | 'bundle'
   value: number
   maxDiscountSatang: number | null
   discountSatang: number
+  /** The code the cashier typed; present only when the sale was given by a coupon. */
+  couponCode?: string
+  /** Of a `bundle` sale snapshot: the group sizes it was set up with. */
+  buyQuantity?: number
+  freeQuantity?: number
 }
 
 const copyPromotion = (promotion?: SalePromotion | null): SalePromotion | null =>
@@ -76,6 +87,9 @@ const copyPromotion = (promotion?: SalePromotion | null): SalePromotion | null =
         value: promotion.value,
         maxDiscountSatang: promotion.maxDiscountSatang,
         discountSatang: promotion.discountSatang,
+        ...(promotion.couponCode !== undefined ? { couponCode: promotion.couponCode } : {}),
+        ...(promotion.buyQuantity !== undefined ? { buyQuantity: promotion.buyQuantity } : {}),
+        ...(promotion.freeQuantity !== undefined ? { freeQuantity: promotion.freeQuantity } : {}),
       }
     : null
 
@@ -105,6 +119,16 @@ export interface NewSale extends SaleTotals, SaleSeller {
   cashierName: string
   items: SaleItem[]
   payments: SalePayment[]
+  /**
+   * What the sale gave and took in points, pinned with the rule it used, so changing
+   * the rule later never rewrites an old receipt. Zero on sales made before points existed.
+   */
+  pointsEarned?: number
+  pointsRedeemed?: number
+  pointsDiscountSatang?: number
+  pointsRule?: PointsRule | null
+  /** The member's balance right after this sale, so a receipt can show what is left. */
+  pointsBalanceAfter?: number | null
 }
 
 export interface SaleEntityProps extends NewSale {
@@ -120,7 +144,13 @@ export interface SaleEntityProps extends NewSale {
 export interface CompleteSaleInput {
   member?: SaleMember | null
   promotion?: SalePromotion | null
-  lines: { product: ProductEntity; quantity: number; options?: readonly LineOption[] }[]
+  lines: {
+    product: ProductEntity
+    quantity: number
+    options?: readonly LineOption[]
+    /** The pack sold: quantity counts packs, options must be empty. Undefined sells pieces. */
+    pack?: { id: number | null; size: number; unitPriceSatang: number }
+  }[]
   discountSatang: number
   payments: SalePayment[]
   vatMode: VatMode
@@ -155,6 +185,11 @@ export class SaleEntity {
   public readonly vatSatang: number
   public readonly paidSatang: number
   public readonly changeSatang: number
+  public readonly pointsEarned: number
+  public readonly pointsRedeemed: number
+  public readonly pointsDiscountSatang: number
+  public readonly pointsRule: PointsRule | null
+  public readonly pointsBalanceAfter: number | null
   public readonly vatMode: VatMode
   public readonly vatRateBp: number
   public readonly branchId: number
@@ -190,6 +225,12 @@ export class SaleEntity {
     this.vatSatang = props.vatSatang
     this.paidSatang = props.paidSatang
     this.changeSatang = props.changeSatang
+    // `?? 0` / `?? null`: a sale stored before points existed has none of them.
+    this.pointsEarned = props.pointsEarned ?? 0
+    this.pointsRedeemed = props.pointsRedeemed ?? 0
+    this.pointsDiscountSatang = props.pointsDiscountSatang ?? 0
+    this.pointsRule = props.pointsRule ?? null
+    this.pointsBalanceAfter = props.pointsBalanceAfter ?? null
     this.vatMode = props.vatMode
     this.vatRateBp = props.vatRateBp
     this.branchId = props.branchId
@@ -206,8 +247,9 @@ export class SaleEntity {
     this.voidedAt = props.voidedAt
     this.voidReason = props.voidReason
     this.createdAt = props.createdAt
-    // `?? []`: a sale restored from a snapshot stored before options were kept has none on its lines.
-    this.items = props.items.map((item) => ({ ...item, options: item.options ?? [] }))
+    // `??` fallbacks: a sale restored from a snapshot stored before packs or options were kept
+    // has none of them on its lines; every older line was pieces.
+    this.items = props.items.map((item) => ({ ...item, packId: item.packId ?? null, packSize: item.packSize ?? 1, options: item.options ?? [] }))
     this.payments = props.payments
   }
 
@@ -225,7 +267,23 @@ export class SaleEntity {
     if (payments.some((payment) => !isWholeAmount(payment.amountSatang) || payment.amountSatang < 1))
       throw new DomainError('ยอดชำระแต่ละรายการต้องเป็นจำนวนเต็มสตางค์ตั้งแต่ 1 ขึ้นไป', 'INVALID_PAYMENT')
 
-    const items: SaleItem[] = lines.map(({ product, quantity, options = [] }) => {
+    const items: SaleItem[] = lines.map(({ product, quantity, options = [], pack }) => {
+      // A pack line is priced by the pack: the size times pieces leave through stock, never options.
+      if (pack !== undefined) {
+        assertPackHasNoOptions(true, options.length)
+        return {
+          productId: product.id,
+          productName: product.name,
+          sku: product.sku,
+          unitPriceSatang: pack.unitPriceSatang,
+          unitCostSatang: packUnitCostSatang(product.costSatang, pack.size),
+          quantity,
+          lineTotalSatang: pack.unitPriceSatang * quantity,
+          packId: pack.id,
+          packSize: pack.size,
+          options: [],
+        }
+      }
       const unitPriceSatang = product.priceSatang + sum(options.map((option) => option.priceSatang))
       return {
         productId: product.id,
@@ -235,6 +293,8 @@ export class SaleEntity {
         unitCostSatang: product.costSatang + sum(options.map((option) => option.costSatang)),
         quantity,
         lineTotalSatang: unitPriceSatang * quantity,
+        packId: null,
+        packSize: 1,
         options: [...options],
       }
     })
@@ -297,6 +357,11 @@ export class SaleEntity {
       vatSatang: this.vatSatang,
       paidSatang: this.paidSatang,
       changeSatang: this.changeSatang,
+      pointsEarned: this.pointsEarned,
+      pointsRedeemed: this.pointsRedeemed,
+      pointsDiscountSatang: this.pointsDiscountSatang,
+      pointsRule: this.pointsRule,
+      pointsBalanceAfter: this.pointsBalanceAfter,
       vatMode: this.vatMode,
       vatRateBp: this.vatRateBp,
       branchId: this.branchId,

@@ -13,11 +13,18 @@ const line = z.object({
   lineTotalSatang: whole,
 })
 
-const qr = z.object({
+// A QR is one kind or the other: the bank's picture, or the payload of a static PromptPay QR that the screen draws.
+const bankQr = z.object({
   // It goes into a data: URL on the screen, so only plain base64 passes.
   image: z.string().max(200_000).regex(/^[A-Za-z0-9+/]+={0,2}$/),
   expiresAt: z.string().max(40).refine((value) => Number.isFinite(Date.parse(value))),
+  payload: z.never().optional(),
 })
+const staticQr = z.strictObject({
+  // An EMV QR is printable ASCII (about 100 characters); the screen draws it as a picture, never as markup.
+  payload: z.string().min(1).max(512).regex(/^[\x20-\x7e]+$/),
+})
+const qr = z.union([bankQr, staticQr])
 
 const state = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('idle') }),

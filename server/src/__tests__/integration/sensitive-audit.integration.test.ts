@@ -54,4 +54,8 @@ test('audit and business writes roll back together in either failure direction',
   const command = new CreateProductUseCase(products, uow, brokenAudit)
   await expect(command.execute({ sku: 'AUDIT-ROLLBACK', name: 'Must roll back', priceSatang: 100 }, 1, owner.user)).rejects.toThrow('audit insert failed')
   expect((await products.findAll({ q: 'AUDIT-ROLLBACK', branchId: 1 })).total).toBe(0)
+  await expect(command.execute({ name: 'Auto rollback', priceSatang: 100 }, 1, owner.user)).rejects.toThrow('audit insert failed')
+  expect((await products.findAll({ q: 'Auto rollback', branchId: 1 })).total).toBe(0)
+  // The failed transaction must release its allocation lock so the next creation works.
+  expect(ok(await owner.api.catalog.products.post({ name: 'After rollback', priceSatang: 100 })).sku).toMatch(/^SKU-\d{6,}$/)
 })

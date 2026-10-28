@@ -17,13 +17,24 @@ const fields = {
   receiptFooter: t.Nullable(t.String({ maxLength: 200 })),
   homeView: t.Union([t.Literal('till'), t.Literal('tables')]),
   tablesEnabled: t.Boolean(),
-  kitchenEnabled: t.Boolean(),
   modifiersEnabled: t.Boolean(),
+  promptpayMode: t.Union([t.Literal('bank'), t.Literal('static')]),
+  promptpayTarget: t.Nullable(t.String({ maxLength: 13 })),
+  receiptPrinterIp: t.Nullable(t.String({ maxLength: 45 })),
+  receiptPrinterPort: t.Integer({ minimum: 1, maximum: 65535 }),
+  receiptPrinterEnabled: t.Boolean(),
+  cashDrawerEnabled: t.Boolean(),
+  pointsEnabled: t.Boolean(),
+  pointsEarnSatang: t.Integer({ minimum: 100 }),
+  pointsRedeemSatang: t.Integer({ minimum: 1 }),
+  pointsMinRedeem: t.Integer({ minimum: 1 }),
 }
 
 export const settingsSchemas = {
-  settings: t.Object(fields),
+  // The storage key stays internal; the response carries a ready-to-use URL instead.
+  settings: t.Object({ ...fields, logoUrl: t.Nullable(t.String()) }),
   update: t.Partial(t.Object(fields)),
+  logo: t.Object({ file: t.File({ type: ['image/jpeg', 'image/png', 'image/webp'], maxSize: '2m' }) }),
 }
 
 export type SettingsResponse = typeof settingsSchemas.settings.static

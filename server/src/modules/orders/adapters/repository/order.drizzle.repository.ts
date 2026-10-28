@@ -107,7 +107,7 @@ export class DrizzleOrderRepository implements IOrderRepository {
       .set({ ...values, updatedAt: new Date() })
       .where(eq(orders.id, id))
 
-    // Lines are compared, not replaced, so a line keeps its id (the till and the kitchen refer to it).
+    // Lines are compared, not replaced, so a line keeps its id.
     const kept = items.filter((item) => item.lineId > 0).map((item) => item.lineId)
     await executor
       .delete(orderItems)

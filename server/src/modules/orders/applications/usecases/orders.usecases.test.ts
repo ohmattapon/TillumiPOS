@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
 import { makeOrder, makeProduct, makeSale, makeTable } from '../../../../__tests__/factories'
 import {
-  mockKitchenTickets,
   mockLineOptionsResolver,
   mockOrderRepository,
   mockProductRepository,
@@ -11,7 +10,7 @@ import {
   mockTableRepository,
   mockUnitOfWork,
 } from '../../../../__tests__/mocks'
-import { identityOf, OrderEntity } from '../../../../domains/order.domain'
+import { OrderEntity } from '../../../../domains/order.domain'
 import { AddOrderItemUseCase } from './add-order-item.usecase'
 import { CancelOrderUseCase } from './cancel-order.usecase'
 import { GetOrderUseCase } from './get-order.usecase'
@@ -33,7 +32,6 @@ let checkout: ReturnType<typeof mockSaleCheckout>
 let unitOfWork: ReturnType<typeof mockUnitOfWork>
 let lineOptions: ReturnType<typeof mockLineOptionsResolver>
 let tables: ReturnType<typeof mockTableRepository>
-let kitchen: ReturnType<typeof mockKitchenTickets>
 
 const actor = { user: { id: 7, displayName: 'สมชาย' }, branch: { id: 1, code: 'MAIN' } }
 const tea = makeProduct({ id: 1, name: 'ชา', sku: 'TEA', priceSatang: 2500 })
@@ -46,7 +44,6 @@ beforeEach(() => {
   unitOfWork = mockUnitOfWork()
   lineOptions = mockLineOptionsResolver()
   tables = mockTableRepository()
-  kitchen = mockKitchenTickets()
   tables.findById.mockResolvedValue(makeTable({ id: 3, branchId: 1 }))
   products.findById.mockImplementation(async (id) => [tea, cake].find((product) => product.id === id) ?? null)
   orders.save.mockImplementation(async (order) => order)
@@ -166,10 +163,10 @@ describe('editing an open order', () => {
   })
 
   test('sets and removes quantities', async () => {
-    const set = await new SetOrderItemQuantityUseCase(orders, unitOfWork, kitchen).execute(3, 1, { quantity: 6 }, 1)
+    const set = await new SetOrderItemQuantityUseCase(orders, unitOfWork).execute(3, 1, { quantity: 6 }, 1)
     expect(set.items[0]!.quantity).toBe(6)
 
-    const removed = await new RemoveOrderItemUseCase(orders, unitOfWork, kitchen).execute(3, 1, 1)
+    const removed = await new RemoveOrderItemUseCase(orders, unitOfWork).execute(3, 1, 1)
     expect(removed.items).toEqual([])
   })
 
@@ -185,7 +182,7 @@ describe('editing an open order', () => {
     await expect(
       new AddOrderItemUseCase(orders, products, unitOfWork, lineOptions).execute(3, { productId: 1, quantity: 1 }, 1),
     ).rejects.toMatchObject({ code: 'ORDER_NOT_FOUND' })
-    await expect(new RemoveOrderItemUseCase(orders, unitOfWork, kitchen).execute(3, 1, 1)).rejects.toMatchObject({
+    await expect(new RemoveOrderItemUseCase(orders, unitOfWork).execute(3, 1, 1)).rejects.toMatchObject({
       code: 'ORDER_NOT_FOUND',
     })
     expect(orders.save).not.toHaveBeenCalled()
@@ -195,7 +192,7 @@ describe('editing an open order', () => {
     orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 3, status: 'cancelled', cancelReason: 'x' }))
 
     await expect(
-      new SetOrderItemQuantityUseCase(orders, unitOfWork, kitchen).execute(3, 1, { quantity: 1 }, 1),
+      new SetOrderItemQuantityUseCase(orders, unitOfWork).execute(3, 1, { quantity: 1 }, 1),
     ).rejects.toMatchObject({ code: 'ORDER_NOT_OPEN' })
     expect(orders.save).not.toHaveBeenCalled()
   })
@@ -204,7 +201,7 @@ describe('editing an open order', () => {
     ['a quantity of zero', { quantity: 0 }],
     ['a missing quantity', {}],
   ])('rejects %s without touching the order', async (_label, bad) => {
-    await expect(new SetOrderItemQuantityUseCase(orders, unitOfWork, kitchen).execute(3, 1, bad, 1)).rejects.toBeInstanceOf(
+    await expect(new SetOrderItemQuantityUseCase(orders, unitOfWork).execute(3, 1, bad, 1)).rejects.toBeInstanceOf(
       ZodError,
     )
     expect(orders.findByIdForUpdate).not.toHaveBeenCalled()
@@ -215,19 +212,19 @@ describe('CancelOrderUseCase', () => {
   test('closes an open order with the reason and who did it', async () => {
     orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 3 }))
 
-    const cancelled = await new CancelOrderUseCase(orders, unitOfWork, kitchen).execute(3, { reason: 'ลูกค้าไม่รอ' }, actor)
+    const cancelled = await new CancelOrderUseCase(orders, unitOfWork).execute(3, { reason: 'ลูกค้าไม่รอ' }, actor)
 
     expect(cancelled).toMatchObject({ status: 'cancelled', cancelReason: 'ลูกค้าไม่รอ', cancelledById: 7 })
   })
 
   test('needs a reason', async () => {
-    await expect(new CancelOrderUseCase(orders, unitOfWork, kitchen).execute(3, {}, actor)).rejects.toBeInstanceOf(ZodError)
+    await expect(new CancelOrderUseCase(orders, unitOfWork).execute(3, {}, actor)).rejects.toBeInstanceOf(ZodError)
   })
 
   test('cannot cancel an order that is already paid', async () => {
     orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 3 }).markPaid(10))
 
-    await expect(new CancelOrderUseCase(orders, unitOfWork, kitchen).execute(3, { reason: 'x' }, actor)).rejects.toMatchObject({
+    await expect(new CancelOrderUseCase(orders, unitOfWork).execute(3, { reason: 'x' }, actor)).rejects.toMatchObject({
       code: 'ORDER_NOT_OPEN',
     })
   })
@@ -391,10 +388,10 @@ describe('options on order lines', () => {
       }),
     )
 
-    const changed = await new SetOrderLineQuantityUseCase(orders, unitOfWork, kitchen).execute(1, 7, { quantity: 3 }, 1)
+    const changed = await new SetOrderLineQuantityUseCase(orders, unitOfWork).execute(1, 7, { quantity: 3 }, 1)
     expect(changed.items[0]!.quantity).toBe(3)
 
-    const removed = await new RemoveOrderLineUseCase(orders, unitOfWork, kitchen).execute(1, 7, 1)
+    const removed = await new RemoveOrderLineUseCase(orders, unitOfWork).execute(1, 7, 1)
     expect(removed.items).toEqual([])
   })
 
@@ -470,7 +467,7 @@ describe('tables on orders', () => {
       items: [{ lineId: 9, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [], note: null }],
     })
     orders.findByIdForUpdate.mockImplementation(async (id) => (id === 1 ? low : high))
-    const useCase = new MergeOrdersUseCase(orders, unitOfWork, kitchen)
+    const useCase = new MergeOrdersUseCase(orders, unitOfWork)
 
     // Into the higher id: the lock order must still be 1 then 2.
     const merged = await useCase.execute(2, { sourceOrderId: 1 }, 1)
@@ -486,7 +483,7 @@ describe('tables on orders', () => {
 
   test("merging an order into itself, or another branch's order, is refused", async () => {
     orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1, branchId: 2 }))
-    const useCase = new MergeOrdersUseCase(orders, unitOfWork, kitchen)
+    const useCase = new MergeOrdersUseCase(orders, unitOfWork)
 
     await expect(useCase.execute(1, { sourceOrderId: 1 }, 1)).rejects.toMatchObject({ code: 'ORDER_MERGE_SAME' })
     await expect(useCase.execute(1, { sourceOrderId: 2 }, 1)).rejects.toMatchObject({ code: 'ORDER_NOT_FOUND' })
@@ -503,7 +500,7 @@ describe('tables on orders', () => {
     )
     orders.create.mockImplementation(async (order) => stored(order))
 
-    const created = await new SplitOrderUseCase(orders, unitOfWork, kitchen).execute(
+    const created = await new SplitOrderUseCase(orders, unitOfWork).execute(
       1,
       { lines: [{ lineId: 4, quantity: 1 }] },
       spoken,
@@ -515,117 +512,79 @@ describe('tables on orders', () => {
   })
 })
 
-describe('การลดหรือยกเลิกหลังส่งครัว', () => {
-  test('ตั้งจำนวนบรรทัดให้ต่ำลงแจ้งครัวด้วยจำนวนที่ออเดอร์ถืออยู่ตอนนี้', async () => {
+describe('การลดจำนวนหรือยกเลิก', () => {
+  test('ตั้งจำนวนบรรทัดให้ต่ำลงแล้วบันทึกจำนวนใหม่', async () => {
     const order = makeOrder({ id: 1, items: [{ lineId: 5, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 3, options: [], note: null }] })
     orders.findByIdForUpdate.mockResolvedValue(order)
 
-    await new SetOrderLineQuantityUseCase(orders, unitOfWork, kitchen).execute(1, 5, { quantity: 1 }, 1)
+    const saved = await new SetOrderLineQuantityUseCase(orders, unitOfWork).execute(1, 5, { quantity: 1 }, 1)
 
-    expect(kitchen.reconcile).toHaveBeenCalledWith(1, new Map([[identityOf(1, ''), 1]]))
+    expect(saved.items.map((line) => line.quantity)).toEqual([1])
+    expect(orders.save).toHaveBeenCalledTimes(1)
   })
 
-  test('ลบบรรทัดแจ้งครัวว่าไม่เหลือจำนวนของสินค้านั้น', async () => {
+  test('ลบบรรทัดแล้วบันทึกเฉพาะบรรทัดที่เหลือ', async () => {
     const order = makeOrder({ id: 1, items: [{ lineId: 5, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 3, options: [], note: null }, { lineId: 6, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [], note: null }] })
     orders.findByIdForUpdate.mockResolvedValue(order)
 
-    await new RemoveOrderLineUseCase(orders, unitOfWork, kitchen).execute(1, 5, 1)
+    const saved = await new RemoveOrderLineUseCase(orders, unitOfWork).execute(1, 5, 1)
 
-    expect(kitchen.reconcile).toHaveBeenCalledWith(1, new Map([[identityOf(2, ''), 1]]))
+    expect(saved.items.map((line) => line.lineId)).toEqual([6])
+    expect(orders.save).toHaveBeenCalledTimes(1)
   })
 
-  test('ยกเลิกออเดอร์แจ้งครัวให้ยกเลิกทุกรายการ', async () => {
+  test('ยกเลิกออเดอร์แล้วบันทึกสถานะพร้อมเหตุผล', async () => {
     orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1, items: [] }))
 
-    await new CancelOrderUseCase(orders, unitOfWork, kitchen).execute(1, { reason: 'ลูกค้าไปแล้ว' }, actor)
+    const saved = await new CancelOrderUseCase(orders, unitOfWork).execute(1, { reason: 'ลูกค้าไปแล้ว' }, actor)
 
-    expect(kitchen.reconcile).toHaveBeenCalledWith(1, new Map())
+    expect(saved.status).toBe('cancelled')
+    expect(saved.cancelReason).toBe('ลูกค้าไปแล้ว')
+    expect(orders.save).toHaveBeenCalledTimes(1)
   })
 
-  test('ตั้งจำนวนสินค้าให้ต่ำลงแจ้งครัวด้วยจำนวนที่ออเดอร์ถืออยู่ตอนนี้', async () => {
+  test('ตั้งจำนวนสินค้าให้ต่ำลงแล้วบันทึกจำนวนใหม่', async () => {
     orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1 }))
 
-    await new SetOrderItemQuantityUseCase(orders, unitOfWork, kitchen).execute(1, 1, { quantity: 1 }, 1)
+    const saved = await new SetOrderItemQuantityUseCase(orders, unitOfWork).execute(1, 1, { quantity: 1 }, 1)
 
-    expect(kitchen.reconcile).toHaveBeenCalledWith(1, new Map([[identityOf(1, ''), 1]]))
+    expect(saved.items.map((line) => line.quantity)).toEqual([1])
+    expect(orders.save).toHaveBeenCalledTimes(1)
   })
 
-  test('เอาสินค้าออกแจ้งครัวว่าไม่เหลือจำนวนของสินค้านั้น', async () => {
+  test('เอาสินค้าออกแล้วบันทึกออเดอร์ที่ไม่มีสินค้านั้น', async () => {
     orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1 }))
 
-    await new RemoveOrderItemUseCase(orders, unitOfWork, kitchen).execute(1, 1, 1)
+    const saved = await new RemoveOrderItemUseCase(orders, unitOfWork).execute(1, 1, 1)
 
-    expect(kitchen.reconcile).toHaveBeenCalledWith(1, new Map())
+    expect(saved.items).toEqual([])
+    expect(orders.save).toHaveBeenCalledTimes(1)
   })
 
-  test('แจ้งครัวหลังบันทึกออเดอร์ ไม่ใช่ก่อน', async () => {
-    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1 }))
-    const calls: string[] = []
-    orders.save.mockImplementation(async (order) => {
-      calls.push('save')
-      return order
-    })
-    kitchen.reconcile.mockImplementation(async () => {
-      calls.push('reconcile')
-    })
-
-    await new CancelOrderUseCase(orders, unitOfWork, kitchen).execute(1, { reason: 'ลูกค้าไปแล้ว' }, actor)
-
-    expect(calls).toEqual(['save', 'reconcile'])
-  })
-
-  test('แก้ออเดอร์ที่ปิดแล้วหรือของสาขาอื่นไม่แตะครัว', async () => {
+  test('แก้ออเดอร์ที่ปิดแล้วหรือของสาขาอื่นแล้วไม่บันทึก', async () => {
     orders.findByIdForUpdate.mockResolvedValueOnce(makeOrder({ id: 1, branchId: 2 })).mockResolvedValueOnce(makeOrder({ id: 1 }).markPaid(10))
 
-    await expect(new RemoveOrderLineUseCase(orders, unitOfWork, kitchen).execute(1, 1, 1)).rejects.toMatchObject({ code: 'ORDER_NOT_FOUND' })
-    await expect(new CancelOrderUseCase(orders, unitOfWork, kitchen).execute(1, { reason: 'x' }, actor)).rejects.toMatchObject({ code: 'ORDER_NOT_OPEN' })
+    await expect(new RemoveOrderLineUseCase(orders, unitOfWork).execute(1, 1, 1)).rejects.toMatchObject({ code: 'ORDER_NOT_FOUND' })
+    await expect(new CancelOrderUseCase(orders, unitOfWork).execute(1, { reason: 'x' }, actor)).rejects.toMatchObject({ code: 'ORDER_NOT_OPEN' })
 
-    expect(kitchen.reconcile).not.toHaveBeenCalled()
+    expect(orders.save).not.toHaveBeenCalled()
   })
 })
 
-describe('รวมและแยกบิลกับใบสั่งครัว', () => {
-  test('รวมบิลไม่ได้ถ้าปลายทางหรือต้นทางมีใบที่ยังไม่เสร็จ', async () => {
-    orders.findByIdForUpdate.mockImplementation(async (id) => makeOrder({ id, items: [] }))
-    kitchen.hasPending.mockImplementation(async (id) => id === 2)
+describe('แยกบิล', () => {
+  test('แยกทุกรายการออกไปไม่ได้ ต้องเหลืออย่างน้อยหนึ่งบรรทัด', async () => {
+    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1, items: [{ lineId: 5, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [], note: null }] }))
 
-    await expect(new MergeOrdersUseCase(orders, unitOfWork, kitchen).execute(1, { sourceOrderId: 2 }, 1)).rejects.toMatchObject({
-      code: 'ORDER_KITCHEN_PENDING',
-    })
-    expect(kitchen.moveTickets).not.toHaveBeenCalled()
-  })
-
-  test('รวมบิลย้ายใบของต้นทางไปปลายทาง', async () => {
-    orders.findByIdForUpdate.mockImplementation(async (id) => makeOrder({ id, items: [] }))
-
-    await new MergeOrdersUseCase(orders, unitOfWork, kitchen).execute(1, { sourceOrderId: 2 }, 1)
-
-    expect(kitchen.moveTickets).toHaveBeenCalledWith(2, 1)
-  })
-
-  test('แยกบิลไม่ได้ถ้าออเดอร์มีใบที่ยังไม่เสร็จ', async () => {
-    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1, items: [{ lineId: 5, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [], note: null }, { lineId: 6, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [], note: null }] }))
-    kitchen.hasPending.mockResolvedValue(true)
-
-    await expect(new SplitOrderUseCase(orders, unitOfWork, kitchen).execute(1, { lines: [{ lineId: 6, quantity: 1 }] }, actor)).rejects.toMatchObject({
-      code: 'ORDER_KITCHEN_PENDING',
-    })
-  })
-
-  test('แยกบิลไม่ได้ถ้ารายการที่เลือกเคยส่งครัวแล้ว', async () => {
-    orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1, items: [{ lineId: 5, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [], note: null }, { lineId: 6, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [], note: null }] }))
-    kitchen.sentByLine.mockResolvedValue(new Map([[1, new Map([[identityOf(1, ''), 1]])]]))
-
-    await expect(new SplitOrderUseCase(orders, unitOfWork, kitchen).execute(1, { lines: [{ lineId: 5, quantity: 1 }] }, actor)).rejects.toMatchObject({
-      code: 'ORDER_SPLIT_SENT',
+    await expect(new SplitOrderUseCase(orders, unitOfWork).execute(1, { lines: [{ lineId: 5, quantity: 2 }] }, actor)).rejects.toMatchObject({
+      code: 'ORDER_SPLIT_EMPTY',
     })
     expect(orders.create).not.toHaveBeenCalled()
   })
 
-  test('แยกบิลได้เมื่อรายการที่เลือกยังไม่เคยส่งครัว', async () => {
+  test('แยกบางรายการออกไปสร้างออเดอร์ใหม่', async () => {
     orders.findByIdForUpdate.mockResolvedValue(makeOrder({ id: 1, items: [{ lineId: 5, productId: 1, productName: 'ชา', sku: 'TEA', unitPriceSatang: 2500, quantity: 2, options: [], note: null }, { lineId: 6, productId: 2, productName: 'เค้ก', sku: 'CAKE', unitPriceSatang: 5700, quantity: 1, options: [], note: null }] }))
 
-    await new SplitOrderUseCase(orders, unitOfWork, kitchen).execute(1, { lines: [{ lineId: 6, quantity: 1 }] }, actor)
+    await new SplitOrderUseCase(orders, unitOfWork).execute(1, { lines: [{ lineId: 6, quantity: 1 }] }, actor)
 
     expect(orders.create).toHaveBeenCalled()
   })

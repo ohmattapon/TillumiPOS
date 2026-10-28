@@ -17,6 +17,14 @@ export interface IUserRepository {
   findActiveById(id: number): Promise<UserEntity | null>
   /** The only way to read a password hash. `username` must already be normalized. */
   findCredentialsByUsername(username: string): Promise<IUserCredentials | null>
+  /** The only read of a PIN hash. Null when the user is missing, inactive or has no PIN. */
+  findPinHash(userId: number): Promise<string | null>
+  /** Stores a PIN hash, or clears it with null. Throws DomainNotFoundError when the user does not exist. */
+  setPinHash(userId: number, pinHash: string | null): Promise<void>
+  /** Active users with a PIN, ordered by display name then id. */
+  findSwitchable(): Promise<{ id: number; displayName: string }[]>
+  /** For checking the current password; null when the user does not exist. */
+  findPasswordHashById(userId: number): Promise<string | null>
   /** Throws DomainConflictError when the username is taken. */
   create(entity: UserEntity, passwordHash: string): Promise<UserEntity>
   /** Overwrites the stored user; the password changes only when a new hash is given. */

@@ -7,14 +7,16 @@ import { toast } from 'sonner'
 import { settingsQuery, useFormat, useSettings } from '@/features/settings'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
+import { SegmentedTabs } from '@/components/SegmentedTabs'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { reportQuery, productsReportQuery, readReport, readProducts } from '../api'
-import { validRange, todayInTimeZone, type ReportFilters as Filters } from '../lib/date-range'
+import { reportQuery, productsReportQuery, promotionsReportQuery, readReport, readProducts, readPromotions } from '../api'
+import { validRange, type ReportFilters as Filters } from '../lib/date-range'
 import { collectPages } from '../lib/collect-pages'
 import { ReportFilters } from './ReportFilters'
 import { ReportDataTable } from './ReportDataTable'
 import { PaginationBar } from '@/components/PaginationBar'
+import { todayIn } from '@/lib/calendar-date'
 import { DailySalesChart } from './DailySalesChart'
 
 export function ReportsPage() {
@@ -22,10 +24,11 @@ export function ReportsPage() {
   const { t: tc } = useTranslation()
   const shop = useSettings()
   const settings = useQuery(settingsQuery)
-  const { money, currency, locale } = useFormat()
+  const { money, currency, locale, date } = useFormat()
   const [params, setParams] = useSearchParams()
   const [exporting, setExporting] = useState(false)
-  const today = todayInTimeZone(shop.timeZone)
+  const [tab, setTab] = useState<'sales' | 'promotions'>('sales')
+  const today = todayIn(shop.timeZone)
   const filters: Filters = {
     from: params.get('from') ?? today.slice(0, 7) + '-01',
     to: params.get('to') ?? today,
@@ -35,9 +38,11 @@ export function ReportsPage() {
     return Number.isSafeInteger(value) && value >= 0 && value <= 1000000 ? value : 0
   }
   const productOffset = offset('products')
+  const promotionOffset = offset('promotions')
   const enabled = Boolean(settings.data) && validRange(filters.from, filters.to)
   const report = useQuery({ ...reportQuery(filters), enabled })
   const products = useQuery({ ...productsReportQuery(filters, productOffset), enabled })
+  const promotions = useQuery({ ...promotionsReportQuery(filters, promotionOffset), enabled: enabled && tab === 'promotions' })
   const summary = report.data?.summary
   const setPage = (name: string, value: number) => {
     const next = new URLSearchParams(params)
@@ -54,8 +59,16 @@ export function ReportsPage() {
         import('../lib/export-workbook'),
       ])
       if (new Set(allProducts.map((row) => row.productId)).size !== allProducts.length) throw new Error('REPORT_CHANGED')
+      // The promotions sheet goes out only from its own tab, so an export from the sales tab keeps
+      // the four sheets the shop already knows.
+      const allPromotions = tab === 'promotions'
+        ? await collectPages((pageOffset, limit) => readPromotions(filters, pageOffset, limit))
+        : undefined
+      if (allPromotions && new Set(allPromotions.map((row) => row.promotionId)).size !== allPromotions.length) {
+        throw new Error('REPORT_CHANGED')
+      }
       await downloadReportWorkbook({
-        report: fresh, products: allProducts,
+        report: fresh, products: allProducts, promotions: allPromotions,
         currency, fractionDigits: money.fractionDigits, locale,
       })
       toast.success(t('exported'))
@@ -68,7 +81,6 @@ export function ReportsPage() {
   const failure = (error: Error | null, retry: () => void) => error ? <div role="alert" className="flex items-center gap-3 p-4 text-sm text-destructive">
     <span>{error.message}</span><Button variant="outline" size="sm" onClick={retry}>{t('retry')}</Button>
   </div> : null
-  const day = new Intl.DateTimeFormat(locale === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'UTC' })
   return (
     <>
       <PageHeader title={t('title')} description={t('description')}>
@@ -86,6 +98,9 @@ export function ReportsPage() {
         {failure(settings.error, () => void settings.refetch())}
         {!validRange(filters.from, filters.to) ? <p role="alert" className="text-sm text-destructive">{t('invalidRange')}</p> : <>
           {failure(report.error, () => void report.refetch())}
+          <SegmentedTabs value={tab} onChange={setTab} className="w-fit"
+            options={[{ value: 'sales', label: t('tabSales') }, { value: 'promotions', label: t('tabPromotions') }]} />
+          {tab === 'sales' ? <>
           {summary ? <>
             <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={t('summarySheet')}>
               {[
@@ -110,7 +125,7 @@ export function ReportsPage() {
               {report.data ? <>
                 <DailySalesChart days={report.data.days.items} />
                 <ReportDataTable headers={[t('day'), t('bills'), t('revenue'), t('profit')]}
-                  rows={report.data.days.items.map((row) => [day.format(new Date(row.day)), row.saleCount, money.plain(row.totalSatang), money.plain(row.profitSatang)])} />
+                  rows={report.data.days.items.map((row) => [date.calendarDateShortYear(row.day), row.saleCount, money.plain(row.totalSatang), money.plain(row.profitSatang)])} />
               </> : <Skeleton className="m-4 h-48" />}
             </Panel>
             <Panel title={t('methods')} description={t('methodNote')}>
@@ -131,6 +146,15 @@ export function ReportsPage() {
             </>}
           </Panel>
           <p className="pb-2 text-xs leading-relaxed text-muted-foreground">{t('basis')}</p>
+          </> : <Panel title={t('promotions')}>
+            <p className="border-b px-4 py-2 text-xs leading-relaxed text-muted-foreground">{t('promotionsNote')}</p>
+            {failure(promotions.error, () => void promotions.refetch())}
+            {promotions.isPending ? <Skeleton className="m-4 h-24" /> : !promotions.error && ((promotions.data?.items ?? []).length > 0 ? <>
+              <ReportDataTable headers={[t('promotionName'), t('promotionBills'), t('promotionDiscount'), t('promotionNetSales')]} numberFrom={1}
+                rows={(promotions.data?.items ?? []).map((row) => [row.name, row.bills, money.plain(row.discountSatang), money.plain(row.netSalesSatang)])} />
+              <PaginationBar page={Math.floor(promotionOffset / 10)} pageSize={10} total={promotions.data?.total ?? 0} isLoading={promotions.isFetching} onPageChange={(value) => setPage('promotions', value * 10)} />
+            </> : <p className="px-4 py-6 text-sm text-muted-foreground">{t('noPromotions')}</p>)}
+          </Panel>}
         </>}
       </main>
     </>

@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
-# Not supported yet: Linux has not been tested (Windows is the supported platform, see docs/install.md).
+# Linux and macOS: neither has been tested on a real machine yet (Windows is the tested platform, see docs/install.md).
 # Loads a backup made by scripts/backup.sh. It REPLACES everything in the database.
 #   scripts/restore.sh backups/easypos-20261014-210000.sql.gz [--yes]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# Podman runs rootful (see install.sh): sudo unless already root.
-compose() {
-  if [ "$(id -u)" -eq 0 ]; then podman compose "$@"; else sudo podman compose "$@"; fi
-}
+. scripts/podman-compose.sh
+prepare_podman || exit 1
 
 FILE="${1:-}"
 if [ -z "$FILE" ] || [ ! -f "$FILE" ]; then
@@ -16,6 +14,9 @@ if [ -z "$FILE" ] || [ ! -f "$FILE" ]; then
   exit 2
 fi
 gzip -t "$FILE" || { echo "$FILE is not a valid backup (the file is damaged)." >&2; exit 1; }
+# Checked before anything is touched: a dump that was cut off would leave the database half empty.
+gunzip -c "$FILE" | tail -n 20 | grep -q 'PostgreSQL database dump complete' \
+  || { echo "$FILE is not a complete backup (it was cut off). Nothing was changed." >&2; exit 1; }
 
 if [ "${2:-}" != "--yes" ]; then
   echo "This replaces ALL data in the shop's database with the contents of:"
@@ -28,7 +29,12 @@ fi
 echo "Stopping the app..."
 compose -f docker-compose.yml stop app
 echo "Loading the backup..."
-gunzip -c "$FILE" | compose -f docker-compose.yml exec -T db psql -U pos -d pos -v ON_ERROR_STOP=1 --quiet
+# One transaction: if anything in the file fails, the database is left exactly as it was.
+if ! gunzip -c "$FILE" | compose -f docker-compose.yml exec -T db psql -U pos -d pos -v ON_ERROR_STOP=1 --single-transaction --quiet; then
+  echo "The restore failed, and the database was left as it was. Starting the app again..." >&2
+  compose -f docker-compose.yml start app
+  exit 1
+fi
 echo "Starting the app (it brings the database up to date if the backup is from an older version)..."
 compose -f docker-compose.yml start app
 

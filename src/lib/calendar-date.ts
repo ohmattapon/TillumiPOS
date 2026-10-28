@@ -14,3 +14,10 @@ export function toCalendarDate(date: Date): string {
   if (!Number.isFinite(date.getTime()) || date.getFullYear() < 1 || date.getFullYear() > 9999) return ''
   return `${String(date.getFullYear()).padStart(4, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
+
+/** The calendar date `YYYY-MM-DD` in the shop's time zone, so "today" is the shop's day, not the browser's. */
+export function todayIn(timeZone: string, now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now)
+  const part = (name: Intl.DateTimeFormatPartTypes) => parts.find((candidate) => candidate.type === name)!.value
+  return `${part('year')}-${part('month')}-${part('day')}`
+}

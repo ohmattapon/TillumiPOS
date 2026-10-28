@@ -2,10 +2,12 @@ import type { Order } from '@pos/api/types'
 import { queryOptions, useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productKeys } from '@/features/products'
 import { saleKeys } from '@/features/sales'
+import { memberKeys } from '@/features/members'
 import { withHeldQuote } from '@/features/promotions'
 import { tableKeys } from '@/features/tables'
 import { api, apiV2, unwrap } from '@/lib/api'
 import type { PaymentInput } from '@/lib/money'
+import { withIdempotencyKey } from '@/lib/idempotency-key'
 
 export const orderKeys = {
   /** Prefix of every order query. */
@@ -94,7 +96,7 @@ export function useIsSavingLineNote() {
   return useIsMutating({ mutationKey: lineNoteMutationKey }) > 0
 }
 
-/** Writes or clears the note of one line. Refused by the API once the line has gone to the kitchen. */
+/** Writes or clears the note of one line. */
 export function useSetOrderLineNote() {
   const remember = useOrderCache()
 
@@ -147,7 +149,7 @@ export function usePayOrder() {
           return unwrap(
             apiV2.orders({ id: orderId }).pay.post(
               { discountSatang: discount, payments: [payment], shiftId, quoteId: pinned },
-              { headers: { 'idempotency-key': idempotencyKey ?? crypto.randomUUID() } },
+              withIdempotencyKey(idempotencyKey),
             ),
           )
         return unwrap(api.orders({ id: orderId }).pay.post({ discountSatang: discount, payments: [payment], quoteId: pinned }))
@@ -157,7 +159,7 @@ export function usePayOrder() {
         queryClient.invalidateQueries({ queryKey: orderKeys.all }),
         queryClient.invalidateQueries({ queryKey: productKeys.all }),
         queryClient.invalidateQueries({ queryKey: saleKeys.all }),
-        queryClient.invalidateQueries({ queryKey: ['members'] }),
+        queryClient.invalidateQueries({ queryKey: memberKeys.all }),
         queryClient.invalidateQueries({ queryKey: tableKeys.all }),
       ]),
   })
