@@ -1,6 +1,6 @@
 {
-  "id": "16011c1f-1099-4d87-b173-75341163eaa3",
-  "prevId": "54816608-38cf-4262-bd57-2422c51b8e33",
+  "id": "8bf0cd1c-f59c-4985-b958-c01737238028",
+  "prevId": "02682f85-5ed6-4171-883b-fd70766bc71b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4420,12 +4420,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "coupon_code": {
-          "name": "coupon_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "subtotal_satang": {
           "name": "subtotal_satang",
           "type": "integer",
@@ -4555,21 +4549,6 @@
               "expression": "status",
               "isExpression": false,
               "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "price_quotes_promotion_id_idx": {
-          "name": "price_quotes_promotion_id_idx",
-          "columns": [
-            {
-              "expression": "(\"promotion\" ->> 'id')",
-              "asc": true,
-              "isExpression": true,
               "nulls": "last"
             }
           ],
