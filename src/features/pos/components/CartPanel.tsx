@@ -30,6 +30,8 @@ interface Props {
   /** side: the wide-screen panel. sheet: the same cart, shown from the bottom on a small screen. */
   variant?: 'side' | 'sheet'
   onClose?: () => void
+  /** Why the quote refused the coupon code, shown under the field. */
+  couponError?: string | null
 }
 
 /**
@@ -71,7 +73,60 @@ function LineNote({ orderId, lineId, line }: { orderId: number; lineId: number; 
   )
 }
 
-export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant = 'side', onClose }: Props) {
+/**
+ * The coupon code. What is typed is kept here until it is sent, so the quote is asked for once
+ * per code rather than once per keystroke.
+ */
+function CouponField({ disabled, error }: { disabled: boolean; error: string | null }) {
+  const { t } = useTranslation('pos')
+  const code = useCartStore((state) => state.couponCode)
+  const setCouponCode = useCartStore((state) => state.setCouponCode)
+  const [draft, setDraft] = useState<string | null>(null)
+  const apply = () => {
+    setCouponCode(draft ?? '')
+    setDraft(null)
+  }
+
+  return (
+    <div className="space-y-1">
+      {code !== '' ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-accent px-3 py-1 text-sm text-accent-foreground">
+          <span className="min-w-0 truncate font-medium">{t('cart.couponApplied', { code })}</span>
+          <Button variant="ghost" className="h-11 px-2" onClick={() => setCouponCode('')}>
+            {t('cart.couponRemove')}
+          </Button>
+        </div>
+      ) : draft === null ? (
+        <Button variant="outline" className="h-11 w-full" disabled={disabled} onClick={() => setDraft('')}>
+          <Tag />
+          {t('cart.couponAdd')}
+        </Button>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Input
+            className="h-11 flex-1 bg-background"
+            aria-label={t('cart.couponAdd')}
+            placeholder={t('cart.couponPlaceholder')}
+            maxLength={20}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') apply()
+            }}
+          />
+          <Button className="h-11 shrink-0" onClick={apply}>{t('cart.couponUse')}</Button>
+          <Button variant="ghost" className="size-11 shrink-0" aria-label={t('cart.couponCancel')} onClick={() => setDraft(null)}>
+            <X />
+          </Button>
+        </div>
+      )}
+      {disabled && <p className="text-xs text-muted-foreground">{t('cart.couponNotWithDiscount')}</p>}
+      {error !== null && <p role="alert" className="text-xs text-destructive">{error}</p>}
+    </div>
+  )
+}
+
+export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant = 'side', onClose, couponError = null }: Props) {
   const { t } = useTranslation('pos')
   const { money, currency } = useFormat()
   const { vatMode, vatRateBp } = useSettings()
@@ -244,6 +299,8 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
             )}
           </>
         )}
+        {/* A coupon is pinned by a quote, so it is offered only while the cart is priced by one. */}
+        {!isOrder && <CouponField disabled={discount.trim() !== ''} error={couponError} />}
         {/* When prices already include VAT there is nothing to add; only an added tax is shown here. */}
         {vatMode === 'exclusive' && (
           <p className="flex justify-between text-sm text-muted-foreground">

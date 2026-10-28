@@ -20,6 +20,10 @@ export function useCart() {
   const localMemberId = useCartStore((state) => state.memberId)
   const clear = useCartStore((state) => state.clear)
   const declined = useCartStore((state) => state.promotionDeclined)
+  // A coupon is pinned by a quote, and a quote cannot carry a typed discount, so a typed discount
+  // wins and the code waits until it is cleared.
+  const storedCoupon = useCartStore((state) => state.couponCode)
+  const couponCode = discount.trim() === '' ? storedCoupon : ''
   const order = useQuery({ ...orderQuery(orderId ?? 0), enabled: orderId !== null })
   const memberId = orderId === null ? localMemberId : order.data?.memberId ?? null
   const member = useQuery({ ...memberQuery(memberId ?? 0), enabled: memberId !== null, staleTime: 0, refetchInterval: 15_000 })
@@ -67,7 +71,7 @@ export function useCart() {
   const priced = best && !declined ? price(best) : base
   // A pinned price is used when a promotion applies, or when no discount is typed. A typed discount is
   // never sent with a quote (the quote would drop it), so such a cart is sold the one-step way instead.
-  const usesQuote = !declined && (best !== null || base.discountSatang === 0)
+  const usesQuote = !declined && (best !== null || base.discountSatang === 0 || couponCode !== '')
 
   const productsReady = products.every((result) => result.isSuccess && result.data.isActive)
   return {
@@ -79,6 +83,7 @@ export function useCart() {
     availablePromotion: best,
     productPromotions,
     promotionDeclined: declined,
+    couponCode,
     usesQuote,
   }
 }

@@ -69,3 +69,19 @@ test('the download is an .xlsx file named after the period, scope and time', asy
   timers[0]![0]()
   expect(revoked).toEqual(['blob:report'])
 }, 30000)
+
+test('adds a promotions sheet with one row per promotion', async () => {
+  const workbook = await buildReportWorkbook({
+    ...fixture,
+    promotions: [
+      { promotionId: 2, name: 'ซื้อ 2 แถม 1', bills: 3, discountSatang: 5000, netSalesSatang: 30000 },
+      { promotionId: 1, name: 'คูปองลด 10%', bills: 1, discountSatang: 2000, netSalesSatang: 9000 },
+    ],
+  })
+  const sheet = workbook.getWorksheet('โปรโมชัน')!
+  expect(workbook.worksheets.length).toBe(5)
+  expect(sheet.getCell('A2').value).toBe('ซื้อ 2 แถม 1')
+  expect(sheet.getCell('B2').value).toBe(3)
+  expect(sheet.getCell('C2').value).toBe(50)
+  expect(sheet.getCell('D2').value).toBe(300)
+}, 30000)
