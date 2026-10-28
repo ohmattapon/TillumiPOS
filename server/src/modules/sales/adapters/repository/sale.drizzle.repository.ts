@@ -34,6 +34,13 @@ const headerColumns = {
   voidedAt: sales.voidedAt,
   voidReason: sales.voidReason,
   createdAt: sales.createdAt,
+  // A bill read back without these looks like a bill that never earned or spent a point, so a void
+  // returns nothing and the receipt and the response show zeros.
+  pointsEarned: sales.pointsEarned,
+  pointsRedeemed: sales.pointsRedeemed,
+  pointsDiscountSatang: sales.pointsDiscountSatang,
+  pointsRule: sales.pointsRule,
+  pointsBalanceAfter: sales.pointsBalanceAfter,
 }
 
 const itemColumns = {
