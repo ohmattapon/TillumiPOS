@@ -1,5 +1,6 @@
 import { DomainConflictError } from './errors/domain-conflict.error'
 import { DomainError } from './errors/domain-error'
+import type { PointsRule } from './member-points'
 import { lineKey, type LineOption } from './modifier.domain'
 import { calculateTotals, type VatMode } from './pricing'
 import { MAX_AMOUNT_SATANG, type SaleMember, type SalePromotion } from './sale.domain'
@@ -52,6 +53,10 @@ export interface NewPriceQuote {
   vatMode: VatMode
   vatRateBp: number
   createdById: number
+  /** Points the cart pinned: a sale made from it redeems them at this rate, whatever the shop changes since. */
+  pointsRedeemed?: number
+  pointsDiscountSatang?: number
+  pointsRule?: PointsRule | null
 }
 
 export interface PricedQuote extends NewPriceQuote {
@@ -110,6 +115,9 @@ export class PriceQuoteEntity {
   public readonly discountSatang: number
   public readonly vatSatang: number
   public readonly totalSatang: number
+  public readonly pointsRedeemed: number
+  public readonly pointsDiscountSatang: number
+  public readonly pointsRule: PointsRule | null
   public readonly status: QuoteStatus
   public readonly qrReference: string | null
   public readonly saleId: number | null
@@ -143,6 +151,10 @@ export class PriceQuoteEntity {
     this.discountSatang = props.discountSatang
     this.vatSatang = props.vatSatang
     this.totalSatang = props.totalSatang
+    // `?? 0` / `?? null`: a quote stored before points existed has none of them.
+    this.pointsRedeemed = props.pointsRedeemed ?? 0
+    this.pointsDiscountSatang = props.pointsDiscountSatang ?? 0
+    this.pointsRule = props.pointsRule ?? null
     this.status = props.status
     this.qrReference = props.qrReference
     this.saleId = props.saleId
@@ -159,7 +171,9 @@ export class PriceQuoteEntity {
 
     const subtotalSatang = sum(input.lines.map((line) => line.unitPriceSatang * line.quantity))
     if (subtotalSatang > MAX_AMOUNT_SATANG) throw tooLarge()
-    const discountSatang = input.promotion?.discountSatang ?? 0
+    // The promotion (or typed) discount and the points discount stack: points are paid with,
+    // not a second discount, so both come off the subtotal before the VAT is worked out.
+    const discountSatang = (input.promotion?.discountSatang ?? 0) + (input.pointsDiscountSatang ?? 0)
     if (discountSatang > subtotalSatang) throw new DomainError('ส่วนลดมากกว่ายอดรวมสินค้า', 'DISCOUNT_TOO_LARGE')
     const { vatSatang, totalSatang } = calculateTotals({
       subtotalSatang, discountSatang, vatMode: input.vatMode, vatRateBp: input.vatRateBp,
@@ -259,6 +273,9 @@ export class PriceQuoteEntity {
       discountSatang: this.discountSatang,
       vatSatang: this.vatSatang,
       totalSatang: this.totalSatang,
+      pointsRedeemed: this.pointsRedeemed,
+      pointsDiscountSatang: this.pointsDiscountSatang,
+      pointsRule: this.pointsRule,
       status: this.status,
       qrReference: this.qrReference,
       saleId: this.saleId,

@@ -93,6 +93,9 @@ const th = {
     lanPrinted: 'พิมพ์ใบเสร็จแล้ว',
     lanFailed: 'พิมพ์ผ่านแลนไม่สำเร็จ: {{reason}}',
     lanFallbackHint: 'ใช้ปุ่มบันทึก PDF หรือพิมพ์ผ่านเบราว์เซอร์แทนได้',
+    pointsUsed: 'ใช้แต้ม {{points}} เป็นส่วนลด {{amount}}',
+    pointsEarned: 'แต้มที่ได้',
+    pointsBalance: 'แต้มคงเหลือ',
   },
 }
 
@@ -191,6 +194,9 @@ const en = {
     lanPrinted: 'Receipt printed',
     lanFailed: 'LAN printing failed: {{reason}}',
     lanFallbackHint: 'You can still use the PDF button or browser print instead.',
+    pointsUsed: 'Points used {{points}} for {{amount}} off',
+    pointsEarned: 'Points earned',
+    pointsBalance: 'Points balance',
   },
 } satisfies typeof th
 

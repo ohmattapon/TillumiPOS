@@ -39,6 +39,8 @@ export const quoteSchemas = {
       }),
     ),
     discountSatang: t.Integer(),
+    pointsRedeemed: t.Integer(),
+    pointsDiscountSatang: t.Integer(),
     vatMode: t.Union([t.Literal('inclusive'), t.Literal('exclusive'), t.Literal('none')]),
     vatRateBp: t.Integer(),
     vatSatang: t.Integer(),
@@ -61,6 +63,7 @@ export const quoteSchemas = {
     ),
     memberId: t.Optional(t.Nullable(t.Integer({ minimum: 1 }))),
     orderId: t.Optional(t.Integer({ minimum: 1 })),
+    redeemPoints: t.Optional(t.Integer({ minimum: 0 })),
   }),
 }
 export type QuoteResponse = typeof quoteSchemas.quote.static

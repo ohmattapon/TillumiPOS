@@ -2,6 +2,8 @@ import type { Order, Product } from '@pos/api/types'
 import type { ProductPack } from '@pos/api/packs'
 import { packUnitPriceSatang } from '@pos/api/packs'
 import { calculateTotals, type VatMode } from '@pos/api/pricing'
+import { pointsDiscountSatang as discountOf, type PointsRule } from '@pos/api/points'
+import { appliedRedeemPoints } from './points'
 import type { CartLine } from '../store/cart.store'
 
 export interface PricedLine {
@@ -41,6 +43,10 @@ export interface PricedCart {
   isDiscountValid: boolean
   /** The promotion that gives this discount; it replaces a typed discount. Null when there is none. */
   promotion: { id: number; name: string; discountSatang: number } | null
+  /** The points this cart spends; 0 when the member spends none. */
+  pointsRedeemed: number
+  /** What those points take off the bill, on top of the promotion or the typed discount. */
+  pointsDiscountSatang: number
   /** VAT charged on this cart, whether included in the total or added on top. */
   vatSatang: number
   /** What the customer owes: exactly what the server will charge. */
@@ -55,6 +61,11 @@ export interface PricingOptions {
   parseAmount: (input: string) => number | null
   /** The promotion the till will be given. It sets the discount, so a typed one is ignored. */
   promotion?: { id: number; name: string; discountSatang: number } | null
+  /**
+   * The points the cashier asked to redeem and what the bill may absorb. A request the shop's
+   * rules would refuse is left out, so the preview matches the quote the server returns.
+   */
+  points?: { requested: number; balance: number; rule: PointsRule } | null
 }
 
 /** What the till needs to know about an option to price it. */
@@ -173,7 +184,7 @@ export function priceOrder(
 function summarize(
   priced: PricedLine[],
   discountInput: string,
-  { vatMode, vatRateBp, parseAmount, promotion = null }: PricingOptions,
+  { vatMode, vatRateBp, parseAmount, promotion = null, points = null }: PricingOptions,
 ): PricedCart {
   const subtotalSatang = priced.reduce((sum, line) => sum + line.lineTotalSatang, 0)
   const itemCount = priced.reduce((sum, line) => sum + line.quantity, 0)
@@ -186,7 +197,20 @@ function summarize(
     : isDiscountValid
       ? typed
       : 0
-  const { vatSatang, totalSatang } = calculateTotals({ subtotalSatang, discountSatang, vatMode, vatRateBp })
+  // Points are asked for against what is left to pay, after the promotion or the typed discount,
+  // and they stack on top of it, exactly as the quote prices them. A typed discount can never reach
+  // the quote, so the till does not redeem points beside one.
+  const pointsRedeemed =
+    points !== null && (promotion !== null || discountInput.trim() === '')
+      ? appliedRedeemPoints(points.requested, subtotalSatang - discountSatang, points.balance, points.rule)
+      : 0
+  const pointsDiscount = points !== null ? discountOf(pointsRedeemed, points.rule) : 0
+  const { vatSatang, totalSatang } = calculateTotals({
+    subtotalSatang,
+    discountSatang: discountSatang + pointsDiscount,
+    vatMode,
+    vatRateBp,
+  })
 
   return {
     lines: priced,
@@ -195,6 +219,8 @@ function summarize(
     discountSatang,
     isDiscountValid,
     promotion,
+    pointsRedeemed,
+    pointsDiscountSatang: pointsDiscount,
     vatSatang,
     totalSatang,
     canPay:

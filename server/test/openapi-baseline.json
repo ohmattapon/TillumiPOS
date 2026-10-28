@@ -10196,6 +10196,18 @@
                             "minLength": 1,
                             "type": "string"
                           },
+                          "pointsBalance": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -10218,6 +10230,7 @@
                           "name",
                           "phone",
                           "isActive",
+                          "pointsBalance",
                           "createdAt",
                           "updatedAt"
                         ],
@@ -10370,6 +10383,18 @@
                       "minLength": 1,
                       "type": "string"
                     },
+                    "pointsBalance": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -10392,6 +10417,7 @@
                     "name",
                     "phone",
                     "isActive",
+                    "pointsBalance",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -10478,6 +10504,18 @@
                       "minLength": 1,
                       "type": "string"
                     },
+                    "pointsBalance": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -10500,6 +10538,7 @@
                     "name",
                     "phone",
                     "isActive",
+                    "pointsBalance",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -10649,6 +10688,18 @@
                       "minLength": 1,
                       "type": "string"
                     },
+                    "pointsBalance": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -10671,6 +10722,7 @@
                     "name",
                     "phone",
                     "isActive",
+                    "pointsBalance",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -10682,6 +10734,399 @@
           }
         },
         "summary": "แก้ไขสมาชิกและสถานะ"
+      }
+    },
+    "/api/v1/members/{id}/points": {
+      "get": {
+        "operationId": "getApiV1MembersByIdPoints",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "maximum": 500,
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "maximum": 500,
+              "minimum": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "actorId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "anyOf": [
+                              {
+                                "format": "date-time",
+                                "type": "string"
+                              },
+                              {
+                                "format": "date",
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              }
+                            ]
+                          },
+                          "id": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "kind": {
+                            "enum": [
+                              "earn",
+                              "redeem",
+                              "void_earn",
+                              "void_redeem",
+                              "adjust"
+                            ],
+                            "type": "string"
+                          },
+                          "points": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "quoteId": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "reason": {
+                            "nullable": true,
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "saleId": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "default": 0,
+                                    "format": "integer",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "points",
+                          "saleId",
+                          "quoteId",
+                          "reason",
+                          "actorId",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ประวัติแต้มของสมาชิก"
+      }
+    },
+    "/api/v1/members/{id}/points/adjustments": {
+      "post": {
+        "operationId": "postApiV1MembersByIdPointsAdjustments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "minimum": 1,
+                  "type": "number"
+                }
+              ],
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "points": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 1000000,
+                        "minimum": -1000000,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 1000000,
+                    "minimum": -1000000
+                  },
+                  "reason": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "points",
+                  "reason"
+                ],
+                "type": "object"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "points": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 1000000,
+                        "minimum": -1000000,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 1000000,
+                    "minimum": -1000000
+                  },
+                  "reason": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "points",
+                  "reason"
+                ],
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "points": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 1000000,
+                        "minimum": -1000000,
+                        "type": "integer"
+                      }
+                    ],
+                    "maximum": 1000000,
+                    "minimum": -1000000
+                  },
+                  "reason": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "points",
+                  "reason"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "memberId": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsBalance": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "memberId",
+                    "pointsBalance"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "ปรับแต้มสมาชิกด้วยมือ"
       }
     },
     "/api/v1/members/{id}/sales": {
@@ -18571,6 +19016,62 @@
                       },
                       "type": "array"
                     },
+                    "pointsBalanceAfter": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "pointsDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsEarned": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsRedeemed": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "promotion": {
                       "nullable": true,
                       "properties": {
@@ -18804,6 +19305,10 @@
                     "voidedAt",
                     "voidReason",
                     "createdAt",
+                    "pointsEarned",
+                    "pointsRedeemed",
+                    "pointsDiscountSatang",
+                    "pointsBalanceAfter",
                     "items",
                     "payments"
                   ],
@@ -23532,6 +24037,20 @@
                       }
                     ],
                     "minimum": 1
+                  },
+                  "redeemPoints": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
                   }
                 },
                 "type": "object"
@@ -23649,6 +24168,20 @@
                       }
                     ],
                     "minimum": 1
+                  },
+                  "redeemPoints": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
                   }
                 },
                 "type": "object"
@@ -23766,6 +24299,20 @@
                       }
                     ],
                     "minimum": 1
+                  },
+                  "redeemPoints": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 0
                   }
                 },
                 "type": "object"
@@ -24067,6 +24614,30 @@
                       ],
                       "nullable": true
                     },
+                    "pointsDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsRedeemed": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "promotion": {
                       "nullable": true,
                       "properties": {
@@ -24226,6 +24797,8 @@
                     "subtotalSatang",
                     "promotion",
                     "discountSatang",
+                    "pointsRedeemed",
+                    "pointsDiscountSatang",
                     "vatMode",
                     "vatRateBp",
                     "vatSatang",
@@ -24564,6 +25137,30 @@
                       ],
                       "nullable": true
                     },
+                    "pointsDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsRedeemed": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "promotion": {
                       "nullable": true,
                       "properties": {
@@ -24723,6 +25320,8 @@
                     "subtotalSatang",
                     "promotion",
                     "discountSatang",
+                    "pointsRedeemed",
+                    "pointsDiscountSatang",
                     "vatMode",
                     "vatRateBp",
                     "vatSatang",
@@ -25061,6 +25660,30 @@
                       ],
                       "nullable": true
                     },
+                    "pointsDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsRedeemed": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "promotion": {
                       "nullable": true,
                       "properties": {
@@ -25220,6 +25843,8 @@
                     "subtotalSatang",
                     "promotion",
                     "discountSatang",
+                    "pointsRedeemed",
+                    "pointsDiscountSatang",
                     "vatMode",
                     "vatRateBp",
                     "vatSatang",
@@ -27532,6 +28157,62 @@
                       },
                       "type": "array"
                     },
+                    "pointsBalanceAfter": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "pointsDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsEarned": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsRedeemed": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "promotion": {
                       "nullable": true,
                       "properties": {
@@ -27765,6 +28446,10 @@
                     "voidedAt",
                     "voidReason",
                     "createdAt",
+                    "pointsEarned",
+                    "pointsRedeemed",
+                    "pointsDiscountSatang",
+                    "pointsBalanceAfter",
                     "items",
                     "payments"
                   ],
@@ -28135,6 +28820,62 @@
                       },
                       "type": "array"
                     },
+                    "pointsBalanceAfter": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "pointsDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsEarned": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsRedeemed": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "promotion": {
                       "nullable": true,
                       "properties": {
@@ -28368,6 +29109,10 @@
                     "voidedAt",
                     "voidReason",
                     "createdAt",
+                    "pointsEarned",
+                    "pointsRedeemed",
+                    "pointsDiscountSatang",
+                    "pointsBalanceAfter",
                     "items",
                     "payments"
                   ],
@@ -28788,6 +29533,62 @@
                       },
                       "type": "array"
                     },
+                    "pointsBalanceAfter": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "nullable": true
+                    },
+                    "pointsDiscountSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsEarned": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "pointsRedeemed": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "promotion": {
                       "nullable": true,
                       "properties": {
@@ -29021,6 +29822,10 @@
                     "voidedAt",
                     "voidReason",
                     "createdAt",
+                    "pointsEarned",
+                    "pointsRedeemed",
+                    "pointsDiscountSatang",
+                    "pointsBalanceAfter",
                     "items",
                     "payments"
                   ],
@@ -30055,6 +30860,51 @@
                         "null"
                       ]
                     },
+                    "pointsEarnSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 100,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 100
+                    },
+                    "pointsEnabled": {
+                      "type": "boolean"
+                    },
+                    "pointsMinRedeem": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
+                    "pointsRedeemSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
                     "promptpayMode": {
                       "enum": [
                         "bank",
@@ -30179,6 +31029,10 @@
                     "receiptPrinterPort",
                     "receiptPrinterEnabled",
                     "cashDrawerEnabled",
+                    "pointsEnabled",
+                    "pointsEarnSatang",
+                    "pointsRedeemSatang",
+                    "pointsMinRedeem",
                     "logoUrl"
                   ],
                   "type": "object"
@@ -30240,6 +31094,51 @@
                       "string",
                       "null"
                     ]
+                  },
+                  "pointsEarnSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 100,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 100
+                  },
+                  "pointsEnabled": {
+                    "type": "boolean"
+                  },
+                  "pointsMinRedeem": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
+                  "pointsRedeemSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
                   },
                   "promptpayMode": {
                     "enum": [
@@ -30391,6 +31290,51 @@
                       "null"
                     ]
                   },
+                  "pointsEarnSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 100,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 100
+                  },
+                  "pointsEnabled": {
+                    "type": "boolean"
+                  },
+                  "pointsMinRedeem": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
+                  "pointsRedeemSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
                   "promptpayMode": {
                     "enum": [
                       "bank",
@@ -30540,6 +31484,51 @@
                       "string",
                       "null"
                     ]
+                  },
+                  "pointsEarnSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 100,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 100
+                  },
+                  "pointsEnabled": {
+                    "type": "boolean"
+                  },
+                  "pointsMinRedeem": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
+                  },
+                  "pointsRedeemSatang": {
+                    "anyOf": [
+                      {
+                        "default": 0,
+                        "format": "integer",
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    ],
+                    "minimum": 1
                   },
                   "promptpayMode": {
                     "enum": [
@@ -30704,6 +31693,51 @@
                         "null"
                       ]
                     },
+                    "pointsEarnSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 100,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 100
+                    },
+                    "pointsEnabled": {
+                      "type": "boolean"
+                    },
+                    "pointsMinRedeem": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
+                    "pointsRedeemSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
                     "promptpayMode": {
                       "enum": [
                         "bank",
@@ -30828,6 +31862,10 @@
                     "receiptPrinterPort",
                     "receiptPrinterEnabled",
                     "cashDrawerEnabled",
+                    "pointsEnabled",
+                    "pointsEarnSatang",
+                    "pointsRedeemSatang",
+                    "pointsMinRedeem",
                     "logoUrl"
                   ],
                   "type": "object"
@@ -30900,6 +31938,51 @@
                         "null"
                       ]
                     },
+                    "pointsEarnSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 100,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 100
+                    },
+                    "pointsEnabled": {
+                      "type": "boolean"
+                    },
+                    "pointsMinRedeem": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
+                    "pointsRedeemSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
                     "promptpayMode": {
                       "enum": [
                         "bank",
@@ -31024,6 +32107,10 @@
                     "receiptPrinterPort",
                     "receiptPrinterEnabled",
                     "cashDrawerEnabled",
+                    "pointsEnabled",
+                    "pointsEarnSatang",
+                    "pointsRedeemSatang",
+                    "pointsMinRedeem",
                     "logoUrl"
                   ],
                   "type": "object"
@@ -31162,6 +32249,51 @@
                         "null"
                       ]
                     },
+                    "pointsEarnSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 100,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 100
+                    },
+                    "pointsEnabled": {
+                      "type": "boolean"
+                    },
+                    "pointsMinRedeem": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
+                    "pointsRedeemSatang": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      ],
+                      "minimum": 1
+                    },
                     "promptpayMode": {
                       "enum": [
                         "bank",
@@ -31286,6 +32418,10 @@
                     "receiptPrinterPort",
                     "receiptPrinterEnabled",
                     "cashDrawerEnabled",
+                    "pointsEnabled",
+                    "pointsEarnSatang",
+                    "pointsRedeemSatang",
+                    "pointsMinRedeem",
                     "logoUrl"
                   ],
                   "type": "object"

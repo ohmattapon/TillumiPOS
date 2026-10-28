@@ -1,5 +1,6 @@
 import { DomainConflictError } from './errors/domain-conflict.error'
 import { DomainError } from './errors/domain-error'
+import type { PointsRule } from './member-points'
 import type { LineOption } from './modifier.domain'
 import { calculateTotals, type VatMode } from './pricing'
 import type { ProductEntity } from './product.domain'
@@ -110,6 +111,16 @@ export interface NewSale extends SaleTotals, SaleSeller {
   cashierName: string
   items: SaleItem[]
   payments: SalePayment[]
+  /**
+   * What the sale gave and took in points, pinned with the rule it used, so changing
+   * the rule later never rewrites an old receipt. Zero on sales made before points existed.
+   */
+  pointsEarned?: number
+  pointsRedeemed?: number
+  pointsDiscountSatang?: number
+  pointsRule?: PointsRule | null
+  /** The member's balance right after this sale, so a receipt can show what is left. */
+  pointsBalanceAfter?: number | null
 }
 
 export interface SaleEntityProps extends NewSale {
@@ -166,6 +177,11 @@ export class SaleEntity {
   public readonly vatSatang: number
   public readonly paidSatang: number
   public readonly changeSatang: number
+  public readonly pointsEarned: number
+  public readonly pointsRedeemed: number
+  public readonly pointsDiscountSatang: number
+  public readonly pointsRule: PointsRule | null
+  public readonly pointsBalanceAfter: number | null
   public readonly vatMode: VatMode
   public readonly vatRateBp: number
   public readonly branchId: number
@@ -201,6 +217,12 @@ export class SaleEntity {
     this.vatSatang = props.vatSatang
     this.paidSatang = props.paidSatang
     this.changeSatang = props.changeSatang
+    // `?? 0` / `?? null`: a sale stored before points existed has none of them.
+    this.pointsEarned = props.pointsEarned ?? 0
+    this.pointsRedeemed = props.pointsRedeemed ?? 0
+    this.pointsDiscountSatang = props.pointsDiscountSatang ?? 0
+    this.pointsRule = props.pointsRule ?? null
+    this.pointsBalanceAfter = props.pointsBalanceAfter ?? null
     this.vatMode = props.vatMode
     this.vatRateBp = props.vatRateBp
     this.branchId = props.branchId
@@ -327,6 +349,11 @@ export class SaleEntity {
       vatSatang: this.vatSatang,
       paidSatang: this.paidSatang,
       changeSatang: this.changeSatang,
+      pointsEarned: this.pointsEarned,
+      pointsRedeemed: this.pointsRedeemed,
+      pointsDiscountSatang: this.pointsDiscountSatang,
+      pointsRule: this.pointsRule,
+      pointsBalanceAfter: this.pointsBalanceAfter,
       vatMode: this.vatMode,
       vatRateBp: this.vatRateBp,
       branchId: this.branchId,

@@ -1,6 +1,11 @@
 import { inject, injectable } from 'tsyringe'
 import { DomainError } from '../../../../domains/errors/domain-error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
+import {
+  assertRedeemable,
+  pointsDiscountSatang as discountForPoints,
+  type PointsRule,
+} from '../../../../domains/member-points'
 import { lineKey } from '../../../../domains/modifier.domain'
 import { assertPackHasNoOptions, packUnitPriceSatang } from '../../../../domains/product-pack'
 import { PriceQuoteEntity, type QuoteLine } from '../../../../domains/price-quote.domain'
@@ -14,6 +19,7 @@ import { priceQuoteRepositoryToken, type IPriceQuoteRepository } from '../ports/
 import { promotionCatalogToken, type IPromotionCatalog } from '../ports/promotion-catalog.port'
 import { quoteLineOptionsToken, type IQuoteLineOptions } from '../ports/quote-line-options.port'
 import { quoteMembersToken, type IQuoteMembers } from '../ports/quote-members.port'
+import { quotePointsToken, type IQuotePoints } from '../ports/quote-points.port'
 import { quoteProductsToken, type IQuoteProducts } from '../ports/quote-products.port'
 import { quoteShopRulesToken, type IQuoteShopRules } from '../ports/quote-shop-rules.port'
 import { createQuoteSchema } from '../schemas/quote-schemas'
@@ -34,6 +40,7 @@ export class CreateQuoteUseCase {
     @inject(orderQuoteSourceToken) private readonly orders: IOrderQuoteSource,
     @inject(priceQuoteRepositoryToken) private readonly quotes: IPriceQuoteRepository,
     @inject(TOKENS.Clock) private readonly clock: IClock,
+    @inject(quotePointsToken) private readonly points: IQuotePoints,
   ) {}
 
   async execute(input: unknown, actor: { id: number }, branch: { id: number }) {
@@ -75,6 +82,24 @@ export class CreateQuoteUseCase {
       })),
     })
 
+    // The rule is pinned on the quote, so a sale made from it redeems at the rate the cashier saw.
+    const rule: PointsRule = {
+      earnSatang: shop.pointsEarnSatang,
+      redeemSatang: shop.pointsRedeemSatang,
+      minRedeem: shop.pointsMinRedeem,
+    }
+    const redeemPoints = dto.redeemPoints ?? 0
+    let pointsDiscount = 0
+    if (redeemPoints > 0) {
+      if (memberId === null) throw new DomainError('ต้องเลือกสมาชิกก่อนใช้แต้ม', 'MEMBER_REQUIRED')
+      if (!shop.pointsEnabled) throw new DomainError('ร้านนี้ยังไม่เปิดใช้แต้มสมาชิก', 'POINTS_DISABLED')
+      // Points come off what is left after the promotion, so a cart can never pay less than nothing.
+      const payableSatang = subtotalSatang - (best?.discountSatang ?? 0)
+      const balance = await this.points.balanceOf(memberId)
+      assertRedeemable(redeemPoints, payableSatang, balance, rule)
+      pointsDiscount = discountForPoints(redeemPoints, rule)
+    }
+
     return this.quotes.create(
       PriceQuoteEntity.price(
         {
@@ -86,6 +111,9 @@ export class CreateQuoteUseCase {
           promotion: best ? best.promotion.toSalePromotion(best.discountSatang) : null,
           vatMode: shop.vatMode,
           vatRateBp: shop.vatRateBp,
+          pointsRedeemed: redeemPoints,
+          pointsDiscountSatang: pointsDiscount,
+          pointsRule: rule,
           createdById: actor.id,
         },
         now,

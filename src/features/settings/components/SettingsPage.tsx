@@ -1,4 +1,5 @@
 import type { ShopSettings } from '@pos/api/types'
+import { pointsDiscountSatang, pointsEarned, type PointsRule } from '@pos/api/points'
 import { PROMPTPAY_MODES } from '@pos/api/shop-settings'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
@@ -69,8 +70,10 @@ function FeatureSwitch({ label, hint, checked, onChange }: { label: string; hint
 function SettingsForm({ settings }: { settings: ShopSettings }) {
   const { t } = useTranslation('settings')
   const save = useUpdateSettings()
+  // The rule is stored in minor units, so the form reads and writes it through the shop's currency.
+  const settingsMoney = createMoney(settings.currency, settings.locale)
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     shopName: settings.shopName,
     taxId: settings.taxId ?? '',
     address: settings.address ?? '',
@@ -91,7 +94,11 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     modifiersEnabled: settings.modifiersEnabled,
     promptpayMode: settings.promptpayMode,
     promptpayTarget: settings.promptpayTarget ?? '',
-  })
+    pointsEnabled: settings.pointsEnabled,
+    pointsEarn: settingsMoney.toInput(settings.pointsEarnSatang),
+    pointsRedeem: settingsMoney.toInput(settings.pointsRedeemSatang),
+    pointsMinRedeem: String(settings.pointsMinRedeem),
+  }))
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm({ ...form, [key]: value })
 
   const timeZones = useMemo(() => timeZoneOptions(settings.timeZone), [settings.timeZone])
@@ -101,6 +108,24 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
   const rate = Number(form.vatRate)
   const isRateValid = form.vatRate.trim() !== '' && Number.isFinite(rate) && rate >= 0 && rate <= 100
   const isPromptPayValid = canSavePromptPay(form.promptpayMode, form.promptpayTarget)
+  // The form is shown in the shop's currency; the rule itself is kept in minor units.
+  const money = useMemo(() => createMoney(form.currency, form.locale), [form.currency, form.locale])
+  const earnSatang = money.parse(form.pointsEarn)
+  const redeemSatang = money.parse(form.pointsRedeem)
+  const minRedeem = Number(form.pointsMinRedeem)
+  const isPointsValid =
+    earnSatang !== null &&
+    earnSatang >= 100 &&
+    redeemSatang !== null &&
+    redeemSatang >= 1 &&
+    form.pointsMinRedeem.trim() !== '' &&
+    Number.isInteger(minRedeem) &&
+    minRedeem >= 1
+  const pointsRule: PointsRule = {
+    earnSatang: earnSatang ?? settings.pointsEarnSatang,
+    redeemSatang: redeemSatang ?? settings.pointsRedeemSatang,
+    minRedeem: Number.isInteger(minRedeem) ? minRedeem : settings.pointsMinRedeem,
+  }
   const printerIp = form.receiptPrinterIp.trim()
   const isPrinterIpValid = printerIp === '' || /^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$/.test(printerIp)
   const printerPort = Number(form.receiptPrinterPort)
@@ -134,9 +159,15 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
     modifiersEnabled: form.modifiersEnabled,
     promptpayMode: form.promptpayMode,
     promptpayTarget: normalizePromptPayTarget(form.promptpayTarget),
+    // Points are edited in their own section, next to the features they change.
+    pointsEnabled: form.pointsEnabled,
+    pointsEarnSatang: pointsRule.earnSatang,
+    pointsRedeemSatang: pointsRule.redeemSatang,
+    pointsMinRedeem: pointsRule.minRedeem,
   }
   const isDirty = JSON.stringify(changes) !== JSON.stringify(persisted)
-  const canSave = isDirty && isRateValid && isPromptPayValid && isPrinterValid && changes.shopName !== '' && !save.isPending
+  const canSave =
+    isDirty && isRateValid && isPromptPayValid && isPrinterValid && isPointsValid && changes.shopName !== '' && !save.isPending
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -257,6 +288,59 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
             onChange={(event) => set('vatRate', event.target.value)}
           />
         </Field>
+      </Section>
+
+      <Section title={t('points.title')}>
+        <FeatureSwitch
+          label={t('points.enabled')}
+          hint={t('points.enabledHint')}
+          checked={form.pointsEnabled}
+          onChange={(on) => set('pointsEnabled', on)}
+        />
+        <Field label={t('points.earn')} hint={t('points.earnHint')}>
+          <Input
+            className="h-10 text-right tabular-nums"
+            inputMode="decimal"
+            value={form.pointsEarn}
+            aria-invalid={earnSatang === null || earnSatang < 100}
+            onChange={(event) => set('pointsEarn', event.target.value)}
+          />
+        </Field>
+        <Field label={t('points.redeem')} hint={t('points.redeemHint')}>
+          <Input
+            className="h-10 text-right tabular-nums"
+            inputMode="decimal"
+            value={form.pointsRedeem}
+            aria-invalid={redeemSatang === null || redeemSatang < 1}
+            onChange={(event) => set('pointsRedeem', event.target.value)}
+          />
+        </Field>
+        <Field label={t('points.minRedeem')} hint={t('points.minRedeemHint')}>
+          <Input
+            className="h-10 text-right tabular-nums"
+            inputMode="numeric"
+            value={form.pointsMinRedeem}
+            aria-invalid={!Number.isInteger(minRedeem) || minRedeem < 1}
+            onChange={(event) => set('pointsMinRedeem', event.target.value)}
+          />
+        </Field>
+        {isPointsValid ? (
+          <>
+            <p className="text-sm text-muted-foreground sm:col-span-2">
+              {t('points.example', { amount: money.format(125_050), points: pointsEarned(125_050, pointsRule) })}
+            </p>
+            <p className="text-sm text-muted-foreground sm:col-span-2">
+              {t('points.redeemExample', {
+                points: pointsRule.minRedeem,
+                amount: money.format(pointsDiscountSatang(pointsRule.minRedeem, pointsRule)),
+              })}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-destructive sm:col-span-2" role="alert">
+            {t('points.invalid')}
+          </p>
+        )}
       </Section>
 
       <Section title={t('promptpay.title')}>

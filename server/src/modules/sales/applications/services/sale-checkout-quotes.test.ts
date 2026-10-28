@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { makeBranch, makePriceQuote, makeProduct, makeSale } from '../../../../__tests__/factories'
 import {
-  mockBranchRepository, mockCheckoutPolicy, mockLineOptionsResolver, mockMemberRepository,
+  mockBranchRepository, mockCheckoutPolicy, mockCheckoutPoints, mockLineOptionsResolver, mockMemberRepository,
   mockProductRepository, mockQrPaymentClaims, mockQuoteClaims, mockSaleRepository, mockShiftLedger,
   mockShopSettingsRepository, mockStockLedger,
 } from '../../../../__tests__/mocks'
@@ -52,7 +52,7 @@ describe('SaleCheckout with a pinned price', () => {
     sales.create.mockImplementation(async (sale, receiptNo) => makeSale({ ...sale, id: 31, receiptNo }))
     checkout = new SaleCheckout(
       sales, products, ledger, settings, qr, mockCheckoutPolicy(), mockShiftLedger(),
-      mockLineOptionsResolver(), members, quotes,
+      mockLineOptionsResolver(), members, mockCheckoutPoints(), quotes,
     )
   })
 
@@ -163,7 +163,7 @@ describe('SaleCheckout without a quote', () => {
     sales.create.mockImplementation(async (sale, receiptNo) => makeSale({ ...sale, id: 2, receiptNo }))
     const checkout = new SaleCheckout(
       sales, products, mockStockLedger(), settings, mockQrPaymentClaims(), mockCheckoutPolicy(), mockShiftLedger(),
-      mockLineOptionsResolver(), mockMemberRepository(), quotes,
+      mockLineOptionsResolver(), mockMemberRepository(), mockCheckoutPoints(), quotes,
     )
 
     const sale = await checkout.checkout({
