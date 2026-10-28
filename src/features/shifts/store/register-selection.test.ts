@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { selectedRegisterId, useRegisterSelectionStore } from './register-selection'
+import { readSelections, selectedRegisterId, useRegisterSelectionStore } from './register-selection'
 
 describe('register selection scope', () => {
   test('returns only the register remembered for the current user', () => {
@@ -49,6 +49,23 @@ describe('remembering the choice in the browser', () => {
 
     expect(useRegisterSelectionStore.getState().selections).toEqual({ '4': 9 })
     expect(JSON.parse(stored.get('pos.register-selection')!)).toEqual({ '4': 9 })
+  })
+
+  test('a stored choice that is not readable starts empty', () => {
+    stored.set('pos.register-selection', '{not json')
+    expect(readSelections()).toEqual({})
+
+    stored.set('pos.register-selection', '[1, 2]')
+    expect(readSelections()).toEqual({})
+  })
+
+  test('clear forgets every choice in the store and in local storage', () => {
+    useRegisterSelectionStore.getState().select(4, 9)
+
+    useRegisterSelectionStore.getState().clear()
+
+    expect(useRegisterSelectionStore.getState().selections).toEqual({})
+    expect(stored.has('pos.register-selection')).toBe(false)
   })
 
   test('a hand over survives a storage that refuses to write', () => {

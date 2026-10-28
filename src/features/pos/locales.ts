@@ -3,6 +3,9 @@ const th = {
     pending: 'ออเดอร์นี้ถูกล็อกเพราะมี QR รอชำระ {{amount}} ยกเลิก QR ก่อนแก้ไขออเดอร์',
     paid: 'ลูกค้าชำระ {{amount}} แล้ว ชำระออเดอร์นี้ด้วยเงินก้อนนี้จากปุ่มชำระเงิน',
     cancel: 'ยกเลิก QR นี้',
+    confirmTitle: 'ยกเลิก QR นี้?',
+    confirmDescription: 'QR นี้จะใช้ชำระไม่ได้อีก หากลูกค้ายังไม่จ่าย ให้สร้าง QR ใหม่',
+    confirm: 'ยืนยันยกเลิก QR',
   },
   header: {
     switchStaff: 'สลับพนักงาน',
@@ -193,6 +196,9 @@ const en = {
     pending: 'This order is locked by a QR waiting for {{amount}}. Cancel the QR to edit the order.',
     paid: 'The customer has paid {{amount}}. Pay this order with that money from the payment button.',
     cancel: 'Cancel this QR',
+    confirmTitle: 'Cancel this QR?',
+    confirmDescription: 'This QR can no longer be used for payment. Issue a new one if the customer has not paid yet.',
+    confirm: 'Confirm cancel QR',
   },
   header: {
     switchStaff: 'Switch staff',

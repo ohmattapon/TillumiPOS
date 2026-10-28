@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { SkeletonRows } from '@/components/Skeletons'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -48,11 +49,19 @@ export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
         {sale.isPending && <SkeletonRows rows={5} />}
         {sale.data && <Receipt sale={sale.data} elementRef={receiptRef} />}
 
-        {isVoiding ? (
-          <form
-            className="space-y-3"
-            onSubmit={(event) => {
-              event.preventDefault()
+        {isVoiding && (
+          <ConfirmDialog
+            open
+            onOpenChange={(open) => !open && setIsVoiding(false)}
+            title={t('detail.voidSale')}
+            description={t('detail.voidWarning')}
+            confirmLabel={t('detail.confirmVoid')}
+            pendingLabel={t('detail.voiding')}
+            cancelLabel={t('detail.keep')}
+            destructive
+            pending={voidSale.isPending}
+            confirmDisabled={reason.trim() === ''}
+            onConfirm={() => {
               voidSale.mutate(reason.trim(), {
                 onSuccess: (voided) => {
                   toast.success(t('detail.voidedToast', { receiptNo: voided.receiptNo }))
@@ -73,23 +82,10 @@ export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
                 autoFocus
                 required
               />
-              <p className="text-xs text-muted-foreground">{t('detail.voidWarning')}</p>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button type="button" variant="outline" className="h-10" onClick={() => setIsVoiding(false)}>
-                {t('detail.keep')}
-              </Button>
-              <Button
-                type="submit"
-                variant="destructive"
-                className="h-10"
-                disabled={reason.trim() === '' || voidSale.isPending}
-              >
-                {voidSale.isPending ? t('detail.voiding') : t('detail.confirmVoid')}
-              </Button>
-            </div>
-          </form>
-        ) : (
+          </ConfirmDialog>
+        )}
+        {!isVoiding && (
           <div className="flex gap-2">
             {canVoid && sale.data?.status === 'completed' && (
               <Button variant="destructive" className="h-10 flex-1" onClick={() => setIsVoiding(true)}>
@@ -98,18 +94,27 @@ export function SaleDetailDialog({ saleId, canVoid, onClose }: Props) {
             )}
             {canVoid && sale.data?.status === 'voided' && hasCash && (
               isRefunding ? (
-                <form className="flex-1 space-y-2" onSubmit={(event) => {
-                  event.preventDefault()
-                  if (!shift.data || !refundReason.trim()) return
-                  cashRefund.mutate({ shiftId: shift.data.id, reason: refundReason.trim() }, {
-                    onSuccess: () => { toast.success(t('detail.refundRecorded')); setIsRefunding(false) },
-                    onError: (error) => toast.error(error.message),
-                  })
-                }}>
-                  <Label htmlFor="refund-reason">{t('detail.refundReason')}</Label>
-                  <Textarea id="refund-reason" value={refundReason} onChange={(event) => setRefundReason(event.target.value)} required maxLength={500} />
-                  <div className="flex gap-2"><Button type="button" variant="outline" className="h-10 flex-1" onClick={() => setIsRefunding(false)}>{t('detail.keep')}</Button><Button type="submit" className="h-10 flex-1" disabled={!shift.data || !refundReason.trim() || cashRefund.isPending}>{t('detail.confirmRefund')}</Button></div>
-                </form>
+                <ConfirmDialog
+                  open
+                  onOpenChange={(open) => !open && setIsRefunding(false)}
+                  title={t('detail.cashRefund')}
+                  confirmLabel={t('detail.confirmRefund')}
+                  cancelLabel={t('detail.keep')}
+                  pending={cashRefund.isPending}
+                  confirmDisabled={!shift.data || !refundReason.trim()}
+                  onConfirm={() => {
+                    if (!shift.data || !refundReason.trim()) return
+                    cashRefund.mutate({ shiftId: shift.data.id, reason: refundReason.trim() }, {
+                      onSuccess: () => { toast.success(t('detail.refundRecorded')); setIsRefunding(false) },
+                      onError: (error) => toast.error(error.message),
+                    })
+                  }}
+                >
+                  <div className="space-y-2">
+                    <Label htmlFor="refund-reason">{t('detail.refundReason')}</Label>
+                    <Textarea id="refund-reason" value={refundReason} onChange={(event) => setRefundReason(event.target.value)} required maxLength={500} autoFocus />
+                  </div>
+                </ConfirmDialog>
               ) : <Button variant="outline" className="h-10" disabled={!shift.data} onClick={() => setIsRefunding(true)}>{t('detail.cashRefund')}</Button>
             )}
             <LanPrintButton saleId={saleId} receiptRef={receiptRef} disabled={!sale.data} />
