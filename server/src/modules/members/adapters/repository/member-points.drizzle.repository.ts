@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql, sum } from 'drizzle-orm'
+import { and, count, desc, eq, inArray, sql, sum } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
@@ -11,6 +11,9 @@ import type {
   PointMovementEntry,
 } from '../../../sales/applications/ports/checkout-points.port'
 import type { IQuotePoints } from '../../../quotes/applications/ports/quote-points.port'
+import type { PointMovement } from '../../../../domains/member-points'
+import type { Page } from '../../../../domains/page'
+import type { IMemberPoints } from '../../applications/ports/member-points.port'
 
 /**
  * Answers the sales and quotes modules from our own ledger, so a bill never reads
@@ -18,7 +21,7 @@ import type { IQuotePoints } from '../../../quotes/applications/ports/quote-poin
  * row and the cached balance move together, or not at all.
  */
 @injectable()
-export class DrizzleMemberPointsLedger implements ICheckoutPoints, IQuotePoints {
+export class DrizzleMemberPointsLedger implements ICheckoutPoints, IQuotePoints, IMemberPoints {
   async balanceOf(memberId: number): Promise<number> {
     const [row] = await currentExecutor()
       .select({ balance: members.pointsBalance })
@@ -83,5 +86,28 @@ export class DrizzleMemberPointsLedger implements ICheckoutPoints, IQuotePoints 
     // Redeem rows are stored negative and a return is positive, so what is still held is what they leave.
     const held = -(Number(row?.points ?? 0))
     return held > 0 ? held : null
+  }
+
+  async listMovements(memberId: number, { limit, offset }: { limit: number; offset: number }): Promise<Page<PointMovement>> {
+    const executor = currentExecutor()
+    const memberMovements = eq(memberPointMovements.memberId, memberId)
+    const items = await executor
+      .select({
+        id: memberPointMovements.id,
+        kind: memberPointMovements.kind,
+        points: memberPointMovements.points,
+        saleId: memberPointMovements.saleId,
+        quoteId: memberPointMovements.quoteId,
+        reason: memberPointMovements.reason,
+        actorId: memberPointMovements.createdById,
+        createdAt: memberPointMovements.createdAt,
+      })
+      .from(memberPointMovements)
+      .where(memberMovements)
+      .orderBy(desc(memberPointMovements.createdAt), desc(memberPointMovements.id))
+      .limit(limit)
+      .offset(offset)
+    const [total] = await executor.select({ value: count() }).from(memberPointMovements).where(memberMovements)
+    return { items, total: total!.value }
   }
 }

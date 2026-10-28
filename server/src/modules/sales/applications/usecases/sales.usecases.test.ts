@@ -58,6 +58,7 @@ let checkoutPolicy: ReturnType<typeof mockCheckoutPolicy>
 let shiftLedger: ReturnType<typeof mockShiftLedger>
 let branches: ReturnType<typeof mockBranchRepository>
 let lineOptions: ReturnType<typeof mockLineOptionsResolver>
+let points: ReturnType<typeof mockCheckoutPoints>
 
 beforeEach(() => {
   sales = mockSaleRepository()
@@ -70,6 +71,7 @@ beforeEach(() => {
   shiftLedger = mockShiftLedger()
   branches = mockBranchRepository()
   lineOptions = mockLineOptionsResolver()
+  points = mockCheckoutPoints()
   branches.findById.mockResolvedValue(makeBranch())
   settings.get.mockResolvedValue(new ShopSettingsEntity(DEFAULT_SHOP_SETTINGS))
   ledger.record.mockResolvedValue(makeStockMovement())
@@ -449,7 +451,7 @@ describe('VoidSaleUseCase', () => {
 
   beforeEach(() => {
     sales.findByIdForUpdate.mockResolvedValue(twoLines())
-    useCase = new VoidSaleUseCase(sales, ledger, unitOfWork, clock, auditMock())
+    useCase = new VoidSaleUseCase(sales, ledger, points, unitOfWork, clock, auditMock())
   })
 
   test('voids the sale with the reason, user and current time, inside one unit of work', async () => {
@@ -507,6 +509,48 @@ describe('VoidSaleUseCase', () => {
     const voided = await useCase.execute(15, { reason: 'คิดเงินผิด' }, { ...{ id: 9, role: 'owner' }, displayName: 'ผู้ทดสอบ' }, 1)
 
     expect(voided.items.map((item) => item.productId)).toEqual([5, 2])
+  })
+
+  test('voiding returns redeemed points and removes the points the bill earned', async () => {
+    sales.findByIdForUpdate.mockResolvedValue(makeSale({
+      id: 15,
+      member: { id: 4, code: 'M-0001', name: 'สมหญิง' },
+      pointsEarned: 30,
+      pointsRedeemed: 20,
+    }))
+    points.balanceOf.mockResolvedValue(120)
+
+    await useCase.execute(15, { reason: 'คิดเงินผิด' }, { ...{ id: 9, role: 'owner' }, displayName: 'ผู้ทดสอบ' }, 1)
+
+    expect(points.lockMember).toHaveBeenCalledWith(4)
+    expect(points.record.mock.calls.map(([entry]) => entry)).toEqual([
+      { memberId: 4, kind: 'void_redeem', points: 20, saleId: 15, quoteId: null, reason: 'คิดเงินผิด', actorId: 9 },
+      { memberId: 4, kind: 'void_earn', points: -30, saleId: 15, quoteId: null, reason: null, actorId: 9 },
+    ])
+  })
+
+  test('voiding when the earned points were already spent stops at zero and records the shortfall', async () => {
+    sales.findByIdForUpdate.mockResolvedValue(makeSale({
+      id: 15,
+      member: { id: 4, code: 'M-0001', name: 'สมหญิง' },
+      pointsEarned: 30,
+      pointsRedeemed: 0,
+    }))
+    points.balanceOf.mockResolvedValue(5)
+
+    await useCase.execute(15, { reason: 'คิดเงินผิด' }, { ...{ id: 9, role: 'owner' }, displayName: 'ผู้ทดสอบ' }, 1)
+
+    expect(points.record.mock.calls.map(([entry]) => entry)).toEqual([
+      { memberId: 4, kind: 'void_earn', points: -5, saleId: 15, quoteId: null, reason: 'คืนแต้มได้ไม่ครบ ขาด 25 แต้ม', actorId: 9 },
+    ])
+  })
+
+  test('a sale without a member leaves the ledger alone', async () => {
+    await useCase.execute(15, { reason: 'คิดเงินผิด' }, { ...{ id: 9, role: 'owner' }, displayName: 'ผู้ทดสอบ' }, 1)
+
+    expect(points.lockMember).not.toHaveBeenCalled()
+    expect(points.record).not.toHaveBeenCalled()
+    expect(points.balanceOf).not.toHaveBeenCalled()
   })
 
   test('an unknown sale is not found', async () => {
@@ -938,7 +982,7 @@ describe('SaleCheckout with a pinned pack', () => {
 
 test('void requires sales.void before accessing persistence', async () => {
   const sales = mockSaleRepository()
-  const usecase = new VoidSaleUseCase(sales, mockStockLedger(), mockUnitOfWork(), { now: () => new Date() }, auditMock())
+  const usecase = new VoidSaleUseCase(sales, mockStockLedger(), mockCheckoutPoints(), mockUnitOfWork(), { now: () => new Date() }, auditMock())
   await expect(usecase.execute(1, { reason: 'incorrect' }, { ...{ id: 9, role: 'cashier' }, displayName: 'ผู้ทดสอบ' }, 1))
     .rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'sales.void' } })
   expect(sales.findByIdForUpdate).not.toHaveBeenCalled()

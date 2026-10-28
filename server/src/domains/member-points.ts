@@ -23,6 +23,19 @@ export const POINT_MOVEMENT_KINDS = [
 
 export type PointMovementKind = (typeof POINT_MOVEMENT_KINDS)[number]
 
+/** One row of the ledger, as a member's history shows it. */
+export interface PointMovement {
+  id: number
+  kind: PointMovementKind
+  /** Signed: earn and adjust add points, redeem and void_earn take them away. */
+  points: number
+  saleId: number | null
+  quoteId: number | null
+  reason: string | null
+  actorId: number
+  createdAt: Date
+}
+
 export function assertValidPointsRule(rule: PointsRule): void {
   const values = [rule.earnSatang, rule.redeemSatang, rule.minRedeem]
   if (!values.every((value) => Number.isInteger(value)))
