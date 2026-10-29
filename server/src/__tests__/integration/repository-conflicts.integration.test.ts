@@ -198,13 +198,6 @@ describe('registers', () => {
     await expect(registers.update(makeRegister({ id: 99999 }))).rejects.toMatchObject({ code: 'REGISTER_NOT_FOUND' })
   })
 
-  test('the MAIN register of a branch is created once, however often it is asked for', async () => {
-    await registers.createMainForBranch(1)
-    await registers.createMainForBranch(1)
-
-    expect((await registers.findAll(1)).filter((register) => register.code === 'MAIN')).toHaveLength(1)
-  })
-
   test('a register is busy while a shift of it is open', async () => {
     const previousMode = Bun.env.CHECKOUT_MODE
     Bun.env.CHECKOUT_MODE = 'shifts'

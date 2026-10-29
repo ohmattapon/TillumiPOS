@@ -7,8 +7,6 @@ export interface IRegisterRepository {
   create(entity: RegisterEntity): Promise<RegisterEntity>
   update(entity: RegisterEntity): Promise<RegisterEntity>
   hasOpenShift(registerId: number): Promise<boolean>
-  /** Ensures every newly-created branch has its immutable MAIN register. */
-  createMainForBranch(branchId: number): Promise<void>
 }
 
 const token: unique symbol = Symbol('IRegisterRepository')
