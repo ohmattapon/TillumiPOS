@@ -42,6 +42,15 @@ export interface ReportCashier {
   /** Completed and voided bills both count: the list picks who to filter by. */
   bills: number
 }
+export interface ReportCategorySums {
+  /** The category stored on the bill lines when they were sold; null for lines sold with none. */
+  categoryId: number | null
+  quantity: number
+  /** The lines' share of bill totals after discount, net of VAT. */
+  netSalesSatang: number
+  vatSatang: number
+  costSatang: number
+}
 export type ReportPageQuery = SalesReportPeriod & { limit: number; offset: number }
 export type ReportItemSort = 'quantity' | 'sales' | 'profit' | 'margin'
 export interface ReportItem {
@@ -70,6 +79,8 @@ export interface ISalesReportRepository {
   products(query: ReportPageQuery): Promise<Page<ReportProduct>>
   /** Per product and pack size, completed bills only, sorted descending by `sort` and then by product id. */
   items(query: ReportItemQuery): Promise<Page<ReportItem>>
+  /** Per category stored on the line, completed bills only, sorted by net sales descending, then category id with no category last. */
+  categories(query: ReportPageQuery): Promise<Page<ReportCategorySums>>
   branches(query: ReportPageQuery): Promise<Page<SalesReportSums & { branchId: number }>>
   promotions(query: ReportPageQuery): Promise<Page<ReportPromotion>>
   /** Ignores `cashierId` and `customer`, so the list shows everyone who sold in the range. */

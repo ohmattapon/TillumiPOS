@@ -7,6 +7,7 @@ import { GetPromotionReportUseCase } from '../../applications/usecases/get-promo
 import { ListReportProductsUseCase } from '../../applications/usecases/list-report-products.usecase'
 import { ListReportBranchesUseCase } from '../../applications/usecases/list-report-branches.usecase'
 import { ListReportCashiersUseCase } from '../../applications/usecases/list-report-cashiers.usecase'
+import { ListReportCategoriesUseCase } from '../../applications/usecases/list-report-categories.usecase'
 import { ListReportItemsUseCase } from '../../applications/usecases/list-report-items.usecase'
 import { reportSchemas } from './schemas/sales-report.schema'
 
@@ -19,6 +20,7 @@ export class SalesReportElysiaController {
     @inject(GetPromotionReportUseCase) private readonly promotions: GetPromotionReportUseCase,
     @inject(ListReportCashiersUseCase) private readonly cashiers: ListReportCashiersUseCase,
     @inject(ListReportItemsUseCase) private readonly items: ListReportItemsUseCase,
+    @inject(ListReportCategoriesUseCase) private readonly categories: ListReportCategoriesUseCase,
   ) {}
   getRoutes() {
     return new Elysia({ name: 'sales-reports', prefix: '/sales/reports', detail: { tags: ['Sales'] } })
@@ -34,6 +36,10 @@ export class SalesReportElysiaController {
       .get('/items', async ({ query, user, branch }) => this.items.execute(query, user, (await branch()).id), {
         auth: { can: 'reports.read' }, query: reportSchemas.itemsQuery, response: page(reportSchemas.item),
         detail: { summary: 'ยอดขาย ต้นทุน และกำไรแยกตามสินค้าและขนาดแพ็ก ใช้ข้อมูล ณ ตอนขาย' },
+      })
+      .get('/categories', async ({ query, user, branch }) => this.categories.execute(query, user, (await branch()).id), {
+        auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: page(reportSchemas.category),
+        detail: { summary: 'ยอดขาย ต้นทุน กำไร และสัดส่วนแยกตามหมวดหมู่ ใช้หมวดหมู่ ณ ตอนขาย' },
       })
       .get('/branches', async ({ query, user, branch }) => this.branches.execute(query, user, (await branch()).id), {
         auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: page(reportSchemas.branch),

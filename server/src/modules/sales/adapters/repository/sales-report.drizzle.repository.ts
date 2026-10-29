@@ -4,7 +4,7 @@ import { currentExecutor } from '../../../../libs/transaction-context'
 import type { Page } from '../../../../domains/page'
 import type { SalesReportSums } from '../../../../domains/sales-report'
 import type {
-  ISalesReportRepository, SalesReportPeriod, ReportOverviewSums, ReportProduct, ReportPageQuery, ReportPromotion, ReportCashier, ReportItem, ReportItemQuery,
+  ISalesReportRepository, SalesReportPeriod, ReportOverviewSums, ReportProduct, ReportPageQuery, ReportPromotion, ReportCashier, ReportItem, ReportItemQuery, ReportCategorySums,
 } from '../../applications/ports/sales-report.repository'
 
 // Aggregate sale costs first: joining lines or payments directly would multiply bill totals.
@@ -123,6 +123,29 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
         (select count(*)::integer from grouped) as total
     `)
     return { items: row!.items as ReportItem[], total: Number(row!.total) }
+  }
+
+  async categories(query: ReportPageQuery): Promise<Page<ReportCategorySums>> {
+    // A line keeps the category it was sold with, even if the category was deleted since; no fallback to the product.
+    const [row] = await currentExecutor().execute<{ items: ReportCategorySums[]; total: number }>(sql`
+      with ${facts(query)},
+      grouped as (
+        select i.category_id as "categoryId",
+          sum(i.quantity)::bigint as quantity,
+          coalesce(sum(i.allocated_total_satang - i.allocated_vat_satang), 0)::bigint as "netSalesSatang",
+          coalesce(sum(i.allocated_vat_satang), 0)::bigint as "vatSatang",
+          coalesce(sum(i.unit_cost_satang::bigint * i.quantity), 0)::bigint as "costSatang"
+        from sale_items i
+        join period_sales s on s.id = i.sale_id
+        where s.status = 'completed'
+        group by i.category_id
+      ),
+      ranked as (select *, row_number() over (order by "netSalesSatang" desc, "categoryId" nulls last) as rn from grouped),
+      paged as (select * from ranked order by rn limit ${query.limit} offset ${query.offset})
+      select coalesce((select jsonb_agg(to_jsonb(paged) - 'rn' order by rn) from paged), '[]'::jsonb) as items,
+        (select count(*)::integer from grouped) as total
+    `)
+    return { items: row!.items as ReportCategorySums[], total: Number(row!.total) }
   }
 
   async branches(query: ReportPageQuery): Promise<Page<SalesReportSums & { branchId: number }>> {

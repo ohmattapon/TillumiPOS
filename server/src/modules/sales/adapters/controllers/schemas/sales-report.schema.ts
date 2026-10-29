@@ -25,6 +25,11 @@ const item = t.Object({
   quantity: t.Integer(), pieces: t.Integer(), netSalesSatang: t.Integer(), vatSatang: t.Integer(),
   costSatang: t.Integer(), profitSatang: t.Integer(),
 })
+const categoryRow = t.Object({
+  categoryId: t.Nullable(t.Integer()), name: t.Nullable(t.String()),
+  quantity: t.Integer(), netSalesSatang: t.Integer(), vatSatang: t.Integer(),
+  costSatang: t.Integer(), profitSatang: t.Integer(), shareBp: t.Integer(),
+})
 const branch = t.Intersect([metrics, t.Object({ branchId: t.Integer(), branchName: t.String() })])
 const promotionRow = t.Object({
   promotionId: t.Integer(), name: t.String(), bills: t.Integer(),
@@ -59,10 +64,11 @@ export const reportSchemas = {
     limit: t.Optional(t.Numeric({ minimum: 1, maximum: 500 })),
     offset: t.Optional(t.Numeric({ minimum: 0 })),
   }),
-  overview, product, item, branch, promotion: promotionRow, cashier,
+  overview, product, item, category: categoryRow, branch, promotion: promotionRow, cashier,
 }
 export type SalesReportResponse = Static<typeof overview>
 export type ReportProductResponse = Static<typeof product>
 export type ReportItemResponse = Static<typeof item>
+export type ReportCategoryResponse = Static<typeof categoryRow>
 export type ReportBranchResponse = Static<typeof branch>
 export type ReportPromotionResponse = Static<typeof promotionRow>

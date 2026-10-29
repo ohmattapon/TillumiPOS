@@ -1,12 +1,13 @@
 import { beforeEach, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
-import { mockSalesReportRepository, mockReportTimeZone, mockReportBranchNames } from '../../../../__tests__/mocks'
+import { mockSalesReportRepository, mockReportTimeZone, mockReportBranchNames, mockReportCategoryNames } from '../../../../__tests__/mocks'
 import { GetSalesReportUseCase } from './get-sales-report.usecase'
 import { GetPromotionReportUseCase } from './get-promotion-report.usecase'
 import { ListReportProductsUseCase } from './list-report-products.usecase'
 import { ListReportBranchesUseCase } from './list-report-branches.usecase'
 import { ListReportCashiersUseCase } from './list-report-cashiers.usecase'
 import { ListReportItemsUseCase } from './list-report-items.usecase'
+import { ListReportCategoriesUseCase } from './list-report-categories.usecase'
 
 const range = { from: '2026-01-01', to: '2026-01-31' }
 const owner = { role: 'owner' as const }
@@ -20,6 +21,8 @@ let comparison: ListReportBranchesUseCase
 let promotionReport: GetPromotionReportUseCase
 let cashierList: ListReportCashiersUseCase
 let itemList: ListReportItemsUseCase
+let categoryNames: ReturnType<typeof mockReportCategoryNames>
+let categoryList: ListReportCategoriesUseCase
 beforeEach(() => {
   reports = mockSalesReportRepository()
   zone = mockReportTimeZone('Asia/Bangkok')
@@ -34,6 +37,9 @@ beforeEach(() => {
   promotionReport = new GetPromotionReportUseCase(reports, zone)
   cashierList = new ListReportCashiersUseCase(reports, zone)
   itemList = new ListReportItemsUseCase(reports, zone)
+  categoryNames = mockReportCategoryNames(new Map([[1, 'เครื่องดื่ม']]))
+  categoryList = new ListReportCategoriesUseCase(reports, zone, categoryNames)
+  reports.categories.mockResolvedValue({ items: [], total: 0 })
   reports.items.mockResolvedValue({ items: [], total: 0 })
 })
 test('keeps branch scope explicit and cash net of change', async () => {
@@ -174,4 +180,45 @@ test('the item report refuses a cashier, a bad range, a bad sort and a bad categ
     await expect(itemList.execute(bad, owner, 1)).rejects.toBeInstanceOf(ZodError)
   expect(zone.timeZone).not.toHaveBeenCalled()
   expect(reports.items).not.toHaveBeenCalled()
+})
+const categoryRow = (categoryId: number | null, netSalesSatang: number) => ({
+  categoryId, quantity: 2, netSalesSatang, vatSatang: 0, costSatang: 1000,
+})
+test('the category report names a category, leaves a deleted or missing one unnamed, and shares against the overview', async () => {
+  // The overview mock nets 10000 satang (10700 total less 700 VAT).
+  reports.categories.mockResolvedValue({ items: [categoryRow(1, 5000), categoryRow(2, 3333), categoryRow(null, 1667)], total: 3 })
+  const result = await categoryList.execute({ ...range, limit: 7, offset: 14 }, owner, 9)
+  expect(result.total).toBe(3)
+  expect(result.items).toEqual([
+    { ...categoryRow(1, 5000), name: 'เครื่องดื่ม', profitSatang: 4000, shareBp: 5000 },
+    { ...categoryRow(2, 3333), name: null, profitSatang: 2333, shareBp: 3333 },
+    { ...categoryRow(null, 1667), name: null, profitSatang: 667, shareBp: 1667 },
+  ])
+  expect(categoryNames.namesFor).toHaveBeenCalledWith([1, 2])
+  expect(reports.categories).toHaveBeenCalledWith({
+    ...range, scope: 'branch', branchId: 9, timeZone: 'Asia/Bangkok', limit: 7, offset: 14,
+  })
+  expect(reports.overview).toHaveBeenCalledWith({ ...range, scope: 'branch', branchId: 9, timeZone: 'Asia/Bangkok' })
+})
+test('the category share rounds down and is zero when the period has no net sales', async () => {
+  reports.categories.mockResolvedValue({ items: [categoryRow(1, 3333)], total: 1 })
+  reports.overview.mockResolvedValue({ summary: { ...sums, totalSatang: 20000, vatSatang: 0 }, days: [], tendered: [] })
+  expect((await categoryList.execute(range, owner, 9)).items[0]?.shareBp).toBe(1666)
+  reports.overview.mockResolvedValue({ summary: { ...sums, totalSatang: 700, vatSatang: 700 }, days: [], tendered: [] })
+  expect((await categoryList.execute(range, owner, 9)).items[0]?.shareBp).toBe(0)
+})
+test('the category report keeps the cashier and customer filters in both reads and all-branch scope', async () => {
+  await categoryList.execute({ ...range, scope: 'all', cashierId: '7', customer: 'guest' }, owner, 9)
+  const period = { ...range, scope: 'all', branchId: null, timeZone: 'Asia/Bangkok', cashierId: 7, customer: 'guest' }
+  expect(reports.overview).toHaveBeenCalledWith(period)
+  expect(reports.categories).toHaveBeenCalledWith({ ...period, limit: 20, offset: 0 })
+  expect(categoryNames.namesFor).not.toHaveBeenCalled()
+})
+test('the category report refuses a cashier and a bad range before reading any port', async () => {
+  await expect(categoryList.execute(range, { role: 'cashier' }, 1)).rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'reports.read' } })
+  for (const bad of [{ from: '2026-02-01', to: '2026-01-01' }, { ...range, limit: 501 }])
+    await expect(categoryList.execute(bad, owner, 1)).rejects.toBeInstanceOf(ZodError)
+  expect(zone.timeZone).not.toHaveBeenCalled()
+  expect(reports.categories).not.toHaveBeenCalled()
+  expect(categoryNames.namesFor).not.toHaveBeenCalled()
 })

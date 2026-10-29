@@ -11,6 +11,7 @@ export const mockRoleRepository = (): Mocked<IRoleRepository> => ({
   delete: mock<IRoleRepository['delete']>(),
 })
 import type { IReportBranchNames } from '../modules/sales/applications/ports/report-branch-names.port'
+import type { IReportCategoryNames } from '../modules/sales/applications/ports/report-category-names.port'
 import type { IReportTimeZone } from '../modules/sales/applications/ports/report-time-zone.port'
 import type { ISalesReportRepository } from '../modules/sales/applications/ports/sales-report.repository'
 
@@ -22,10 +23,15 @@ export const mockReportBranchNames = (names: Map<number, string> = new Map()): M
   namesById: mock<IReportBranchNames['namesById']>().mockResolvedValue(names),
 })
 
+export const mockReportCategoryNames = (names: Map<number, string> = new Map()): Mocked<IReportCategoryNames> => ({
+  namesFor: mock<IReportCategoryNames['namesFor']>().mockResolvedValue(names),
+})
+
 export const mockSalesReportRepository = (): Mocked<ISalesReportRepository> => ({
   overview: mock<ISalesReportRepository['overview']>(),
   products: mock<ISalesReportRepository['products']>(),
   items: mock<ISalesReportRepository['items']>(),
+  categories: mock<ISalesReportRepository['categories']>(),
   branches: mock<ISalesReportRepository['branches']>(),
   promotions: mock<ISalesReportRepository['promotions']>(),
   cashiers: mock<ISalesReportRepository['cashiers']>(),
