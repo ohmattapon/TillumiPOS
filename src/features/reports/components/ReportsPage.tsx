@@ -10,6 +10,8 @@ import { Panel } from '@/components/Panel'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { dailyTotalsCells, hasTotals } from '../lib/report-totals'
+import { promotionTotalsCells, hasPromotionTotals } from '../lib/promotion-totals'
 import { reportQuery, productsReportQuery, promotionsReportQuery, readReport, readProducts, readPromotions } from '../api'
 import { validRange } from '../lib/date-range'
 import { readReportSearch, writeReportSearch, type ReportSearch, type ReportTab } from '../lib/report-search-params'
@@ -145,7 +147,8 @@ export function ReportsPage() {
               {report.data ? <>
                 <DailySalesChart days={report.data.days.items} />
                 <ReportDataTable headers={[t('day'), t('bills'), t('revenue'), t('profit')]}
-                  rows={report.data.days.items.map((row) => [date.calendarDateShortYear(row.day), row.saleCount, money.plain(row.totalSatang), money.plain(row.profitSatang)])} />
+                  rows={report.data.days.items.map((row) => [date.calendarDateShortYear(row.day), row.saleCount, money.plain(row.totalSatang), money.plain(row.profitSatang)])}
+                  footer={hasTotals(report.data.days.items.length) ? dailyTotalsCells(t('dailyTotal'), report.data.summary, money.plain) : undefined} />
               </> : <Skeleton className="m-4 h-48" />}
             </Panel>
             <Panel title={t('methods')} description={t('methodNote')}>
@@ -153,6 +156,9 @@ export function ReportsPage() {
                 {report.data?.byMethod.map((row) => <div key={row.method} className="flex justify-between gap-3 py-4 text-sm">
                   <span>{tc(`paymentMethods.${row.method}`)}</span><strong className="tabular-nums">{money.format(row.amountSatang)}</strong>
                 </div>)}
+                {report.data && <div className="flex justify-between gap-3 py-4 text-sm font-semibold">
+                  <span>{t('methodsTotal')}</span><strong className="tabular-nums">{money.format(report.data.summary.totalSatang)}</strong>
+                </div>}
               </div>
             </Panel>
           </div>
@@ -170,8 +176,10 @@ export function ReportsPage() {
             <p className="border-b px-4 py-2 text-xs leading-relaxed text-muted-foreground">{t('promotionsNote')}</p>
             {failure(promotions.error, () => void promotions.refetch())}
             {promotions.isPending ? <Skeleton className="m-4 h-24" /> : !promotions.error && ((promotions.data?.items ?? []).length > 0 ? <>
+              <p className="border-b px-4 py-2 text-sm">{t('promotionUsage', { used: count(promotions.data?.totals.bills ?? 0), all: count(promotions.data?.completedBills ?? 0) })}</p>
               <ReportDataTable headers={[t('promotionName'), t('promotionBills'), t('promotionDiscount'), t('promotionNetSales')]} numberFrom={1}
-                rows={(promotions.data?.items ?? []).map((row) => [row.name, row.bills, money.plain(row.discountSatang), money.plain(row.netSalesSatang)])} />
+                rows={(promotions.data?.items ?? []).map((row) => [row.name, row.bills, money.plain(row.discountSatang), money.plain(row.netSalesSatang)])}
+                footer={promotions.data && hasPromotionTotals(promotions.data.items.length) ? promotionTotalsCells(t('promotionTotal'), promotions.data.totals, money.plain) : undefined} />
               <PaginationBar page={Math.floor(promotionOffset / 10)} pageSize={10} total={promotions.data?.total ?? 0} isLoading={promotions.isFetching} onPageChange={(value) => setPage('promotions', value * 10)} />
             </> : <p className="px-4 py-6 text-sm text-muted-foreground">{t('noPromotions')}</p>)}
           </Panel>}

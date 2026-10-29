@@ -12,6 +12,9 @@ import { ListReportCategoriesUseCase } from './list-report-categories.usecase'
 const range = { from: '2026-01-01', to: '2026-01-31' }
 const owner = { role: 'owner' as const }
 const sums = { saleCount: 1, voidedCount: 1, totalSatang: 10700, vatSatang: 700, discountSatang: 500, costSatang: 6000, changeSatang: 300 }
+const noTotals = { bills: 0, discountSatang: 0, netSalesSatang: 0 }
+const noItemTotals = { quantity: 0, pieces: 0, netSalesSatang: 0, costSatang: 0, profitSatang: 0 }
+const noCategoryTotals = { quantity: 0, netSalesSatang: 0, costSatang: 0 }
 let reports: ReturnType<typeof mockSalesReportRepository>
 let zone: ReturnType<typeof mockReportTimeZone>
 let branchNames: ReturnType<typeof mockReportBranchNames>
@@ -30,7 +33,7 @@ beforeEach(() => {
   reports.overview.mockResolvedValue({ summary: sums, days: [{ day: '2026-01-01', ...sums }], tendered: [{ method: 'cash', amountSatang: 11000 }], unallocatedLines: 4 })
   reports.products.mockResolvedValue({ items: [], total: 0 })
   reports.branches.mockResolvedValue({ items: [{ branchId: 3, ...sums }], total: 1 })
-  reports.promotions.mockResolvedValue({ items: [], total: 0 })
+  reports.promotions.mockResolvedValue({ items: [], total: 0, totals: noTotals, completedBills: 0 })
   overview = new GetSalesReportUseCase(reports, zone)
   products = new ListReportProductsUseCase(reports, zone)
   comparison = new ListReportBranchesUseCase(reports, zone, branchNames)
@@ -39,8 +42,8 @@ beforeEach(() => {
   itemList = new ListReportItemsUseCase(reports, zone)
   categoryNames = mockReportCategoryNames(new Map([[1, 'เครื่องดื่ม']]))
   categoryList = new ListReportCategoriesUseCase(reports, zone, categoryNames)
-  reports.categories.mockResolvedValue({ items: [], total: 0 })
-  reports.items.mockResolvedValue({ items: [], total: 0 })
+  reports.categories.mockResolvedValue({ items: [], total: 0, totals: noCategoryTotals })
+  reports.items.mockResolvedValue({ items: [], total: 0, totals: noItemTotals })
 })
 test('keeps branch scope explicit and cash net of change', async () => {
   const result = await overview.execute(range, owner, 9)
@@ -96,8 +99,9 @@ test('rejects invalid dates, reversed ranges, excessive ranges and invalid pagin
 })
 test('validates the range like the other reports', async () => {
   const rows = [{ promotionId: 4, name: 'ซื้อ 2 แถม 1', bills: 2, discountSatang: 900, netSalesSatang: 3100 }]
-  reports.promotions.mockResolvedValue({ items: rows, total: 1 })
-  expect(await promotionReport.execute({ ...range, limit: 7, offset: 14 }, owner, 9)).toEqual({ items: rows, total: 1 })
+  const totals = { bills: 5, discountSatang: 2100, netSalesSatang: 9000 }
+  reports.promotions.mockResolvedValue({ items: rows, total: 1, totals, completedBills: 8 })
+  expect(await promotionReport.execute({ ...range, limit: 7, offset: 14 }, owner, 9)).toEqual({ items: rows, total: 1, totals, completedBills: 8 })
   expect(reports.promotions).toHaveBeenCalledWith({
     ...range, scope: 'branch', branchId: 9, timeZone: 'Asia/Bangkok', limit: 7, offset: 14,
   })
@@ -158,8 +162,9 @@ test('the item report sorts by quantity by default and passes the filters, scope
     productId: 4, productName: 'ชา', sku: 'T-1', packSize: 12, quantity: 2, pieces: 24,
     netSalesSatang: 5000, vatSatang: 327, costSatang: 3000, profitSatang: 2000,
   }
-  reports.items.mockResolvedValue({ items: [row], total: 1 })
-  expect(await itemList.execute({ ...range, cashierId: '7', customer: 'guest', limit: 7, offset: 14 }, owner, 9)).toEqual({ items: [row], total: 1 })
+  const totals = { quantity: 9, pieces: 40, netSalesSatang: 12000, costSatang: 7000, profitSatang: 5000 }
+  reports.items.mockResolvedValue({ items: [row], total: 1, totals })
+  expect(await itemList.execute({ ...range, cashierId: '7', customer: 'guest', limit: 7, offset: 14 }, owner, 9)).toEqual({ items: [row], total: 1, totals })
   expect(reports.items).toHaveBeenCalledWith({
     ...range, scope: 'branch', branchId: 9, timeZone: 'Asia/Bangkok', cashierId: 7, customer: 'guest', sort: 'quantity', limit: 7, offset: 14,
   })
@@ -190,9 +195,14 @@ const categoryRow = (categoryId: number | null, netSalesSatang: number) => ({
 })
 test('the category report names a category, leaves a deleted or missing one unnamed, and shares against the overview', async () => {
   // The overview mock nets 10000 satang (10700 total less 700 VAT).
-  reports.categories.mockResolvedValue({ items: [categoryRow(1, 5000), categoryRow(2, 3333), categoryRow(null, 1667)], total: 3 })
+  reports.categories.mockResolvedValue({
+    items: [categoryRow(1, 5000), categoryRow(2, 3333), categoryRow(null, 1667)], total: 3,
+    totals: { quantity: 11, netSalesSatang: 10000, costSatang: 4000 },
+  })
   const result = await categoryList.execute({ ...range, limit: 7, offset: 14 }, owner, 9)
   expect(result.total).toBe(3)
+  // The totals cover every category, so profit is worked out from them and not from the page.
+  expect(result.totals).toEqual({ quantity: 11, netSalesSatang: 10000, costSatang: 4000, profitSatang: 6000 })
   expect(result.items).toEqual([
     { ...categoryRow(1, 5000), name: 'เครื่องดื่ม', profitSatang: 4000, shareBp: 5000 },
     { ...categoryRow(2, 3333), name: null, profitSatang: 2333, shareBp: 3333 },
@@ -205,7 +215,7 @@ test('the category report names a category, leaves a deleted or missing one unna
   expect(reports.overview).toHaveBeenCalledWith({ ...range, scope: 'branch', branchId: 9, timeZone: 'Asia/Bangkok' })
 })
 test('the category share rounds down and is zero when the period has no net sales', async () => {
-  reports.categories.mockResolvedValue({ items: [categoryRow(1, 3333)], total: 1 })
+  reports.categories.mockResolvedValue({ items: [categoryRow(1, 3333)], total: 1, totals: noCategoryTotals })
   reports.overview.mockResolvedValue({ summary: { ...sums, totalSatang: 20000, vatSatang: 0 }, days: [], tendered: [], unallocatedLines: 0 })
   expect((await categoryList.execute(range, owner, 9)).items[0]?.shareBp).toBe(1666)
   reports.overview.mockResolvedValue({ summary: { ...sums, totalSatang: 700, vatSatang: 700 }, days: [], tendered: [], unallocatedLines: 0 })

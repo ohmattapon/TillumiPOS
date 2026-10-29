@@ -37,6 +37,13 @@ export interface ReportPromotion {
   /** Bill totals net of VAT, added up as the other reports do. */
   netSalesSatang: number
 }
+export interface ReportPromotionTotals {
+  bills: number
+  discountSatang: number
+  netSalesSatang: number
+}
+/** `totals` and `completedBills` cover every promotion in the period, not only the rows of the page. */
+export type ReportPromotionPage = Page<ReportPromotion> & { totals: ReportPromotionTotals; completedBills: number }
 export interface ReportCashier {
   cashierId: number
   /** The name on the cashier's latest bill in the range, so bills keep the name they were sold under. */
@@ -53,6 +60,13 @@ export interface ReportCategorySums {
   vatSatang: number
   costSatang: number
 }
+export interface ReportCategoryTotals {
+  quantity: number
+  netSalesSatang: number
+  costSatang: number
+}
+/** `totals` cover every category in the period, not only the rows of the page. */
+export type ReportCategoryPage = Page<ReportCategorySums> & { totals: ReportCategoryTotals }
 export type ReportPageQuery = SalesReportPeriod & { limit: number; offset: number }
 export type ReportItemSort = 'quantity' | 'sales' | 'profit' | 'margin'
 export interface ReportItem {
@@ -76,15 +90,24 @@ export type ReportItemQuery = ReportPageQuery & {
   categoryId?: number | null
   sort: ReportItemSort
 }
+export interface ReportItemTotals {
+  quantity: number
+  pieces: number
+  netSalesSatang: number
+  costSatang: number
+  profitSatang: number
+}
+/** `totals` cover every product and pack size that matches the filters, not only the rows of the page. */
+export type ReportItemPage = Page<ReportItem> & { totals: ReportItemTotals }
 export interface ISalesReportRepository {
   overview(period: SalesReportPeriod): Promise<ReportOverviewSums>
   products(query: ReportPageQuery): Promise<Page<ReportProduct>>
   /** Per product and pack size, completed bills only, sorted descending by `sort` and then by product id. */
-  items(query: ReportItemQuery): Promise<Page<ReportItem>>
+  items(query: ReportItemQuery): Promise<ReportItemPage>
   /** Per category stored on the line, completed bills only, sorted by net sales descending, then category id with no category last. */
-  categories(query: ReportPageQuery): Promise<Page<ReportCategorySums>>
+  categories(query: ReportPageQuery): Promise<ReportCategoryPage>
   branches(query: ReportPageQuery): Promise<Page<SalesReportSums & { branchId: number }>>
-  promotions(query: ReportPageQuery): Promise<Page<ReportPromotion>>
+  promotions(query: ReportPageQuery): Promise<ReportPromotionPage>
   /** Ignores `cashierId` and `customer`, so the list shows everyone who sold in the range. */
   cashiers(period: SalesReportPeriod): Promise<ReportCashier[]>
 }

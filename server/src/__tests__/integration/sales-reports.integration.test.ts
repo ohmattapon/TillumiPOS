@@ -109,6 +109,48 @@ test('sums bills, discount and net sales per promotion and leaves out voided bil
   expect(ok(await owner.api.sales.reports.promotions.get({ query: { ...range, limit: 1 } })))
     .toMatchObject({ total: 2, items: [{ promotionId: bundle.id }] })
 })
+test('totals cover every promotion and the bills that used none, and follow the cashier filter', async () => {
+  const cashier = await signIn('cashier')
+  const tea = await seedProduct(owner, { priceSatang: 2500, costSatang: 1000, stock: 40 })
+  const bundle = ok(await owner.api.promotions.post({
+    name: 'ซื้อ 2 แถม 1', kind: 'bundle', value: 0, buyQuantity: 2, freeQuantity: 1,
+    scope: { productIds: [tea.id], categoryIds: [] },
+  }))
+  const coupon = ok(await owner.api.promotions.post({ name: 'คูปองลด 10%', kind: 'percent', value: 1000, couponCode: 'SUMMER10' }))
+  const sellWithQuote = async (who: typeof owner, quantity: number, couponCode?: string) => {
+    const quote = ok(await who.api.quotes.post({
+      lines: [{ productId: tea.id, quantity }], ...(couponCode === undefined ? {} : { couponCode }),
+    }))
+    return ok(await who.api.sales.post({
+      items: [{ productId: tea.id, quantity }],
+      payments: [{ method: 'cash' as const, amountSatang: quote.totalSatang }],
+      quoteId: quote.id,
+    }))
+  }
+  const bundled = await sellWithQuote(owner, 3)
+  const couponed = await sellWithQuote(cashier, 2, 'SUMMER10')
+  const plain = await sell(owner, tea.id)
+  expect(bundled.promotion?.id).toBe(bundle.id)
+  expect(couponed.promotion?.id).toBe(coupon.id)
+  for (const sale of [bundled, couponed, plain]) await dateSale(sale.id, '2026-01-02T03:00:00Z')
+
+  const all = ok(await owner.api.sales.reports.promotions.get({ query: { ...range, limit: 1 } }))
+  expect(all.items).toHaveLength(1)
+  expect(all.completedBills).toBe(3)
+  expect(all.totals).toEqual({
+    bills: 2,
+    discountSatang: bundled.discountSatang + couponed.discountSatang,
+    netSalesSatang: bundled.totalSatang - bundled.vatSatang + couponed.totalSatang - couponed.vatSatang,
+  })
+  const byCashier = ok(await owner.api.sales.reports.promotions.get({ query: { ...range, cashierId: cashier.user.id } }))
+  expect(byCashier.completedBills).toBe(1)
+  expect(byCashier.totals).toEqual({
+    bills: 1, discountSatang: couponed.discountSatang, netSalesSatang: couponed.totalSatang - couponed.vatSatang,
+  })
+  const byOwner = ok(await owner.api.sales.reports.promotions.get({ query: { ...range, cashierId: owner.user.id } }))
+  expect(byOwner.completedBills).toBe(2)
+  expect(byOwner.totals.bills).toBe(1)
+})
 test('filters every report by cashier and by member or guest, and lists the cashiers', async () => {
   const cashier = await signIn('cashier')
   const p = await seedProduct(owner, { stock: 20 })
@@ -194,6 +236,46 @@ test('the item report filters by category, with none for products without one, a
   expect(Number((await cashier.api.sales.reports.items.get({ query: range })).error?.status)).toBe(403)
   expect(Number((await owner.api.sales.reports.items.get({ query: { ...range, sort: 'name' as 'profit' } })).error?.status)).toBe(422)
 })
+test('the item report totals equal the sum of every row, the overview, and follow the page, the category and the cashier', async () => {
+  const drinks = ok(await owner.api.catalog.categories.post({ name: 'เครื่องดื่ม' }))
+  const cashier = await signIn('cashier')
+  const { tea } = await sellPieceAndPack()
+  const other = await seedProduct(owner, { categoryId: drinks.id, priceSatang: 1000, costSatang: 100, stock: 5 })
+  const plain = await seedProduct(owner, { priceSatang: 700, costSatang: 200, stock: 5 })
+  await dateSale((await sell(owner, other.id)).id, '2026-01-02T04:00:00Z')
+  await dateSale((await sell(cashier, plain.id)).id, '2026-01-02T05:00:00Z')
+  const sumOf = (rows: { quantity: number; pieces: number; netSalesSatang: number; costSatang: number; profitSatang: number }[]) => ({
+    quantity: rows.reduce((n, row) => n + row.quantity, 0), pieces: rows.reduce((n, row) => n + row.pieces, 0),
+    netSalesSatang: rows.reduce((n, row) => n + row.netSalesSatang, 0), costSatang: rows.reduce((n, row) => n + row.costSatang, 0),
+    profitSatang: rows.reduce((n, row) => n + row.profitSatang, 0),
+  })
+  const whole = ok(await owner.api.sales.reports.items.get({ query: { ...range, limit: 500 } }))
+  expect(whole.total).toBe(4)
+  expect(whole.totals).toEqual(sumOf(whole.items))
+  const summary = ok(await owner.api.sales.reports.get({ query: range })).summary
+  expect(whole.totals).toMatchObject({ netSalesSatang: summary.netSalesSatang, costSatang: summary.costSatang, profitSatang: summary.profitSatang })
+  // A page of one row still carries the totals of all of them.
+  const paged = ok(await owner.api.sales.reports.items.get({ query: { ...range, limit: 1, offset: 2 } }))
+  expect(paged.items).toHaveLength(1)
+  expect(paged.totals).toEqual(whole.totals)
+  const byCashier = ok(await owner.api.sales.reports.items.get({ query: { ...range, cashierId: cashier.user.id, limit: 500 } }))
+  expect(byCashier.totals).toEqual(sumOf(byCashier.items))
+  expect(byCashier.totals.quantity).toBe(1)
+  expect(byCashier.totals).not.toEqual(whole.totals)
+  const inDrinks = ok(await owner.api.sales.reports.items.get({ query: { ...range, categoryId: String(drinks.id) } }))
+  expect(inDrinks.totals).toEqual(sumOf(inDrinks.items))
+  expect(inDrinks.items.map((row) => row.productId)).toEqual([other.id])
+  expect(tea.id).not.toBe(other.id)
+})
+test('the item report totals count a line with no share as zero net sales with its cost, and are zero for an empty period', async () => {
+  const tea = await seedProduct(owner, { priceSatang: 2500, costSatang: 900, stock: 10 })
+  await dateSale((await sell(owner, tea.id)).id, '2026-01-02T03:00:00Z')
+  await sql`update sale_items set allocated_total_satang = null, allocated_vat_satang = null`
+  const report = ok(await owner.api.sales.reports.items.get({ query: range }))
+  expect(report.totals).toEqual({ quantity: 1, pieces: 1, netSalesSatang: 0, costSatang: 900, profitSatang: -900 })
+  expect(ok(await owner.api.sales.reports.items.get({ query: { from: '2026-02-01', to: '2026-02-01' } })).totals)
+    .toEqual({ quantity: 0, pieces: 0, netSalesSatang: 0, costSatang: 0, profitSatang: 0 })
+})
 test('a bill backfilled after the line shares were added matches the overview, and its lines keep no category', async () => {
   const drinks = ok(await owner.api.catalog.categories.post({ name: 'เครื่องดื่ม' }))
   const tea = await seedProduct(owner, { categoryId: drinks.id, priceSatang: 3333, stock: 10 })
@@ -240,4 +322,42 @@ test('a line sold without a category stays without one when the product is given
     ok(await owner.api.sales.reports.items.get({ query: { ...range, categoryId } })).items.map((row) => [row.productId, row.quantity])
   expect(await rows(String(drinks.id))).toEqual([])
   expect(await rows('none')).toEqual([[plain.id, 1]])
+})
+test('the promotion and item totals leave out a voided bill and follow the member or guest filter', async () => {
+  const tea = await seedProduct(owner, { priceSatang: 2500, costSatang: 1000, stock: 40 })
+  const member = ok(await owner.api.members.post({ name: 'สมาชิกรายงาน', phone: '0812345679' }))
+  ok(await owner.api.promotions.post({ name: 'คูปองลด 10%', kind: 'percent', value: 1000, couponCode: 'SUMMER10' }))
+  const sellWithCoupon = async (memberId?: number) => {
+    const quote = ok(await owner.api.quotes.post({
+      lines: [{ productId: tea.id, quantity: 2 }], couponCode: 'SUMMER10', ...(memberId === undefined ? {} : { memberId }),
+    }))
+    const bill = ok(await owner.api.sales.post({
+      items: [{ productId: tea.id, quantity: 2 }], ...(memberId === undefined ? {} : { memberId }),
+      payments: [{ method: 'cash' as const, amountSatang: quote.totalSatang }], quoteId: quote.id,
+    }))
+    await dateSale(bill.id, '2026-01-02T03:00:00Z')
+    return bill
+  }
+  const guestBill = await sellWithCoupon()
+  const memberBill = await sellWithCoupon(member.id)
+  const voided = await sellWithCoupon()
+  ok(await owner.api.sales({ id: voided.id }).void.post({ reason: 'ผิดรายการ' }))
+  const net = (bill: typeof guestBill) => bill.totalSatang - bill.vatSatang
+
+  const all = ok(await owner.api.sales.reports.promotions.get({ query: range }))
+  expect(all.totals).toEqual({
+    bills: 2, discountSatang: guestBill.discountSatang + memberBill.discountSatang, netSalesSatang: net(guestBill) + net(memberBill),
+  })
+  expect(all.completedBills).toBe(2)
+  const members = ok(await owner.api.sales.reports.promotions.get({ query: { ...range, customer: 'member' } }))
+  expect(members.totals).toEqual({ bills: 1, discountSatang: memberBill.discountSatang, netSalesSatang: net(memberBill) })
+  const guests = ok(await owner.api.sales.reports.promotions.get({ query: { ...range, customer: 'guest' } }))
+  expect(guests.totals).toEqual({ bills: 1, discountSatang: guestBill.discountSatang, netSalesSatang: net(guestBill) })
+
+  const items = ok(await owner.api.sales.reports.items.get({ query: range }))
+  expect(items.totals.quantity).toBe(4)
+  expect(ok(await owner.api.sales.reports.categories.get({ query: range })).totals.quantity).toBe(4)
+  expect(ok(await owner.api.sales.reports.categories.get({ query: { ...range, customer: 'member' } })).totals.quantity).toBe(2)
+  expect(ok(await owner.api.sales.reports.items.get({ query: { ...range, customer: 'member' } })).totals.quantity).toBe(2)
+  expect(ok(await owner.api.sales.reports.items.get({ query: { ...range, customer: 'guest' } })).totals.quantity).toBe(2)
 })

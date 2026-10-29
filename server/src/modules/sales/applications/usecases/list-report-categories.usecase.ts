@@ -29,8 +29,10 @@ export class ListReportCategoriesUseCase {
     const ids = result.items.flatMap((row) => (row.categoryId === null ? [] : [row.categoryId]))
     const names = ids.length === 0 ? new Map<number, string>() : await this.categoryNames.namesFor(ids)
     const periodNetSales = calculateReportMetrics(overview.summary).netSalesSatang
+    const { totals } = result
     return {
       ...result,
+      totals: { ...totals, profitSatang: totals.netSalesSatang - totals.costSatang },
       items: result.items.map((row) => ({
         ...row,
         name: row.categoryId === null ? null : names.get(row.categoryId) ?? null,

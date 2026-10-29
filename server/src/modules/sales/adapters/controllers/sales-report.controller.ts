@@ -34,11 +34,11 @@ export class SalesReportElysiaController {
         detail: { summary: 'สินค้าขายดี เรียงตามจำนวน ใช้ข้อมูล ณ ตอนขาย' },
       })
       .get('/items', async ({ query, user, branch }) => this.items.execute(query, user, (await branch()).id), {
-        auth: { can: 'reports.read' }, query: reportSchemas.itemsQuery, response: page(reportSchemas.item),
+        auth: { can: 'reports.read' }, query: reportSchemas.itemsQuery, response: reportSchemas.itemPage,
         detail: { summary: 'ยอดขาย ต้นทุน และกำไรแยกตามสินค้าและขนาดแพ็ก ใช้ข้อมูล ณ ตอนขาย' },
       })
       .get('/categories', async ({ query, user, branch }) => this.categories.execute(query, user, (await branch()).id), {
-        auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: page(reportSchemas.category),
+        auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: reportSchemas.categoryPage,
         detail: { summary: 'ยอดขาย ต้นทุน กำไร และสัดส่วนแยกตามหมวดหมู่ ใช้หมวดหมู่ ณ ตอนขาย' },
       })
       .get('/branches', async ({ query, user, branch }) => this.branches.execute(query, user, (await branch()).id), {
@@ -46,7 +46,7 @@ export class SalesReportElysiaController {
         detail: { summary: 'เปรียบเทียบยอดขายแยกสาขา' },
       })
       .get('/promotions', async ({ query, user, branch }) => this.promotions.execute(query, user, (await branch()).id), {
-        auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: page(reportSchemas.promotion),
+        auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: reportSchemas.promotionPage,
         detail: { summary: 'ยอดขายและส่วนลดแยกตามโปรโมชัน ใช้ข้อมูล ณ ตอนขาย' },
       })
       .get('/cashiers', async ({ query, user, branch }) => this.cashiers.execute(query, user, (await branch()).id), {

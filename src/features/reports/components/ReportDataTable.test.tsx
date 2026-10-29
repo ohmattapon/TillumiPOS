@@ -38,3 +38,11 @@ describe('ReportDataTable (adapter บน DataTable กลาง)', () => {
     expect(html).toContain(reportsLocales.th.empty)
   })
 })
+
+describe('ReportDataTable footer', () => {
+  test('แสดงแถวรวมต่อท้ายตัวหนา', () => {
+    const html = renderToStaticMarkup(<ReportDataTable headers={headers} rows={rows} footer={['รวม', 9, '฿900', '฿150']} />)
+    for (const text of ['รวม', '฿900', '฿150']) expect(html).toContain(text)
+    expect(html).toContain('font-semibold')
+  })
+})
