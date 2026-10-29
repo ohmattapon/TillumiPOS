@@ -46,7 +46,7 @@ export function ShiftHistoryPanel({ registers }: { registers: { id: number; code
             <SelectTrigger id="shift-history-register" className="h-10! w-full min-w-0">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent position="popper">
+            <SelectContent>
               <SelectGroup>
                 <SelectItem value="all">{t('historyAllRegisters')}</SelectItem>
                 {registers.map((item) => (
@@ -67,7 +67,7 @@ export function ShiftHistoryPanel({ registers }: { registers: { id: number; code
             <SelectTrigger id="shift-history-status" className="h-10! w-full min-w-0">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent position="popper">
+            <SelectContent>
               <SelectGroup>
                 {statuses.map((value) => (
                   <SelectItem key={value} value={value}>

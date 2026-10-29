@@ -128,7 +128,7 @@ export function ShiftsPage() {
               <SelectTrigger id="shift-register" className="h-11! w-full min-w-0">
                 <SelectValue placeholder={t('chooseRegister')} />
               </SelectTrigger>
-              <SelectContent position="popper">
+              <SelectContent>
                 <SelectGroup>
                   {registers.data?.items.filter((item) => item.isActive).map((item) => (
                     <SelectItem key={item.id} value={String(item.id)}>{item.code}, {item.name}</SelectItem>
@@ -173,7 +173,7 @@ export function ShiftsPage() {
                       <SelectTrigger id="shift-movement-kind" className="h-10! w-full min-w-0">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent position="popper">
+                      <SelectContent>
                         <SelectGroup>
                           <SelectItem value="cash_in">{t('cashIn')}</SelectItem>
                           <SelectItem value="cash_out">{t('cashOut')}</SelectItem>
