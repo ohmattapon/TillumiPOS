@@ -38,6 +38,7 @@ const env = {
   SCB_REF3_PREFIX: '',
 }
 const children: ReturnType<typeof Bun.spawn>[] = []
+let reportData: ReportRange | undefined
 
 async function run(args: string[]) {
   const child = Bun.spawn(['bun', ...args], { cwd: `${root}/server`, env, stdout: 'pipe', stderr: 'pipe' })
@@ -280,6 +281,10 @@ async function main() {
       }
       await page.evaluate(() => localStorage.setItem('pos.theme', 'light'))
 
+      // The report tabs need bills to show rows, totals and a comparison; they are seeded once, on the first size.
+      if (!reportData) reportData = await seedReportData(page)
+      await reportTabs(page, reportData, size)
+
       // A failed first read must not look like zero sales or keep totals loading forever.
       const salesReads = /\/api\/v1\/sales(?:\/summary)?\?/
       const failure = 'ทดสอบการเชื่อมต่อขัดข้อง'
@@ -308,6 +313,110 @@ async function main() {
     }
   } finally {
     await browser.close()
+  }
+}
+
+type ReportRange = { from: string; to: string }
+
+/** A calendar day in the shop's time zone, `offset` days before today. */
+function dayAgo(offset: number) {
+  return new Date(Date.now() - offset * 86_400_000).toLocaleDateString('sv', { timeZone: 'Asia/Bangkok' })
+}
+
+/**
+ * Bills for the report tabs: two categories and a product with none, a percent promotion on some bills, a member and
+ * a guest, a voided bill, and days inside and before the range so the comparison has an earlier period.
+ * Every bill is moved off today, because the Today screenshots expect a day without sales.
+ */
+async function seedReportData(page: Page): Promise<ReportRange> {
+  const api = (path: string) => `${WEB}/api${path}`
+  const post = async <T>(path: string, data: unknown, headers: Record<string, string> = {}) => {
+    const response = await page.request.post(api(path), { data, headers })
+    assert(response.ok(), `report fixture ${path}: ${response.status()} ${await response.text()}`)
+    return await response.json() as T
+  }
+  const category = (name: string, sortOrder: number) => post<{ id: number }>('/v1/catalog/categories', { name, sortOrder })
+  const product = (sku: string, name: string, priceSatang: number, costSatang: number, categoryId?: number) =>
+    post<{ id: number }>('/v1/catalog/products', { sku, name, priceSatang, costSatang, trackStock: false, ...(categoryId ? { categoryId } : {}) })
+
+  const hot = await category('กาแฟร้อน (รายงาน)', 90)
+  const bakery = await category('เบเกอรี่ (รายงาน)', 91)
+  const latte = await product('RPT-001', 'ลาเต้ร้อน', 6500, 2200, hot.id)
+  const croissant = await product('RPT-002', 'ครัวซองต์เนยสด', 9500, 4100, bakery.id)
+  const sticker = await product('RPT-003', 'สติกเกอร์ร้าน', 3000, 800)
+  const member = await post<{ id: number }>('/v1/members', { name: 'คุณรายงาน ใจดี', phone: '0899990001' })
+  const promotion = await post<{ id: number }>('/v1/promotions', { name: 'ลด 10% ทั้งบิล (รายงาน)', kind: 'percent', value: 1000 })
+
+  const shifts = await (await page.request.get(api('/v2/shifts?status=open'))).json() as { items: { id: number }[] }
+  const shiftId = shifts.items[0]?.id
+  assert(shiftId, 'report fixtures need the shift opened by the first size')
+
+  type Line = { productId: number; quantity: number }
+  const sell = async (lines: Line[], opts: { member?: boolean; promoted?: boolean } = {}) => {
+    const memberId = opts.member ? member.id : null
+    let quoteId: number | undefined
+    let total = lines.reduce((sum, line) => sum + line.quantity * ({ [latte.id]: 6500, [croissant.id]: 9500, [sticker.id]: 3000 }[line.productId] ?? 0), 0)
+    if (opts.promoted) {
+      const quote = await post<{ id: number; totalSatang: number }>('/v1/quotes', { lines, memberId })
+      quoteId = quote.id
+      total = quote.totalSatang
+    }
+    return await post<{ id: number }>('/v2/sales',
+      { memberId, quoteId, shiftId, items: lines, payments: [{ method: 'cash', amountSatang: total }] },
+      { 'idempotency-key': crypto.randomUUID() })
+  }
+
+  // Inside the range (1 to 3 days ago) and in the 4 days before it (5 and 6 days ago).
+  const placed: [number, number][] = []
+  const at = (days: number, sale: { id: number }) => placed.push([sale.id, days])
+  at(1, await sell([{ productId: latte.id, quantity: 2 }, { productId: croissant.id, quantity: 1 }]))
+  at(1, await sell([{ productId: latte.id, quantity: 1 }, { productId: sticker.id, quantity: 2 }], { member: true, promoted: true }))
+  at(2, await sell([{ productId: croissant.id, quantity: 3 }], { promoted: true }))
+  at(2, await sell([{ productId: latte.id, quantity: 4 }]))
+  const unshared = await sell([{ productId: sticker.id, quantity: 1 }, { productId: latte.id, quantity: 1 }])
+  at(3, unshared)
+  const voided = await sell([{ productId: croissant.id, quantity: 1 }])
+  at(3, voided)
+  await post(`/v2/sales/${voided.id}/void`, { reason: 'ลูกค้าเปลี่ยนใจ' }, { 'idempotency-key': crypto.randomUUID() })
+  at(5, await sell([{ productId: latte.id, quantity: 2 }], { member: true }))
+  at(6, await sell([{ productId: croissant.id, quantity: 1 }, { productId: sticker.id, quantity: 1 }]))
+
+  // Direct database access is for the fixture only: the API cannot back-date a bill.
+  const db = new SQL(env.DATABASE_URL)
+  try {
+    for (const [saleId, days] of placed)
+      await db`update sales set created_at = date_trunc('day', now() at time zone 'Asia/Bangkok') at time zone 'Asia/Bangkok' - make_interval(days => ${days}) + interval '12 hours' where id = ${saleId}`
+    // One line from before the allocation existed, so the "earlier sales have no share" note shows.
+    await db`update sale_items set allocated_total_satang = null, allocated_vat_satang = null where sale_id = ${unshared.id} and product_id = ${sticker.id}`
+  } finally {
+    await db.close()
+  }
+
+  // Keep the fixtures out of the till and the promotion off the next size's carts.
+  for (const id of [latte.id, croissant.id, sticker.id])
+    assert((await page.request.patch(api(`/v1/catalog/products/${id}`), { data: { isActive: false } })).ok())
+  assert((await page.request.patch(api(`/v1/promotions/${promotion.id}`), { data: { isActive: false } })).ok())
+  return { from: dayAgo(3), to: dayAgo(0) }
+}
+
+/** Every report tab with data; the numbers are free ones in the existing list (37 for the overview, which sorts apart from the empty 22). */
+async function reportTabs(page: Page, range: ReportRange, size: typeof sizes[number]) {
+  const range_ = `from=${range.from}&to=${range.to}`
+  for (const [name, query] of [
+    ['37-reports-overview', ''],
+    ['27-reports-items', '&tab=items'],
+    ['28-reports-categories', '&tab=categories'],
+    ['29-reports-promotions', '&tab=promotions'],
+    ['30-reports-compare', '&compare=1'],
+  ] as const) {
+    await page.goto(`${WEB}/reports?${range_}${query}`)
+    await page.waitForTimeout(1500)
+    // The page scrolls inside the app shell and the tables sit below the filters, so a tall window shows the whole report.
+    await page.setViewportSize({ width: size.width, height: 3200 })
+    await page.waitForTimeout(500)
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${size.name}/${name}: horizontal overflow`)
+    await page.screenshot({ path: join(OUT, `${size.name}-${name}.png`), animations: 'disabled' })
+    await page.setViewportSize({ width: size.width, height: size.height })
   }
 }
 
