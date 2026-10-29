@@ -34441,13 +34441,21 @@
                       "type": "string"
                     },
                     "latestVersion": {
-                      "type": "string"
+                      "nullable": true,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "supported": {
+                      "type": "boolean"
                     },
                     "updateAvailable": {
                       "type": "boolean"
                     }
                   },
                   "required": [
+                    "supported",
                     "currentVersion",
                     "latestVersion",
                     "updateAvailable"

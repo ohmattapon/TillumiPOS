@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
 import {
   mockUnitOfWork,
+  mockUpdateChannel,
   mockUpdateAudit,
   mockUpdateDownloader,
   mockUpdateFeed,
@@ -29,6 +30,7 @@ let downloader: ReturnType<typeof mockUpdateDownloader>
 let hasher: ReturnType<typeof mockUpdateHasher>
 let signatures: ReturnType<typeof mockUpdateSignatureVerifier>
 let staging: ReturnType<typeof mockUpdateStaging>
+let channel: ReturnType<typeof mockUpdateChannel>
 
 beforeEach(() => {
   feed = mockUpdateFeed()
@@ -36,16 +38,18 @@ beforeEach(() => {
   hasher = mockUpdateHasher()
   signatures = mockUpdateSignatureVerifier()
   staging = mockUpdateStaging()
+  channel = mockUpdateChannel()
 })
 
 const apply = (audit = mockUpdateAudit()) =>
-  new ApplyUpdateUseCase(feed, downloader, hasher, signatures, staging, mockUnitOfWork(), audit)
+  new ApplyUpdateUseCase(feed, downloader, hasher, signatures, staging, mockUnitOfWork(), audit, channel)
 
 describe('CheckUpdateUseCase', () => {
   test('reports an available update when the feed is newer', async () => {
     feed.fetchFeed.mockResolvedValue({ version: '9.9.9', sha256: FEED_SHA, url: FEED_URL, signature: SIGNATURE })
 
-    expect(await new CheckUpdateUseCase(feed).execute()).toEqual({
+    expect(await new CheckUpdateUseCase(feed, channel).execute()).toEqual({
+      supported: true,
       currentVersion: APP_VERSION,
       latestVersion: '9.9.9',
       updateAvailable: true,
@@ -55,17 +59,29 @@ describe('CheckUpdateUseCase', () => {
   test('reports up to date when the feed matches this build', async () => {
     feed.fetchFeed.mockResolvedValue({ version: APP_VERSION, sha256: FEED_SHA, url: FEED_URL, signature: SIGNATURE })
 
-    expect(await new CheckUpdateUseCase(feed).execute()).toMatchObject({ updateAvailable: false })
+    expect(await new CheckUpdateUseCase(feed, channel).execute()).toMatchObject({ updateAvailable: false })
   })
 
   test('never offers a downgrade when the feed is older', async () => {
     feed.fetchFeed.mockResolvedValue({ version: '0.0.1', sha256: FEED_SHA, url: FEED_URL, signature: SIGNATURE })
 
-    expect(await new CheckUpdateUseCase(feed).execute()).toMatchObject({
+    expect(await new CheckUpdateUseCase(feed, channel).execute()).toMatchObject({
       currentVersion: APP_VERSION,
       latestVersion: '0.0.1',
       updateAvailable: false,
     })
+  })
+
+  test('an install that cannot apply updates reports so without asking the feed', async () => {
+    channel.isEnabled.mockReturnValue(false)
+
+    expect(await new CheckUpdateUseCase(feed, channel).execute()).toEqual({
+      supported: false,
+      currentVersion: APP_VERSION,
+      latestVersion: null,
+      updateAvailable: false,
+    })
+    expect(feed.fetchFeed).not.toHaveBeenCalled()
   })
 
   test('a broken feed surfaces instead of a version answer', async () => {
@@ -73,7 +89,7 @@ describe('CheckUpdateUseCase', () => {
       new DomainExternalServiceError('ดึงข้อมูลอัปเดตไม่ได้ กรุณาตรวจเน็ตแล้วลองใหม่', 'UPDATE_FEED_UNAVAILABLE'),
     )
 
-    const attempt = new CheckUpdateUseCase(feed).execute()
+    const attempt = new CheckUpdateUseCase(feed, channel).execute()
     await expect(attempt).rejects.toBeInstanceOf(DomainExternalServiceError)
     await expect(attempt).rejects.toMatchObject({ code: 'UPDATE_FEED_UNAVAILABLE' })
   })
@@ -117,6 +133,23 @@ describe('ApplyUpdateUseCase', () => {
     await expect(attempt).rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'settings.write' } })
     expect(feed.fetchFeed).not.toHaveBeenCalled()
     expect(downloader.download).not.toHaveBeenCalled()
+  })
+
+  test('an install that cannot apply updates refuses before anything is fetched', async () => {
+    channel.isEnabled.mockReturnValue(false)
+
+    const attempt = apply().execute(undefined, owner)
+
+    await expect(attempt).rejects.toBeInstanceOf(DomainConflictError)
+    await expect(attempt).rejects.toMatchObject({ code: 'UPDATE_NOT_SUPPORTED' })
+    expect(feed.fetchFeed).not.toHaveBeenCalled()
+    expect(downloader.download).not.toHaveBeenCalled()
+    expect(staging.stagePackage).not.toHaveBeenCalled()
+  })
+
+  test('a cashier is refused even where updates are not supported', async () => {
+    channel.isEnabled.mockReturnValue(false)
+    await expect(apply().execute(undefined, cashier)).rejects.toBeInstanceOf(DomainForbiddenError)
   })
 
   test('a client-supplied field is rejected before anything is fetched', async () => {

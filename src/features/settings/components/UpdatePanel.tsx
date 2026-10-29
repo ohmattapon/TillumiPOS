@@ -18,6 +18,10 @@ export function UpdatePanel() {
   const checking = status.isPending || status.isFetching
   const info = status.data
 
+  // Only the native Windows install can apply an update. Elsewhere the API says so without asking
+  // the feed, and the panel stays out of the way. A failed check can only come from a native install.
+  if (status.isPending || (info && !info.supported)) return null
+
   return (
     <section className="space-y-4 rounded-xl border bg-card p-5 shadow-xs">
       <h2 className="text-sm font-semibold">{t('update.title')}</h2>

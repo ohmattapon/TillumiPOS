@@ -7,6 +7,7 @@ import { APP_VERSION, compareVersions } from '../../../../domains/update-version
 import { TOKENS } from '../../../tokens'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import { updateAuditToken, type IUpdateAudit } from '../ports/update-audit.port'
+import { updateChannelToken, type IUpdateChannel } from '../ports/update-channel.port'
 import { updateDownloaderToken, type IUpdateDownloader } from '../ports/update-downloader.port'
 import { updateFeedToken, type IUpdateFeed } from '../ports/update-feed.port'
 import { updateHasherToken, type IUpdateHasher } from '../ports/update-hasher.port'
@@ -39,11 +40,15 @@ export class ApplyUpdateUseCase {
     @inject(updateStagingToken) private readonly staging: IUpdateStaging,
     @inject(TOKENS.UnitOfWork) private readonly unitOfWork: IUnitOfWork,
     @inject(updateAuditToken) private readonly updateAudit: IUpdateAudit,
+    @inject(updateChannelToken) private readonly channel: IUpdateChannel,
   ) {}
 
   async execute(input: unknown, actor: Actor & { id: number; displayName: string }): Promise<StagedUpdate> {
     applyUpdateSchema.parse(input)
     requirePermission(actor, 'settings.write', 'เฉพาะเจ้าของร้านติดตั้งอัปเดตได้')
+    // Staging a package here would be useless: only the native Windows install has a script that applies it.
+    if (!this.channel.isEnabled())
+      throw new DomainConflictError('ระบบที่ติดตั้งแบบนี้อัปเดตจากหน้าเว็บไม่ได้', 'UPDATE_NOT_SUPPORTED')
 
     const release = await this.feed.fetchFeed()
     if (compareVersions(release.version, APP_VERSION) <= 0)

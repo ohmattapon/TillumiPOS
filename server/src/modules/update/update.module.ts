@@ -1,10 +1,12 @@
 import { container } from 'tsyringe'
+import { EnvUpdateChannel } from './adapters/channel/env-update-channel.adapter'
 import { DiskUpdateStaging } from './adapters/staging/update-staging.adapter'
 import { HttpUpdateDownloader } from './adapters/download/update-downloader.adapter'
 import { HttpUpdateFeed } from './adapters/feed/update-feed.adapter'
 import { NodeUpdateHasher } from './adapters/hash/update-hasher.adapter'
 import { NodeUpdateSignatureVerifier } from './adapters/signature/update-signature-verifier.adapter'
 import { UpdateElysiaController } from './adapters/controllers/update.controller'
+import { updateChannelToken } from './applications/ports/update-channel.port'
 import { updateDownloaderToken } from './applications/ports/update-downloader.port'
 import { updateFeedToken } from './applications/ports/update-feed.port'
 import { updateHasherToken } from './applications/ports/update-hasher.port'
@@ -13,6 +15,7 @@ import { updateStagingToken } from './applications/ports/update-staging.port'
 import { ApplyUpdateUseCase } from './applications/usecases/apply-update.usecase'
 import { CheckUpdateUseCase } from './applications/usecases/check-update.usecase'
 
+container.register(updateChannelToken, { useFactory: () => new EnvUpdateChannel() })
 container.register(updateFeedToken, { useClass: HttpUpdateFeed })
 container.register(updateDownloaderToken, { useClass: HttpUpdateDownloader })
 container.register(updateHasherToken, { useClass: NodeUpdateHasher })

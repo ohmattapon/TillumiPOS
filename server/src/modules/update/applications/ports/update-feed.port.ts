@@ -9,8 +9,11 @@ export interface UpdateRelease {
 
 /** What the settings screen shows: this build beside the newest published release. */
 export interface UpdateStatus {
+  /** False when this install cannot update from the screen; then nothing was fetched. */
+  supported: boolean
   currentVersion: string
-  latestVersion: string
+  /** Null when not supported, since the feed was not asked. */
+  latestVersion: string | null
   updateAvailable: boolean
 }
 

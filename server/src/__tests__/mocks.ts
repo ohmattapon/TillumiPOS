@@ -419,6 +419,7 @@ export const mockLoginAttemptGuard = (): Mocked<ILoginAttemptGuard> => {
 import type { IStockReceiptRepository } from '../modules/stock-receipts/applications/ports/stock-receipt.repository'
 import type { IUpdateDownloader } from '../modules/update/applications/ports/update-downloader.port'
 import type { IUpdateFeed } from '../modules/update/applications/ports/update-feed.port'
+import type { IUpdateChannel } from '../modules/update/applications/ports/update-channel.port'
 import type { IUpdateHasher } from '../modules/update/applications/ports/update-hasher.port'
 import type { IUpdateSignatureVerifier } from '../modules/update/applications/ports/update-signature.port'
 import type { IUpdateStaging } from '../modules/update/applications/ports/update-staging.port'
@@ -440,6 +441,10 @@ export const mockUpdateDownloader = (): Mocked<IUpdateDownloader> => ({
 
 export const mockUpdateHasher = (): Mocked<IUpdateHasher> => ({
   sha256Hex: mock<IUpdateHasher['sha256Hex']>(() => '0'.repeat(64)),
+})
+
+export const mockUpdateChannel = (enabled = true): Mocked<IUpdateChannel> => ({
+  isEnabled: mock<IUpdateChannel['isEnabled']>(() => enabled),
 })
 
 export const mockUpdateSignatureVerifier = (): Mocked<IUpdateSignatureVerifier> => ({
