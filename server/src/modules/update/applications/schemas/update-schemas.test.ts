@@ -6,6 +6,7 @@ const good = {
   version: '1.0.1',
   sha256: 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
   url: 'https://github.com/ohmattapon/TillumiPOS/releases/download/v1.0.1/TillumiPOS-update-1.0.1.zip',
+  signature: 'A'.repeat(512),
 }
 
 describe('updateFeedSchema', () => {
@@ -25,6 +26,11 @@ describe('updateFeedSchema', () => {
     ['non-hex hash', { ...good, sha256: 'z'.repeat(64) }],
     ['http url', { ...good, url: 'http://example.com/update.zip' }],
     ['non-url', { ...good, url: 'not-a-url' }],
+    ['https url on another host', { ...good, url: 'https://evil.example/TillumiPOS-update-1.0.1.zip' }],
+    ['https url on another github repo', { ...good, url: 'https://github.com/someone/else/releases/download/v1/x.zip' }],
+    ['missing signature', { ...good, signature: undefined }],
+    ['short signature', { ...good, signature: 'AAAA' }],
+    ['signature that is not base64', { ...good, signature: '!'.repeat(512) }],
     ['missing url', { ...good, url: undefined }],
     ['null body', null],
     ['array body', []],

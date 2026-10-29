@@ -31,6 +31,10 @@ export class HttpUpdateDownloader implements IUpdateDownloader {
     if (!response.ok)
       throw new DomainExternalServiceError('โหลดไฟล์อัปเดตไม่ได้ กรุณาลองใหม่อีกครั้ง', 'UPDATE_DOWNLOAD_FAILED')
 
+    // fetch follows redirects; a package that ended up on plain http could have been swapped on the way.
+    if (response.url && !response.url.startsWith('https://'))
+      throw new DomainExternalServiceError('โหลดไฟล์อัปเดตไม่ได้ กรุณาลองใหม่อีกครั้ง', 'UPDATE_DOWNLOAD_FAILED')
+
     const buffer = await response.arrayBuffer()
     if (buffer.byteLength === 0 || buffer.byteLength > MAX_PACKAGE_BYTES)
       throw new DomainExternalServiceError('ไฟล์อัปเดตมีขนาดผิดปกติ กรุณาลองใหม่อีกครั้ง', 'UPDATE_DOWNLOAD_FAILED')

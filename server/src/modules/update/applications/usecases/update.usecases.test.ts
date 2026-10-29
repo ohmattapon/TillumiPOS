@@ -6,8 +6,10 @@ import {
   mockUpdateDownloader,
   mockUpdateFeed,
   mockUpdateHasher,
+  mockUpdateSignatureVerifier,
   mockUpdateStaging,
 } from '../../../../__tests__/mocks'
+import { updateSignedMessage } from '../../../../domains/update-release'
 import { APP_VERSION } from '../../../../domains/update-version'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { DomainExternalServiceError } from '../../../../domains/errors/domain-external-service.error'
@@ -19,26 +21,29 @@ const owner = { role: 'owner' as const, id: 1, displayName: 'เจ้าขอ�
 const cashier = { role: 'cashier' as const, id: 2, displayName: 'แคชเชียร์' }
 
 const FEED_URL = 'https://github.com/ohmattapon/TillumiPOS/releases/download/v9.9.9/TillumiPOS-update-9.9.9.zip'
+const SIGNATURE = 'c2lnbmF0dXJl'
 const FEED_SHA = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
 
 let feed: ReturnType<typeof mockUpdateFeed>
 let downloader: ReturnType<typeof mockUpdateDownloader>
 let hasher: ReturnType<typeof mockUpdateHasher>
+let signatures: ReturnType<typeof mockUpdateSignatureVerifier>
 let staging: ReturnType<typeof mockUpdateStaging>
 
 beforeEach(() => {
   feed = mockUpdateFeed()
   downloader = mockUpdateDownloader()
   hasher = mockUpdateHasher()
+  signatures = mockUpdateSignatureVerifier()
   staging = mockUpdateStaging()
 })
 
 const apply = (audit = mockUpdateAudit()) =>
-  new ApplyUpdateUseCase(feed, downloader, hasher, staging, mockUnitOfWork(), audit)
+  new ApplyUpdateUseCase(feed, downloader, hasher, signatures, staging, mockUnitOfWork(), audit)
 
 describe('CheckUpdateUseCase', () => {
   test('reports an available update when the feed is newer', async () => {
-    feed.fetchFeed.mockResolvedValue({ version: '9.9.9', sha256: FEED_SHA, url: FEED_URL })
+    feed.fetchFeed.mockResolvedValue({ version: '9.9.9', sha256: FEED_SHA, url: FEED_URL, signature: SIGNATURE })
 
     expect(await new CheckUpdateUseCase(feed).execute()).toEqual({
       currentVersion: APP_VERSION,
@@ -48,13 +53,13 @@ describe('CheckUpdateUseCase', () => {
   })
 
   test('reports up to date when the feed matches this build', async () => {
-    feed.fetchFeed.mockResolvedValue({ version: APP_VERSION, sha256: FEED_SHA, url: FEED_URL })
+    feed.fetchFeed.mockResolvedValue({ version: APP_VERSION, sha256: FEED_SHA, url: FEED_URL, signature: SIGNATURE })
 
     expect(await new CheckUpdateUseCase(feed).execute()).toMatchObject({ updateAvailable: false })
   })
 
   test('never offers a downgrade when the feed is older', async () => {
-    feed.fetchFeed.mockResolvedValue({ version: '0.0.1', sha256: FEED_SHA, url: FEED_URL })
+    feed.fetchFeed.mockResolvedValue({ version: '0.0.1', sha256: FEED_SHA, url: FEED_URL, signature: SIGNATURE })
 
     expect(await new CheckUpdateUseCase(feed).execute()).toMatchObject({
       currentVersion: APP_VERSION,
@@ -76,7 +81,7 @@ describe('CheckUpdateUseCase', () => {
 
 describe('ApplyUpdateUseCase', () => {
   test('downloads, verifies, stages, audits and returns the plan', async () => {
-    feed.fetchFeed.mockResolvedValue({ version: '9.9.9', sha256: FEED_SHA, url: FEED_URL })
+    feed.fetchFeed.mockResolvedValue({ version: '9.9.9', sha256: FEED_SHA, url: FEED_URL, signature: SIGNATURE })
     const bytes = new TextEncoder().encode('release-bytes')
     downloader.download.mockResolvedValue(bytes)
     hasher.sha256Hex.mockReturnValue(FEED_SHA.toUpperCase())
@@ -88,7 +93,17 @@ describe('ApplyUpdateUseCase', () => {
     expect(downloader.download).toHaveBeenCalledWith(FEED_URL)
     expect(hasher.sha256Hex).toHaveBeenCalledWith(bytes)
     // The signature match is case-insensitive: feeds write hex either way.
-    expect(staging.stagePackage).toHaveBeenCalledWith({ version: '9.9.9', sha256: FEED_SHA, data: bytes })
+    expect(staging.stagePackage).toHaveBeenCalledWith({
+      version: '9.9.9',
+      sha256: FEED_SHA,
+      url: FEED_URL,
+      signature: SIGNATURE,
+      data: bytes,
+    })
+    expect(signatures.verify).toHaveBeenCalledWith(
+      updateSignedMessage({ version: '9.9.9', sha256: FEED_SHA, url: FEED_URL }),
+      SIGNATURE,
+    )
     expect(audit.recordUpdate).toHaveBeenCalledTimes(1)
     const [actor, entry] = audit.recordUpdate.mock.calls[0]!
     expect(actor).toEqual({ id: owner.id, name: owner.displayName })
@@ -110,7 +125,7 @@ describe('ApplyUpdateUseCase', () => {
   })
 
   test('refuses when already on the latest version', async () => {
-    feed.fetchFeed.mockResolvedValue({ version: APP_VERSION, sha256: FEED_SHA, url: FEED_URL })
+    feed.fetchFeed.mockResolvedValue({ version: APP_VERSION, sha256: FEED_SHA, url: FEED_URL, signature: SIGNATURE })
     const audit = mockUpdateAudit()
 
     const attempt = apply(audit).execute(undefined, owner)
@@ -122,8 +137,33 @@ describe('ApplyUpdateUseCase', () => {
     expect(audit.recordUpdate).not.toHaveBeenCalled()
   })
 
+  test('refuses a release whose signature does not verify, before downloading anything', async () => {
+    feed.fetchFeed.mockResolvedValue({ version: '9.9.9', sha256: FEED_SHA, url: FEED_URL, signature: SIGNATURE })
+    signatures.verify.mockReturnValue(false)
+    const audit = mockUpdateAudit()
+
+    const attempt = apply(audit).execute(undefined, owner)
+
+    await expect(attempt).rejects.toBeInstanceOf(DomainConflictError)
+    await expect(attempt).rejects.toMatchObject({ code: 'UPDATE_SIGNATURE_INVALID', params: { version: '9.9.9' } })
+    expect(downloader.download).not.toHaveBeenCalled()
+    expect(staging.stagePackage).not.toHaveBeenCalled()
+    expect(audit.recordUpdate).not.toHaveBeenCalled()
+  })
+
+  test('a build without a publisher key refuses instead of skipping the check', async () => {
+    feed.fetchFeed.mockResolvedValue({ version: '9.9.9', sha256: FEED_SHA, url: FEED_URL, signature: SIGNATURE })
+    signatures.verify.mockImplementation(() => {
+      throw new DomainExternalServiceError('ยังไม่มีกุญแจ', 'UPDATE_SIGNING_NOT_CONFIGURED')
+    })
+
+    await expect(apply().execute(undefined, owner)).rejects.toMatchObject({ code: 'UPDATE_SIGNING_NOT_CONFIGURED' })
+    expect(downloader.download).not.toHaveBeenCalled()
+    expect(staging.stagePackage).not.toHaveBeenCalled()
+  })
+
   test('refuses a package whose hash does not match, without staging or auditing', async () => {
-    feed.fetchFeed.mockResolvedValue({ version: '9.9.9', sha256: FEED_SHA, url: FEED_URL })
+    feed.fetchFeed.mockResolvedValue({ version: '9.9.9', sha256: FEED_SHA, url: FEED_URL, signature: SIGNATURE })
     downloader.download.mockResolvedValue(new TextEncoder().encode('tampered-bytes'))
     hasher.sha256Hex.mockReturnValue('0'.repeat(64))
     const audit = mockUpdateAudit()
@@ -147,7 +187,7 @@ describe('ApplyUpdateUseCase', () => {
   })
 
   test('a failed download never stages or audits', async () => {
-    feed.fetchFeed.mockResolvedValue({ version: '9.9.9', sha256: FEED_SHA, url: FEED_URL })
+    feed.fetchFeed.mockResolvedValue({ version: '9.9.9', sha256: FEED_SHA, url: FEED_URL, signature: SIGNATURE })
     downloader.download.mockRejectedValue(
       new DomainExternalServiceError('โหลดไฟล์อัปเดตไม่ได้ กรุณาตรวจเน็ตแล้วลองใหม่', 'UPDATE_DOWNLOAD_FAILED'),
     )

@@ -30,6 +30,9 @@ param(
   [string]$Version = '',
   [string]$PackagePath = '',
   [string]$ExpectedSha256 = '',
+  [string]$ReleaseUrl = '',
+  [string]$Signature = '',
+  [string]$PublicKeyPath = '',
   [int]$PortDb = 5435,
   [int]$PortApi = 3000,
   [switch]$TestMode,
@@ -56,6 +59,37 @@ function Assert-PackageHash([string]$Path, [string]$Expected) {
   }
 }
 
+function ConvertFrom-Base64Url([string]$Value) {
+  $text = $Value.Replace('-', '+').Replace('_', '/')
+  switch ($text.Length % 4) { 2 { $text += '==' } 3 { $text += '=' } }
+  return [Convert]::FromBase64String($text)
+}
+
+# The hash in pending.json sits next to the package in a folder the API's service account can write,
+# so it only proves the file is intact, not who published it. This check is what the script trusts:
+# the publisher's signature over version, hash and url, against the key the setup .exe put in
+# Program Files (admin-only). Same text as updateSignedMessage in server/src/domains/update-release.ts.
+function Assert-ReleaseSignature([string]$Version, [string]$Sha256, [string]$Url, [string]$SignatureBase64, [string]$KeyPath) {
+  if (-not (Test-Path -LiteralPath $KeyPath)) { throw "ไม่พบกุญแจตรวจลายเซ็นอัปเดต: $KeyPath (ยังไม่มีอะไรเปลี่ยน)" }
+  if ($Url -eq '' -or $SignatureBase64 -eq '') { throw 'รุ่นอัปเดตนี้ไม่มีลายเซ็น ไม่ติดตั้งให้ (ยังไม่มีอะไรเปลี่ยน)' }
+  $key = Get-Content -Raw -LiteralPath $KeyPath | ConvertFrom-Json
+  if ([string]::IsNullOrEmpty($key.n)) { throw 'โปรแกรมนี้ยังไม่มีกุญแจตรวจลายเซ็นอัปเดต ไม่ติดตั้งให้ (ยังไม่มีอะไรเปลี่ยน)' }
+  $parameters = New-Object System.Security.Cryptography.RSAParameters
+  $parameters.Modulus = ConvertFrom-Base64Url ([string]$key.n)
+  $parameters.Exponent = ConvertFrom-Base64Url ([string]$key.e)
+  $rsa = [System.Security.Cryptography.RSA]::Create()
+  try {
+    $rsa.ImportParameters($parameters)
+    $message = (@('tillumi-update:v1', $Version, $Sha256.ToLowerInvariant(), $Url) -join "`n")
+    $valid = $false
+    try {
+      $valid = $rsa.VerifyData([Text.Encoding]::UTF8.GetBytes($message), [Convert]::FromBase64String($SignatureBase64),
+        [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+    } catch { $valid = $false }
+    if (-not $valid) { throw 'ลายเซ็นของรุ่นอัปเดตไม่ถูกต้อง ไม่ติดตั้งให้ (ยังไม่มีอะไรเปลี่ยน)' }
+  } finally { $rsa.Dispose() }
+}
+
 function Read-PendingUpdate([string]$UpdatesDir) {
   $found = Get-ChildItem -Path $UpdatesDir -Directory -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' } |
@@ -63,7 +97,7 @@ function Read-PendingUpdate([string]$UpdatesDir) {
       $marker = Join-Path $_.FullName 'pending.json'
       if (Test-Path -LiteralPath $marker) {
         $parsed = Get-Content -Raw -LiteralPath $marker | ConvertFrom-Json
-        [pscustomobject]@{ Version = [string]$parsed.version; Sha256 = [string]$parsed.sha256; Package = [string]$parsed.packagePath; Dir = $_.FullName }
+        [pscustomobject]@{ Version = [string]$parsed.version; Sha256 = [string]$parsed.sha256; Url = [string]$parsed.url; Signature = [string]$parsed.signature; Package = [string]$parsed.packagePath; Dir = $_.FullName }
       }
     } |
     Sort-Object Version -Descending |
@@ -129,14 +163,18 @@ function Start-ApiService {
 
 # ---- 1. หา pending + ตรวจแฮชก่อนแตะ service ----
 $updatesDir = Join-Path $DataDir 'updates'
-if ($Version -eq '' -or $PackagePath -eq '' -or $ExpectedSha256 -eq '') {
+if ($Version -eq '' -or $PackagePath -eq '' -or $ExpectedSha256 -eq '' -or $ReleaseUrl -eq '' -or $Signature -eq '') {
   $pending = Read-PendingUpdate $updatesDir
   if ($null -eq $pending) { throw "ยังไม่มีรุ่นใหม่ที่เตรียมไว้ ให้เจ้าของกด 'โหลดรุ่นใหม่' ในหน้าตั้งค่าก่อน (ยังไม่มีอะไรเปลี่ยน)" }
   if ($Version -eq '') { $Version = $pending.Version }
   if ($PackagePath -eq '') { $PackagePath = $pending.Package }
   if ($ExpectedSha256 -eq '') { $ExpectedSha256 = $pending.Sha256 }
+  if ($ReleaseUrl -eq '') { $ReleaseUrl = $pending.Url }
+  if ($Signature -eq '') { $Signature = $pending.Signature }
 }
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "รุ่นไม่ถูกต้อง: $Version (ยังไม่มีอะไรเปลี่ยน)" }
+if ($PublicKeyPath -eq '') { $PublicKeyPath = Join-Path $InstallDir 'update-public-key.json' }
+Assert-ReleaseSignature $Version $ExpectedSha256 $ReleaseUrl $Signature $PublicKeyPath
 Assert-PackageHash $PackagePath $ExpectedSha256
 
 $xmlPath = Join-Path $InstallDir 'tillumi-pos.xml'

@@ -1,6 +1,7 @@
 {
-  "_note": "แม่แบบ feed อัปเดต TillumiPOS (ไฟล์นี้เป็นตัวอย่างเท่านั้น ห้ามมีค่าจริง — ค่าข้างล่างเป็นตัวอย่างที่ตั้งใจให้ใช้ไม่ได้). วิธี publish รุ่นใหม่: 1) เตรียม .zip ที่มี tillumi-pos.exe + tillumi-migrate.exe + web/ + drizzle/ ของรุ่นนั้น 2) หาค่าแฮชด้วย powershell: Get-FileHash .\\TillumiPOS-update-1.0.1.zip -Algorithm SHA256 3) สร้าง GitHub Release ชื่อ v1.0.1 อัปโหลด .zip แล้วอัปโหลด feed.json ที่กรอก version/sha256/url จริงของรุ่นนั้น (url ต้อง https:// เสมอ) 4) อย่าลืม bump APP_VERSION ใน server/src/domains/update-version.ts กับ AppVersion ใน installer/tillumi.iss ให้ตรงกันทุกครั้ง. ช่อง _note มีไว้ให้คนอ่านอย่างเดียว ตัว API ตัดทิ้งตอนตรวจ (ดู updateFeedSchema).",
+  "_note": "แม่แบบ feed อัปเดต TillumiPOS (ไฟล์นี้เป็นตัวอย่างเท่านั้น ห้ามมีค่าจริง). อย่าเขียนไฟล์นี้เอง: สร้างด้วย bun scripts/sign-update.ts sign --key <private-key.pem> --package TillumiPOS-update-1.0.1.zip --version 1.0.1 --url https://github.com/ohmattapon/TillumiPOS/releases/download/v1.0.1/TillumiPOS-update-1.0.1.zip --out feed.json ซึ่งคำนวณ sha256 และลงลายเซ็นให้ แล้วอัปโหลด .zip กับ feed.json ที่ได้ไว้ใน GitHub Release ชื่อ v1.0.1 (url ต้องขึ้นต้น https://github.com/ohmattapon/TillumiPOS/releases/download/). .zip ต้องมี tillumi-pos.exe + tillumi-migrate.exe + web/ + drizzle/ ของรุ่นนั้น และอย่าลืม bump APP_VERSION ใน server/src/domains/update-version.ts กับ AppVersion ใน installer/tillumi.iss ให้ตรงกัน ช่อง _note มีไว้ให้คนอ่านอย่างเดียว ตัว API ตัดทิ้งตอนตรวจ",
   "version": "1.0.1",
   "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-  "url": "https://github.com/ohmattapon/TillumiPOS/releases/download/v1.0.1/TillumiPOS-update-1.0.1.zip"
+  "url": "https://github.com/ohmattapon/TillumiPOS/releases/download/v1.0.1/TillumiPOS-update-1.0.1.zip",
+  "signature": "ตัวอย่างเท่านั้น ลายเซ็นจริงมาจาก sign-update.ts"
 }

@@ -3,6 +3,8 @@ export interface UpdateRelease {
   version: string
   sha256: string
   url: string
+  /** Base64 publisher signature over version, hash and url (see `updateSignedMessage`). */
+  signature: string
 }
 
 /** What the settings screen shows: this build beside the newest published release. */

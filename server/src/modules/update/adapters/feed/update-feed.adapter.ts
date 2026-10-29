@@ -28,6 +28,8 @@ export class HttpUpdateFeed implements IUpdateFeed {
       throw unreachable()
     }
     if (!response.ok) throw unreachable()
+    // fetch follows redirects; never accept an answer that ended up on plain http.
+    if (response.url && !response.url.startsWith('https://')) throw unreachable()
 
     let body: unknown
     try {

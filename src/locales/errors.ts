@@ -125,5 +125,7 @@ export const errors = {
     UPDATE_DOWNLOAD_FAILED: 'The update package could not be downloaded. Please try again.',
     UPDATE_NOT_AVAILABLE: 'This is already the latest version.',
     UPDATE_HASH_MISMATCH: 'The update file does not match its signature. Please try again.',
+    UPDATE_SIGNATURE_INVALID: 'This update is not signed by the publisher, so it was not installed. Please tell your technician.',
+    UPDATE_SIGNING_NOT_CONFIGURED: 'This program has no key to check updates with. Please tell your technician.',
   },
 }

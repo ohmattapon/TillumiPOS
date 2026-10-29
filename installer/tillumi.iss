@@ -105,6 +105,9 @@ Source: "{#PayloadDir}\WinSW-x64.exe"; DestDir: "{app}"; DestName: "tillumi-post
 Source: "{#PayloadDir}\WinSW-x64.exe"; DestDir: "{app}"; DestName: "tillumi-pos.exe"; Flags: ignoreversion
 ; สคริปต์ของร้าน (first-install ใช้ครั้งเดียวตอนติดตั้ง อีกสองไฟล์งานสำรองข้อมูลเรียกทุกคืน)
 Source: "scripts\*.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+; Publisher's public key: the only thing apply-update.ps1 trusts to say who signed an update. Installed here (admin-only)
+; and never taken from an update package. A new key means a new setup .exe.
+Source: "..\server\src\modules\update\update-public-key.json"; DestDir: "{app}"; Flags: ignoreversion
 ; ต้นแบบ xml มี {{...}} อยู่ เอาไปแทนค่าที่ {tmp} แล้วเขียนไฟล์จริงที่ {app} ใน [Code] (ห้ามติดตั้งตรง ๆ)
 Source: "winsw\tillumi-postgres.xml"; DestDir: "{tmp}\tillumi-templates"; Flags: deleteafterinstall
 Source: "winsw\tillumi-pos.xml"; DestDir: "{tmp}\tillumi-templates"; Flags: deleteafterinstall

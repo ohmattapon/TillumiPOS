@@ -28,7 +28,13 @@ export class DiskUpdateStaging implements IUpdateStaging {
     this.root = root
   }
 
-  async stagePackage(input: { version: string; sha256: string; data: Uint8Array }): Promise<{ path: string }> {
+  async stagePackage(input: {
+    version: string
+    sha256: string
+    url: string
+    signature: string
+    data: Uint8Array
+  }): Promise<{ path: string }> {
     // The use case only passes feed-validated versions, but staging never
     // trusts its caller with a filesystem path: reject anything but a triple.
     if (!isUpdateVersion(input.version)) throw new Error(`Refusing to stage an invalid version: ${input.version}`)
@@ -46,6 +52,8 @@ export class DiskUpdateStaging implements IUpdateStaging {
       const marker: PendingUpdate = {
         version: input.version,
         sha256: input.sha256,
+        url: input.url,
+        signature: input.signature,
         packagePath,
         stagedAt: new Date().toISOString(),
       }

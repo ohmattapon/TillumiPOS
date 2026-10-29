@@ -156,13 +156,24 @@ powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/service-acco
 - ตรวจเวอร์ชัน: `GET /api/v1/update/status` (ล็อกอินก็เรียกได้) เทียบ `APP_VERSION`
   (`server/src/domains/update-version.ts`) กับ feed
 - โหลดรุ่นใหม่: `POST /api/v1/update/apply` (ต้องสิทธิ์ `settings.write` = เจ้าของร้าน, audit `update.applied`)
-  API โหลด zip จาก feed ตรวจ SHA-256 แล้ววางที่ `<DataDir>\updates\<รุ่น>\` + `pending.json`
+  API ตรวจ **ลายเซ็นผู้เผยแพร่** ของรายการใน feed ก่อน แล้วโหลด zip ตรวจ SHA-256 แล้ววางที่
+  `<DataDir>\updates\<รุ่น>\` + `pending.json` (มี url กับลายเซ็นติดไปด้วย)
 - feed URL ตายตัวในโค้ด (`UPDATE_FEED_URL` ใน `update-feed.adapter.ts` ชี้ `.../releases/latest/download/feed.json`
   ตามแม่แบบ `installer/feed.json`) ต้อง HTTPS เท่านั้น **ห้ามให้ client ส่ง URL มาเอง**
-- ติดตั้ง: `apply-update.ps1` แบบยกระดับสิทธิ์ — ตรวจแฮชซ้ำ → หยุด `tillumi-pos` → แตกเป็น `app-<รุ่นใหม่>` →
+- ติดตั้ง: `apply-update.ps1` แบบยกระดับสิทธิ์ — **ตรวจลายเซ็นเองด้วยกุญแจใน Program Files** (ไม่เชื่อแฮชใน
+  `pending.json` เพราะโฟลเดอร์นั้น service เขียนได้) → ตรวจแฮชซ้ำ → หยุด `tillumi-pos` → แตกเป็น `app-<รุ่นใหม่>` →
   รัน `tillumi-migrate.exe` ก่อนสตาร์ทเสมอ → ชี้ `tillumi-pos.xml` ไปรุ่นใหม่ → สตาร์ท → ตรวจสุขภาพ
   `GET /api/v1/setup` (ต้อง 200 = ต่อ DB ที่อัปแล้วได้จริง) → เก็บรุ่นเก่าไว้ 1 รุ่น ลบรุ่นที่เก่ากว่านั้น
   พังขั้นไหน = ชี้ xml กลับรุ่นเดิม + สตาร์ท (rollback) แล้วจบด้วยรหัสผิดพลาดเสมอ
+- **ลายเซ็นรุ่นอัปเดต:** ลายเซ็น RSA-3072 (SHA-256, PKCS#1 v1.5) ครอบข้อความ `tillumi-update:v1` + รุ่น + แฮช + url
+  (`updateSignedMessage` ใน `server/src/domains/update-release.ts`) จึงสลับรุ่น แฮช หรือ url ไม่ได้ และ url ต้องอยู่ใต้
+  `https://github.com/ohmattapon/TillumiPOS/releases/download/` กุญแจสาธารณะอยู่ที่
+  `server/src/modules/update/update-public-key.json` ตัวติดตั้งวางไว้ที่ `C:\Program Files\TillumiPOS\update-public-key.json`
+  (แก้ได้เฉพาะแอดมิน และไม่เคยมาจากแพ็กเกจอัปเดต) ถ้ายังไม่มีกุญแจ (ค่าว่างใน repo) ทั้ง API และสคริปต์ **ปฏิเสธการอัปเดตทุกครั้ง**
+  - ครั้งแรก: `bun scripts/sign-update.ts keygen --out <ที่เก็บกุญแจส่วนตัว.pem>` แล้ว commit ไฟล์กุญแจสาธารณะ และ build setup .exe ใหม่
+    **เก็บกุญแจส่วนตัวนอก repo และสำรองไว้** ถ้าหายหรือเปลี่ยนกุญแจ ทุกร้านต้องติดตั้ง setup .exe ใหม่ถึงจะอัปเดตต่อได้
+  - ทุกรุ่น: `bun scripts/sign-update.ts sign --key <.pem> --package <zip> --version x.y.z --url <url> --out feed.json`
+    แล้วอัปโหลด zip กับ feed.json ที่ได้ไว้ใน GitHub Release
 - **กฎเหล็กตอน release:** `APP_VERSION` ใน `server/src/domains/update-version.ts` กับ `AppVersion`
   (`#define` ใน `installer/tillumi.iss`) ต้องเลขเดียวกันทุกครั้ง มีเทสต์อัตโนมัติคุม
   (`update-version.test.ts` หัวข้อ version parity) — ถ้าเทสต์แดงห้าม release

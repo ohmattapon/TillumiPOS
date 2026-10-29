@@ -12,6 +12,9 @@ export interface StagedUpdate {
 export interface PendingUpdate {
   version: string
   sha256: string
+  /** Release url and publisher signature, kept so the script can verify them itself. */
+  url: string
+  signature: string
   packagePath: string
   stagedAt: string
 }
@@ -22,7 +25,13 @@ export interface PendingUpdate {
  * never has to decide what is trustworthy.
  */
 export interface IUpdateStaging {
-  stagePackage(input: { version: string; sha256: string; data: Uint8Array }): Promise<{ path: string }>
+  stagePackage(input: {
+    version: string
+    sha256: string
+    url: string
+    signature: string
+    data: Uint8Array
+  }): Promise<{ path: string }>
 }
 
 const updateStagingTokenSymbol: unique symbol = Symbol('IUpdateStaging')
