@@ -109,6 +109,48 @@ test('sums bills, discount and net sales per promotion and leaves out voided bil
   expect(ok(await owner.api.sales.reports.promotions.get({ query: { ...range, limit: 1 } })))
     .toMatchObject({ total: 2, items: [{ promotionId: bundle.id }] })
 })
+test('totals cover every promotion and the bills that used none, and follow the cashier filter', async () => {
+  const cashier = await signIn('cashier')
+  const tea = await seedProduct(owner, { priceSatang: 2500, costSatang: 1000, stock: 40 })
+  const bundle = ok(await owner.api.promotions.post({
+    name: 'ซื้อ 2 แถม 1', kind: 'bundle', value: 0, buyQuantity: 2, freeQuantity: 1,
+    scope: { productIds: [tea.id], categoryIds: [] },
+  }))
+  const coupon = ok(await owner.api.promotions.post({ name: 'คูปองลด 10%', kind: 'percent', value: 1000, couponCode: 'SUMMER10' }))
+  const sellWithQuote = async (who: typeof owner, quantity: number, couponCode?: string) => {
+    const quote = ok(await who.api.quotes.post({
+      lines: [{ productId: tea.id, quantity }], ...(couponCode === undefined ? {} : { couponCode }),
+    }))
+    return ok(await who.api.sales.post({
+      items: [{ productId: tea.id, quantity }],
+      payments: [{ method: 'cash' as const, amountSatang: quote.totalSatang }],
+      quoteId: quote.id,
+    }))
+  }
+  const bundled = await sellWithQuote(owner, 3)
+  const couponed = await sellWithQuote(cashier, 2, 'SUMMER10')
+  const plain = await sell(owner, tea.id)
+  expect(bundled.promotion?.id).toBe(bundle.id)
+  expect(couponed.promotion?.id).toBe(coupon.id)
+  for (const sale of [bundled, couponed, plain]) await dateSale(sale.id, '2026-01-02T03:00:00Z')
+
+  const all = ok(await owner.api.sales.reports.promotions.get({ query: { ...range, limit: 1 } }))
+  expect(all.items).toHaveLength(1)
+  expect(all.completedBills).toBe(3)
+  expect(all.totals).toEqual({
+    bills: 2,
+    discountSatang: bundled.discountSatang + couponed.discountSatang,
+    netSalesSatang: bundled.totalSatang - bundled.vatSatang + couponed.totalSatang - couponed.vatSatang,
+  })
+  const byCashier = ok(await owner.api.sales.reports.promotions.get({ query: { ...range, cashierId: cashier.user.id } }))
+  expect(byCashier.completedBills).toBe(1)
+  expect(byCashier.totals).toEqual({
+    bills: 1, discountSatang: couponed.discountSatang, netSalesSatang: couponed.totalSatang - couponed.vatSatang,
+  })
+  const byOwner = ok(await owner.api.sales.reports.promotions.get({ query: { ...range, cashierId: owner.user.id } }))
+  expect(byOwner.completedBills).toBe(2)
+  expect(byOwner.totals.bills).toBe(1)
+})
 test('filters every report by cashier and by member or guest, and lists the cashiers', async () => {
   const cashier = await signIn('cashier')
   const p = await seedProduct(owner, { stock: 20 })

@@ -33131,6 +33131,18 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "completedBills": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
                     "items": {
                       "items": {
                         "properties": {
@@ -33208,11 +33220,59 @@
                           "type": "integer"
                         }
                       ]
+                    },
+                    "totals": {
+                      "properties": {
+                        "bills": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "discountSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "netSalesSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "bills",
+                        "discountSatang",
+                        "netSalesSatang"
+                      ],
+                      "type": "object"
                     }
                   },
                   "required": [
                     "items",
-                    "total"
+                    "total",
+                    "totals",
+                    "completedBills"
                   ],
                   "type": "object"
                 }

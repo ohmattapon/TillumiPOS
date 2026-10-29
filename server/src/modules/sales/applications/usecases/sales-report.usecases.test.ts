@@ -12,6 +12,7 @@ import { ListReportCategoriesUseCase } from './list-report-categories.usecase'
 const range = { from: '2026-01-01', to: '2026-01-31' }
 const owner = { role: 'owner' as const }
 const sums = { saleCount: 1, voidedCount: 1, totalSatang: 10700, vatSatang: 700, discountSatang: 500, costSatang: 6000, changeSatang: 300 }
+const noTotals = { bills: 0, discountSatang: 0, netSalesSatang: 0 }
 let reports: ReturnType<typeof mockSalesReportRepository>
 let zone: ReturnType<typeof mockReportTimeZone>
 let branchNames: ReturnType<typeof mockReportBranchNames>
@@ -30,7 +31,7 @@ beforeEach(() => {
   reports.overview.mockResolvedValue({ summary: sums, days: [{ day: '2026-01-01', ...sums }], tendered: [{ method: 'cash', amountSatang: 11000 }], unallocatedLines: 4 })
   reports.products.mockResolvedValue({ items: [], total: 0 })
   reports.branches.mockResolvedValue({ items: [{ branchId: 3, ...sums }], total: 1 })
-  reports.promotions.mockResolvedValue({ items: [], total: 0 })
+  reports.promotions.mockResolvedValue({ items: [], total: 0, totals: noTotals, completedBills: 0 })
   overview = new GetSalesReportUseCase(reports, zone)
   products = new ListReportProductsUseCase(reports, zone)
   comparison = new ListReportBranchesUseCase(reports, zone, branchNames)
@@ -96,8 +97,9 @@ test('rejects invalid dates, reversed ranges, excessive ranges and invalid pagin
 })
 test('validates the range like the other reports', async () => {
   const rows = [{ promotionId: 4, name: 'ซื้อ 2 แถม 1', bills: 2, discountSatang: 900, netSalesSatang: 3100 }]
-  reports.promotions.mockResolvedValue({ items: rows, total: 1 })
-  expect(await promotionReport.execute({ ...range, limit: 7, offset: 14 }, owner, 9)).toEqual({ items: rows, total: 1 })
+  const totals = { bills: 5, discountSatang: 2100, netSalesSatang: 9000 }
+  reports.promotions.mockResolvedValue({ items: rows, total: 1, totals, completedBills: 8 })
+  expect(await promotionReport.execute({ ...range, limit: 7, offset: 14 }, owner, 9)).toEqual({ items: rows, total: 1, totals, completedBills: 8 })
   expect(reports.promotions).toHaveBeenCalledWith({
     ...range, scope: 'branch', branchId: 9, timeZone: 'Asia/Bangkok', limit: 7, offset: 14,
   })

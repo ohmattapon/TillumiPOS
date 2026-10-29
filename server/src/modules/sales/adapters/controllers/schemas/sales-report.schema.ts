@@ -35,6 +35,11 @@ const promotionRow = t.Object({
   promotionId: t.Integer(), name: t.String(), bills: t.Integer(),
   discountSatang: t.Integer(), netSalesSatang: t.Integer(),
 })
+const promotionPage = t.Object({
+  items: t.Array(promotionRow), total: t.Integer(),
+  totals: t.Object({ bills: t.Integer(), discountSatang: t.Integer(), netSalesSatang: t.Integer() }),
+  completedBills: t.Integer(),
+})
 const cashier = t.Object({ cashierId: t.Integer(), cashierName: t.String(), bills: t.Integer() })
 const overview = t.Object({
   from: t.String(), to: t.String(), timeZone: t.String(),
@@ -65,7 +70,7 @@ export const reportSchemas = {
     limit: t.Optional(t.Numeric({ minimum: 1, maximum: 500 })),
     offset: t.Optional(t.Numeric({ minimum: 0 })),
   }),
-  overview, product, item, category: categoryRow, branch, promotion: promotionRow, cashier,
+  overview, product, item, category: categoryRow, branch, promotion: promotionRow, promotionPage, cashier,
 }
 export type SalesReportResponse = Static<typeof overview>
 export type ReportProductResponse = Static<typeof product>

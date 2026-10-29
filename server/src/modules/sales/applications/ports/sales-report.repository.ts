@@ -37,6 +37,13 @@ export interface ReportPromotion {
   /** Bill totals net of VAT, added up as the other reports do. */
   netSalesSatang: number
 }
+export interface ReportPromotionTotals {
+  bills: number
+  discountSatang: number
+  netSalesSatang: number
+}
+/** `totals` and `completedBills` cover every promotion in the period, not only the rows of the page. */
+export type ReportPromotionPage = Page<ReportPromotion> & { totals: ReportPromotionTotals; completedBills: number }
 export interface ReportCashier {
   cashierId: number
   /** The name on the cashier's latest bill in the range, so bills keep the name they were sold under. */
@@ -84,7 +91,7 @@ export interface ISalesReportRepository {
   /** Per category stored on the line, completed bills only, sorted by net sales descending, then category id with no category last. */
   categories(query: ReportPageQuery): Promise<Page<ReportCategorySums>>
   branches(query: ReportPageQuery): Promise<Page<SalesReportSums & { branchId: number }>>
-  promotions(query: ReportPageQuery): Promise<Page<ReportPromotion>>
+  promotions(query: ReportPageQuery): Promise<ReportPromotionPage>
   /** Ignores `cashierId` and `customer`, so the list shows everyone who sold in the range. */
   cashiers(period: SalesReportPeriod): Promise<ReportCashier[]>
 }

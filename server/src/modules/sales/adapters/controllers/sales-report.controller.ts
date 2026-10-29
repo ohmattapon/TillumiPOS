@@ -46,7 +46,7 @@ export class SalesReportElysiaController {
         detail: { summary: 'เปรียบเทียบยอดขายแยกสาขา' },
       })
       .get('/promotions', async ({ query, user, branch }) => this.promotions.execute(query, user, (await branch()).id), {
-        auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: page(reportSchemas.promotion),
+        auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: reportSchemas.promotionPage,
         detail: { summary: 'ยอดขายและส่วนลดแยกตามโปรโมชัน ใช้ข้อมูล ณ ตอนขาย' },
       })
       .get('/cashiers', async ({ query, user, branch }) => this.cashiers.execute(query, user, (await branch()).id), {

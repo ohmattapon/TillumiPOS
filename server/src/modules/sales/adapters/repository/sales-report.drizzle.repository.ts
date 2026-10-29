@@ -4,7 +4,7 @@ import { currentExecutor } from '../../../../libs/transaction-context'
 import type { Page } from '../../../../domains/page'
 import type { SalesReportSums } from '../../../../domains/sales-report'
 import type {
-  ISalesReportRepository, SalesReportPeriod, ReportOverviewSums, ReportProduct, ReportPageQuery, ReportPromotion, ReportCashier, ReportItem, ReportItemQuery, ReportCategorySums,
+  ISalesReportRepository, SalesReportPeriod, ReportOverviewSums, ReportProduct, ReportPageQuery, ReportPromotion, ReportPromotionPage, ReportCashier, ReportItem, ReportItemQuery, ReportCategorySums,
 } from '../../applications/ports/sales-report.repository'
 
 // Aggregate sale costs first: joining lines or payments directly would multiply bill totals.
@@ -163,12 +163,12 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
     return { items: row!.items as (SalesReportSums & { branchId: number })[], total: Number(row!.total) }
   }
 
-  async promotions(query: ReportPageQuery): Promise<Page<ReportPromotion>> {
+  async promotions(query: ReportPageQuery): Promise<ReportPromotionPage> {
     // The promotion lives in the bill's snapshot, so a voided or renamed promotion changes nothing here.
     // The snapshot is stored as a JSON string, so it is unwrapped before its keys are read; JSON null
     // (a bill with no promotion) unwraps to `null`, whose keys are SQL null.
     const snapshot = sql`(s.promotion #>> '{}')::jsonb`
-    const [row] = await currentExecutor().execute<{ items: ReportPromotion[]; total: number }>(sql`
+    const [row] = await currentExecutor().execute<{ items: ReportPromotion[]; total: number; totals: ReportPromotionPage['totals']; completedBills: number }>(sql`
       with ${facts(query)},
       grouped as (
         select (${snapshot} ->> 'id')::integer as "promotionId",
@@ -183,9 +183,12 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
       paged as (select * from grouped order by "discountSatang" desc, "promotionId"
         limit ${query.limit} offset ${query.offset})
       select coalesce((select jsonb_agg(to_jsonb(paged) order by "discountSatang" desc, "promotionId") from paged), '[]'::jsonb) as items,
-        (select count(*)::integer from grouped) as total
+        (select count(*)::integer from grouped) as total,
+        (select jsonb_build_object('bills', coalesce(sum(bills), 0)::integer, 'discountSatang', coalesce(sum("discountSatang"), 0)::integer,
+          'netSalesSatang', coalesce(sum("netSalesSatang"), 0)::integer) from grouped) as totals,
+        (select count(*)::integer from period_sales s where s.status = 'completed') as "completedBills"
     `)
-    return { items: row!.items as ReportPromotion[], total: Number(row!.total) }
+    return { items: row!.items as ReportPromotion[], total: Number(row!.total), totals: row!.totals, completedBills: Number(row!.completedBills) }
   }
 
   async cashiers(period: SalesReportPeriod): Promise<ReportCashier[]> {
