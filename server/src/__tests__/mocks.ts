@@ -10,7 +10,12 @@ export const mockRoleRepository = (): Mocked<IRoleRepository> => ({
   update: mock<IRoleRepository['update']>(),
   delete: mock<IRoleRepository['delete']>(),
 })
+import type { IReportTimeZone } from '../modules/sales/applications/ports/report-time-zone.port'
 import type { ISalesReportRepository } from '../modules/sales/applications/ports/sales-report.repository'
+
+export const mockReportTimeZone = (timeZone = 'Asia/Bangkok'): Mocked<IReportTimeZone> => ({
+  timeZone: mock<IReportTimeZone['timeZone']>().mockResolvedValue(timeZone),
+})
 
 export const mockSalesReportRepository = (): Mocked<ISalesReportRepository> => ({
   overview: mock<ISalesReportRepository['overview']>(),

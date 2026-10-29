@@ -1,8 +1,7 @@
 import { beforeEach, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
 import { makeBranch } from '../../../../__tests__/factories'
-import { mockSalesReportRepository, mockShopSettingsRepository, mockBranchRepository } from '../../../../__tests__/mocks'
-import { DEFAULT_SHOP_SETTINGS, ShopSettingsEntity } from '../../../../domains/shop-settings.domain'
+import { mockSalesReportRepository, mockReportTimeZone, mockBranchRepository } from '../../../../__tests__/mocks'
 import { GetSalesReportUseCase } from './get-sales-report.usecase'
 import { GetPromotionReportUseCase } from './get-promotion-report.usecase'
 import { ListReportProductsUseCase } from './list-report-products.usecase'
@@ -12,7 +11,7 @@ const range = { from: '2026-01-01', to: '2026-01-31' }
 const owner = { role: 'owner' as const }
 const sums = { saleCount: 1, voidedCount: 1, totalSatang: 10700, vatSatang: 700, discountSatang: 500, costSatang: 6000, changeSatang: 300 }
 let reports: ReturnType<typeof mockSalesReportRepository>
-let settings: ReturnType<typeof mockShopSettingsRepository>
+let zone: ReturnType<typeof mockReportTimeZone>
 let branches: ReturnType<typeof mockBranchRepository>
 let overview: GetSalesReportUseCase
 let products: ListReportProductsUseCase
@@ -20,18 +19,17 @@ let comparison: ListReportBranchesUseCase
 let promotionReport: GetPromotionReportUseCase
 beforeEach(() => {
   reports = mockSalesReportRepository()
-  settings = mockShopSettingsRepository()
+  zone = mockReportTimeZone('Asia/Bangkok')
   branches = mockBranchRepository()
-  settings.get.mockResolvedValue(new ShopSettingsEntity(DEFAULT_SHOP_SETTINGS))
   reports.overview.mockResolvedValue({ summary: sums, days: [{ day: '2026-01-01', ...sums }], tendered: [{ method: 'cash', amountSatang: 11000 }] })
   reports.products.mockResolvedValue({ items: [], total: 0 })
   reports.branches.mockResolvedValue({ items: [{ branchId: 3, ...sums }], total: 1 })
   reports.promotions.mockResolvedValue({ items: [], total: 0 })
   branches.findAll.mockResolvedValue([makeBranch({ id: 3, name: 'สาขาปิด', isActive: false })])
-  overview = new GetSalesReportUseCase(reports, settings)
-  products = new ListReportProductsUseCase(reports, settings)
-  comparison = new ListReportBranchesUseCase(reports, settings, branches)
-  promotionReport = new GetPromotionReportUseCase(reports, settings)
+  overview = new GetSalesReportUseCase(reports, zone)
+  products = new ListReportProductsUseCase(reports, zone)
+  comparison = new ListReportBranchesUseCase(reports, zone, branches)
+  promotionReport = new GetPromotionReportUseCase(reports, zone)
 })
 test('keeps branch scope explicit and cash net of change', async () => {
   const result = await overview.execute(range, owner, 9)
@@ -47,7 +45,7 @@ test('all-branch scope is explicit; pagination and closed branch names are prese
 test('every report refuses cashier access before reading any port', async () => {
   for (const usecase of [overview, products, comparison, promotionReport])
     await expect(usecase.execute(range, { role: 'cashier' }, 1)).rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'reports.read' } })
-  expect(settings.get).not.toHaveBeenCalled()
+  expect(zone.timeZone).not.toHaveBeenCalled()
 })
 test('rejects invalid dates, reversed ranges, excessive ranges and invalid pagination', async () => {
   for (const query of [{ from: '2026-02-30', to: '2026-03-01' }, { from: '2026-02-01', to: '2026-01-01' }, { from: '2025-01-01', to: '2026-01-02' }])

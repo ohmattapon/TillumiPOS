@@ -1,7 +1,9 @@
 import { container } from 'tsyringe'
 import { printerSettingsToken } from '../receipt-printer/applications/ports/printer-settings.port'
+import { reportTimeZoneToken } from '../sales/applications/ports/report-time-zone.port'
 import { quoteShopRulesToken } from '../quotes/applications/ports/quote-shop-rules.port'
 import { SettingsElysiaController } from './adapters/controllers/settings.controller'
+import { SettingsReportTimeZone } from './adapters/report-time-zone.adapter'
 import { CachedShopSettingsRepository } from './adapters/repository/shop-settings.cached.repository'
 import { ShopPrinterSettings } from './adapters/repository/printer-settings.adapter'
 import { shopSettingsRepositoryToken } from './applications/ports/shop-settings.repository'
@@ -12,6 +14,7 @@ import { UpdateShopSettingsUseCase } from './applications/usecases/update-shop-s
 
 container.register(shopSettingsRepositoryToken, { useClass: CachedShopSettingsRepository })
 container.register(printerSettingsToken, { useClass: ShopPrinterSettings })
+container.register(reportTimeZoneToken, { useClass: SettingsReportTimeZone })
 container.register(quoteShopRulesToken, { useToken: shopSettingsRepositoryToken })
 container.registerSingleton(GetShopSettingsUseCase)
 container.registerSingleton(UpdateShopSettingsUseCase)
