@@ -236,6 +236,7 @@ Every operation is a use case that is exactly one of a command or a query, and t
 ### The API contract
 
 - Every route is under `/api/v1`. A change that would break existing API users requires a new version and must not be made in `v1`.
+- `POST /api/v1/cafe-menu` (`ApplyCafeMenuUseCase`) is published in `v1` but no web screen calls it: the owner chose to create cafe products by hand (`productType: 'cafe'`, `nextCafeSku`), so the starter-set dialog was dropped. The route stays in `v1` because removing a published route is a breaking change, and it is not the shape to copy for a new feature. `INVALID_CAFE_MENU_ITEM` is still translated in `src/locales/errors.ts`.
 - Every route that returns a list returns `{ items, total }` through `page()` in `libs/http-schemas.ts`. Never return a bare array. `total` is the total number matching the filter.
 - A list that can grow without limit must accept `limit` and `offset`, and the repository port returns `Page<T>` from `domains/page.ts`
 - Money is an integer number of satang, not above `MAX_AMOUNT_SATANG` in `domains/sale.domain.ts`
