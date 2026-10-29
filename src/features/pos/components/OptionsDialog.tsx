@@ -56,7 +56,7 @@ export function OptionsDialog({ product, groups, onConfirm, onCancel }: Props) {
                   <span>{group.name}</span>
                   <span className="text-xs font-normal text-muted-foreground">
                     {group.required ? t('options.required') : t('options.optional')}
-                    {' · '}
+                    {', '}
                     {single ? t('options.pickOne') : t('options.pickUpTo', { count: group.maxSelections })}
                   </span>
                 </legend>

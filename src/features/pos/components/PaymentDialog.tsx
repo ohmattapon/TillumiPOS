@@ -175,7 +175,7 @@ export function PaymentDialog({ totalSatang, quote, isSubmitting, error, onConfi
                   <li key={payment.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
                     <span className="text-muted-foreground">
                       {payment.payerName ?? t('payment.qr.unknownPayer')}
-                      {payment.paidAt ? ` · ${date.dateTime(payment.paidAt)}` : ''}
+                      {payment.paidAt ? `, ${date.dateTime(payment.paidAt)}` : ''}
                     </span>
                     {confirmingId === payment.id ? (
                       <span className="flex gap-2">

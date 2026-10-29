@@ -1,6 +1,6 @@
 const th = {
   title: 'ตัวเลือกเสริม',
-  description: '{{items}} · เช่น ระดับความหวาน ท็อปปิง ที่เลือกได้ตอนขาย',
+  description: '{{items}}',
   addGroup: 'เพิ่มกลุ่มตัวเลือก',
   addOption: 'เพิ่มตัวเลือก',
   empty: 'ยังไม่มีกลุ่มตัวเลือก',
@@ -61,7 +61,7 @@ const th = {
 
 const en = {
   title: 'Modifiers',
-  description: '{{items}} · such as sweetness or toppings, chosen when selling',
+  description: '{{items}}',
   addGroup: 'Add group',
   addOption: 'Add option',
   empty: 'No modifier groups yet',

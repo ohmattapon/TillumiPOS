@@ -1,6 +1,6 @@
 const th = {
   title: 'สินค้าและสต็อก',
-  pageDescription: '{{items}} · {{priceNote}}',
+  pageDescription: '{{items}}, {{priceNote}}',
   priceNote: {
     inclusive: 'ราคารวม VAT',
     exclusive: 'ราคายังไม่รวม VAT',
@@ -59,7 +59,7 @@ const th = {
     productType: 'ประเภทสินค้า',
     titleNew: 'เพิ่มสินค้า',
     titleEdit: 'แก้ไขสินค้า',
-    description: '{{priceNote}} · จำนวนสต็อกแก้ที่ปุ่มรับเข้าหรือปรับยอด',
+    description: '{{priceNote}}',
     priceNote: {
       inclusive: 'ราคาขายเป็นราคารวม VAT',
       exclusive: 'ราคาขายเป็นราคาก่อน VAT',
@@ -70,7 +70,7 @@ const th = {
     pickImage: 'เลือกรูป',
     changeImage: 'เปลี่ยนรูป',
     removeImage: 'ลบรูป',
-    imageHint: 'JPEG, PNG หรือ WebP · ระบบย่อรูปให้อัตโนมัติ',
+    imageHint: 'JPEG, PNG หรือ WebP ระบบย่อรูปให้อัตโนมัติ',
     imageFailed: 'แปลงรูปภาพไม่สำเร็จ',
     name: 'ชื่อสินค้า',
     sku: 'รหัสสินค้า (SKU)',
@@ -112,7 +112,7 @@ const th = {
     pieces: 'รวม {{count}} ชิ้น',
     receiveSubmit: 'รับเข้าสต็อก',
     adjustSubmit: 'ปรับยอด',
-    current: '{{name}} · ในระบบมี {{count}} ชิ้น',
+    current: '{{name}}, ในระบบมี {{count}} ชิ้น',
     enterWhole: 'กรอกจำนวนเป็นตัวเลขเต็ม',
     after: 'หลังบันทึกจะคงเหลือ {{count}} ชิ้น',
     note: 'หมายเหตุ',
@@ -124,7 +124,7 @@ const th = {
 
 const en = {
   title: 'Products & stock',
-  pageDescription: '{{items}} · {{priceNote}}',
+  pageDescription: '{{items}}, {{priceNote}}',
   priceNote: {
     inclusive: 'prices include VAT',
     exclusive: 'prices exclude VAT',
@@ -183,7 +183,7 @@ const en = {
     productType: 'Product type',
     titleNew: 'Add product',
     titleEdit: 'Edit product',
-    description: '{{priceNote}} · change the stock with Receive or Adjust',
+    description: '{{priceNote}}',
     priceNote: {
       inclusive: 'The price includes VAT',
       exclusive: 'The price is before VAT',
@@ -194,7 +194,7 @@ const en = {
     pickImage: 'Choose image',
     changeImage: 'Change image',
     removeImage: 'Remove image',
-    imageHint: 'JPEG, PNG or WebP · resized automatically',
+    imageHint: 'JPEG, PNG or WebP, resized automatically',
     imageFailed: 'Could not process the image',
     name: 'Name',
     sku: 'SKU',
@@ -236,7 +236,7 @@ const en = {
     pieces: '{{count}} pieces',
     receiveSubmit: 'Receive',
     adjustSubmit: 'Adjust',
-    current: '{{name}} · {{count}} in the system',
+    current: '{{name}}, {{count}} in the system',
     enterWhole: 'Enter a whole number',
     after: 'After saving there will be {{count}}',
     note: 'Note',

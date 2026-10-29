@@ -1,6 +1,6 @@
 const th = {
   title: 'หมวดหมู่',
-  description: '{{items}} · ใช้จัดกลุ่มสินค้าในหน้าขาย',
+  description: '{{items}}',
   add: 'เพิ่มหมวดหมู่',
   list: {
     title: 'รายการหมวดหมู่',
@@ -43,7 +43,7 @@ const th = {
 
 const en = {
   title: 'Categories',
-  description: '{{items}} · group products on the sell screen',
+  description: '{{items}}',
   add: 'Add category',
   list: {
     title: 'Categories',

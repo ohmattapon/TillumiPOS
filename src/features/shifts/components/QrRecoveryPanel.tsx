@@ -64,7 +64,7 @@ export function QrRecoveryPanel({ isOwner }: { isOwner: boolean }) {
                 <div>
                   <p className="font-medium tabular-nums">{money.format(attempt.amountSatang)}</p>
                   <p className="text-xs text-muted-foreground">
-                    {attempt.actorName} · {date.dateTime(attempt.createdAt)} · {attempt.reference}
+                    {attempt.actorName}, {date.dateTime(attempt.createdAt)}, {attempt.reference}
                   </p>
                 </div>
                 <Button
@@ -100,7 +100,7 @@ export function QrRecoveryPanel({ isOwner }: { isOwner: boolean }) {
                     <p className="font-medium tabular-nums">{money.format(payment.amountSatang)}</p>
                     <p className="text-xs text-muted-foreground">
                       {payment.payerName ?? t('qr.unknownPayer')}
-                      {payment.paidAt ? ` · ${date.dateTime(payment.paidAt)}` : ''} · {payment.reference}
+                      {payment.paidAt ? `, ${date.dateTime(payment.paidAt)}` : ''}, {payment.reference}
                     </p>
                   </div>
                   {isOwner && (

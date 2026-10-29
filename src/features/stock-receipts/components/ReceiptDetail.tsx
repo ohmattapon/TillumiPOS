@@ -11,7 +11,7 @@ export function ReceiptDetail({ actorId, id }: { actorId: number; id: number }) 
   const { date } = useFormat()
   const result = useQuery(stockReceiptQuery(actorId, id))
   const receipt = result.data
-  return <Panel title={t('receipt', { id })} description={receipt ? `${date.dateTime(receipt.createdAt)} · ${receipt.receivedByName}` : undefined}>
+  return <Panel title={t('receipt', { id })} description={receipt ? `${date.dateTime(receipt.createdAt)}, ${receipt.receivedByName}` : undefined}>
     {result.error ? <div role="alert" className="space-y-2 p-4 text-destructive"><p>{result.error.message}</p><Button className="h-11" variant="outline" onClick={() => void result.refetch()}>{t('retry')}</Button></div> : <DataTable
       rows={receipt?.items ?? []} rowKey={(item) => item.productId} isPending={result.isPending} empty={t('noItems')}
       columns={[

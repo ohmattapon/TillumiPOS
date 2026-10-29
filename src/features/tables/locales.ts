@@ -1,6 +1,6 @@
 const th = {
   title: 'ผังโต๊ะ',
-  description: '{{items}} · ลากโต๊ะไปวางตามจริง ดึงมุมขวาล่างเพื่อปรับขนาด',
+  description: '{{items}}',
   add: 'เพิ่มโต๊ะ',
   empty: 'ยังไม่มีโต๊ะ กด "เพิ่มโต๊ะ" แล้วลากไปวางตามผังร้าน',
   floor: 'ผังร้าน',
@@ -32,7 +32,7 @@ const th = {
 
 const en = {
   title: 'Floor plan',
-  description: '{{items}} · drag tables where they are, pull the bottom right corner to resize',
+  description: '{{items}}',
   add: 'Add table',
   empty: 'No tables yet. Press "Add table", then drag it into place.',
   floor: 'Floor plan',

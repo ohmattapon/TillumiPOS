@@ -111,7 +111,7 @@ export function OpenOrdersDialog({ onClose }: { onClose: () => void }) {
             open
             onOpenChange={(open) => !open && setCancelling(null)}
             title={t('orders.cancel')}
-            description={`${cancellingLabel} · ${money.format(cancellingOrder.subtotalSatang)}`}
+            description={`${cancellingLabel}, ${money.format(cancellingOrder.subtotalSatang)}`}
             confirmLabel={t('orders.confirmCancel')}
             cancelLabel={t('orders.keep')}
             destructive

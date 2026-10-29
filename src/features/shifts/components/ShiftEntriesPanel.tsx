@@ -22,7 +22,7 @@ export function ShiftEntriesPanel({ shiftId }: { shiftId: number }) {
             <li key={entry.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
               <span>{t(`entry_${entry.kind}`)}</span>
               <span className="font-medium tabular-nums">{money.format(entry.amountSatang)}</span>
-              <span className="text-muted-foreground">{entry.actorName} · {date.dateTime(entry.createdAt)}{entry.reason ? ` · ${entry.reason}` : ''}</span>
+              <span className="text-muted-foreground">{entry.actorName}, {date.dateTime(entry.createdAt)}{entry.reason ? `, ${entry.reason}` : ''}</span>
             </li>
           ))}
         </ul>

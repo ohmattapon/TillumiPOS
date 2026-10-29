@@ -200,7 +200,7 @@ function Lines({ lines, money }: { lines: DisplayLine[]; money: Money }) {
               <p className={cn('line-clamp-1 text-muted-foreground', size.label)}>{line.packLabel}</p>
             )}
             {line.options.length > 0 && (
-              <p className={cn('line-clamp-1 text-muted-foreground', size.label)}>{line.options.join(' · ')}</p>
+              <p className={cn('line-clamp-1 text-muted-foreground', size.label)}>{line.options.join(', ')}</p>
             )}
           </div>
           <span className="shrink-0 text-muted-foreground tabular-nums">×{line.quantity}</span>

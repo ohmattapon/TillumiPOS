@@ -1,6 +1,6 @@
 const th = {
   title: 'ผู้ใช้',
-  description: '{{items}} · แต่ละคนเข้าระบบด้วยบัญชีของตัวเอง',
+  description: '{{items}}',
   add: 'เพิ่มผู้ใช้',
   list: {
     title: 'รายชื่อผู้ใช้',
@@ -26,7 +26,7 @@ const th = {
   you: 'คุณ',
   team: {
     title: 'ผู้ใช้และบทบาท',
-    description: '{{items}} · จัดสมาชิกตามบทบาท',
+    description: '{{items}}',
     addUser: 'เพิ่มผู้ใช้',
     addUserTo: 'เพิ่มผู้ใช้ในบทบาท {{role}}',
     unassigned: 'ยังไม่กำหนดบทบาท',
@@ -84,7 +84,7 @@ const th = {
 
 const en = {
   title: 'Users',
-  description: '{{items}} · everyone signs in with their own account',
+  description: '{{items}}',
   add: 'Add user',
   list: {
     title: 'Users',
@@ -110,7 +110,7 @@ const en = {
   you: 'you',
   team: {
     title: 'Users and roles',
-    description: '{{items}} · members grouped by role',
+    description: '{{items}}',
     addUser: 'Add user',
     addUserTo: 'Add a user to {{role}}',
     unassigned: 'Unassigned',

@@ -57,7 +57,7 @@ export function PromotionsPage() {
       parts.push(t('when.onDays', { days: promotion.weekdays.map((day) => weekdayName(locale, day)).join(' ') }))
     if (promotion.windowStartMinute !== null && promotion.windowEndMinute !== null)
       parts.push(t('when.window', { start: timeOf(promotion.windowStartMinute), end: timeOf(promotion.windowEndMinute) }))
-    return parts.length > 0 ? parts.join(' · ') : t('when.always')
+    return parts.length > 0 ? parts.join(', ') : t('when.always')
   }
 
   const setActive = (promotion: Promotion, isActive: boolean) =>

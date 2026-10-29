@@ -75,7 +75,7 @@ export function QrPaymentPanel({ qr, isSaving, onRegenerate }: { qr: ReturnType<
           <Loader2 className="size-4 animate-spin" />
           {t('payment.qr.waiting')}
           {secondsLeft !== null && (
-            <span className="tabular-nums">· {t('payment.qr.remaining', { time: clock(secondsLeft) })}</span>
+            <span className="tabular-nums">{t('payment.qr.remaining', { time: clock(secondsLeft) })}</span>
           )}
         </p>
       )}

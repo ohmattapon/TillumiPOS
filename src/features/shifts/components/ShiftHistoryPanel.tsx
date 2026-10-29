@@ -51,7 +51,7 @@ export function ShiftHistoryPanel({ registers }: { registers: { id: number; code
                 <SelectItem value="all">{t('historyAllRegisters')}</SelectItem>
                 {registers.map((item) => (
                   <SelectItem key={item.id} value={String(item.id)}>
-                    {item.code} · {item.name}
+                    {item.code}, {item.name}
                   </SelectItem>
                 ))}
               </SelectGroup>
@@ -101,7 +101,7 @@ export function ShiftHistoryPanel({ registers }: { registers: { id: number; code
                 onClick={() => setOpenId(isOpen ? null : shift.id)}
               >
                 <span className="font-medium">
-                  {registerName.get(shift.registerId) ?? t('register')} · {shift.openedByName}
+                  {registerName.get(shift.registerId) ?? t('register')}, {shift.openedByName}
                 </span>
                 <span className="text-muted-foreground">{date.dateTime(shift.openedAt)}</span>
                 <span className="rounded-full bg-muted px-2 py-1">{t(`status_${shift.status}`)}</span>
@@ -115,7 +115,7 @@ export function ShiftHistoryPanel({ registers }: { registers: { id: number; code
                         <dt className="text-muted-foreground">{t('detail.closedBy')}</dt>
                         <dd>
                           {shift.closedByName}
-                          {shift.closedAt ? ` · ${date.dateTime(shift.closedAt)}` : ''}
+                          {shift.closedAt ? `, ${date.dateTime(shift.closedAt)}` : ''}
                         </dd>
                       </div>
                       <div className="flex justify-between gap-4">
