@@ -2451,6 +2451,39 @@
           "primaryKey": false,
           "notNull": true
         },
+        "points_earned": {
+          "name": "points_earned",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "points_redeemed": {
+          "name": "points_redeemed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "points_discount_satang": {
+          "name": "points_discount_satang",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "points_rule": {
+          "name": "points_rule",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "points_balance_after": {
+          "name": "points_balance_after",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "cashier_id": {
           "name": "cashier_id",
           "type": "integer",
@@ -3585,6 +3618,34 @@
           "primaryKey": false,
           "notNull": false
         },
+        "points_enabled": {
+          "name": "points_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "points_earn_satang": {
+          "name": "points_earn_satang",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 2500
+        },
+        "points_redeem_satang": {
+          "name": "points_redeem_satang",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 100
+        },
+        "points_min_redeem": {
+          "name": "points_min_redeem",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 10
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp with time zone",
@@ -4092,6 +4153,13 @@
           "notNull": true,
           "default": true
         },
+        "points_balance": {
+          "name": "points_balance",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -4136,7 +4204,198 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "members_points_balance_non_negative": {
+          "name": "members_points_balance_non_negative",
+          "value": "\"members\".\"points_balance\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.member_point_movements": {
+      "name": "member_point_movements",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "member_point_movements_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "member_id": {
+          "name": "member_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "point_movement_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "points": {
+          "name": "points",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sale_id": {
+          "name": "sale_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quote_id": {
+          "name": "quote_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by_id": {
+          "name": "created_by_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "member_point_movements_member_idx": {
+          "name": "member_point_movements_member_idx",
+          "columns": [
+            {
+              "expression": "member_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "member_point_movements_sale_kind_unique": {
+          "name": "member_point_movements_sale_kind_unique",
+          "columns": [
+            {
+              "expression": "sale_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "kind",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"member_point_movements\".\"sale_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "member_point_movements_member_id_members_id_fk": {
+          "name": "member_point_movements_member_id_members_id_fk",
+          "tableFrom": "member_point_movements",
+          "tableTo": "members",
+          "columnsFrom": [
+            "member_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "member_point_movements_sale_id_sales_id_fk": {
+          "name": "member_point_movements_sale_id_sales_id_fk",
+          "tableFrom": "member_point_movements",
+          "tableTo": "sales",
+          "columnsFrom": [
+            "sale_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "member_point_movements_quote_id_price_quotes_id_fk": {
+          "name": "member_point_movements_quote_id_price_quotes_id_fk",
+          "tableFrom": "member_point_movements",
+          "tableTo": "price_quotes",
+          "columnsFrom": [
+            "quote_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "member_point_movements_created_by_id_users_id_fk": {
+          "name": "member_point_movements_created_by_id_users_id_fk",
+          "tableFrom": "member_point_movements",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "member_point_movements_points_nonzero": {
+          "name": "member_point_movements_points_nonzero",
+          "value": "\"member_point_movements\".\"points\" <> 0"
+        },
+        "member_point_movements_source": {
+          "name": "member_point_movements_source",
+          "value": "\"member_point_movements\".\"kind\" = 'adjust' or \"member_point_movements\".\"sale_id\" is not null or \"member_point_movements\".\"quote_id\" is not null"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.promotions": {
@@ -4457,6 +4716,26 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "points_redeemed": {
+          "name": "points_redeemed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "points_discount_satang": {
+          "name": "points_discount_satang",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "points_rule": {
+          "name": "points_rule",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "status": {
           "name": "status",
@@ -5028,6 +5307,17 @@
       "values": [
         "owner",
         "cashier"
+      ]
+    },
+    "public.point_movement_kind": {
+      "name": "point_movement_kind",
+      "schema": "public",
+      "values": [
+        "earn",
+        "redeem",
+        "void_earn",
+        "void_redeem",
+        "adjust"
       ]
     },
     "public.promotion_audience": {
