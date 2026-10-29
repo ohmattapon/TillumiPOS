@@ -33,17 +33,7 @@ export class AdjustMemberPointsUseCase {
       const member = await this.members.findByIdForUpdate(id)
       if (!member) throw new DomainNotFoundError('ไม่พบสมาชิก', 'MEMBER_NOT_FOUND')
 
-      await this.points.lockMember(id)
-      // The ledger refuses a movement that would take the balance below zero.
-      const { balanceAfter } = await this.points.record({
-        memberId: id,
-        kind: 'adjust',
-        points: dto.points,
-        saleId: null,
-        quoteId: null,
-        reason: dto.reason,
-        actorId: actor.id,
-      })
+      const balanceAfter = await this.moveBalance(id, dto, actor.id)
 
       await this.audit.record({ id: actor.id, name: actor.displayName }, branchId, buildAuditEntry({
         action: 'member.points_adjusted',
@@ -57,5 +47,20 @@ export class AdjustMemberPointsUseCase {
 
       return { memberId: id, pointsBalance: balanceAfter }
     })
+  }
+
+  private async moveBalance(memberId: number, dto: ReturnType<typeof adjustMemberPointsSchema.parse>, actorId: number): Promise<number> {
+    await this.points.lockMember(memberId)
+    // The ledger refuses a movement that would take the balance below zero.
+    const { balanceAfter } = await this.points.record({
+      memberId,
+      kind: 'adjust',
+      points: dto.points,
+      saleId: null,
+      quoteId: null,
+      reason: dto.reason,
+      actorId,
+    })
+    return balanceAfter
   }
 }

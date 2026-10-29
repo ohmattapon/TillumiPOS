@@ -17,32 +17,33 @@ export class CreatePromotionUseCase {
   async execute(input: unknown, actor: Actor) {
     const dto = createPromotionSchema.parse(input)
     requirePermission(actor, 'promotions.write', 'เฉพาะเจ้าของร้านจัดการโปรโมชันได้')
-    const now = this.clock.now()
-    return this.promotions.create(
-      new PromotionEntity({
-        id: 0,
-        name: dto.name,
-        kind: dto.kind,
-        value: dto.value,
-        maxDiscountSatang: dto.maxDiscountSatang ?? null,
-        minSubtotalSatang: dto.minSubtotalSatang ?? 0,
-        startsOn: dto.startsOn ?? null,
-        endsOn: dto.endsOn ?? null,
-        weekdays: dto.weekdays ?? null,
-        windowStartMinute: dto.windowStartMinute ?? null,
-        windowEndMinute: dto.windowEndMinute ?? null,
-        audience: dto.audience ?? 'everyone',
-        isActive: dto.isActive ?? true,
-        scope: dto.scope ?? null,
-        couponCode: dto.couponCode ?? null,
-        buyQuantity: dto.buyQuantity ?? null,
-        freeQuantity: dto.freeQuantity ?? null,
-        maxUses: dto.maxUses ?? null,
-        maxUsesPerMember: dto.maxUsesPerMember ?? null,
-        imageKey: null,
-        createdAt: now,
-        updatedAt: now,
-      }),
-    )
+    return this.promotions.create(this.newPromotion(dto, this.clock.now()))
+  }
+
+  private newPromotion(dto: ReturnType<typeof createPromotionSchema.parse>, now: Date): PromotionEntity {
+    return new PromotionEntity({
+      id: 0,
+      name: dto.name,
+      kind: dto.kind,
+      value: dto.value,
+      maxDiscountSatang: dto.maxDiscountSatang ?? null,
+      minSubtotalSatang: dto.minSubtotalSatang ?? 0,
+      startsOn: dto.startsOn ?? null,
+      endsOn: dto.endsOn ?? null,
+      weekdays: dto.weekdays ?? null,
+      windowStartMinute: dto.windowStartMinute ?? null,
+      windowEndMinute: dto.windowEndMinute ?? null,
+      audience: dto.audience ?? 'everyone',
+      isActive: dto.isActive ?? true,
+      scope: dto.scope ?? null,
+      couponCode: dto.couponCode ?? null,
+      buyQuantity: dto.buyQuantity ?? null,
+      freeQuantity: dto.freeQuantity ?? null,
+      maxUses: dto.maxUses ?? null,
+      maxUsesPerMember: dto.maxUsesPerMember ?? null,
+      imageKey: null,
+      createdAt: now,
+      updatedAt: now,
+    })
   }
 }
