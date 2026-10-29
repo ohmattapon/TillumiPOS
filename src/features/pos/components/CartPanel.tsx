@@ -211,7 +211,7 @@ export function CartPanel({ onPay, onSaveOrder, paymentAvailable = true, variant
                         promotion.name,
                         promotion.minSubtotalSatang > 0 && t('cart.promotionMin', { amount: money.format(promotion.minSubtotalSatang) }),
                         promotion.membersOnly && t('cart.promotionMembers'),
-                      ].filter(Boolean).join(' · ')}
+                      ].filter(Boolean).join(', ')}
                     </span>
                   </li>
                 ))}

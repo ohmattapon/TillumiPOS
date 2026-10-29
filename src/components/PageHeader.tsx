@@ -22,7 +22,7 @@ export function PageHeader({ title, highlight, description, breadcrumb, children
           {title}
           {highlight && (
             <>
-              {' · '}
+              {' '}
               <span className="text-primary">{highlight}</span>
             </>
           )}

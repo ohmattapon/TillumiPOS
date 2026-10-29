@@ -94,7 +94,7 @@ export function ReportsPage() {
         <ReportFilters key={`${filters.from}-${filters.to}-${shop.timeZone}`}
           filters={filters} today={today}
           onApply={(next) => setParams({ ...next })} />
-        <p className="text-xs text-muted-foreground">{t('zone', { zone: report.data?.timeZone ?? shop.timeZone })} · {currency}</p>
+        <p className="text-xs text-muted-foreground">{t('zone', { zone: report.data?.timeZone ?? shop.timeZone })}, {currency}</p>
         {failure(settings.error, () => void settings.refetch())}
         {!validRange(filters.from, filters.to) ? <p role="alert" className="text-sm text-destructive">{t('invalidRange')}</p> : <>
           {failure(report.error, () => void report.refetch())}

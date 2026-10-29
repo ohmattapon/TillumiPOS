@@ -40,7 +40,7 @@ export function RoleCard({ role, members, isPending, onAdd, onEdit, onSetPin, on
   const me = useQuery(meQuery).data
   const paging = useListPagination(`team-${role?.id ?? 'unassigned'}`)
 
-  const system = role?.systemKey ? ` · ${tr('system')}` : ''
+  const system = role?.systemKey ? `, ${tr('system')}` : ''
 
   return (
     <Panel

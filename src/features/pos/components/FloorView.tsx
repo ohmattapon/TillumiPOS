@@ -47,7 +47,7 @@ export function FloorView({ onResume }: { onResume: (order: Order) => void }) {
         onSelect={setSelected}
         renderBadge={(table) =>
           table.openOrders > 0
-            ? `${t('floor.orders', { count: table.openOrders })} · ${money.plain(table.openTotalSatang)}`
+            ? `${t('floor.orders', { count: table.openOrders })}, ${money.plain(table.openTotalSatang)}`
             : t('floor.free')
         }
       />
@@ -62,7 +62,7 @@ export function FloorView({ onResume }: { onResume: (order: Order) => void }) {
             {here.map((order) => (
               <li key={order.id} className="flex items-center justify-between gap-3 py-2">
                 <span className="min-w-0 truncate">
-                  {order.label ?? t('orders.untitled', { id: order.id })} · {money.format(order.subtotalSatang)}
+                  {order.label ?? t('orders.untitled', { id: order.id })}, {money.format(order.subtotalSatang)}
                 </span>
                 <Button variant="outline" className="h-11" onClick={() => onResume(order)}>
                   {t('orders.resume')}

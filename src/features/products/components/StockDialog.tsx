@@ -93,7 +93,7 @@ export function StockDialog({ product, mode, onClose }: Props) {
               {pieces === null
                 ? t('stock.enterWhole')
                 : pack
-                  ? `${t('stock.pieces', { count: pieces })} · ${t('stock.after', { count: balanceAfter })}`
+                  ? `${t('stock.pieces', { count: pieces })}, ${t('stock.after', { count: balanceAfter })}`
                   : t('stock.after', { count: balanceAfter })}
             </p>
           </div>

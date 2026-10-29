@@ -254,7 +254,7 @@ function SettingsForm({ settings }: { settings: ShopSettings }) {
             <SelectContent>
               {currencies.map((code) => (
                 <SelectItem key={code} value={code}>
-                  {code} · {currencyName(code)}
+                  {code}, {currencyName(code)}
                 </SelectItem>
               ))}
             </SelectContent>

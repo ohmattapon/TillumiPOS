@@ -131,7 +131,7 @@ export function ShiftsPage() {
               <SelectContent position="popper">
                 <SelectGroup>
                   {registers.data?.items.filter((item) => item.isActive).map((item) => (
-                    <SelectItem key={item.id} value={String(item.id)}>{item.code} · {item.name}</SelectItem>
+                    <SelectItem key={item.id} value={String(item.id)}>{item.code}, {item.name}</SelectItem>
                   ))}
                 </SelectGroup>
               </SelectContent>
@@ -147,7 +147,7 @@ export function ShiftsPage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="font-semibold">{current.data.status === 'open' ? t('shiftOpen') : t('shiftClosing')}</p>
-                  <p className="text-sm text-muted-foreground">{registerName} · {t('openedBy', { name: current.data.openedByName })}</p>
+                  <p className="text-sm text-muted-foreground">{registerName}, {t('openedBy', { name: current.data.openedByName })}</p>
                 </div>
                 <p className="text-sm text-muted-foreground">{date.dateTime(current.data.openedAt)}</p>
               </div>
@@ -237,7 +237,7 @@ export function ShiftsPage() {
                   title={t(confirming === 'start' ? 'startCounting' : confirming === 'close' ? 'closeAction' : 'cancelCounting')}
                   description={
                     confirming === 'close' && activeShift.data && countedCashSatang !== null
-                      ? `${t('countedCash')}: ${money.format(countedCashSatang)} · ${t('expected')}: ${money.format(activeShift.data.closingExpectedCashSatang ?? 0)}`
+                      ? `${t('countedCash')}: ${money.format(countedCashSatang)}, ${t('expected')}: ${money.format(activeShift.data.closingExpectedCashSatang ?? 0)}`
                       : confirming === 'start'
                         ? t('shiftClosing')
                         : undefined

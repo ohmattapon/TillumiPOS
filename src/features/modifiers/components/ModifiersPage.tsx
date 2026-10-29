@@ -281,7 +281,7 @@ export function ModifiersPage() {
               group.required ? t('group.summaryRequired') : t('group.summaryOptional'),
               group.maxSelections === 1 ? t('group.one') : t('group.many', { count: group.maxSelections }),
               t('group.products', { count: group.productIds.length }),
-            ].join(' · ')}
+            ].join(', ')}
           >
             <div className="flex items-center gap-2 border-b px-4 py-2">
               {!group.isActive && <StatusBadge tone="neutral">{t('group.inactive')}</StatusBadge>}

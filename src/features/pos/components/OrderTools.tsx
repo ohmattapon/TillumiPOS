@@ -98,7 +98,7 @@ function MergeDialog({ order, onClose }: { order: Order; onClose: () => void }) 
           {others.map((other) => (
             <li key={other.id} className="flex items-center justify-between gap-3 px-4 py-2">
               <span className="min-w-0 truncate">
-                {other.label ?? t('orders.untitled', { id: other.id })} · {money.format(other.subtotalSatang)}
+                {other.label ?? t('orders.untitled', { id: other.id })}, {money.format(other.subtotalSatang)}
               </span>
               <Button
                 className="h-11"
@@ -167,7 +167,7 @@ function SplitDialog({ order, onClose }: { order: Order; onClose: () => void }) 
                 {line.options.length > 0 && (
                   <span className="text-xs text-muted-foreground">
                     {' '}
-                    · {line.options.map((option) => option.name).join(', ')}
+                    ({line.options.map((option) => option.name).join(', ')})
                   </span>
                 )}
               </span>
