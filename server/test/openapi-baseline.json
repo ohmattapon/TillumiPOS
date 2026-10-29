@@ -31380,6 +31380,35 @@
           },
           {
             "in": "query",
+            "name": "cashierId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "customer",
+            "required": false,
+            "schema": {
+              "enum": [
+                "member",
+                "guest"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
             "name": "compare",
             "required": false,
             "schema": {
@@ -31882,6 +31911,35 @@
           },
           {
             "in": "query",
+            "name": "cashierId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "customer",
+            "required": false,
+            "schema": {
+              "enum": [
+                "member",
+                "guest"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
@@ -32100,6 +32158,117 @@
         ]
       }
     },
+    "/api/v1/sales/reports/cashiers": {
+      "get": {
+        "operationId": "getApiV1SalesReportsCashiers",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "enum": [
+                "branch",
+                "all"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "bills": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "cashierId": {
+                            "anyOf": [
+                              {
+                                "default": 0,
+                                "format": "integer",
+                                "type": "string"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          "cashierName": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "cashierId",
+                          "cashierName",
+                          "bills"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Response for status 200"
+          }
+        },
+        "summary": "แคชเชียร์ที่ขายในช่วงวัน พร้อมจำนวนบิล ใช้เลือกกรองรายงาน",
+        "tags": [
+          "Sales"
+        ]
+      }
+    },
     "/api/v1/sales/reports/products": {
       "get": {
         "operationId": "getApiV1SalesReportsProducts",
@@ -32130,6 +32299,35 @@
               "enum": [
                 "branch",
                 "all"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cashierId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "customer",
+            "required": false,
+            "schema": {
+              "enum": [
+                "member",
+                "guest"
               ],
               "type": "string"
             }
@@ -32298,6 +32496,35 @@
               "enum": [
                 "branch",
                 "all"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cashierId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "default": 0,
+                  "format": "numeric",
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "customer",
+            "required": false,
+            "schema": {
+              "enum": [
+                "member",
+                "guest"
               ],
               "type": "string"
             }
