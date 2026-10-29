@@ -13,8 +13,9 @@ export async function backfillSaleLines(batchSize = 500): Promise<number> {
   let updated = 0
   // Paging by id keeps each batch from rescanning the sales that were already filled.
   let lastId = 0
-  for (;;) {
-    const done = await db.transaction(async (tx) => {
+  let done = 0
+  do {
+    done = await db.transaction(async (tx) => {
       const batch = await tx
         .select({ id: sales.id, totalSatang: sales.totalSatang, vatSatang: sales.vatSatang })
         .from(sales)
@@ -47,7 +48,7 @@ export async function backfillSaleLines(batchSize = 500): Promise<number> {
       }
       return batch.length
     })
-    if (done === 0) return updated
     updated += done
-  }
+  } while (done > 0)
+  return updated
 }
