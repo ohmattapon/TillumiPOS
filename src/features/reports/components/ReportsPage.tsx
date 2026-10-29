@@ -10,6 +10,7 @@ import { Panel } from '@/components/Panel'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { promotionTotalsCells, hasPromotionTotals } from '../lib/promotion-totals'
 import { reportQuery, productsReportQuery, promotionsReportQuery, readReport, readProducts, readPromotions } from '../api'
 import { validRange } from '../lib/date-range'
 import { readReportSearch, writeReportSearch, type ReportSearch, type ReportTab } from '../lib/report-search-params'
@@ -170,8 +171,10 @@ export function ReportsPage() {
             <p className="border-b px-4 py-2 text-xs leading-relaxed text-muted-foreground">{t('promotionsNote')}</p>
             {failure(promotions.error, () => void promotions.refetch())}
             {promotions.isPending ? <Skeleton className="m-4 h-24" /> : !promotions.error && ((promotions.data?.items ?? []).length > 0 ? <>
+              <p className="border-b px-4 py-2 text-sm">{t('promotionUsage', { used: count(promotions.data?.totals.bills ?? 0), all: count(promotions.data?.completedBills ?? 0) })}</p>
               <ReportDataTable headers={[t('promotionName'), t('promotionBills'), t('promotionDiscount'), t('promotionNetSales')]} numberFrom={1}
-                rows={(promotions.data?.items ?? []).map((row) => [row.name, row.bills, money.plain(row.discountSatang), money.plain(row.netSalesSatang)])} />
+                rows={(promotions.data?.items ?? []).map((row) => [row.name, row.bills, money.plain(row.discountSatang), money.plain(row.netSalesSatang)])}
+                footer={promotions.data && hasPromotionTotals(promotions.data.items.length) ? promotionTotalsCells(t('promotionTotal'), promotions.data.totals, money.plain) : undefined} />
               <PaginationBar page={Math.floor(promotionOffset / 10)} pageSize={10} total={promotions.data?.total ?? 0} isLoading={promotions.isFetching} onPageChange={(value) => setPage('promotions', value * 10)} />
             </> : <p className="px-4 py-6 text-sm text-muted-foreground">{t('noPromotions')}</p>)}
           </Panel>}

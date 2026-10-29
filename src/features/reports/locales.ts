@@ -37,6 +37,7 @@ const th = {
   promotions: 'ยอดขายตามโปรโมชัน', promotionsNote: 'ใช้ชื่อโปรโมชัน ณ ตอนขาย บิลยกเลิกไม่รวม',
   promotionName: 'โปรโมชัน', promotionBills: 'จำนวนบิล', promotionDiscount: 'ส่วนลดที่ให้ไป', promotionNetSales: 'ยอดขายไม่รวม VAT',
   noPromotions: 'ไม่มีบิลที่ใช้โปรโมชันในช่วงนี้',
+  promotionTotal: 'รวมทุกโปรโมชัน', promotionUsage: 'มี {{used}} จาก {{all}} บิลที่ใช้โปรโมชัน',
   cash: 'เงินสด', promptpay: 'พร้อมเพย์', card: 'บัตร',
 }
 const en = {
@@ -78,6 +79,7 @@ const en = {
   promotions: 'Sales by promotion', promotionsNote: 'Uses the promotion name as it was at sale time. Voids are excluded',
   promotionName: 'Promotion', promotionBills: 'Bills', promotionDiscount: 'Given away', promotionNetSales: 'Sales excluding VAT',
   noPromotions: 'No bill used a promotion in this period',
+  promotionTotal: 'All promotions', promotionUsage: '{{used}} of {{all}} bills used a promotion',
   cash: 'Cash', promptpay: 'PromptPay', card: 'Card',
 } satisfies typeof th
 export const reportsLocales = { th, en }
