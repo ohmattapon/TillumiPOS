@@ -57,7 +57,8 @@ function start(): FakeKbank {
   let tokensIssued = 0
 
   const server = Bun.serve({
-    port: 0,
+    // Tests take a free port; `bun run dev:fake-kbank` pins one so the API's .env can point at it.
+    port: Number(Bun.env.FAKE_KBANK_PORT ?? 0),
     async fetch(request) {
       const url = new URL(request.url)
       const headers = Object.fromEntries(request.headers)

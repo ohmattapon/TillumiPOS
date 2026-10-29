@@ -2,6 +2,7 @@
 env = false
 
 [test]
+preload = ["./test/setup.ts"]
 # The web's logic (lib/ and store/) must be fully covered. Pages, components and hooks are covered by the
 # browser tests in e2e/, shadcn components are third-party code, and server/ is covered by its own run.
 coverageSkipTestFiles = true

@@ -1,5 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { checkoutModeQuery } from '@/features/shifts'
 import { useFormat } from '@/features/settings'
@@ -16,6 +18,7 @@ export function OrderQrHold({ orderId }: { orderId: number }) {
   const hold = useQuery(orderQrHoldQuery(orderId))
   const inShift = useQuery(checkoutModeQuery).data?.checkoutMode === 'shifts'
   const cancel = useCancelQrPayment()
+  const [confirming, setConfirming] = useState(false)
 
   const held = hold.data
   if (!held) return null
@@ -34,9 +37,20 @@ export function OrderQrHold({ orderId }: { orderId: number }) {
       ) : (
         <>
           <p>{t('orderHold.pending', { amount })}</p>
-          <Button variant="outline" className="h-11 w-full" disabled={cancel.isPending} onClick={cancelHold}>
+          <Button variant="outline" className="h-11 w-full" disabled={cancel.isPending} onClick={() => setConfirming(true)}>
             {t('orderHold.cancel')}
           </Button>
+          <ConfirmDialog
+            open={confirming}
+            onOpenChange={setConfirming}
+            title={t('orderHold.confirmTitle')}
+            description={t('orderHold.confirmDescription')}
+            confirmLabel={t('orderHold.confirm')}
+            cancelLabel={t('orders.keep')}
+            destructive
+            pending={cancel.isPending}
+            onConfirm={cancelHold}
+          />
           {cancel.error && (
             <p role="alert" className="text-destructive">
               {cancel.error.message}
