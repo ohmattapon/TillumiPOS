@@ -15,7 +15,7 @@ export function ConnectDevicesPanel() {
   const address = deviceAddress(typed, window.location.origin)
 
   return (
-    <section className="space-y-4 rounded-xl border bg-card p-5 shadow-xs">
+    <section className="space-y-4 rounded-[10px] border bg-card p-5">
       <div className="space-y-1">
         <h2 className="text-sm font-semibold">{t('connect.title')}</h2>
         <p className="text-xs text-muted-foreground">{t('connect.intro')}</p>

@@ -1,7 +1,9 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
-@import '@fontsource-variable/inter';
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
 @import '@fontsource/ibm-plex-sans-thai/400.css';
 @import '@fontsource/ibm-plex-sans-thai/500.css';
 @import '@fontsource/ibm-plex-sans-thai/600.css';
@@ -10,8 +12,8 @@
 
 @theme inline {
   --font-heading: var(--font-sans);
-  /* Inter draws Latin and digits; Thai glyphs fall through to IBM Plex Sans Thai. */
-  --font-sans: 'Inter Variable', 'IBM Plex Sans Thai', sans-serif;
+  /* IBM Plex Sans draws Latin and digits; Thai glyphs fall through to its Thai sibling, so both share one design. */
+  --font-sans: 'IBM Plex Sans', 'IBM Plex Sans Thai', sans-serif;
   --color-success: var(--success);
   --color-canvas: var(--canvas);
   --color-category-1: var(--category-1);

@@ -116,8 +116,8 @@ export function ShiftsPage() {
     <div className="flex min-h-0 flex-1 flex-col">
       <PageHeader title={t('title')} />
       <main className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 md:p-6">
-        {mode.data?.checkoutMode === 'legacy' && <p role="status" className="mx-auto w-full max-w-3xl rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">{t('legacyMode')}</p>}
-        <section className="mx-auto w-full max-w-3xl space-y-5 rounded-xl border bg-card p-5 shadow-sm">
+        {mode.data?.checkoutMode === 'legacy' && <p role="status" className="mx-auto w-full max-w-3xl rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-foreground">{t('legacyMode')}</p>}
+        <section className="mx-auto w-full max-w-3xl space-y-5 rounded-[10px] border bg-card p-5">
           <div className="grid min-w-0 gap-2">
             <Label htmlFor="shift-register">{t('register')}</Label>
             <Select
@@ -209,7 +209,7 @@ export function ShiftsPage() {
                 </Button>
               )}
               {current.data.status === 'open' && needsQrAcknowledgement && (
-                <div role="alert" className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                <div role="alert" className="space-y-3 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-foreground">
                   <p>{t('qr.pendingWarning')}</p>
                   <div className="flex flex-wrap gap-2">
                     <Button variant="outline" className="h-10" onClick={() => setNeedsQrAcknowledgement(false)}>
@@ -265,7 +265,7 @@ export function ShiftsPage() {
         {mode.data?.checkoutMode === 'shifts' && <QrRecoveryPanel isOwner={can('qr.dismiss')} />}
 
         {can('registers.manage') && (
-          <section className="mx-auto w-full max-w-3xl space-y-4 rounded-xl border bg-card p-5">
+          <section className="mx-auto w-full max-w-3xl space-y-4 rounded-[10px] border bg-card p-5">
             <h2 className="font-semibold">{t('manageRegisters')}</h2>
             <form className="grid gap-3 md:grid-cols-[1fr_1fr_auto]" onSubmit={(event) => { event.preventDefault(); createRegister.mutate({ code: newRegisterCode.trim().toUpperCase(), name: newRegisterName.trim() }, { onSuccess: () => { setNewRegisterCode(''); setNewRegisterName('') } }) }}>
               <label className="grid gap-2 text-sm">{t('registerCode')}<Input value={newRegisterCode} onChange={(event) => setNewRegisterCode(event.target.value.toUpperCase())} maxLength={20} pattern="[A-Z0-9-]+" required /></label>

@@ -23,7 +23,7 @@ export function UpdatePanel() {
   if (status.isPending || (info && !info.supported)) return null
 
   return (
-    <section className="space-y-4 rounded-xl border bg-card p-5 shadow-xs">
+    <section className="space-y-4 rounded-[10px] border bg-card p-5">
       <h2 className="text-sm font-semibold">{t('update.title')}</h2>
       {status.error && (
         <p role="alert" className="text-sm text-destructive">

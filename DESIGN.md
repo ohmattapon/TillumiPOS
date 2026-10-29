@@ -20,36 +20,36 @@ colors:
   destructive: "#e7000b"
 typography:
   page-title:
-    fontFamily: Inter Variable, IBM Plex Sans Thai
+    fontFamily: IBM Plex Sans, IBM Plex Sans Thai
     fontSize: 16px
     fontWeight: 600
   section-title:
-    fontFamily: Inter Variable, IBM Plex Sans Thai
+    fontFamily: IBM Plex Sans, IBM Plex Sans Thai
     fontSize: 14px
     fontWeight: 600
   body:
-    fontFamily: Inter Variable, IBM Plex Sans Thai
+    fontFamily: IBM Plex Sans, IBM Plex Sans Thai
     fontSize: 14px
     fontWeight: 400
   caption:
-    fontFamily: Inter Variable, IBM Plex Sans Thai
+    fontFamily: IBM Plex Sans, IBM Plex Sans Thai
     fontSize: 12px
     fontWeight: 400
   table-header:
-    fontFamily: Inter Variable, IBM Plex Sans Thai
+    fontFamily: IBM Plex Sans, IBM Plex Sans Thai
     fontSize: 11px
     fontWeight: 500
     letterSpacing: 0.05em
   stat-value:
-    fontFamily: Inter Variable
+    fontFamily: IBM Plex Sans
     fontSize: 24px
     fontWeight: 600
   grand-total:
-    fontFamily: Inter Variable
+    fontFamily: IBM Plex Sans
     fontSize: 30px
     fontWeight: 600
   payment-amount:
-    fontFamily: Inter Variable
+    fontFamily: IBM Plex Sans
     fontSize: 36px
     fontWeight: 600
 rounded:
@@ -128,7 +128,7 @@ Rules for using color:
 
 ## Typography
 
-- **Inter Variable** is used for Latin letters and digits. **IBM Plex Sans Thai** is used for Thai letters. Both are installed in the project through `@fontsource`, so they work without an internet connection.
+- **IBM Plex Sans** is used for Latin letters and digits, and its sibling **IBM Plex Sans Thai** for Thai letters, so mixed Thai and English text reads as one typeface. Both are installed in the project through `@fontsource`, so they work without an internet connection.
 - There are three weights: 400 for body text, 500 for labels and buttons, 600 for headings and key figures. Do not use bold 700, except on the receipt.
 - Every money figure and every quantity needs the `tabular-nums` class so the digits line up in a column.
 - Money is always shown with two decimal places, through `formatBaht` in `src/lib/money.ts`, and is prefixed with `฿` when it appears outside a table.
