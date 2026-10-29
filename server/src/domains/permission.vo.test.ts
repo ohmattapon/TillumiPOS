@@ -8,7 +8,8 @@ describe('permissions', () => {
   })
   test('uses area.action names and rejects unknown values', () => {
     for (const permission of PERMISSIONS) {
-      expect(permission).toMatch(/^[a-z]+\.[a-z]+$/)
+      // `points_adjust` is one action word, so the underscore is allowed inside the action only.
+      expect(permission).toMatch(/^[a-z]+\.[a-z]+(_[a-z]+)*$/)
       expect(isPermission(permission)).toBe(true)
     }
     for (const value of ['sales.fly', 7, null, {}, undefined]) expect(isPermission(value)).toBe(false)

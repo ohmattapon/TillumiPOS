@@ -453,7 +453,7 @@ describe('หมายเหตุต่อบรรทัด', () => {
     expect(merged.items[0]!.note).toBeNull()
   })
 
-  test('รวมออเดอร์ใช้หมายเหตุของปลายทางก่อน ถ้าว่างจึงใช้ของต้นทาง', () => {
+  test('รวมออเดอร์เก็บหมายเหตุของทั้งสองฝั่งแยกบรรทัด', () => {
     const destination = makeOrder({ id: 1, items: [noteLine({ lineId: 1, note: 'หวานน้อย' })] })
     const source = makeOrder({
       id: 2,
@@ -462,8 +462,96 @@ describe('หมายเหตุต่อบรรทัด', () => {
 
     const absorbed = destination.absorb(source)
 
-    expect(absorbed.items.find((item) => item.productId === 10)!.note).toBe('หวานน้อย')
+    const lines = absorbed.items.filter((item) => item.productId === 10)
+    expect(lines.map((item) => [item.quantity, item.note])).toEqual([
+      [1, 'หวานน้อย'],
+      [1, 'เผ็ด'],
+    ])
     expect(absorbed.items.find((item) => item.productId === 11)!.note).toBe('ไม่ใส่ไข่')
+  })
+})
+
+describe('บรรทัดที่หมายเหตุต่างกัน', () => {
+  test('เพิ่มสินค้าที่มีบรรทัดมีหมายเหตุอยู่แล้ว ได้บรรทัดใหม่ที่ไม่มีหมายเหตุ', () => {
+    const order = makeOrder({ items: [noteLine({ lineId: 1, note: 'หวานน้อย' })] })
+
+    const added = order.addItem({ productId: 10, productName: 'ชาเย็น', sku: 'TEA', unitPriceSatang: 3500 }, 1)
+
+    expect(added.items.map((item) => [item.lineId, item.quantity, item.note])).toEqual([
+      [1, 1, 'หวานน้อย'],
+      [0, 1, null],
+    ])
+  })
+
+  test('บรรทัดใหม่ของสินค้าเดิมใช้ราคาของบรรทัดแรก แม้ราคาสินค้าเปลี่ยนแล้ว', () => {
+    const order = makeOrder({ items: [noteLine({ lineId: 1, note: 'หวานน้อย', unitPriceSatang: 3500 })] })
+
+    const added = order.addItem({ productId: 10, productName: 'ชาเย็น', sku: 'TEA', unitPriceSatang: 4000 }, 1)
+
+    expect(added.items.map((item) => item.unitPriceSatang)).toEqual([3500, 3500])
+  })
+
+  test('รวมออเดอร์ บรรทัดจากต้นทางใช้ราคาของปลายทางสำหรับสินค้าเดียวกัน', () => {
+    const destination = makeOrder({
+      id: 1,
+      items: [noteLine({ lineId: 1, note: 'หวานน้อย', unitPriceSatang: 3500 })],
+    })
+    const source = makeOrder({ id: 2, items: [noteLine({ lineId: 5, note: 'เผ็ด', unitPriceSatang: 4000 })] })
+
+    const absorbed = destination.absorb(source)
+
+    expect(absorbed.items.map((item) => [item.note, item.unitPriceSatang])).toEqual([
+      ['หวานน้อย', 3500],
+      ['เผ็ด', 3500],
+    ])
+  })
+
+  test('แก้หมายเหตุให้ตรงกับอีกบรรทัด สองบรรทัดรวมเป็นบรรทัดแรก', () => {
+    const order = makeOrder({
+      items: [noteLine({ lineId: 1, note: 'หวานน้อย' }), noteLine({ lineId: 2, note: null, quantity: 2 })],
+    })
+
+    const merged = order.setLineNote(2, 'หวานน้อย')
+
+    expect(merged.items.map((item) => [item.lineId, item.quantity, item.note])).toEqual([[1, 3, 'หวานน้อย']])
+  })
+
+  test('route ตาม productId แก้เฉพาะบรรทัดธรรมดาบรรทัดแรก', () => {
+    const order = makeOrder({
+      items: [noteLine({ lineId: 1, note: 'หวานน้อย' }), noteLine({ lineId: 2, note: null })],
+    })
+
+    const changed = order.setQuantity(10, 5)
+    expect(changed.items.map((item) => [item.lineId, item.quantity])).toEqual([
+      [1, 5],
+      [2, 1],
+    ])
+    expect(changed.removeItem(10).items.map((item) => [item.lineId, item.note])).toEqual([[2, null]])
+  })
+
+  test('quantitiesByLine รวมจำนวนของสินค้าเดียวกันทุกหมายเหตุ', () => {
+    const order = makeOrder({
+      items: [noteLine({ lineId: 1, note: 'a', quantity: 2 }), noteLine({ lineId: 2, note: null, quantity: 3 })],
+    })
+
+    expect(order.quantitiesByLine()).toEqual(new Map([[identityOf(10, ''), 5]]))
+  })
+
+  test('แยกบิล บรรทัดที่แยกไปเก็บหมายเหตุและราคาเดิม', () => {
+    const order = makeOrder({
+      items: [
+        noteLine({ lineId: 1, note: 'หวานน้อย', quantity: 2, unitPriceSatang: 3500 }),
+        noteLine({ lineId: 2, productId: 11 }),
+      ],
+    })
+
+    const split = order.splitOff([{ lineId: 1, quantity: 1 }], { id: 1, displayName: 'A' }, null)
+
+    expect(split.created.items.map((item) => [item.note, item.unitPriceSatang])).toEqual([['หวานน้อย', 3500]])
+    expect(split.remaining.items.map((item) => [item.productId, item.quantity])).toEqual([
+      [10, 1],
+      [11, 1],
+    ])
   })
 })
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { makeBranch, makeProduct, makeSale } from '../../../../__tests__/factories'
 import {
-  mockBranchRepository, mockCheckoutPolicy, mockLineOptionsResolver, mockMemberRepository,
+  mockBranchRepository, mockCheckoutPolicy, mockCheckoutPoints, mockLineOptionsResolver, mockMemberRepository,
   mockProductRepository, mockQrPaymentClaims, mockSaleRepository, mockShiftLedger,
   mockShopSettingsRepository, mockStockLedger, mockQuoteClaims,
 } from '../../../../__tests__/mocks'
@@ -40,7 +40,7 @@ describe('SaleCheckout membership', () => {
     members.findByIdForUpdate.mockResolvedValue(identity())
     sales.nextReceiptNo.mockResolvedValue('MAIN-20261015-00001')
     sales.create.mockImplementation(async (sale, receiptNo) => makeSale({ ...sale, id: 1, receiptNo }))
-    checkout = new SaleCheckout(sales, products, ledger, settings, qr, mockCheckoutPolicy(), mockShiftLedger(), mockLineOptionsResolver(), members, mockQuoteClaims())
+    checkout = new SaleCheckout(sales, products, ledger, settings, qr, mockCheckoutPolicy(), mockShiftLedger(), mockLineOptionsResolver(), members, mockCheckoutPoints(), mockQuoteClaims())
   })
 
   test('locks member before stock and persists only receipt identity', async () => {

@@ -18,6 +18,8 @@ export const inventorySchemas = {
   receive: t.Object({
     productId: t.Integer(),
     quantity: t.Integer({ minimum: 1 }),
+    // When sent, the quantity counts packs of that pack, not single pieces.
+    packId: t.Optional(t.Integer({ minimum: 1 })),
     note,
   }),
   // Stock count: the caller states what is physically on the shelf.

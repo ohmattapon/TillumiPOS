@@ -18,6 +18,8 @@ data/
 server/data/
 screenshots/
 heema/
+dist-installer/
+installer-preview.png
 # Native Windows installer (Task 3): build payloads and setup .exe output stay out of git
 installer/output/
 installer/payload/

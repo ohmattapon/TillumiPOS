@@ -232,6 +232,62 @@
       "when": 1792386717710,
       "tag": "0032_printer_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792500954221,
+      "tag": "0033_shop_logo",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792841287141,
+      "tag": "0034_robust_virginia_dare",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793074725093,
+      "tag": "0035_open_the_fallen",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793102023659,
+      "tag": "0036_high_firestar",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793103135053,
+      "tag": "0037_first_killer_shrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793142919584,
+      "tag": "0038_watery_cerise",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793145678127,
+      "tag": "0039_lonely_xorn",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793152680846,
+      "tag": "0040_silly_randall_flagg",
+      "breakpoints": true
     }
   ]
 }

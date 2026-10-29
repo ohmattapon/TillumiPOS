@@ -5,7 +5,7 @@ import { idParams } from '../../../../libs/http-schemas'
 import { auth } from '../../../auth.plugin'
 import { GetQrConfigUseCase } from '../../applications/usecases/get-qr-config.usecase'
 import { CancelQrPaymentUseCase } from '../../applications/usecases/cancel-qr-payment.usecase'
-import { ConfirmScbCallbackUseCase } from '../../applications/usecases/confirm-scb-callback.usecase'
+import { ConfirmKbankCallbackUseCase } from '../../applications/usecases/confirm-kbank-callback.usecase'
 import { CreateQrPaymentUseCase } from '../../applications/usecases/create-qr-payment.usecase'
 import { RefreshQrPaymentUseCase } from '../../applications/usecases/refresh-qr-payment.usecase'
 import { qrPaymentSchemas, type QrPaymentResponse } from './schemas/qr-payment.schema'
@@ -32,7 +32,7 @@ export class QrPaymentElysiaController {
     @inject(CreateQrPaymentUseCase) private readonly createQrPayment: CreateQrPaymentUseCase,
     @inject(RefreshQrPaymentUseCase) private readonly refreshQrPayment: RefreshQrPaymentUseCase,
     @inject(CancelQrPaymentUseCase) private readonly cancelQrPayment: CancelQrPaymentUseCase,
-    @inject(ConfirmScbCallbackUseCase) private readonly confirmScbCallback: ConfirmScbCallbackUseCase,
+    @inject(ConfirmKbankCallbackUseCase) private readonly confirmKbankCallback: ConfirmKbankCallbackUseCase,
     @inject(GetQrConfigUseCase) private readonly getQrConfig: GetQrConfigUseCase,
   ) {}
 
@@ -81,17 +81,18 @@ export class QrPaymentElysiaController {
         },
       )
       .post(
-        '/scb/confirmation',
+        '/kbank/confirmation',
         async ({ body }) => {
-          const { transactionId } = await this.confirmScbCallback.execute(body)
-          // The exact acknowledgement SCB expects; anything else makes it resend.
-          return { resCode: '00', resDesc: 'success', transactionId }
+          const { partnerTxnUid } = await this.confirmKbankCallback.execute(body)
+          // The acknowledgement KBank is assumed to expect ('00' means success in its API
+          // vocabulary); confirm against the portal webhook docs before registering this URL.
+          return { statusCode: '00', partnerTxnUid }
         },
         {
-          body: qrPaymentSchemas.scbConfirmation,
-          response: qrPaymentSchemas.scbAcknowledgement,
+          body: qrPaymentSchemas.kbankConfirmation,
+          response: qrPaymentSchemas.kbankAcknowledgement,
           detail: {
-            summary: 'ที่รับแจ้งการชำระจาก SCB (ไม่ต้องล็อกอิน) ใช้เป็นสัญญาณให้ตรวจกับ SCB เท่านั้น',
+            summary: 'ที่รับแจ้งการชำระจาก KBank (ไม่ต้องล็อกอิน) ใช้เป็นสัญญาณให้ตรวจกับ KBank เท่านั้น',
           },
         },
       )

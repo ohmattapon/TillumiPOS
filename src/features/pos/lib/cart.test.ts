@@ -19,6 +19,7 @@ const product = (overrides: Partial<Product>): Product => ({
   stockQty: 10,
   isActive: true,
   imageUrl: null,
+  packs: [],
   ...overrides,
 })
 
@@ -174,6 +175,71 @@ describe('priceCart: VAT', () => {
     const cart = priceCart(one, catalogue(tea), '500', { ...inclusive, vatMode: 'none', parseAmount: yen.parse })
 
     expect(cart).toMatchObject({ discountSatang: 500, totalSatang: 9_500 })
+  })
+})
+
+describe('a pack on a line', () => {
+  const caseOfTea = product({
+    id: 1,
+    priceSatang: 2500,
+    stockQty: 30,
+    packs: [{ id: 5, barcode: 'CASE-1', size: 12, priceSatang: 27_000, isActive: true }],
+  })
+
+  test('a pack is charged its own price, not the piece price twelve times', () => {
+    const cart = priceCart(
+      [{ key: '1::p5', productId: 1, optionIds: [], quantity: 1, packId: 5 }],
+      catalogue(caseOfTea),
+      '',
+      inclusive,
+    )
+
+    expect(cart.lines[0]).toMatchObject({ unitPriceSatang: 27_000, lineTotalSatang: 27_000, packId: 5, packSize: 12 })
+  })
+
+  test('a pack without a price of its own costs its size times the piece price', () => {
+    const cart = priceCart(
+      [{ key: '1::p5', productId: 1, optionIds: [], quantity: 2, packId: 5 }],
+      catalogue({ ...caseOfTea, packs: [{ ...caseOfTea.packs[0], priceSatang: null }] }),
+      '',
+      inclusive,
+    )
+
+    expect(cart.lines[0]).toMatchObject({ unitPriceSatang: 30_000, lineTotalSatang: 60_000 })
+  })
+
+  test('a pack counts its pieces against the stock, which the pieces line also asks for', () => {
+    const cart = priceCart(
+      [
+        { key: '1::p5', productId: 1, optionIds: [], quantity: 1, packId: 5 },
+        { key: '1:', productId: 1, optionIds: [], quantity: 20 },
+      ],
+      catalogue(caseOfTea),
+      '',
+      inclusive,
+    )
+
+    expect(cart.lines.map((line) => line.exceedsStock)).toEqual([true, true])
+    expect(cart.canPay).toBe(false)
+  })
+
+  test('selling exactly the stock in packs is allowed', () => {
+    const cart = priceCart([{ key: '1::p5', productId: 1, optionIds: [], quantity: 2, packId: 5 }], catalogue(caseOfTea), '', inclusive)
+
+    expect(cart.lines[0]).toMatchObject({ exceedsStock: false, stockQty: 30 })
+    expect(cart.canPay).toBe(true)
+  })
+
+  test('a pack the product no longer offers blocks payment instead of silently charging pieces', () => {
+    const cart = priceCart(
+      [{ key: '1::p5', productId: 1, optionIds: [], quantity: 1, packId: 5 }],
+      catalogue({ ...caseOfTea, packs: [] }),
+      '',
+      inclusive,
+    )
+
+    expect(cart.lines[0]).toMatchObject({ packId: 5, unavailable: true })
+    expect(cart.canPay).toBe(false)
   })
 })
 
@@ -359,5 +425,52 @@ describe('a promotion', () => {
     ]
     const cart = priceOrder(items, catalogue(tea), '', { ...inclusive, promotion: { id: 4, name: 'ลด 10%', discountSatang: 400 } })
     expect(cart).toMatchObject({ subtotalSatang: 4000, discountSatang: 400, totalSatang: 3600 })
+  })
+})
+
+describe('points on the cart', () => {
+  const tea = product({ id: 1, priceSatang: 2500 })
+  const lines = [{ key: '1:', productId: 1, optionIds: [], quantity: 2 }]
+  const rule = { earnSatang: 1000, redeemSatang: 100, minRedeem: 10 }
+  const points = { requested: 20, balance: 500, rule }
+
+  test('the discount is added to the one the promotion gives, as the quote prices it', () => {
+    const promotion = { id: 4, name: 'ลด 10%', discountSatang: 500 }
+    const cart = priceCart(lines, catalogue(tea), '', { ...inclusive, promotion, points })
+    expect(cart).toMatchObject({
+      subtotalSatang: 5000,
+      discountSatang: 500,
+      pointsRedeemed: 20,
+      pointsDiscountSatang: 2000,
+      totalSatang: 2500,
+    })
+  })
+
+  test('a request the shop would refuse is left out of the preview', () => {
+    const tooMany = priceCart(lines, catalogue(tea), '', { ...inclusive, points: { ...points, requested: 60 } })
+    expect(tooMany).toMatchObject({ pointsRedeemed: 0, pointsDiscountSatang: 0, totalSatang: 5000 })
+
+    const tooFew = priceCart(lines, catalogue(tea), '', { ...inclusive, points: { ...points, requested: 5 } })
+    expect(tooFew).toMatchObject({ pointsRedeemed: 0, pointsDiscountSatang: 0 })
+  })
+
+  test('no member means no points in the price', () => {
+    expect(priceCart(lines, catalogue(tea), '', { ...inclusive, points: null })).toMatchObject({
+      pointsRedeemed: 0,
+      pointsDiscountSatang: 0,
+      totalSatang: 5000,
+    })
+  })
+
+  test('a typed discount is never combined with points, because a quote cannot carry one', () => {
+    // The payment would send this cart with a quote, and the quote knows nothing of the typed discount.
+    const cart = priceCart(lines, catalogue(tea), '5', { ...inclusive, points })
+    expect(cart).toMatchObject({
+      subtotalSatang: 5000,
+      discountSatang: 500,
+      pointsRedeemed: 0,
+      pointsDiscountSatang: 0,
+      totalSatang: 4500,
+    })
   })
 })

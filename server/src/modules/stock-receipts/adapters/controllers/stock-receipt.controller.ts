@@ -8,6 +8,8 @@ import { ReceiveStockBatchUseCase } from '../../applications/usecases/receive-st
 
 const quantity = t.Integer({ minimum: 1, maximum: 2147483647 })
 const item = t.Object({ productId: quantity, quantity })
+// The request may count packs; the stored receipt always keeps pieces.
+const receivedItem = t.Object({ productId: quantity, quantity, packId: t.Optional(t.Integer({ minimum: 1 })) })
 const receipt = t.Object({
   id: t.Integer(), branchId: t.Integer(), receivedById: t.Integer(), receivedByName: t.String(),
   createdAt: t.String(), note: t.Nullable(t.String()),
@@ -27,7 +29,7 @@ export class StockReceiptElysiaController {
       .use(auth)
       .post('/', async ({ body, user, branch, headers }) => this.receive.execute(body, user, (await branch()).id, headers['idempotency-key']), {
         auth: { can: 'inventory.receive' }, headers: idempotencyHeaders,
-        body: t.Object({ items: t.Array(item, { minItems: 1, maxItems: 100 }), note: t.Optional(t.String({ maxLength: 500 })) }),
+        body: t.Object({ items: t.Array(receivedItem, { minItems: 1, maxItems: 100 }), note: t.Optional(t.String({ maxLength: 500 })) }),
         response: receipt, detail: { summary: 'รับสินค้าเข้าสต็อกหลายรายการ' },
       })
       .get('/', async ({ query, branch }) => this.list.execute(query, (await branch()).id), {

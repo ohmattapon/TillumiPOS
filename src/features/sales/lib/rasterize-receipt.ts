@@ -64,6 +64,8 @@ export async function rasterizeReceipt(element: HTMLElement, paperMm: 58 | 80): 
   const canvas = await html2canvas(element, {
     backgroundColor: '#ffffff',
     logging: false,
+    // The shop logo may come from the image Worker, a different origin; it is drawn only if that answers with CORS.
+    useCORS: true,
     // One CSS pixel becomes one printer dot at 203 dpi, so the clone is laid
     // out at exactly the dot width instead of being scaled afterwards.
     scale: 1,

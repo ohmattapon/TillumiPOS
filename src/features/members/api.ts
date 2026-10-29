@@ -32,6 +32,31 @@ export const memberHistoryQuery = (id: number, filters: HistoryFilters = {}) =>
     queryFn: () => unwrap(api.members({ id }).sales.get({ query: { limit: 20, offset: 0, ...filters } })),
   })
 export type Member = Awaited<ReturnType<typeof fetchMember>>
+
+export interface PointsFilters {
+  limit?: number
+  offset?: number
+}
+const fetchPoints = (id: number, filters: PointsFilters) =>
+  unwrap(api.members({ id }).points.get({ query: { limit: 20, offset: 0, ...filters } }))
+
+export type PointMovement = Awaited<ReturnType<typeof fetchPoints>>['items'][number]
+
+/** Every movement of the member's points, newest first; the balance only moves through this list. */
+export const memberPointsQuery = (id: number, filters: PointsFilters = {}) =>
+  queryOptions({
+    queryKey: [...memberKeys.all, 'points', id, filters],
+    queryFn: () => fetchPoints(id, filters),
+  })
+export function useAdjustMemberPoints() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, points, reason }: { id: number; points: number; reason: string }) =>
+      unwrap(api.members({ id }).points.adjustments.post({ points, reason })),
+    // The balance and the ledger both changed, and the member list shows the balance.
+    onSuccess: () => client.invalidateQueries({ queryKey: memberKeys.all }),
+  })
+}
 export function useCreateMember() {
   const client = useQueryClient()
   return useMutation({

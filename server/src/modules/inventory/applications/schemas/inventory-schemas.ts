@@ -5,6 +5,8 @@ const note = z.string().max(500).optional()
 export const receiveStockSchema = z.object({
   productId: z.number().int(),
   quantity: z.number().int().min(1),
+  // When sent, the quantity counts packs of that pack, not single pieces.
+  packId: z.number().int().positive().optional(),
   note,
 })
 

@@ -35,6 +35,11 @@ describe('shop settings', () => {
       receiptPrinterPort: 9100,
       receiptPrinterEnabled: false,
       cashDrawerEnabled: false,
+      pointsEnabled: false,
+      pointsEarnSatang: 2500,
+      pointsRedeemSatang: 100,
+      pointsMinRedeem: 10,
+      logoUrl: null,
     })
   })
 

@@ -4,7 +4,9 @@ import {
   Armchair,
   ChartNoAxesCombined,
   CalendarCheck,
+  ChevronDown,
   ChevronsUpDown,
+  Database,
   LayoutGrid,
   KeyRound,
   LogOut,
@@ -18,6 +20,7 @@ import {
   Settings,
   ShoppingCart,
   SlidersHorizontal,
+  Store,
   WalletCards,
   MonitorPlay,
   BadgePercent,
@@ -48,16 +51,17 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import { LOW_STOCK_THRESHOLD, productsQuery } from '@/features/products'
 import { useFeatures, useSettings } from '@/features/settings'
 import { OwnPinDialog, useAuthorization } from '@/features/auth'
+import { cn } from '@/lib/utils'
 import { themes, useTheme, type Theme } from './theme'
 
 interface NavItem {
@@ -65,6 +69,13 @@ interface NavItem {
   label: string
   icon: LucideIcon
   badge?: number
+}
+
+interface NavGroup {
+  key: 'sales' | 'manage'
+  label: string
+  icon: LucideIcon
+  items: NavItem[]
 }
 
 // Active item reads as a flat mint wash with deep-teal text. Hover is a quieter neutral wash, so pointing at a row never
@@ -83,10 +94,16 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
   const [pinOpen, setPinOpen] = useState(false)
   const products = useQuery(productsQuery({ stockAtMost: LOW_STOCK_THRESHOLD, limit: 1 }))
   const lowStockCount = products.data?.total ?? 0
+  const { state } = useSidebar()
+  // A folded sidebar shows every item as an icon, so a group is only collapsible while it shows its labels.
+  const iconMode = state === 'collapsed'
+  const [chosenOpen, setChosenOpen] = useState<Record<string, boolean>>({})
 
-  const groups: { label: string; items: NavItem[] }[] = [
+  const groups: NavGroup[] = [
     {
+      key: 'sales',
       label: t('groups.sales'),
+      icon: Store,
       items: [
         // With the floor as home the till moves to /sell, and the floor takes its place at the top.
         ...(homeView === 'tables'
@@ -103,20 +120,27 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
         { to: '/shifts', label: t('nav.shifts'), icon: WalletCards },
       ],
     },
-          {
-            label: t('groups.manage'),
-            items: [
-              ...((can('products.write') || can('inventory.receive') || can('inventory.adjust')) ? [{ to: '/products', label: t('nav.products'), icon: Package, badge: lowStockCount }] : []),
-              ...(can('inventory.receive') ? [{ to: '/stock-receipts', label: t('nav.stockReceipts'), icon: Package }] : []),
-              ...(can('categories.write') ? [{ to: '/categories', label: t('nav.categories'), icon: Tags }] : []),
-              ...(features.modifiers && can('modifiers.write') ? [{ to: '/modifiers', label: t('nav.modifiers'), icon: SlidersHorizontal }] : []),
-              ...(features.tables && can('tables.write') ? [{ to: '/tables', label: t('nav.tables'), icon: LayoutGrid }] : []),
-              ...((can('users.manage') || can('roles.manage')) ? [{ to: '/users', label: t('nav.users'), icon: Users }] : []),
-              ...(can('settings.write') ? [{ to: '/settings', label: t('nav.settings'), icon: Settings }] : []),
-              ...(can('audit.read') ? [{ to: '/audit', label: t('nav.audit'), icon: History }] : []),
-            ],
-          },
+    {
+      key: 'manage',
+      label: t('groups.manage'),
+      icon: Database,
+      items: [
+        ...((can('products.write') || can('inventory.receive') || can('inventory.adjust')) ? [{ to: '/products', label: t('nav.products'), icon: Package, badge: lowStockCount }] : []),
+        ...(can('inventory.receive') ? [{ to: '/stock-receipts', label: t('nav.stockReceipts'), icon: Package }] : []),
+        ...(can('categories.write') ? [{ to: '/categories', label: t('nav.categories'), icon: Tags }] : []),
+        ...(features.modifiers && can('modifiers.write') ? [{ to: '/modifiers', label: t('nav.modifiers'), icon: SlidersHorizontal }] : []),
+        ...(features.tables && can('tables.write') ? [{ to: '/tables', label: t('nav.tables'), icon: LayoutGrid }] : []),
+        ...((can('users.manage') || can('roles.manage')) ? [{ to: '/users', label: t('nav.users'), icon: Users }] : []),
+        ...(can('settings.write') ? [{ to: '/settings', label: t('nav.settings'), icon: Settings }] : []),
+        ...(can('audit.read') ? [{ to: '/audit', label: t('nav.audit'), icon: History }] : []),
+      ],
+    },
   ]
+
+  const isGroupOpen = (group: NavGroup) =>
+    iconMode ||
+    (chosenOpen[group.key] ??
+      group.items.some((item) => pathname === item.to || (item.to !== '/' && pathname.startsWith(`${item.to}/`))))
 
   return (
     <Sidebar collapsible="icon" className="print:hidden">
@@ -135,33 +159,61 @@ export function AppSidebar({ user, onLogout }: { user: User; onLogout: () => voi
       </SidebarHeader>
 
       <SidebarContent>
-        {groups.filter((group) => group.items.length > 0).map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel className="text-[11px] tracking-wider uppercase">{group.label}</SidebarGroupLabel>
-            <SidebarMenu className="gap-1">
-              {group.items.map((item) => (
-                <SidebarMenuItem key={item.to}>
+        {groups.filter((group) => group.items.length > 0).map((group) => {
+          const open = isGroupOpen(group)
+          const hasActive = group.items.some(
+            (item) => pathname === item.to || (item.to !== '/' && pathname.startsWith(`${item.to}/`)),
+          )
+          return (
+            <SidebarGroup key={group.key}>
+              <SidebarMenu className="gap-1">
+                <SidebarMenuItem>
+                  {/* A group has no page of its own, so its row only folds and unfolds the items under it. */}
                   <SidebarMenuButton
-                    asChild
-                    isActive={pathname === item.to || (item.to !== '/' && pathname.startsWith(`${item.to}/`))}
-                    tooltip={item.label}
-                    className={`h-11 ${activeItem}`}
+                    type="button"
+                    onClick={() => setChosenOpen((previous) => ({ ...previous, [group.key]: !open }))}
+                    aria-expanded={open}
+                    aria-controls={`nav-group-${group.key}`}
+                    tooltip={group.label}
+                    className={cn('h-11', !hasActive && 'text-muted-foreground')}
                   >
-                    <NavLink to={item.to}>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </NavLink>
+                    <group.icon />
+                    <span>{group.label}</span>
+                    {!iconMode && (
+                      <ChevronDown className={cn('ml-auto size-4 transition-transform', open && 'rotate-180')} />
+                    )}
                   </SidebarMenuButton>
-                  {!!item.badge && (
-                    <SidebarMenuBadge className="rounded-full bg-primary/10 px-1.5 text-primary">
-                      {item.badge}
-                    </SidebarMenuBadge>
-                  )}
                 </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
-        ))}
+                {open && (
+                  <SidebarMenuItem>
+                    <SidebarMenu id={`nav-group-${group.key}`} className={cn('gap-1', !iconMode && 'ml-3 border-l pl-2')}>
+                      {group.items.map((item) => (
+                        <SidebarMenuItem key={item.to}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={pathname === item.to || (item.to !== '/' && pathname.startsWith(`${item.to}/`))}
+                            tooltip={item.label}
+                            className={`h-11 ${activeItem}`}
+                          >
+                            <NavLink to={item.to}>
+                              <item.icon />
+                              <span>{item.label}</span>
+                            </NavLink>
+                          </SidebarMenuButton>
+                          {!!item.badge && (
+                            <SidebarMenuBadge className="rounded-full bg-primary/10 px-1.5 text-primary">
+                              {item.badge}
+                            </SidebarMenuBadge>
+                          )}
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarMenuItem>
+                )}
+              </SidebarMenu>
+            </SidebarGroup>
+          )
+        })}
       </SidebarContent>
 
       <SidebarFooter>

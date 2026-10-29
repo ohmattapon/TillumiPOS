@@ -90,7 +90,14 @@ export function PosPage() {
       locale: settings.locale,
       currency: settings.currency,
       shopName: settings.shopName,
-      state: toDisplayState({ cart, vatMode: settings.vatMode, isPaying, qr: shownQr, paidSale }),
+      state: toDisplayState({
+        cart,
+        vatMode: settings.vatMode,
+        packLabel: (size) => t('cart.pack', { size }),
+        isPaying,
+        qr: shownQr,
+        paidSale,
+      }),
     },
     { registerId: selectedRegisterId },
   )
@@ -108,8 +115,12 @@ export function PosPage() {
     cart.orderId !== null
       ? { orderId: cart.orderId }
       : {
-          lines: cart.lines.map((line) => ({ productId: line.productId, quantity: line.quantity, options: line.optionIds })),
+          lines: cart.lines.map((line) => ({
+            productId: line.productId, quantity: line.quantity, options: line.optionIds, packId: line.packId ?? undefined,
+          })),
           memberId: cart.memberId,
+          couponCode: cart.couponCode === '' ? undefined : cart.couponCode,
+          redeemPoints: cart.pointsRedeemed,
         }
   // The price is asked again, e.g. after the QR holding it was cancelled. The dialog opens on the method chosen.
   const requote = (method: PaymentMethod) => {
@@ -124,6 +135,19 @@ export function PosPage() {
     setIsPaying(true)
     if (usesQuote) createQuote.mutate(quoteInput())
   }
+  // A coupon is only pinned by a quote, so a new code is priced as soon as it is applied and the
+  // cashier sees whether it can be used before the payment opens.
+  const askedCoupon = useRef<string | null>(null)
+  const couponCode = cart.orderId === null ? cart.couponCode : ''
+  useEffect(() => {
+    if (couponCode === '' || askedCoupon.current === couponCode) {
+      if (couponCode === '') askedCoupon.current = null
+      return
+    }
+    if (!usesQuote || cart.lines.length === 0) return
+    askedCoupon.current = couponCode
+    createQuote.mutate(quoteInput())
+  })
   // The keyboard handler is set up once per `canPay`, so it reads the latest function through a ref.
   const startPaymentRef = useRef(startPayment)
   useEffect(() => {
@@ -163,18 +187,19 @@ export function PosPage() {
     if (cart.orderId !== null) {
       payOrder.mutate(
         {
-          orderId: cart.orderId, discountSatang, quoteId, payment,
-          ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id, idempotencyKey: paymentCommandKey.current } : {}),
+          orderId: cart.orderId, discountSatang, quoteId, payment, idempotencyKey: paymentCommandKey.current,
+          ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id } : {}),
         },
         paid,
       )
     } else {
       checkout.mutate(
         {
-          items: cart.lines.map((line) => ({ productId: line.productId, quantity: line.quantity, options: line.optionIds })),
-          discountSatang, quoteId, memberId: cart.memberId, payment,
+          items: cart.lines.map((line) => ({
+            productId: line.productId, quantity: line.quantity, options: line.optionIds, packId: line.packId ?? undefined,
+          })),
+          discountSatang, quoteId, memberId: cart.memberId, payment, idempotencyKey: paymentCommandKey.current,
           ...(needsShift && currentShift.data ? { shiftId: currentShift.data.id } : {}),
-          ...(needsShift ? { idempotencyKey: paymentCommandKey.current } : {}),
         },
         paid,
       )
@@ -277,11 +302,13 @@ export function PosPage() {
           onPay={startPayment}
           onSaveOrder={() => setIsSavingOrder(true)}
           paymentAvailable={shiftReady === true}
+          couponError={couponCode === '' ? null : (createQuote.error?.message ?? null)}
         />
         <CartBar
           onPay={startPayment}
           onSaveOrder={() => setIsSavingOrder(true)}
           paymentAvailable={shiftReady === true}
+          couponError={couponCode === '' ? null : (createQuote.error?.message ?? null)}
         />
       </div>
 

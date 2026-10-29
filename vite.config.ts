@@ -28,6 +28,8 @@ export default defineConfig({
       { find: '@pos/api/promptpay-qr', replacement: server('domains/promptpay-qr.domain.ts') },
       { find: '@pos/api/receipt-raster', replacement: server('domains/receipt-raster.domain.ts') },
       { find: '@pos/api/permissions', replacement: server('permissions.ts') },
+      { find: '@pos/api/packs', replacement: server('domains/product-pack.ts') },
+      { find: '@pos/api/points', replacement: server('domains/member-points.ts') },
       { find: /^@pos\/api$/, replacement: server('app.ts') },
       { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
     ],

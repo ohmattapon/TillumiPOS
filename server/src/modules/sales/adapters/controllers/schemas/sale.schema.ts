@@ -7,15 +7,19 @@ const memberInput = t.Optional(t.Nullable(t.Integer({ minimum: 1 })))
 const quoteInput = t.Optional(t.Nullable(t.Integer({ minimum: 1 })))
 const header = {
   member: t.Nullable(t.Object({ id: t.Integer(), code: t.String(), name: t.String() })),
-  // The promotion the sale was given, as it was when sold; null when it had none.
+  // The promotion the sale was given, as it was when sold; null when it had none. A bundle sale
+  // carries its group sizes, a coupon sale the code that was typed.
   promotion: t.Nullable(
     t.Object({
       id: t.Integer(),
       name: t.String(),
-      kind: t.Union([t.Literal('fixed'), t.Literal('percent')]),
+      kind: t.Union([t.Literal('fixed'), t.Literal('percent'), t.Literal('bundle')]),
       value: t.Integer(),
       maxDiscountSatang: t.Nullable(t.Integer()),
       discountSatang: t.Integer(),
+      couponCode: t.Optional(t.String()),
+      buyQuantity: t.Optional(t.Integer()),
+      freeQuantity: t.Optional(t.Integer()),
     }),
   ),
   id: t.Integer(),
@@ -57,10 +61,13 @@ const saleItem = t.Object({
   productId: t.Integer(),
   productName: t.String(),
   sku: t.String(),
-  // One unit: the product's price plus the options chosen.
+  // One unit: the product's price plus the options chosen, or the pack's price on a pack line.
   unitPriceSatang: t.Integer(),
   quantity: t.Integer(),
   lineTotalSatang: t.Integer(),
+  // The pack sold, if the line is packs; every older line reads as pieces.
+  packId: t.Union([t.Integer(), t.Null()]),
+  packSize: t.Integer(),
   options: t.Array(lineOption),
 })
 
@@ -68,6 +75,8 @@ const itemRequest = t.Object({
   productId: t.Integer(),
   quantity: t.Integer({ minimum: 1 }),
   options: t.Optional(t.Array(t.Integer({ minimum: 1 }), { maxItems: 40 })),
+  // The pack sold; quantity then counts packs.
+  packId: t.Optional(t.Integer({ minimum: 1 })),
 })
 
 const payment = t.Object({ method, amountSatang: satang({ minimum: 1 }) })
@@ -82,11 +91,24 @@ export const saleSchemas = {
   saleHeader: t.Object(header),
   sale: t.Object({
     ...header,
+    // What the sale gave and took in points; zero on sales made before points existed.
+    pointsEarned: t.Integer(),
+    pointsRedeemed: t.Integer(),
+    pointsDiscountSatang: t.Integer(),
+    // The member's balance right after the sale; null when the sale had no member.
+    pointsBalanceAfter: t.Nullable(t.Integer()),
     items: t.Array(saleItem),
     payments: t.Array(payment),
   }),
   saleV2: t.Composite([
-    t.Object({ ...header, shiftId: t.Integer() }),
+    t.Object({
+      ...header,
+      pointsEarned: t.Integer(),
+      pointsRedeemed: t.Integer(),
+      pointsDiscountSatang: t.Integer(),
+      pointsBalanceAfter: t.Nullable(t.Integer()),
+      shiftId: t.Integer(),
+    }),
     t.Object({
       items: t.Array(saleItem),
       payments: t.Array(payment),
@@ -131,5 +153,6 @@ export const saleSchemas = {
 }
 
 export type SaleResponse = typeof saleSchemas.sale.static
+export type SaleV2Response = typeof saleSchemas.saleV2.static
 export type SaleHeaderResponse = typeof saleSchemas.saleHeader.static
 export type SaleSummaryResponse = typeof saleSchemas.summary.static

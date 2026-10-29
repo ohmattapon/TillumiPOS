@@ -2,9 +2,18 @@ import type { SalesReport, ReportProduct } from '@pos/api/types'
 import type { Locale } from '@/lib/money'
 import { reportsLocales } from '../locales'
 
+export interface ReportPromotionRow {
+  promotionId: number
+  name: string
+  bills: number
+  discountSatang: number
+  netSalesSatang: number
+}
 export interface ReportExportData {
   report: SalesReport
   products: ReportProduct[]
+  /** Given only by the promotions tab, so a report exported elsewhere keeps its four sheets. */
+  promotions?: ReportPromotionRow[]
   currency: string
   fractionDigits: number
   locale: Locale
@@ -54,6 +63,10 @@ export async function buildReportWorkbook(data: ReportExportData) {
     data.products.map((row) => [row.sku, row.productName, row.quantity, amount(row.lineTotalSatang)]), [4])
   sheet(t.methodsSheet, [t.methods, data.currency],
     data.report.byMethod.map((row) => [t[row.method], amount(row.amountSatang)]), [2])
+  if (data.promotions !== undefined) {
+    sheet(t.promotionsSheet, [t.promotionName, t.promotionBills, t.promotionDiscount, t.promotionNetSales],
+      data.promotions.map((row) => [row.name, row.bills, amount(row.discountSatang), amount(row.netSalesSatang)]), [3, 4])
+  }
   return workbook
 }
 export async function downloadReportWorkbook(data: ReportExportData) {

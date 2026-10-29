@@ -203,6 +203,7 @@ describe('products', () => {
       stockQty: 0,
       isActive: true,
       imageUrl: null,
+      packs: [],
     })
   })
 

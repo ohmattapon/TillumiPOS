@@ -12,6 +12,8 @@ export async function readReport(filters: ReportFilters) {
 }
 export const readProducts = (filters: ReportFilters, offset: number, limit: number) =>
   unwrap(api.sales.reports.products.get({ query: { ...filters, offset, limit } }))
+export const readPromotions = (filters: ReportFilters, offset: number, limit = 10) =>
+  unwrap(api.sales.reports.promotions.get({ query: { ...filters, offset, limit } }))
 
 const key = (filters: ReportFilters) => [...saleKeys.all, 'reports', filters] as const
 export const reportQuery = (filters: ReportFilters) => queryOptions({
@@ -19,4 +21,7 @@ export const reportQuery = (filters: ReportFilters) => queryOptions({
 })
 export const productsReportQuery = (filters: ReportFilters, offset: number) => queryOptions({
   queryKey: [...key(filters), 'products', offset], queryFn: () => readProducts(filters, offset, 10),
+})
+export const promotionsReportQuery = (filters: ReportFilters, offset: number) => queryOptions({
+  queryKey: [...key(filters), 'promotions', offset], queryFn: () => readPromotions(filters, offset),
 })

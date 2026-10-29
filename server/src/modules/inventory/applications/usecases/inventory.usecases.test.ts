@@ -139,6 +139,41 @@ describe('stock commands', () => {
       await expect(receive().execute(input, { id: 4, displayName: 'ผู้ทดสอบ' }, 1)).rejects.toBeInstanceOf(ZodError)
       expect(unitOfWork.run).not.toHaveBeenCalled()
     })
+
+    describe('in packs', () => {
+      const casePack = { id: 5, barcode: 'CASE-1', size: 12, priceSatang: null, isActive: true }
+
+      beforeEach(() => {
+        products.findManyForUpdate.mockResolvedValue([makeProduct({ id: 2, stockQty: 10, packs: [casePack] })])
+      })
+
+      test('counts the pack into the pieces it holds and says so in the note', async () => {
+        await receive().execute({ productId: 2, quantity: 2, packId: 5 }, { id: 4, displayName: 'ผู้ทดสอบ' }, 1)
+
+        expect(ledger.record).toHaveBeenCalledWith({
+          branchId: 1,
+          productId: 2,
+          type: 'receive',
+          quantity: 24,
+          note: 'รับ 2 ลัง (CASE-1) = 24 ชิ้น',
+          userId: 4,
+        })
+      })
+
+      test('a pack that is switched off can still be received', async () => {
+        products.findManyForUpdate.mockResolvedValue([makeProduct({ id: 2, packs: [{ ...casePack, isActive: false }] })])
+
+        await receive().execute({ productId: 2, quantity: 1, packId: 5 }, { id: 4, displayName: 'ผู้ทดสอบ' }, 1)
+
+        expect(ledger.record.mock.calls[0]![0].quantity).toBe(12)
+      })
+
+      test('a pack the product does not have is refused and nothing is recorded', async () => {
+        await expect(receive().execute({ productId: 2, quantity: 1, packId: 999 }, { id: 4, displayName: 'ผู้ทดสอบ' }, 1))
+          .rejects.toMatchObject({ code: 'PACK_NOT_FOUND', params: { packId: 999 } })
+        expect(ledger.record).not.toHaveBeenCalled()
+      })
+    })
   })
 
   describe('AdjustStockUseCase', () => {

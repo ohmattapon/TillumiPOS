@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { makeBranch, makeProduct, makeSale } from '../../../../__tests__/factories'
 import {
-  mockBranchRepository, mockCheckoutPolicy, mockLineOptionsResolver, mockMemberRepository,
+  mockBranchRepository, mockCheckoutPolicy, mockCheckoutPoints, mockLineOptionsResolver, mockMemberRepository,
   mockProductRepository, mockQrPaymentClaims, mockQuoteClaims, mockSaleRepository, mockShiftLedger,
   mockShopSettingsRepository, mockStockLedger,
 } from '../../../../__tests__/mocks'
@@ -29,7 +29,7 @@ describe('SaleCheckout receipt header', () => {
     sales.create.mockImplementation(async (sale, receiptNo) => makeSale({ ...sale, id: 1, receiptNo }))
     checkout = new SaleCheckout(
       sales, products, mockStockLedger(), settings, mockQrPaymentClaims(), mockCheckoutPolicy(), mockShiftLedger(),
-      mockLineOptionsResolver(), mockMemberRepository(), mockQuoteClaims(),
+      mockLineOptionsResolver(), mockMemberRepository(), mockCheckoutPoints(), mockQuoteClaims(),
     )
   })
 

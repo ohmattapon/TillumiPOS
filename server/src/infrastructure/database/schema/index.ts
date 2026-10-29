@@ -21,6 +21,7 @@ export * from './roles'
 export * from './audit-logs'
 
 export * from './members'
+export * from './member-point-movements'
 export * from './promotions'
 export * from './price-quotes'
 export * from './display-slides'

@@ -44,6 +44,12 @@ export interface QrPaymentEntityProps extends NewQrPayment {
 
 const REFERENCE_PATTERN = /^[A-Z0-9]{1,20}$/
 
+/**
+ * Reference 1 sent to the bank: 'QR' plus 13 characters of A-Z and 0-9. KBank takes at most
+ * 15 characters, so every QR reference in the system is built by this one function from a raw id.
+ */
+export const buildQrReference = (rawId: string) => `QR${rawId.replaceAll('-', '').slice(0, 13).toUpperCase()}`
+
 const invalid = (message: string) => new DomainError(message, 'INVALID_QR_PAYMENT')
 
 /**

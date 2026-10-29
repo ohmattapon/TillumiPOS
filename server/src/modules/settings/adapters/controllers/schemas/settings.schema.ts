@@ -24,11 +24,17 @@ const fields = {
   receiptPrinterPort: t.Integer({ minimum: 1, maximum: 65535 }),
   receiptPrinterEnabled: t.Boolean(),
   cashDrawerEnabled: t.Boolean(),
+  pointsEnabled: t.Boolean(),
+  pointsEarnSatang: t.Integer({ minimum: 100 }),
+  pointsRedeemSatang: t.Integer({ minimum: 1 }),
+  pointsMinRedeem: t.Integer({ minimum: 1 }),
 }
 
 export const settingsSchemas = {
-  settings: t.Object(fields),
+  // The storage key stays internal; the response carries a ready-to-use URL instead.
+  settings: t.Object({ ...fields, logoUrl: t.Nullable(t.String()) }),
   update: t.Partial(t.Object(fields)),
+  logo: t.Object({ file: t.File({ type: ['image/jpeg', 'image/png', 'image/webp'], maxSize: '2m' }) }),
 }
 
 export type SettingsResponse = typeof settingsSchemas.settings.static

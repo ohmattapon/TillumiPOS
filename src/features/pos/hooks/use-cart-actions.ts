@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAddOrderItem, useRemoveOrderLine, useSetOrderLineQuantity } from '@/features/orders'
 import type { PricedLine } from '../lib/cart'
@@ -8,6 +9,7 @@ import { useCartStore } from '../store/cart.store'
  * is working on: the screen does not need to know which.
  */
 export function useCartActions() {
+  const { t } = useTranslation('pos')
   const orderId = useCartStore((state) => state.orderId)
   const addToCart = useCartStore((state) => state.add)
   const setCartQuantity = useCartStore((state) => state.setQuantity)
@@ -18,8 +20,10 @@ export function useCartActions() {
   const onError = (error: Error) => toast.error(error.message)
 
   return {
-    add(productId: number, optionIds: number[] = []) {
-      if (orderId === null) addToCart(productId, optionIds)
+    /** A pack is chosen by its id and is never sold on an open order. */
+    add(productId: number, optionIds: number[] = [], packId?: number) {
+      if (orderId === null) addToCart(productId, optionIds, packId)
+      else if (packId !== undefined) toast.error(t('picker.packNotInOrders'))
       else addItem.mutate({ orderId, productId, quantity: 1, options: optionIds }, { onError })
     },
     /** A quantity below 1 takes the line off. */
