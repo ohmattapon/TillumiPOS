@@ -25,7 +25,11 @@ export function assertLoadDatabase(url: string): void {
   if (url.includes('#')) throw new Error('Refusing a database URL with a fragment (fragment rule)')
   if (!LOCAL_HOSTS.has(parsed.hostname))
     throw new Error(`Refusing the database host "${parsed.hostname}": the load test only runs against 127.0.0.1 or localhost (host rule)`)
-  const name = parsed.pathname.replace(/^\//, '')
+  assertLoadDatabaseName(parsed.pathname.replace(/^\//, ''))
+}
+
+/** Throws unless the name starts with `pos_load` and holds only a-z, 0-9 and _; for a handle whose URL is unknown. */
+export function assertLoadDatabaseName(name: string): void {
   if (!/^pos_load[a-z0-9_]*$/.test(name))
     throw new Error(`Refusing the database name "${name}": it must start with ${LOAD_DATABASE_PREFIX} and hold only a-z, 0-9 and _ (database name rule)`)
 }

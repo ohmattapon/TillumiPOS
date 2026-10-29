@@ -12,6 +12,7 @@ import { allocateBillToLines } from '../server/src/domains/bill-allocation'
 import { calculateTotals } from '../server/src/domains/pricing'
 import { evaluatePromotion, PromotionEntity, type PromotionProps } from '../server/src/domains/promotion.domain'
 import { randomTools, type RandomTools } from './lib/prng'
+import { assertLoadDatabaseName } from './lib/safety'
 
 export interface SeedOptions {
   products?: number
@@ -529,6 +530,9 @@ function bangkokMidnight(at: Date): number {
 
 export async function seedLoadData(sql: SQL, options: SeedOptions = {}): Promise<SeededData> {
   const sizes = { ...SEED_DEFAULTS, ...Object.fromEntries(Object.entries(options).filter(([key, value]) => key in SEED_DEFAULTS && value !== undefined)) } as typeof SEED_DEFAULTS
+  // Defence in depth: whoever built the handle, bulk data only ever goes into a throwaway pos_load* database.
+  const [connected] = await sql.unsafe('select current_database() as name')
+  assertLoadDatabaseName(String(connected?.name ?? ''))
   if (!options.cashierPassword) throw new Error('seedLoadData needs options.cashierPassword: the runner makes one at run time')
   if (options.cashierPin !== undefined && !/^\d{4,6}$/.test(options.cashierPin)) throw new Error('options.cashierPin must be 4 to 6 digits')
   if (sizes.categories < 1 || sizes.cashiers < 1 || sizes.products < HOT_PRODUCTS + 2) throw new Error(`Seed at least 1 category, 1 cashier and ${HOT_PRODUCTS + 2} products`)

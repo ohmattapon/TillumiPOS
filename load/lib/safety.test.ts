@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { assertLoadDatabase, assertLocalBaseUrl } from './safety'
+import { assertLoadDatabase, assertLoadDatabaseName, assertLocalBaseUrl } from './safety'
 
 describe('assertLoadDatabase', () => {
   test.each(['postgres://u:p@127.0.0.1:5434/pos_load', 'postgres://u:p@127.0.0.1:5434/pos_load_inv', 'postgres://u:p@localhost:5434/pos_load'])(
@@ -71,4 +71,14 @@ describe('assertLocalBaseUrl edge cases', () => {
       expect(() => assertLocalBaseUrl(url)).toThrow()
     },
   )
+})
+
+describe('assertLoadDatabaseName', () => {
+  test.each(['pos_load', 'pos_load_seed_test'])('accepts %s', (name) => {
+    expect(() => assertLoadDatabaseName(name)).not.toThrow()
+  })
+
+  test.each(['pos', 'pos_test', 'pos_e2e', 'postgres', 'POS_LOAD', 'pos_load-x', ''])('refuses "%s"', (name) => {
+    expect(() => assertLoadDatabaseName(name)).toThrow('database name')
+  })
 })
