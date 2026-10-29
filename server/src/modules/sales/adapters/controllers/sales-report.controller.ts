@@ -30,7 +30,7 @@ export class SalesReportElysiaController {
         detail: { summary: 'ยอดขายย้อนหลังตามวันและเขตเวลาของร้าน (สูงสุด 366 วัน)' },
       })
       .get('/products', async ({ query, user, branch }) => this.products.execute(query, user, (await branch()).id), {
-        auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: page(reportSchemas.product),
+        auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: reportSchemas.productPage,
         detail: { summary: 'สินค้าขายดี เรียงตามจำนวน ใช้ข้อมูล ณ ตอนขาย' },
       })
       .get('/items', async ({ query, user, branch }) => this.items.execute(query, user, (await branch()).id), {

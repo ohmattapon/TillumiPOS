@@ -20,6 +20,10 @@ const product = t.Object({
   productId: t.Integer(), productName: t.String(), sku: t.String(),
   quantity: t.Integer(), lineTotalSatang: t.Integer(),
 })
+const productPage = t.Object({
+  items: t.Array(product), total: t.Integer(),
+  totals: t.Object({ quantity: t.Integer(), lineTotalSatang: t.Integer() }),
+})
 const item = t.Object({
   productId: t.Integer(), productName: t.String(), sku: t.String(), packSize: t.Integer(),
   quantity: t.Integer(), pieces: t.Integer(), netSalesSatang: t.Integer(), vatSatang: t.Integer(),
@@ -80,7 +84,7 @@ export const reportSchemas = {
     limit: t.Optional(t.Numeric({ minimum: 1, maximum: 500 })),
     offset: t.Optional(t.Numeric({ minimum: 0 })),
   }),
-  overview, product, item, category: categoryRow, itemPage, categoryPage, branch, promotion: promotionRow, promotionPage, cashier,
+  overview, product, productPage, item, category: categoryRow, itemPage, categoryPage, branch, promotion: promotionRow, promotionPage, cashier,
 }
 export type SalesReportResponse = Static<typeof overview>
 export type ReportProductResponse = Static<typeof product>

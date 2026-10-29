@@ -31,7 +31,7 @@ beforeEach(() => {
   zone = mockReportTimeZone('Asia/Bangkok')
   branchNames = mockReportBranchNames(new Map([[3, 'สาขาปิด']]))
   reports.overview.mockResolvedValue({ summary: sums, days: [{ day: '2026-01-01', ...sums }], tendered: [{ method: 'cash', amountSatang: 11000 }], unallocatedLines: 4 })
-  reports.products.mockResolvedValue({ items: [], total: 0 })
+  reports.products.mockResolvedValue({ items: [], total: 0, totals: { quantity: 0, lineTotalSatang: 0 } })
   reports.branches.mockResolvedValue({ items: [{ branchId: 3, ...sums }], total: 1 })
   reports.promotions.mockResolvedValue({ items: [], total: 0, totals: noTotals, completedBills: 0 })
   overview = new GetSalesReportUseCase(reports, zone)
@@ -80,6 +80,11 @@ test('all-branch scope is explicit; pagination and closed branch names are prese
   await products.execute({ ...range, scope: 'all', limit: 7, offset: 14 }, owner, 9)
   expect(reports.products).toHaveBeenCalledWith({ ...range, scope: 'all', branchId: null, timeZone: 'Asia/Bangkok', limit: 7, offset: 14 })
   expect((await comparison.execute({ ...range, scope: 'all' }, owner, 9)).items[0]?.branchName).toBe('สาขาปิด')
+})
+test('the best sellers carry the totals over every product, not only the page', async () => {
+  reports.products.mockResolvedValue({ items: [], total: 40, totals: { quantity: 90, lineTotalSatang: 123400 } })
+  const page = await products.execute({ ...range, limit: 5, offset: 0 }, owner, 9)
+  expect(page.totals).toEqual({ quantity: 90, lineTotalSatang: 123400 })
 })
 test('a branch with no known name is shown by its id', async () => {
   reports.branches.mockResolvedValue({ items: [{ branchId: 8, ...sums }], total: 1 })
