@@ -25,16 +25,7 @@ export class CompleteSaleUseCase {
     const dto = completeSaleSchema.parse(input)
 
     return this.unitOfWork.run(() => {
-      const checkout = () =>
-        this.checkout.checkout({
-          lines: dto.items.map(({ productId, quantity, options, packId }) => ({ productId, quantity, optionIds: options, packId })),
-          memberId: dto.memberId ?? null,
-          quoteId: dto.quoteId ?? null,
-          discountSatang: dto.discountSatang ?? 0,
-          payments: dto.payments,
-          cashier,
-          branch,
-        })
+      const checkout = () => this.checkout.checkout(this.checkoutRequest(dto, cashier, branch))
 
       if (idempotencyKey === undefined) return checkout()
 
@@ -46,5 +37,21 @@ export class CompleteSaleUseCase {
         async (snapshot) => restoreSaleSnapshot(snapshot),
       )
     })
+  }
+
+  private checkoutRequest(
+    dto: ReturnType<typeof completeSaleSchema.parse>,
+    cashier: { id: number; displayName: string },
+    branch: { id: number; code: string },
+  ): Parameters<ISaleCheckout['checkout']>[0] {
+    return {
+      lines: dto.items.map(({ productId, quantity, options, packId }) => ({ productId, quantity, optionIds: options, packId })),
+      memberId: dto.memberId ?? null,
+      quoteId: dto.quoteId ?? null,
+      discountSatang: dto.discountSatang ?? 0,
+      payments: dto.payments,
+      cashier,
+      branch,
+    }
   }
 }

@@ -1,3 +1,4 @@
+import type { ProductEntity } from '../../../../domains/product.domain'
 import { buildAuditEntry } from '../../../../domains/audit-entry.vo'
 import { auditLogToken, type IAuditLog } from '../../../audit/applications/ports/audit-log.port'
 import { inject, injectable } from 'tsyringe'
@@ -25,10 +26,7 @@ export class AdjustStockUseCase {
     const dto = adjustStockSchema.parse(input)
 
     return this.unitOfWork.run(async () => {
-      // Locked so the balance cannot move between this read and the ledger write.
-      const [product] = await this.products.findManyForUpdate([dto.productId], branchId)
-      if (!product) throw new DomainNotFoundError('ไม่พบสินค้า')
-      if (!product.trackStock) throw new DomainError('สินค้านี้ไม่ได้ตั้งให้นับสต็อก', 'STOCK_NOT_TRACKED')
+      const product = await this.lockCountedProduct(dto.productId, branchId)
 
       const difference = dto.countedQty - product.stockQty
       if (difference === 0) throw new DomainError('ยอดที่นับได้ตรงกับยอดในระบบอยู่แล้ว', 'NO_CHANGE')
@@ -52,5 +50,13 @@ export class AdjustStockUseCase {
       }))
       return movement!
     })
+  }
+
+  /** Locked so the balance cannot move between this read and the ledger write. */
+  private async lockCountedProduct(productId: number, branchId: number): Promise<ProductEntity> {
+    const [product] = await this.products.findManyForUpdate([productId], branchId)
+    if (!product) throw new DomainNotFoundError('ไม่พบสินค้า')
+    if (!product.trackStock) throw new DomainError('สินค้านี้ไม่ได้ตั้งให้นับสต็อก', 'STOCK_NOT_TRACKED')
+    return product
   }
 }

@@ -1,3 +1,4 @@
+import type { ProductEntity } from '../../../../domains/product.domain'
 import { buildAuditEntry } from '../../../../domains/audit-entry.vo'
 import { auditLogToken, type IAuditLog } from '../../../audit/applications/ports/audit-log.port'
 import { inject, injectable } from 'tsyringe'
@@ -31,9 +32,7 @@ export class ReceiveStockUseCase {
       if (!product) throw new DomainNotFoundError('ไม่พบสินค้า')
       if (!product.trackStock) throw new DomainError('สินค้านี้ไม่ได้ตั้งให้นับสต็อก', 'STOCK_NOT_TRACKED')
 
-      const pack = dto.packId === undefined ? null : product.packForReceipt(dto.packId)
-      const quantity = pack ? receiptPieces(dto.quantity, pack.size, dto.productId) : dto.quantity
-      const note = pack ? packReceiptNote(dto.note ?? null, dto.quantity, pack) : dto.note ?? null
+      const { quantity, note } = this.inPieces(product, dto)
 
       const movement = await this.ledger.record({
         branchId,
@@ -54,5 +53,14 @@ export class ReceiveStockUseCase {
       }))
       return movement!
     })
+  }
+
+  /** Stock always moves in pieces, so a received pack is converted before the ledger is written. */
+  private inPieces(product: ProductEntity, dto: ReturnType<typeof receiveStockSchema.parse>) {
+    const pack = dto.packId === undefined ? null : product.packForReceipt(dto.packId)
+    return {
+      quantity: pack ? receiptPieces(dto.quantity, pack.size, dto.productId) : dto.quantity,
+      note: pack ? packReceiptNote(dto.note ?? null, dto.quantity, pack) : dto.note ?? null,
+    }
   }
 }
