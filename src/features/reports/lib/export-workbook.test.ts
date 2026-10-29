@@ -217,3 +217,28 @@ test('every amount in every sheet is a number, never text', async () => {
   expect(typeof workbook.getWorksheet('สรุป')!.getCell('B9').value).toBe('number')
   expect(typeof workbook.getWorksheet('การชำระเงิน')!.getCell('B2').value).toBe('number')
 }, 30000)
+
+const FORMULA_STARTS = ['=SUM(1,1)', '+1+1', '-1-1', '@SUM(1)']
+test('SKU, promotion, category and cashier text starting with a formula character stay plain strings', async () => {
+  for (const text of FORMULA_STARTS) {
+    const workbook = await buildReportWorkbook({
+      ...fixture, locale: 'en',
+      items: [{ ...fixture.items[0]!, sku: text }],
+      promotions: [{ ...fixture.promotions[0]!, name: text }],
+      categories: [{ ...fixture.categories[0]!, name: text }],
+      filters: { cashierName: text, categoryName: text },
+    })
+    const summary = lines(workbook.getWorksheet('Summary')!)
+    const cells = [
+      workbook.getWorksheet('Products')!.getCell('A2'),
+      workbook.getWorksheet('Promotions')!.getCell('A2'),
+      workbook.getWorksheet('Categories')!.getCell('A2'),
+    ]
+    for (const cell of cells) {
+      expect(cell.value).toBe(text)
+      expect(typeof cell.value).toBe('string')
+    }
+    expect(summary).toContainEqual(['Cashier', text])
+    expect(summary).toContainEqual(['Category', text])
+  }
+}, 30000)
