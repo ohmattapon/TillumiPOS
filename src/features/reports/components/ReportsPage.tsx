@@ -69,7 +69,7 @@ export function ReportsPage() {
     setExporting(true)
     try {
       const itemOptions = { categoryId: tab === 'items' ? search.categoryId : undefined, sort: search.sort }
-      const [fresh, items, categories, promotions, { downloadReportWorkbook }] = await Promise.all([
+      const [fresh, items, categories, promotionRows, { downloadReportWorkbook }] = await Promise.all([
         readReport(filters),
         collectPagesWith((pageOffset, limit) => readItems(filters, itemOptions, pageOffset, limit), (page) => page.totals),
         collectPagesWith((pageOffset, limit) => readCategories(filters, pageOffset, limit), (page) => page.totals),
@@ -78,7 +78,7 @@ export function ReportsPage() {
       ])
       if (new Set(items.items.map((row) => `${row.productId}-${row.packSize}`)).size !== items.items.length) throw new Error('REPORT_CHANGED')
       if (new Set(categories.items.map((row) => row.categoryId)).size !== categories.items.length) throw new Error('REPORT_CHANGED')
-      if (new Set(promotions.items.map((row) => row.promotionId)).size !== promotions.items.length) throw new Error('REPORT_CHANGED')
+      if (new Set(promotionRows.items.map((row) => row.promotionId)).size !== promotionRows.items.length) throw new Error('REPORT_CHANGED')
       const cashierName = filters.cashierId === undefined ? undefined
         : cashiers.data?.items.find((row) => row.cashierId === filters.cashierId)?.cashierName ?? t('unknownCashier', { id: filters.cashierId })
       const categoryName = itemOptions.categoryId === undefined ? undefined
@@ -87,7 +87,7 @@ export function ReportsPage() {
       await downloadReportWorkbook({
         report: fresh, items: items.items, itemTotals: items.extra,
         categories: categories.items, categoryTotals: categories.extra,
-        promotions: promotions.items, promotionTotals: promotions.extra.totals, completedBills: promotions.extra.completedBills,
+        promotions: promotionRows.items, promotionTotals: promotionRows.extra.totals, completedBills: promotionRows.extra.completedBills,
         filters: { cashierName, customer: filters.customer, categoryName },
         currency, fractionDigits: money.fractionDigits, locale,
       })
