@@ -108,7 +108,7 @@ export function ReportsPage() {
                 { title: t('bills'), value: summary.saleCount.toLocaleString(), note: t('voids', { count: summary.voidedCount }) },
                 { title: t('profit'), value: money.format(summary.profitSatang), note: t('profitNote') },
                 { title: t('average'), value: money.format(summary.saleCount ? Math.round(summary.totalSatang / summary.saleCount) : 0), note: t('revenueNote') },
-              ].map((stat) => <div key={stat.title} className="rounded-xl border bg-card p-4 shadow-xs">
+              ].map((stat) => <div key={stat.title} className="rounded-[10px] border bg-card p-4">
                 <p className="text-xs text-muted-foreground">{stat.title}</p>
                 <p className="mt-2 text-2xl font-semibold tabular-nums">{stat.value}</p>
                 <p className="mt-2 text-xs text-muted-foreground">{stat.note}</p>

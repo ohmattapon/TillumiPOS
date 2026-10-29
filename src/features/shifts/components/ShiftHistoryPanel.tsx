@@ -34,7 +34,7 @@ export function ShiftHistoryPanel({ registers }: { registers: { id: number; code
   }
 
   return (
-    <section className="mx-auto w-full max-w-3xl space-y-4 rounded-xl border bg-card p-5">
+    <section className="mx-auto w-full max-w-3xl space-y-4 rounded-[10px] border bg-card p-5">
       <h2 className="font-semibold">{t('history')}</h2>
       <div className="grid gap-3 md:grid-cols-2">
         <div className="grid min-w-0 gap-2">

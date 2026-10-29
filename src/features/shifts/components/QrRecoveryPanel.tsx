@@ -47,7 +47,7 @@ export function QrRecoveryPanel({ isOwner }: { isOwner: boolean }) {
   const dismissingPayment = payments.find((payment) => payment.id === dismissing?.id)
 
   return (
-    <section className="mx-auto w-full max-w-3xl space-y-4 rounded-xl border border-amber-300 bg-card p-5">
+    <section className="mx-auto w-full max-w-3xl space-y-4 rounded-[10px] border border-warning/40 bg-card p-5">
       <div>
         <h2 className="font-semibold">{t('qr.title')}</h2>
         <p className="text-sm text-muted-foreground">{t('qr.description')}</p>

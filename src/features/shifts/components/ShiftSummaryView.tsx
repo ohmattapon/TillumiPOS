@@ -78,7 +78,7 @@ export function ShiftSummaryView({ shiftId, currency, live = false }: Props) {
       </div>
       <p className="text-xs text-muted-foreground">{t('summary.bankNote')}</p>
       {voidedAfterCutoff.count > 0 && (
-        <p role="status" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-950">
+        <p role="status" className="rounded-md border border-warning/40 bg-warning/10 p-3 text-foreground">
           {t('summary.voidedAfter', { count: voidedAfterCutoff.count, amount: money.format(voidedAfterCutoff.amountSatang) })}
         </p>
       )}

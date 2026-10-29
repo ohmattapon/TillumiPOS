@@ -206,9 +206,9 @@ export function TablesPage() {
           <div className="sm:hidden">
             <p className="mb-2 text-sm text-muted-foreground">{t('phoneNote')}</p>
             {tables.isPending ? (
-              <SkeletonRows rows={4} className="rounded-xl border bg-background" />
+              <SkeletonRows rows={4} className="rounded-[10px] border bg-background" />
             ) : (
-            <ul className="divide-y rounded-xl border bg-background">
+            <ul className="divide-y rounded-[10px] border bg-background">
               {all.map((table) => (
                 <li key={table.id}>
                   <button

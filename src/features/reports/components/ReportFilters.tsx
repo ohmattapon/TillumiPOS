@@ -15,7 +15,7 @@ export function ReportFilters({ filters, today, onApply }: {
   const [draft, setDraft] = useState(filters)
   const valid = validRange(draft.from, draft.to)
   return (
-    <form className="flex flex-col gap-3 rounded-xl border bg-card p-4" onSubmit={(event) => {
+    <form className="flex flex-col gap-3 rounded-[10px] border bg-card p-4" onSubmit={(event) => {
       event.preventDefault()
       if (valid) onApply(draft)
     }}>

@@ -42,7 +42,7 @@ export function SkeletonRows({ rows = 4, className }: { rows?: number; className
 export function SkeletonPanel({ rows = 3, className }: { rows?: number; className?: string }) {
   return (
     <Status className={className}>
-      <section className="overflow-hidden rounded-xl border bg-card shadow-xs">
+      <section className="overflow-hidden rounded-[10px] border bg-card">
         <div className="space-y-2 border-b px-4 py-3">
           <Skeleton className="h-4 w-40" />
           <Skeleton className="h-3 w-56" />
@@ -67,7 +67,7 @@ export function SkeletonCardGrid({ count = 8, className }: { count?: number; cla
   return (
     <Status className={className}>
       {Array.from({ length: count }, (_, index) => (
-        <div key={index} className="flex flex-col overflow-hidden rounded-xl border bg-card shadow-xs">
+        <div key={index} className="flex flex-col overflow-hidden rounded-[10px] border bg-card">
           <Skeleton className="aspect-[4/3] w-full rounded-none" />
           <div className="space-y-2 p-3">
             <Skeleton className="h-4 w-4/5" />
@@ -87,7 +87,7 @@ export function SkeletonStatCards({ count = 4 }: { count?: number }) {
   return (
     <Status className="contents">
       {Array.from({ length: count }, (_, index) => (
-        <div key={index} className="rounded-xl border bg-card p-4 shadow-xs">
+        <div key={index} className="rounded-[10px] border bg-card p-4">
           <div className="flex items-center gap-2">
             <Skeleton className="size-7 rounded-md" />
             <Skeleton className="h-3 w-24" />
