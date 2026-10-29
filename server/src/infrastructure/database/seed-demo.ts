@@ -14,6 +14,7 @@ import { lineKey, type LineOption } from '../../domains/modifier.domain'
 import { buildShiftSummary } from '../../domains/shift-summary'
 import { client, db } from '../../libs/db'
 import '../../modules/di-registrations'
+import { backfillSaleLines } from './backfill-sale-lines'
 import { CreateUserUseCase } from '../../modules/users/applications/usecases/create-user.usecase'
 import { branches, branchStock } from './schema/branches'
 import { categories } from './schema/categories'
@@ -783,4 +784,6 @@ console.log(`Open shifts: ${todayShift}. Cashiers somying and wichai (MAIN) use 
   // End of the transaction: either all of the demo data is written, or none of it.
 })
 
+// The demo bills above were written without their line shares; the reports read them.
+await backfillSaleLines()
 await client.close()
