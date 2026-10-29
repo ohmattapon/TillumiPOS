@@ -21,12 +21,7 @@ export class CreateProductUseCase {
     const dto = createProductSchema.parse(input)
 
     return this.uow.run(async () => {
-      let sku = dto.sku
-      if (sku === undefined) {
-        do {
-          sku = formatProductSku(await this.products.nextSkuNumber())
-        } while (await this.products.skuExists(sku))
-      }
+      const sku = dto.sku ?? (await this.freeSku())
       const result = await this.products.create(
         new ProductEntity({
           id: 0,
@@ -56,5 +51,13 @@ export class CreateProductUseCase {
       }))
       return result
     })
+  }
+
+  private async freeSku(): Promise<string> {
+    let sku: string
+    do {
+      sku = formatProductSku(await this.products.nextSkuNumber())
+    } while (await this.products.skuExists(sku))
+    return sku
   }
 }

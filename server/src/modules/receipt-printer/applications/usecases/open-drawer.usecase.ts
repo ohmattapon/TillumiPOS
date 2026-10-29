@@ -33,16 +33,25 @@ export class OpenDrawerUseCase {
     if (settings.host === null)
       throw new DomainError('ยังไม่ได้กรอก IP เครื่องพิมพ์ในตั้งค่าร้าน', 'INVALID_PRINTER_SETTINGS')
 
-    // Outside every transaction: a stalled printer must never hold the database.
-    const bytes = buildDrawerCommand()
-    let sentBytes: number
+    const sentBytes = await this.kick(settings.host, settings.port, actor, branchId)
+
+    const kickedAt = this.clock.now()
+    await this.unitOfWork.run(() =>
+      this.audit.record(actor, branchId, { action: 'receipt.drawer_opened', ref: 'manual', saleId: null, sentBytes }),
+    )
+    return { kickedAt, sentBytes }
+  }
+
+  /** Outside every transaction: a stalled printer must never hold the database. */
+  private async kick(host: string, port: number, actor: { id: number; displayName: string }, branchId: number): Promise<number> {
     try {
-      ;({ sentBytes } = await this.gateway.sendRaw({
-        host: settings.host,
-        port: settings.port,
-        bytes,
+      const { sentBytes } = await this.gateway.sendRaw({
+        host,
+        port,
+        bytes: buildDrawerCommand(),
         timeoutMs: SEND_TIMEOUT_MS,
-      }))
+      })
+      return sentBytes
     } catch (error) {
       await this.unitOfWork.run(() =>
         this.audit.record(actor, branchId, {
@@ -55,11 +64,5 @@ export class OpenDrawerUseCase {
       )
       throw error
     }
-
-    const kickedAt = this.clock.now()
-    await this.unitOfWork.run(() =>
-      this.audit.record(actor, branchId, { action: 'receipt.drawer_opened', ref: 'manual', saleId: null, sentBytes }),
-    )
-    return { kickedAt, sentBytes }
   }
 }

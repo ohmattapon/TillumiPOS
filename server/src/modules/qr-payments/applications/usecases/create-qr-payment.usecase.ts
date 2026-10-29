@@ -42,18 +42,7 @@ export class CreateQrPaymentUseCase {
       )
     }
 
-    let qr
-    try {
-      qr = await this.gateway.createQr({
-        reference,
-        amountSatang: dto.amountSatang,
-        branchCode: actor.branch.code,
-      })
-    } catch (error) {
-      // No QR was made, so nobody can pay: the quote goes back to being open.
-      if (dto.quoteId !== undefined) await this.unitOfWork.run(() => this.quotes.releaseByReference(reference))
-      throw error
-    }
+    const qr = await this.askBank(reference, dto, actor.branch.code)
 
     const payment = await this.payments.create({
       branchId: actor.branch.id,
@@ -65,5 +54,15 @@ export class CreateQrPaymentUseCase {
       originShiftId: null,
     })
     return { payment, qrImage: qr.qrImage }
+  }
+
+  private async askBank(reference: string, dto: { amountSatang: number; quoteId?: number }, branchCode: string) {
+    try {
+      return await this.gateway.createQr({ reference, amountSatang: dto.amountSatang, branchCode })
+    } catch (error) {
+      // No QR was made, so nobody can pay: the quote goes back to being open.
+      if (dto.quoteId !== undefined) await this.unitOfWork.run(() => this.quotes.releaseByReference(reference))
+      throw error
+    }
   }
 }

@@ -59,9 +59,23 @@ export class CreateQrPaymentV2UseCase {
     if (!this.gateway.isEnabled())
       throw new DomainConflictError('ร้านนี้ยังไม่ได้ตั้งค่าการรับชำระด้วย QR', 'QR_NOT_CONFIGURED')
 
-    // Step 1: reserve. The shift lock makes this and "start counting" take turns, and serializes retries.
-    const reserved = await this.unitOfWork.run(async () => {
-      await this.shiftLedger.assertOpenForCheckout(dto.shiftId, branch.id)
+    const reserved = await this.reserve(dto, actor, branch.id, key)
+    if (reserved.prior) return this.replay(reserved.prior, { originShiftId: dto.shiftId, amountSatang: dto.amountSatang })
+    const attempt = reserved.attempt
+
+    const qr = await this.askBank(attempt, branch.code)
+    return this.recordPayment(attempt, qr, branch.id, actor.id)
+  }
+
+  /** Step 1: reserve. The shift lock makes this and "start counting" take turns, and serializes retries. */
+  private reserve(
+    dto: { shiftId: number; amountSatang: number; quoteId?: number },
+    actor: { id: number; displayName: string },
+    branchId: number,
+    key: string,
+  ): Promise<{ prior: QrAttemptEntity; attempt?: undefined } | { attempt: QrAttemptEntity; prior?: undefined }> {
+    return this.unitOfWork.run(async () => {
+      await this.shiftLedger.assertOpenForCheckout(dto.shiftId, branchId)
 
       const prior = await this.attempts.findByKey(actor.id, key)
       if (prior) return { prior }
@@ -70,10 +84,10 @@ export class CreateQrPaymentV2UseCase {
       const reference = buildQrReference(this.ids.newId())
       // The quote is held under the same shift lock, so counting the shift cannot start between the two.
       if (dto.quoteId !== undefined)
-        await this.quotes.reserveForQr(dto.quoteId, { branchId: branch.id, reference, amountSatang: dto.amountSatang })
+        await this.quotes.reserveForQr(dto.quoteId, { branchId, reference, amountSatang: dto.amountSatang })
       const attempt = await this.attempts.create({
         originShiftId: dto.shiftId,
-        branchId: branch.id,
+        branchId,
         reference,
         amountSatang: dto.amountSatang,
         actorId: actor.id,
@@ -82,17 +96,15 @@ export class CreateQrPaymentV2UseCase {
       })
       return { attempt }
     })
+  }
 
-    if (reserved.prior) return this.replay(reserved.prior, { originShiftId: dto.shiftId, amountSatang: dto.amountSatang })
-    const attempt = reserved.attempt
-
-    // Step 2: the bank, with nothing locked.
-    let qr
+  /** Step 2: the bank, with nothing locked. */
+  private async askBank(attempt: QrAttemptEntity, branchCode: string) {
     try {
-      qr = await this.gateway.createQr({
+      return await this.gateway.createQr({
         reference: attempt.reference,
         amountSatang: attempt.amountSatang,
-        branchCode: branch.code,
+        branchCode,
       })
     } catch (error) {
       if (!(error instanceof DomainExternalServiceError)) throw error
@@ -110,16 +122,23 @@ export class CreateQrPaymentV2UseCase {
         { attemptId: attempt.id },
       )
     }
+  }
 
-    // Step 3: record what the bank made.
+  /** Step 3: record what the bank made. */
+  private recordPayment(
+    attempt: QrAttemptEntity,
+    qr: Awaited<ReturnType<IQrPaymentGateway['createQr']>>,
+    branchId: number,
+    actorId: number,
+  ) {
     return this.unitOfWork.run(async () => {
       const payment = await this.payments.create({
-        branchId: branch.id,
+        branchId,
         reference: attempt.reference,
         amountSatang: attempt.amountSatang,
         qrRawData: qr.qrRawData,
         expiresAt: new Date(this.clock.now().getTime() + QR_VALID_FOR_MS),
-        createdById: actor.id,
+        createdById: actorId,
         originShiftId: attempt.originShiftId,
       })
       await this.attempts.save(attempt.ready(payment.id, qr.qrImage))

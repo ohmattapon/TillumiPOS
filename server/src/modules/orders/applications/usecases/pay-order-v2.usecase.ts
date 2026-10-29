@@ -30,31 +30,33 @@ export class PayOrderV2UseCase {
     return this.unitOfWork.run(() => this.idempotency.execute(
       { actorId: actor.user.id, branchId: actor.branch.id, action: 'orders.pay', key: idempotencyKey },
       { orderId: id, ...dto },
-      async () => {
-      await this.shiftLedger.assertOpenForCheckout(dto.shiftId, actor.branch.id)
-      const order = inBranch(await this.orders.findByIdForUpdate(id), actor.branch.id)
-      order.assertPayable()
-      const sale = await this.checkout.checkout({
-        orderId: order.id,
-        lines: order.items.map(({ productId, quantity, unitPriceSatang, options }) => ({
-          productId,
-          quantity,
-          unitPriceSatang,
-          options,
-        })),
-        memberId: order.memberId,
-        quoteId: dto.quoteId,
-        discountSatang: dto.discountSatang ?? 0,
-        payments: dto.payments,
-        cashier: actor.user,
-        branch: actor.branch,
-        shiftId: dto.shiftId,
-      })
-      await this.orders.save(order.markPaid(sale.id))
-      return sale
-      },
+      () => this.pay(id, dto, actor),
       (sale) => sale.toSnapshot(),
       async (snapshot) => restoreSaleSnapshot(snapshot),
     ))
+  }
+
+  private async pay(id: number, dto: ReturnType<typeof payOrderV2Schema.parse>, actor: OrderActor) {
+    await this.shiftLedger.assertOpenForCheckout(dto.shiftId, actor.branch.id)
+    const order = inBranch(await this.orders.findByIdForUpdate(id), actor.branch.id)
+    order.assertPayable()
+    const sale = await this.checkout.checkout({
+      orderId: order.id,
+      lines: order.items.map(({ productId, quantity, unitPriceSatang, options }) => ({
+        productId,
+        quantity,
+        unitPriceSatang,
+        options,
+      })),
+      memberId: order.memberId,
+      quoteId: dto.quoteId,
+      discountSatang: dto.discountSatang ?? 0,
+      payments: dto.payments,
+      cashier: actor.user,
+      branch: actor.branch,
+      shiftId: dto.shiftId,
+    })
+    await this.orders.save(order.markPaid(sale.id))
+    return sale
   }
 }

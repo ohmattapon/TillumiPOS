@@ -3,6 +3,7 @@ import { buildAuditEntry } from '../../../../domains/audit-entry.vo'
 import { requirePermission, type Actor } from '../../../../domains/authorization'
 import { DomainConflictError } from '../../../../domains/errors/domain-conflict.error'
 import { updateSignedMessage } from '../../../../domains/update-release'
+import type { UpdateRelease } from '../ports/update-feed.port'
 import { APP_VERSION, compareVersions } from '../../../../domains/update-version'
 import { TOKENS } from '../../../tokens'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
@@ -50,26 +51,8 @@ export class ApplyUpdateUseCase {
     if (!this.channel.isEnabled())
       throw new DomainConflictError('ระบบที่ติดตั้งแบบนี้อัปเดตจากหน้าเว็บไม่ได้', 'UPDATE_NOT_SUPPORTED')
 
-    const release = await this.feed.fetchFeed()
-    if (compareVersions(release.version, APP_VERSION) <= 0)
-      throw new DomainConflictError('เป็นรุ่นล่าสุดแล้ว ไม่ต้องอัปเดต', 'UPDATE_NOT_AVAILABLE', {
-        version: release.version,
-      })
-
-    // The hash only proves the file arrived intact. Who published it is the signature, checked before
-    // anything is downloaded, over the version, hash and url together.
-    if (!this.signatures.verify(updateSignedMessage(release), release.signature))
-      throw new DomainConflictError('ลายเซ็นของรุ่นอัปเดตไม่ถูกต้อง ไม่ติดตั้งให้', 'UPDATE_SIGNATURE_INVALID', {
-        version: release.version,
-      })
-
-    const data = await this.downloader.download(release.url)
-    const actual = this.hasher.sha256Hex(data)
-    if (actual.toLowerCase() !== release.sha256.toLowerCase())
-      throw new DomainConflictError('ไฟล์อัปเดตไม่ตรงกับลายเซ็น กรุณาลองใหม่', 'UPDATE_HASH_MISMATCH', {
-        version: release.version,
-      })
-
+    const release = await this.newerRelease()
+    const data = await this.downloadVerified(release)
     const { path } = await this.staging.stagePackage({
       version: release.version,
       sha256: release.sha256.toLowerCase(),
@@ -88,5 +71,31 @@ export class ApplyUpdateUseCase {
       })),
     )
     return { staged: true, version: release.version }
+  }
+
+  private async newerRelease(): Promise<UpdateRelease> {
+    const release = await this.feed.fetchFeed()
+    if (compareVersions(release.version, APP_VERSION) <= 0)
+      throw new DomainConflictError('เป็นรุ่นล่าสุดแล้ว ไม่ต้องอัปเดต', 'UPDATE_NOT_AVAILABLE', {
+        version: release.version,
+      })
+    return release
+  }
+
+  private async downloadVerified(release: UpdateRelease) {
+    // The hash only proves the file arrived intact. Who published it is the signature, checked before
+    // anything is downloaded, over the version, hash and url together.
+    if (!this.signatures.verify(updateSignedMessage(release), release.signature))
+      throw new DomainConflictError('ลายเซ็นของรุ่นอัปเดตไม่ถูกต้อง ไม่ติดตั้งให้', 'UPDATE_SIGNATURE_INVALID', {
+        version: release.version,
+      })
+
+    const data = await this.downloader.download(release.url)
+    const actual = this.hasher.sha256Hex(data)
+    if (actual.toLowerCase() !== release.sha256.toLowerCase())
+      throw new DomainConflictError('ไฟล์อัปเดตไม่ตรงกับลายเซ็น กรุณาลองใหม่', 'UPDATE_HASH_MISMATCH', {
+        version: release.version,
+      })
+    return data
   }
 }

@@ -1,4 +1,5 @@
 import { inject, injectable } from 'tsyringe'
+import type { ProductEntity } from '../../../../domains/product.domain'
 import { requirePermission, type Actor } from '../../../../domains/authorization'
 import { buildAuditEntry } from '../../../../domains/audit-entry.vo'
 import { invalidReceiptItems, normalizeReceiptItems, packReceiptNote, POSTGRES_INT_MAX, receiptPieces, type StockReceipt } from '../../../../domains/stock-receipt.domain'
@@ -32,32 +33,9 @@ export class ReceiveStockBatchUseCase {
       async () => {
         const products = await this.products.findManyForUpdate(items.map(item => item.productId), branchId)
         const byId = new Map(products.map(product => [product.id, product]))
-        // Packs resolve only for products that exist, so an unknown product is still reported alongside the rest.
-        const lines = items.map(item => {
-          const product = byId.get(item.productId)
-          if (!product || item.packId === undefined) return { productId: item.productId, quantity: item.quantity, note: canonical.note }
-          const pack = product.packForReceipt(item.packId)
-          return {
-            productId: item.productId,
-            quantity: receiptPieces(item.quantity, pack.size, item.productId),
-            note: packReceiptNote(canonical.note, item.quantity, pack),
-          }
-        })
-        const piecesByProduct = new Map<number, number>()
-        for (const line of lines) piecesByProduct.set(line.productId, (piecesByProduct.get(line.productId) ?? 0) + line.quantity)
-        const invalid = [...piecesByProduct].filter(([productId, pieces]) => {
-          const product = byId.get(productId)
-          return !product || !product.trackStock || product.stockQty + pieces > POSTGRES_INT_MAX
-        })
-        if (invalid.length) throw invalidReceiptItems(invalid.map(([productId]) => productId))
-        const receipt = await this.receipts.create({ branchId, receivedById: actor.id, receivedByName: actor.displayName, note: canonical.note })
-        for (const line of lines) {
-          const product = byId.get(line.productId)!
-          const movement = await this.ledger.record({ ...line, branchId, type: 'receive', userId: actor.id, receiptId: receipt.id })
-          if (!movement) throw invalidReceiptItems([line.productId])
-          receipt.items.push({ productId: line.productId, quantity: line.quantity, sku: product.sku, name: product.name, balanceAfter: movement.balanceAfter })
-        }
-        await this.receipts.appendItems(receipt.id, receipt.items)
+        const lines = this.toPieceLines(items, byId, canonical.note)
+        this.assertReceivable(lines, byId)
+        const receipt = await this.postLines(lines, byId, actor, branchId, canonical.note)
         await this.audit.record({ id: actor.id, name: actor.displayName }, branchId, buildAuditEntry({
           action: 'stock.receive_batch', entityType: 'stock_receipt', entityId: String(receipt.id), summary: 'รับสินค้าเข้าสต็อกหลายรายการ',
           after: { items: receipt.items }, reason: dto.note,
@@ -65,5 +43,47 @@ export class ReceiveStockBatchUseCase {
         return receipt
       }, result => result, async result => result as StockReceipt,
     ))
+  }
+
+  /** Packs resolve only for products that exist, so an unknown product is still reported alongside the rest. */
+  private toPieceLines(items: ReturnType<typeof normalizeReceiptItems>, byId: Map<number, ProductEntity>, note: string | null) {
+    return items.map(item => {
+      const product = byId.get(item.productId)
+      if (!product || item.packId === undefined) return { productId: item.productId, quantity: item.quantity, note }
+      const pack = product.packForReceipt(item.packId)
+      return {
+        productId: item.productId,
+        quantity: receiptPieces(item.quantity, pack.size, item.productId),
+        note: packReceiptNote(note, item.quantity, pack),
+      }
+    })
+  }
+
+  private assertReceivable(lines: { productId: number; quantity: number }[], byId: Map<number, ProductEntity>): void {
+    const piecesByProduct = new Map<number, number>()
+    for (const line of lines) piecesByProduct.set(line.productId, (piecesByProduct.get(line.productId) ?? 0) + line.quantity)
+    const invalid = [...piecesByProduct].filter(([productId, pieces]) => {
+      const product = byId.get(productId)
+      return !product || !product.trackStock || product.stockQty + pieces > POSTGRES_INT_MAX
+    })
+    if (invalid.length) throw invalidReceiptItems(invalid.map(([productId]) => productId))
+  }
+
+  private async postLines(
+    lines: { productId: number; quantity: number; note: string | null }[],
+    byId: Map<number, ProductEntity>,
+    actor: { id: number; displayName: string },
+    branchId: number,
+    note: string | null,
+  ): Promise<StockReceipt> {
+    const receipt = await this.receipts.create({ branchId, receivedById: actor.id, receivedByName: actor.displayName, note })
+    for (const line of lines) {
+      const product = byId.get(line.productId)!
+      const movement = await this.ledger.record({ ...line, branchId, type: 'receive', userId: actor.id, receiptId: receipt.id })
+      if (!movement) throw invalidReceiptItems([line.productId])
+      receipt.items.push({ productId: line.productId, quantity: line.quantity, sku: product.sku, name: product.name, balanceAfter: movement.balanceAfter })
+    }
+    await this.receipts.appendItems(receipt.id, receipt.items)
+    return receipt
   }
 }

@@ -1,4 +1,5 @@
 import { inject, injectable } from 'tsyringe'
+import type { QrAttemptEntity } from '../../../../domains/qr-attempt.domain'
 import { DomainNotFoundError } from '../../../../domains/errors/domain-not-found.error'
 import type { IClock } from '../../../shared/ports/clock.port'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
@@ -48,19 +49,27 @@ export class ResolveQrAttemptUseCase {
         await this.quotes.releaseByReference(attempt.reference)
         return this.attempts.save(attempt.fail())
       }
-
-      const payment = await this.payments.create({
-        branchId: attempt.branchId,
-        reference: attempt.reference,
-        amountSatang: attempt.amountSatang,
-        // The payload was never received; the money is what matters now.
-        qrRawData: '',
-        expiresAt: new Date(now.getTime() + QR_VALID_FOR_MS),
-        createdById: actor.id,
-        originShiftId: attempt.originShiftId,
-      })
-      await this.payments.save(payment.markPaid(found).checked(now))
-      return this.attempts.save(attempt.ready(payment.id, null))
+      return this.recordRecovered(attempt, found, actor.id, now)
     })
+  }
+
+  private async recordRecovered(
+    attempt: QrAttemptEntity,
+    found: NonNullable<Awaited<ReturnType<IQrPaymentGateway['findPayment']>>>,
+    actorId: number,
+    now: Date,
+  ) {
+    const payment = await this.payments.create({
+      branchId: attempt.branchId,
+      reference: attempt.reference,
+      amountSatang: attempt.amountSatang,
+      // The payload was never received; the money is what matters now.
+      qrRawData: '',
+      expiresAt: new Date(now.getTime() + QR_VALID_FOR_MS),
+      createdById: actorId,
+      originShiftId: attempt.originShiftId,
+    })
+    await this.payments.save(payment.markPaid(found).checked(now))
+    return this.attempts.save(attempt.ready(payment.id, null))
   }
 }

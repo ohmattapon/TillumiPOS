@@ -37,42 +37,44 @@ export class OpenShiftUseCase {
     return this.uow.run(() => this.idempotency.execute(
       { actorId: actor.id, branchId, action: 'shifts.open', key: idempotencyKey },
       dto,
-      async () => {
-      const settings = await this.settings.getForUpdate()
-      const register = await this.registers.findByIdForUpdate(dto.registerId, branchId)
-      if (!register) throw new DomainNotFoundError('ไม่พบจุดขาย', 'REGISTER_NOT_FOUND')
-      if (!register.isActive) throw new DomainConflictError('จุดขายนี้ปิดใช้งานแล้ว', 'REGISTER_INACTIVE')
-      if (await this.shifts.findCurrentByRegister(register.id, branchId))
-        throw new DomainConflictError('จุดขายนี้มีกะที่ยังไม่ปิด', 'SHIFT_ALREADY_OPEN')
-      const opened = await this.shifts.create(new ShiftEntity({
-        id: 0,
-        branchId,
-        registerId: register.id,
-        status: 'open',
-        openedAt: this.clock.now(),
-        openedById: actor.id,
-        openedByName: actor.displayName,
-        openingCashSatang: dto.openingCashSatang,
-        openingNote: dto.openingNote?.trim() || null,
-        currency: settings.currency,
-        timeZone: settings.timeZone,
-        closingRevision: 0,
-        closingStartedAt: null,
-        closingStartedById: null,
-        closingStartedByName: null,
-        closingExpectedCashSatang: null,
-        closedAt: null,
-        closedById: null,
-        closedByName: null,
-        countedCashSatang: null,
-        cashDifferenceSatang: null,
-        differenceReason: null,
-      }))
-      await this.policy.activateShifts()
-      return opened
-      },
+      () => this.open(dto, actor, branchId),
       (shift) => shift.toSnapshot(),
       async (snapshot) => restoreShiftSnapshot(snapshot),
     ))
+  }
+
+  private async open(dto: ReturnType<typeof openShiftSchema.parse>, actor: Actor, branchId: number): Promise<ShiftEntity> {
+    const settings = await this.settings.getForUpdate()
+    const register = await this.registers.findByIdForUpdate(dto.registerId, branchId)
+    if (!register) throw new DomainNotFoundError('ไม่พบจุดขาย', 'REGISTER_NOT_FOUND')
+    if (!register.isActive) throw new DomainConflictError('จุดขายนี้ปิดใช้งานแล้ว', 'REGISTER_INACTIVE')
+    if (await this.shifts.findCurrentByRegister(register.id, branchId))
+      throw new DomainConflictError('จุดขายนี้มีกะที่ยังไม่ปิด', 'SHIFT_ALREADY_OPEN')
+    const opened = await this.shifts.create(new ShiftEntity({
+      id: 0,
+      branchId,
+      registerId: register.id,
+      status: 'open',
+      openedAt: this.clock.now(),
+      openedById: actor.id,
+      openedByName: actor.displayName,
+      openingCashSatang: dto.openingCashSatang,
+      openingNote: dto.openingNote?.trim() || null,
+      currency: settings.currency,
+      timeZone: settings.timeZone,
+      closingRevision: 0,
+      closingStartedAt: null,
+      closingStartedById: null,
+      closingStartedByName: null,
+      closingExpectedCashSatang: null,
+      closedAt: null,
+      closedById: null,
+      closedByName: null,
+      countedCashSatang: null,
+      cashDifferenceSatang: null,
+      differenceReason: null,
+    }))
+    await this.policy.activateShifts()
+    return opened
   }
 }
