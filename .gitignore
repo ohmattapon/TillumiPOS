@@ -18,3 +18,5 @@ data/
 server/data/
 screenshots/
 heema/
+dist-installer/
+installer-preview.png

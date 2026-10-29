@@ -6,6 +6,25 @@ on:
   pull_request:
 
 jobs:
+  windows-installer:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Windows installer behavior
+        shell: powershell
+        run: |
+          & ./installer/windows/runtime.tests.ps1
+          & ./installer/windows/packaging.tests.ps1
+          $parseErrors = @()
+          Get-ChildItem ./installer/windows -Filter *.ps1 | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            $parseErrors += $errors
+          }
+          if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
+
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 15
