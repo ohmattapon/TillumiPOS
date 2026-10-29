@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 const STORAGE_KEY = 'pos.register-selection'
 
-function readSelections(): Record<string, number> {
+export function readSelections(): Record<string, number> {
   try {
     const stored: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}')
     if (stored && typeof stored === 'object' && !Array.isArray(stored)) return stored as Record<string, number>
