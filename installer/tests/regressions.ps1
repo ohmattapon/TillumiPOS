@@ -110,6 +110,39 @@ foreach ($unhealthy in @($false, $true)) {
     }
   }
 }
+Check 'the API service gets its database password from .env only, and is marked as a native install' {
+  [xml]$apiXml = Get-Content -Raw (Join-Path $root 'installer\winsw\tillumi-pos.xml')
+  $names = @($apiXml.service.env | ForEach-Object { $_.name })
+  Assert (-not ($names -contains 'DATABASE_URL')) 'A DATABASE_URL in the service would override the one with the password in .env'
+  Assert (($apiXml.service.env | Where-Object { $_.name -eq 'NATIVE_UPDATES' }).value -eq '1') 'The service does not turn on native updates'
+}
+Check 'first install locks the data folder before writing any secret' {
+  $first = Get-Content -Raw (Join-Path $root 'installer\scripts\first-install.ps1')
+  $lock = $first.IndexOf("'protect-data-dir.ps1'")
+  Assert ($lock -gt 0) 'first-install does not lock the data folder'
+  Assert ($lock -lt $first.IndexOf('initdb.exe'')') -and $lock -lt $first.IndexOf('JWT_SECRET=')) 'Secrets are written before the folder is locked'
+  Assert ($first -notmatch '--auth-(local|host)=trust') 'initdb still trusts local connections'
+}
+Check 'protect-data-dir leaves only SYSTEM and Administrators (plus the test account) on the data folder' {
+  $fixture = Join-Path ([IO.Path]::GetTempPath()) ('tillumi-protect-' + [guid]::NewGuid().ToString('N'))
+  New-Item -ItemType Directory -Path (Join-Path $fixture 'logs') | Out-Null
+  Set-Content (Join-Path $fixture '.env') 'JWT_SECRET=x'
+  $me = '*' + [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+  try {
+    & (Join-Path $root 'installer\scripts\protect-data-dir.ps1') -DataDir $fixture -AlsoGrant $me
+    foreach ($path in @($fixture, (Join-Path $fixture '.env'), (Join-Path $fixture 'logs'))) {
+      $sids = @((Get-Acl -LiteralPath $path).Access | ForEach-Object { $_.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value })
+      $allowed = @('S-1-5-18', 'S-1-5-32-544', $me.TrimStart('*'))
+      $other = @($sids | Where-Object { $allowed -notcontains $_ })
+      Assert ($other.Count -eq 0) "Other accounts can still open $path : $($other -join ', ')"
+      Assert ($sids -contains 'S-1-5-18' -and $sids -contains 'S-1-5-32-544') "SYSTEM or Administrators lost access to $path"
+    }
+  } finally { Remove-Item -LiteralPath $fixture -Recurse -Force -ErrorAction SilentlyContinue }
+}
+Check 'the setup code shortcut asks for administrator rights, since the logs are locked' {
+  $show = Get-Content -Raw (Join-Path $root 'installer\scripts\show-setup-code.ps1')
+  Assert ($show.Contains('-Verb RunAs')) 'show-setup-code cannot read the locked logs as a normal user'
+}
 Check 'the setup installs the publisher key where only an administrator can write' {
   Assert ($iss.Contains('update-public-key.json"; DestDir: "{app}";')) 'Setup does not install the publisher key beside the program'
 }

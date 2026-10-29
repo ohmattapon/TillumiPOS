@@ -22,11 +22,12 @@
   ENV CONTRACT:
   - <workingdirectory> is {{DATA_DIR}} so the Bun runtime picks up
     {{DATA_DIR}}\.env at boot. A real process variable wins over .env, so the
-    PORT/DATABASE_URL <env> entries below are backstops (substituted at install
-    time), not the source of truth.
-  - DATABASE_URL uses trust auth on 127.0.0.1 with NO password (see the AUTH
-    TRADEOFF note in first-install.ps1). Safe to keep here: no credential, and
-    postgres never listens beyond loopback.
+    PORT <env> entry below is a backstop (substituted at install time).
+  - DATABASE_URL is deliberately NOT set here: it carries the database password,
+    so it lives only in {{DATA_DIR}}\.env. A passwordless value here would win
+    over .env and lock the API out of its database.
+  - NATIVE_UPDATES=1 tells the API this install can apply updates
+    (installer/scripts/apply-update.ps1); other installs hide the update screen.
   - WEB_DIST points at the shop page shipped beside the API ({{APP_DIR}}\web,
     the `vite build` output). It MUST move with {{APP_EXE}} on update (Task 4):
     the page and the API are one version.
@@ -58,7 +59,7 @@
   <depend>tillumi-postgres</depend>
   <startmode>Automatic</startmode>
   <env name="PORT" value="{{PORT_API}}"/>
-  <env name="DATABASE_URL" value="postgres://pos@127.0.0.1:{{PORT_DB}}/pos"/>
+  <env name="NATIVE_UPDATES" value="1"/>
   <env name="WEB_DIST" value="{{APP_DIR}}\web"/>
   <logpath>{{DATA_DIR}}\logs</logpath>
   <log mode="roll-by-size">

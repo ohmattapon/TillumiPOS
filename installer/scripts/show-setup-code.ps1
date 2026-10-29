@@ -5,6 +5,14 @@ param(
   [int]$PortApi = 3000
 )
 $ErrorActionPreference = 'Stop'
+# The logs (which hold the code) are readable by SYSTEM and Administrators only (protect-data-dir.ps1),
+# so a normal start from the Start menu asks Windows for administrator rights first.
+$identity = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+if (-not $identity.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+  $arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$PSCommandPath`" -DataDir `"$DataDir`" -PortApi $PortApi"
+  try { Start-Process -FilePath 'powershell.exe' -ArgumentList $arguments -Verb RunAs | Out-Null } catch { exit 1 }
+  exit 0
+}
 Add-Type -AssemblyName System.Windows.Forms
 try {
   $status = Invoke-RestMethod -Uri "http://127.0.0.1:$PortApi/api/v1/setup" -TimeoutSec 5

@@ -2,9 +2,8 @@
 #
 #   .\installer\scripts\restore-native.ps1 -File <backup> -PgsqlBinDir '<InstallDir>\pgsql\bin' -DataDir '<DataDir>' [-Yes]
 #
-# All paths come from parameters (no hardcoded machine paths). When the shop later
-# switches the cluster to password auth, set PGPASSWORD in the environment — libpq
-# picks it up automatically, no script change needed. Stopping/starting the
+# All paths come from parameters (no hardcoded machine paths). The database password is read
+# from DATABASE_URL in <DataDir>.env (shop-database.ps1) and handed to psql as PGPASSWORD. Stopping/starting the
 # tillumi-pos service needs an elevated shell; without the service installed (a test
 # box) the script warns and goes on, so stop the API yourself first.
 param(
@@ -18,6 +17,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'shop-database.ps1')
 
 function Test-DumpComplete([string]$GzPath) {
   # Same completeness rule as backup-native.ps1; also proves the gzip is intact.
@@ -91,7 +91,9 @@ try {
   Expand-GzipFile $File $tmpSql
   Write-Host 'Loading the backup...'
   # One transaction: if anything in the file fails, the database is left exactly as it was.
-  & $psql -h 127.0.0.1 -p $PortDb -U $DbUser -d $Database -v ON_ERROR_STOP=1 --single-transaction --quiet -f $tmpSql
+  Invoke-WithShopDatabasePassword $DataDir {
+    & $psql -h 127.0.0.1 -p $PortDb -U $DbUser -d $Database -v ON_ERROR_STOP=1 --single-transaction --quiet -f $tmpSql
+  }
   if ($LASTEXITCODE -ne 0) { throw 'The restore failed, and the database was left as it was.' }
 } catch {
   if ($stoppedByMe) { Start-Service 'tillumi-pos' -ErrorAction SilentlyContinue }

@@ -14,6 +14,8 @@ public class NativeRunnerFixture {
   public static int Main() {
     string events = Environment.GetEnvironmentVariable("NATIVE_TEST_EVENTS");
     if (!String.IsNullOrEmpty(events)) File.AppendAllText(events, "sql\n");
+    string passwordLog = Environment.GetEnvironmentVariable("NATIVE_TEST_PASSWORD_LOG");
+    if (!String.IsNullOrEmpty(passwordLog)) File.WriteAllText(passwordLog, Environment.GetEnvironmentVariable("PGPASSWORD") ?? "");
     Console.WriteLine(Environment.GetEnvironmentVariable("MIGRATIONS_DIR"));
     Console.WriteLine(Environment.GetEnvironmentVariable("DATABASE_URL"));
     Console.WriteLine(Environment.CurrentDirectory);
@@ -22,6 +24,9 @@ public class NativeRunnerFixture {
 }
 '@ -OutputAssembly $fake -OutputType ConsoleApplication
 Copy-Item -LiteralPath $fake -Destination (Join-Path $appDir 'tillumi-migrate.exe')
+# The shop's connection, password included, lives only in .env (first-install.ps1 writes it).
+$shopUrl = 'postgres://pos:Secret123abc@127.0.0.1:15435/pos'
+Set-Content -LiteralPath (Join-Path $dataDir '.env') -Value @('JWT_SECRET=x', "DATABASE_URL=$shopUrl")
 $oldMigrations = $env:MIGRATIONS_DIR
 $oldDatabase = $env:DATABASE_URL
 $oldLocation = (Get-Location).Path
@@ -30,14 +35,20 @@ try {
   $env:DATABASE_URL = 'original-database'
   $result = & (Join-Path $root 'installer\scripts\migrate-native.ps1') -AppDir $appDir -DataDir $dataDir -PortDb 15435
   if ($result[0] -cne (Join-Path $appDir 'drizzle')) { throw 'Migration path changed or has trailing spaces' }
-  if ($result[1] -cne 'postgres://pos@127.0.0.1:15435/pos') { throw 'Wrong migration database' }
+  if ($result[1] -cne $shopUrl) { throw 'Migration did not use DATABASE_URL from .env' }
   if ($result[2] -cne $dataDir) { throw 'Wrong migration working directory' }
   if ($env:MIGRATIONS_DIR -ne 'original-migrations' -or $env:DATABASE_URL -ne 'original-database' -or (Get-Location).Path -ne $oldLocation) { throw 'Migration leaked environment or working directory' }
   $env:NATIVE_TEST_FAIL = '1'
   $failed = $false
   try { & (Join-Path $root 'installer\scripts\migrate-native.ps1') -AppDir $appDir -DataDir $dataDir -PortDb 15435 | Out-Null } catch { $failed = $true }
   if (-not $failed -or $env:DATABASE_URL -ne 'original-database') { throw 'Migration failure was swallowed or leaked environment' }
-  Write-Host 'PASS migration runner preserves spaces, propagates failure, restores environment and directory'
+  Remove-Item Env:\NATIVE_TEST_FAIL -ErrorAction SilentlyContinue
+  Move-Item -LiteralPath (Join-Path $dataDir '.env') -Destination (Join-Path $fixture 'saved.env')
+  $failed = $false
+  try { & (Join-Path $root 'installer\scripts\migrate-native.ps1') -AppDir $appDir -DataDir $dataDir | Out-Null } catch { $failed = $true }
+  Move-Item -LiteralPath (Join-Path $fixture 'saved.env') -Destination (Join-Path $dataDir '.env')
+  if (-not $failed) { throw 'Migration ran without a DATABASE_URL in .env' }
+  Write-Host 'PASS migration runner uses .env, preserves spaces, propagates failure, restores environment and directory'
 } finally {
   $env:MIGRATIONS_DIR = $oldMigrations
   $env:DATABASE_URL = $oldDatabase
@@ -68,7 +79,15 @@ function Start-Service {
   Add-Content $events 'start'
 }
 try {
+  $passwordLog = Join-Path $fixture 'pgpassword.txt'
+  $env:NATIVE_TEST_PASSWORD_LOG = $passwordLog
+  $env:PGPASSWORD = 'caller-value'
   & (Join-Path $root 'installer\scripts\restore-native.ps1') -File $sql -PgsqlBinDir $bin -DataDir $dataDir -Yes
+  Remove-Item Env:\NATIVE_TEST_PASSWORD_LOG
+  if ((Get-Content -Raw $passwordLog) -cne 'Secret123abc') { throw 'Restore did not give psql the password from .env' }
+  if ($env:PGPASSWORD -ne 'caller-value') { throw 'Restore leaked PGPASSWORD' }
+  Remove-Item Env:\PGPASSWORD
+  Write-Host 'PASS restore signs in with the password from .env and puts PGPASSWORD back'
   if (((Get-Content $events) -join ',') -ne 'stop,sql,start') { throw 'Restore service ordering is wrong' }
   if (Test-Path (Join-Path $media 'old.txt')) { throw 'Old images mixed with restored images' }
   $previous = Get-ChildItem $dataDir -Directory -Filter 'media-before-restore-*'

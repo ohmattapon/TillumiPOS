@@ -5,9 +5,8 @@
 #
 #   .\installer\scripts\backup-native.ps1 -PgsqlBinDir '<InstallDir>\pgsql\bin' -DataDir '<DataDir>'
 #
-# All paths come from parameters (no hardcoded machine paths). When the shop later
-# switches the cluster to password auth, set PGPASSWORD in the environment — libpq
-# picks it up automatically, no script change needed.
+# All paths come from parameters (no hardcoded machine paths). The database password is read
+# from DATABASE_URL in <DataDir>.env (shop-database.ps1) and handed to pg_dump as PGPASSWORD.
 param(
   [Parameter(Mandatory = $true)][string]$PgsqlBinDir,
   [Parameter(Mandatory = $true)][string]$DataDir,
@@ -18,6 +17,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'shop-database.ps1')
 
 function Test-DumpComplete([string]$GzPath) {
   # pg_dump ends every complete dump with a closing line. A dump cut off by a failure
@@ -62,7 +62,9 @@ $tmpSql = Join-Path $Directory ('.tmp-{0}.sql' -f [guid]::NewGuid().ToString('N'
 try {
   # --file keeps the dump out of the PowerShell pipeline (binary would be damaged there).
   # --clean --if-exists: the file can be loaded over a database that already has the tables.
-  & $pgDump -h 127.0.0.1 -p $PortDb -U $DbUser -d $Database --clean --if-exists --no-owner --file=$tmpSql
+  Invoke-WithShopDatabasePassword $DataDir {
+    & $pgDump -h 127.0.0.1 -p $PortDb -U $DbUser -d $Database --clean --if-exists --no-owner --file=$tmpSql
+  }
   if (($LASTEXITCODE -ne 0) -or (-not (Test-Path $tmpSql))) {
     throw 'The backup failed: is the database running? (net start tillumi-postgres)'
   }
