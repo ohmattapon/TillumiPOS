@@ -4,7 +4,7 @@ import { currentExecutor } from '../../../../libs/transaction-context'
 import type { Page } from '../../../../domains/page'
 import type { SalesReportSums } from '../../../../domains/sales-report'
 import type {
-  ISalesReportRepository, SalesReportPeriod, ReportOverviewSums, ReportProduct, ReportPageQuery, ReportPromotion,
+  ISalesReportRepository, SalesReportPeriod, ReportOverviewSums, ReportProduct, ReportPageQuery, ReportPromotion, ReportCashier,
 } from '../../applications/ports/sales-report.repository'
 
 // Aggregate sale costs first: joining lines or payments directly would multiply bill totals.
@@ -18,6 +18,8 @@ const facts = (period: SalesReportPeriod) => sql`
     select s.* from sales s, bounds b
     where s.created_at >= b.from_at and s.created_at < b.to_at
       and ${period.branchId === null ? sql`true` : sql`s.branch_id = ${period.branchId}`}
+      and ${period.cashierId === undefined ? sql`true` : sql`s.cashier_id = ${period.cashierId}`}
+      and ${period.customer === undefined ? sql`true` : period.customer === 'member' ? sql`s.member_id is not null` : sql`s.member_id is null`}
   ),
   costs as (
     select i.sale_id, sum(i.unit_cost_satang::bigint * i.quantity) as cost_satang
@@ -121,5 +123,21 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
         (select count(*)::integer from grouped) as total
     `)
     return { items: row!.items as ReportPromotion[], total: Number(row!.total) }
+  }
+
+  async cashiers(period: SalesReportPeriod): Promise<ReportCashier[]> {
+    // The filters would hide every cashier but the chosen one, so they are dropped here.
+    const { cashierId: _cashier, customer: _customer, ...range } = period
+    const [row] = await currentExecutor().execute<{ items: ReportCashier[] }>(sql`
+      with ${facts(range)},
+      grouped as (
+        select s.cashier_id as "cashierId",
+          (array_agg(s.cashier_name order by s.id desc))[1] as "cashierName",
+          count(*)::integer as bills
+        from period_sales s group by s.cashier_id
+      )
+      select coalesce(jsonb_agg(to_jsonb(grouped) order by bills desc, "cashierId"), '[]'::jsonb) as items from grouped
+    `)
+    return row!.items
   }
 }

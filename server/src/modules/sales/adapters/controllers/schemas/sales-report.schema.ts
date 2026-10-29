@@ -6,9 +6,14 @@ const metrics = t.Object({
   totalSatang: t.Integer(), vatSatang: t.Integer(), discountSatang: t.Integer(),
   costSatang: t.Integer(), netSalesSatang: t.Integer(), profitSatang: t.Integer(),
 })
-const query = t.Object({
+const rangeQuery = t.Object({
   from: t.String({ format: 'date' }), to: t.String({ format: 'date' }),
   scope: t.Optional(t.Union([t.Literal('branch'), t.Literal('all')])),
+})
+const query = t.Object({
+  ...rangeQuery.properties,
+  cashierId: t.Optional(t.Numeric()),
+  customer: t.Optional(t.Union([t.Literal('member'), t.Literal('guest')])),
 })
 const overviewQuery = t.Object({ ...query.properties, compare: t.Optional(t.BooleanString()) })
 const product = t.Object({
@@ -20,6 +25,7 @@ const promotionRow = t.Object({
   promotionId: t.Integer(), name: t.String(), bills: t.Integer(),
   discountSatang: t.Integer(), netSalesSatang: t.Integer(),
 })
+const cashier = t.Object({ cashierId: t.Integer(), cashierName: t.String(), bills: t.Integer() })
 const overview = t.Object({
   from: t.String(), to: t.String(), timeZone: t.String(),
   scope: t.Union([t.Literal('branch'), t.Literal('all')]),
@@ -32,12 +38,12 @@ const overview = t.Object({
   })),
 })
 export const reportSchemas = {
-  query, overviewQuery,
+  query, rangeQuery, overviewQuery,
   pageQuery: t.Object({ ...query.properties,
     limit: t.Optional(t.Numeric({ minimum: 1, maximum: 500 })),
     offset: t.Optional(t.Numeric({ minimum: 0 })),
   }),
-  overview, product, branch, promotion: promotionRow,
+  overview, product, branch, promotion: promotionRow, cashier,
 }
 export type SalesReportResponse = Static<typeof overview>
 export type ReportProductResponse = Static<typeof product>

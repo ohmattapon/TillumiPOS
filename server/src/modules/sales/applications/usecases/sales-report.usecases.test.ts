@@ -5,6 +5,7 @@ import { GetSalesReportUseCase } from './get-sales-report.usecase'
 import { GetPromotionReportUseCase } from './get-promotion-report.usecase'
 import { ListReportProductsUseCase } from './list-report-products.usecase'
 import { ListReportBranchesUseCase } from './list-report-branches.usecase'
+import { ListReportCashiersUseCase } from './list-report-cashiers.usecase'
 
 const range = { from: '2026-01-01', to: '2026-01-31' }
 const owner = { role: 'owner' as const }
@@ -16,6 +17,7 @@ let overview: GetSalesReportUseCase
 let products: ListReportProductsUseCase
 let comparison: ListReportBranchesUseCase
 let promotionReport: GetPromotionReportUseCase
+let cashierList: ListReportCashiersUseCase
 beforeEach(() => {
   reports = mockSalesReportRepository()
   zone = mockReportTimeZone('Asia/Bangkok')
@@ -28,6 +30,7 @@ beforeEach(() => {
   products = new ListReportProductsUseCase(reports, zone)
   comparison = new ListReportBranchesUseCase(reports, zone, branchNames)
   promotionReport = new GetPromotionReportUseCase(reports, zone)
+  cashierList = new ListReportCashiersUseCase(reports, zone)
 })
 test('keeps branch scope explicit and cash net of change', async () => {
   const result = await overview.execute(range, owner, 9)
@@ -98,4 +101,41 @@ test('validates the range like the other reports', async () => {
     { ...range, offset: -1 },
   ]) await expect(promotionReport.execute(query, owner, 1)).rejects.toBeInstanceOf(ZodError)
   expect(reports.promotions).not.toHaveBeenCalled()
+})
+test('the cashier and member filters reach every report, and the compare period keeps them', async () => {
+  const filters = { cashierId: '7', customer: 'member' }
+  await overview.execute({ ...range, ...filters, compare: true }, owner, 9)
+  expect(reports.overview).toHaveBeenNthCalledWith(1, { ...range, scope: 'branch', branchId: 9, timeZone: 'Asia/Bangkok', cashierId: 7, customer: 'member' })
+  expect(reports.overview).toHaveBeenNthCalledWith(2, {
+    from: '2025-12-01', to: '2025-12-31', scope: 'branch', branchId: 9, timeZone: 'Asia/Bangkok', cashierId: 7, customer: 'member',
+  })
+  await products.execute({ ...range, ...filters }, owner, 9)
+  await comparison.execute({ ...range, ...filters }, owner, 9)
+  await promotionReport.execute({ ...range, ...filters }, owner, 9)
+  for (const read of [reports.products, reports.branches, reports.promotions])
+    expect(read).toHaveBeenCalledWith(expect.objectContaining({ cashierId: 7, customer: 'member' }))
+})
+test('without filters the repositories get no cashier or customer key', async () => {
+  await overview.execute(range, owner, 9)
+  expect(reports.overview.mock.calls[0]?.[0]).not.toHaveProperty('cashierId')
+  expect(reports.overview.mock.calls[0]?.[0]).not.toHaveProperty('customer')
+})
+test('rejects a cashier id that is not a positive integer and an unknown customer kind', async () => {
+  for (const bad of [{ cashierId: 0 }, { cashierId: -1 }, { cashierId: 1.5 }, { customer: 'everyone' }])
+    await expect(overview.execute({ ...range, ...bad }, owner, 1)).rejects.toBeInstanceOf(ZodError)
+  expect(reports.overview).not.toHaveBeenCalled()
+})
+test('lists cashiers of the range with the row count as the total, ignoring the other filters', async () => {
+  const rows = [{ cashierId: 2, cashierName: 'ก', bills: 2 }, { cashierId: 5, cashierName: 'ข', bills: 1 }]
+  reports.cashiers.mockResolvedValue(rows)
+  expect(await cashierList.execute({ ...range, cashierId: 2, customer: 'guest' }, owner, 9)).toEqual({ items: rows, total: 2 })
+  expect(reports.cashiers).toHaveBeenCalledWith({ ...range, scope: 'branch', branchId: 9, timeZone: 'Asia/Bangkok' })
+  await cashierList.execute({ ...range, scope: 'all' }, owner, 9)
+  expect(reports.cashiers).toHaveBeenLastCalledWith({ ...range, scope: 'all', branchId: null, timeZone: 'Asia/Bangkok' })
+})
+test('the cashier list refuses a cashier and a bad range before reading any port', async () => {
+  await expect(cashierList.execute(range, { role: 'cashier' }, 1)).rejects.toMatchObject({ code: 'PERMISSION_DENIED' })
+  await expect(cashierList.execute({ from: '2026-02-01', to: '2026-01-01' }, owner, 1)).rejects.toBeInstanceOf(ZodError)
+  expect(zone.timeZone).not.toHaveBeenCalled()
+  expect(reports.cashiers).not.toHaveBeenCalled()
 })

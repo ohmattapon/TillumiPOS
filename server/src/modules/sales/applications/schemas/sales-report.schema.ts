@@ -9,11 +9,18 @@ const inRange = ({ from, to }: { from: string; to: string }) => {
   const days = (Date.parse(to) - Date.parse(from)) / 86400000
   return days >= 0 && days <= 365
 }
+const filterFields = {
+  cashierId: z.coerce.number().int().positive().optional(),
+  customer: z.enum(['member', 'guest']).optional(),
+}
 const rangeMessage = { message: 'เลือกช่วงวันตามลำดับและไม่เกิน 366 วัน' }
 const rangeSchema = z.object(rangeFields).refine(inRange, rangeMessage)
 /** Only the overview compares; the other reports must not carry a `compare` flag to their repositories. */
-export const salesReportSchema = z.object({ ...rangeFields, compare: z.union([z.boolean(), z.enum(['true', 'false'])]).transform((value) => value === true || value === 'true').default(false) }).refine(inRange, rangeMessage)
+/** The cashier list ignores the report filters, so a filtered cashier does not hide the others. */
+export const salesReportRangeSchema = rangeSchema
+export const salesReportSchema = z.object({ ...rangeFields, ...filterFields, compare: z.union([z.boolean(), z.enum(['true', 'false'])]).transform((value) => value === true || value === 'true').default(false) }).refine(inRange, rangeMessage)
 export const salesReportPageSchema = rangeSchema.safeExtend({
+  ...filterFields,
   limit: z.number().int().min(1).max(500).default(20),
   offset: z.number().int().min(0).default(0),
 })

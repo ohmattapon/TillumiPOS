@@ -27,6 +27,7 @@ export const mockSalesReportRepository = (): Mocked<ISalesReportRepository> => (
   products: mock<ISalesReportRepository['products']>(),
   branches: mock<ISalesReportRepository['branches']>(),
   promotions: mock<ISalesReportRepository['promotions']>(),
+  cashiers: mock<ISalesReportRepository['cashiers']>(),
 })
 import type { IBranchRepository } from '../modules/branches/applications/ports/branch.repository'
 import type { ICategoryRepository } from '../modules/categories/applications/ports/category.repository'

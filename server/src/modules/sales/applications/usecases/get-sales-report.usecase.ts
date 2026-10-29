@@ -17,7 +17,11 @@ export class GetSalesReportUseCase {
     const { compare, ...query } = salesReportSchema.parse(input)
     requirePermission(actor, 'reports.read', 'เฉพาะเจ้าของร้านดูรายงานได้')
     const timeZone = await this.zone.timeZone()
-    const scoped = { scope: query.scope, timeZone, branchId: query.scope === 'all' ? null : branchId }
+    const { cashierId, customer } = query
+    const scoped = {
+      scope: query.scope, timeZone, branchId: query.scope === 'all' ? null : branchId,
+      ...(cashierId === undefined ? {} : { cashierId }), ...(customer === undefined ? {} : { customer }),
+    }
     const result = await this.reports.overview({ ...query, ...scoped })
     const before = compare ? await this.reports.overview({ ...previousPeriod(query.from, query.to), ...scoped }) : null
     return {
