@@ -5,7 +5,8 @@
 // It refuses any database whose name does not start with pos_load, and any host but this machine. Every value
 // (the admin URL, the generated passwords) comes from the environment or is made here at run time; none is written
 // to a file. The real bank is never called: the API is pointed at the fake in server/test/kbank-server.ts.
-import { randomBytes } from 'node:crypto'
+import { SQL } from 'bun'
+import { randomBytes, randomInt } from 'node:crypto'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -14,6 +15,7 @@ import { dropDatabase, inheritedEnv, migrateAndSeedBase, recreateDatabase, targe
 import { createProcessGroup } from './lib/processes'
 import { redactUrls } from './lib/redact'
 import { assertLoadDatabase, assertLocalBaseUrl } from './lib/safety'
+import { SEED_DEFAULTS, seedLoadData, type SeedOptions } from './seed'
 
 const PROFILES = ['smoke', 'load', 'stress', 'spike', 'soak'] as const
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '')
@@ -36,6 +38,18 @@ function parseArgs(argv: string[]): Options {
     else throw new Error(usage)
   }
   return { profile: profile as Options['profile'], scenario, keepDb }
+}
+
+/** Seed sizes from LOAD_SEED_<NAME> (for example LOAD_SEED_PAST_SALES=5000); unset ones keep the seed's default. */
+function seedSizesFromEnv(): SeedOptions {
+  const sizes: SeedOptions = {}
+  for (const key of Object.keys(SEED_DEFAULTS) as (keyof typeof SEED_DEFAULTS)[]) {
+    const raw = Bun.env[`LOAD_SEED_${key.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase()}`]
+    if (raw === undefined) continue
+    if (!/^\d+$/.test(raw)) throw new Error(`LOAD_SEED_${key} must be a whole number`)
+    sizes[key] = Number(raw)
+  }
+  return sizes
 }
 
 async function freePort(): Promise<number> {
@@ -114,6 +128,18 @@ async function main() {
     fakeKbank.enableIn(apiEnv)
 
     await migrateAndSeedBase(apiEnv, group.spawn)
+    // Made here and handed to the scenarios later; never printed or written down.
+    const cashierPassword = randomBytes(18).toString('base64url')
+    const cashierPin = String(randomInt(0, 1_000_000)).padStart(6, '0')
+    const seedSizes = seedSizesFromEnv()
+    const seedSql = new SQL(databaseUrl)
+    const seedStarted = performance.now()
+    // History ends at the start of today, so the reports have this month and this year to compute.
+    const seeded = await seedLoadData(seedSql, { ...seedSizes, cashierPassword, cashierPin, referenceDate: new Date() }).finally(() => seedSql.close())
+    console.log(
+      `Seeded in ${((performance.now() - seedStarted) / 1000).toFixed(1)}s: ${seeded.productIds.length + seeded.hotProductIds.length} products (${seeded.hotProductIds.length} hot), ` +
+        `${seedSizes.pastSales ?? SEED_DEFAULTS.pastSales} past bills, ${seeded.memberIds.length} members, ${seeded.couponCodes.length} coupons, ${seeded.cashierUsernames.length} cashiers + ${seeded.authUsers.length} auth users, ${seeded.registerIds.length} registers`,
+    )
 
     const api = group.spawn(['bun', 'src/index.ts'], { cwd: join(root, 'server'), env: apiEnv, stdout: 'ignore', stderr: 'pipe' })
     // The API's own error output can name the connection string, so it is shown redacted.
