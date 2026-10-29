@@ -27,6 +27,7 @@ export class GetSalesReportUseCase {
     return {
       from: query.from, to: query.to, timeZone, scope: query.scope,
       summary: calculateReportMetrics(result.summary),
+      unallocatedLines: result.unallocatedLines,
       ...(before ? { previous: calculateReportMetrics(before.summary) } : {}),
       days: { items: result.days.map(({ day, ...sums }) => ({ day, ...calculateReportMetrics(sums) })), total: result.days.length },
       byMethod: PAYMENT_METHODS.map((method) => ({

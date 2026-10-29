@@ -27,7 +27,7 @@ beforeEach(() => {
   reports = mockSalesReportRepository()
   zone = mockReportTimeZone('Asia/Bangkok')
   branchNames = mockReportBranchNames(new Map([[3, 'สาขาปิด']]))
-  reports.overview.mockResolvedValue({ summary: sums, days: [{ day: '2026-01-01', ...sums }], tendered: [{ method: 'cash', amountSatang: 11000 }] })
+  reports.overview.mockResolvedValue({ summary: sums, days: [{ day: '2026-01-01', ...sums }], tendered: [{ method: 'cash', amountSatang: 11000 }], unallocatedLines: 4 })
   reports.products.mockResolvedValue({ items: [], total: 0 })
   reports.branches.mockResolvedValue({ items: [{ branchId: 3, ...sums }], total: 1 })
   reports.promotions.mockResolvedValue({ items: [], total: 0 })
@@ -48,10 +48,14 @@ test('keeps branch scope explicit and cash net of change', async () => {
   expect(result.summary.profitSatang).toBe(4000)
   expect(result.byMethod.find((row) => row.method === 'cash')?.amountSatang).toBe(10700)
 })
+test('reports how many lines of completed bills have no share yet', async () => {
+  const result = await overview.execute(range, owner, 9)
+  expect(result.unallocatedLines).toBe(4)
+})
 test('compare reads the same-length period before and returns it as previous', async () => {
   const before = { ...sums, totalSatang: 5350, vatSatang: 350 }
-  reports.overview.mockResolvedValueOnce({ summary: sums, days: [], tendered: [] })
-  reports.overview.mockResolvedValueOnce({ summary: before, days: [], tendered: [] })
+  reports.overview.mockResolvedValueOnce({ summary: sums, days: [], tendered: [], unallocatedLines: 0 })
+  reports.overview.mockResolvedValueOnce({ summary: before, days: [], tendered: [], unallocatedLines: 0 })
   const result = await overview.execute({ ...range, compare: true }, owner, 9)
   expect(reports.overview).toHaveBeenCalledTimes(2)
   expect(reports.overview).toHaveBeenLastCalledWith({
@@ -202,9 +206,9 @@ test('the category report names a category, leaves a deleted or missing one unna
 })
 test('the category share rounds down and is zero when the period has no net sales', async () => {
   reports.categories.mockResolvedValue({ items: [categoryRow(1, 3333)], total: 1 })
-  reports.overview.mockResolvedValue({ summary: { ...sums, totalSatang: 20000, vatSatang: 0 }, days: [], tendered: [] })
+  reports.overview.mockResolvedValue({ summary: { ...sums, totalSatang: 20000, vatSatang: 0 }, days: [], tendered: [], unallocatedLines: 0 })
   expect((await categoryList.execute(range, owner, 9)).items[0]?.shareBp).toBe(1666)
-  reports.overview.mockResolvedValue({ summary: { ...sums, totalSatang: 700, vatSatang: 700 }, days: [], tendered: [] })
+  reports.overview.mockResolvedValue({ summary: { ...sums, totalSatang: 700, vatSatang: 700 }, days: [], tendered: [], unallocatedLines: 0 })
   expect((await categoryList.execute(range, owner, 9)).items[0]?.shareBp).toBe(0)
 })
 test('the category report keeps the cashier and customer filters in both reads and all-branch scope', async () => {

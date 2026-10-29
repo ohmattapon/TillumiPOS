@@ -210,6 +210,16 @@ test('a bill backfilled after the line shares were added matches the overview, a
   expect(ok(await owner.api.sales.reports.items.get({ query: { ...range, categoryId: String(drinks.id) } })).items).toEqual([])
   expect(ok(await owner.api.sales.reports.items.get({ query: { ...range, categoryId: 'none' } })).items.map((row) => row.productId).sort()).toEqual([tea.id, cake.id].sort())
 })
+test('the overview counts lines of completed bills that have no share yet, and none after the backfill', async () => {
+  const tea = await seedProduct(owner, { priceSatang: 2500, stock: 10 })
+  const bill = await sell(owner, tea.id)
+  await dateSale(bill.id, '2026-01-02T03:00:00Z')
+  expect(ok(await owner.api.sales.reports.get({ query: range })).unallocatedLines).toBe(0)
+  await sql`update sale_items set allocated_total_satang = null, allocated_vat_satang = null where sale_id = ${bill.id}`
+  expect(ok(await owner.api.sales.reports.get({ query: range })).unallocatedLines).toBe(1)
+  await backfillSaleLines(1)
+  expect(ok(await owner.api.sales.reports.get({ query: range })).unallocatedLines).toBe(0)
+})
 test('a sold line keeps the category it was sold in when the product moves to another category later', async () => {
   const drinks = ok(await owner.api.catalog.categories.post({ name: 'เครื่องดื่ม' }))
   const snacks = ok(await owner.api.catalog.categories.post({ name: 'ขนม' }))

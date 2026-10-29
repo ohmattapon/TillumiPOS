@@ -40,6 +40,7 @@ const overview = t.Object({
   from: t.String(), to: t.String(), timeZone: t.String(),
   scope: t.Union([t.Literal('branch'), t.Literal('all')]),
   summary: metrics,
+  unallocatedLines: t.Integer(),
   previous: t.Optional(metrics),
   days: page(t.Intersect([metrics, t.Object({ day: t.String() })])),
   byMethod: t.Array(t.Object({

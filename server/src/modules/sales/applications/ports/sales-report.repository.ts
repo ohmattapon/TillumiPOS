@@ -17,6 +17,8 @@ export interface ReportOverviewSums {
   summary: SalesReportSums
   days: (SalesReportSums & { day: string })[]
   tendered: { method: PaymentMethod; amountSatang: number }[]
+  /** Lines of completed bills in the period that have no allocated share yet (old bills before the backfill). */
+  unallocatedLines: number
 }
 export interface ReportProduct {
   productId: number

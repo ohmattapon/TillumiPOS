@@ -62,7 +62,9 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
           cross join lateral generate_series(b.from_day::timestamp, b.to_day::timestamp, interval '1 day') series(day)
           left join daily d on d.day = series.day::date), '[]'::jsonb),
         'tendered', coalesce((select jsonb_agg(jsonb_build_object('method', method, 'amountSatang', amount) order by method)
-          from tendered), '[]'::jsonb)
+          from tendered), '[]'::jsonb),
+        'unallocatedLines', (select count(*)::integer from sale_items i join period_sales s on s.id = i.sale_id
+          where s.status = 'completed' and i.allocated_total_satang is null)
       ) as overview
     `)
     return row!.overview

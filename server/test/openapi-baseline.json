@@ -31851,6 +31851,18 @@
                     },
                     "to": {
                       "type": "string"
+                    },
+                    "unallocatedLines": {
+                      "anyOf": [
+                        {
+                          "default": 0,
+                          "format": "integer",
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -31859,6 +31871,7 @@
                     "timeZone",
                     "scope",
                     "summary",
+                    "unallocatedLines",
                     "days",
                     "byMethod"
                   ],
