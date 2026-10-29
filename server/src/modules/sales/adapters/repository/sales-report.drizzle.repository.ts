@@ -88,9 +88,8 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
   }
 
   async items(query: ReportItemQuery): Promise<Page<ReportItem>> {
-    // Lines sold before the category snapshot have a null `category_id`. `products.category_id` is read as
-    // their fallback, so a category filter still finds them; a line that kept its own category never uses it.
-    const category = sql`coalesce(i.category_id, p.category_id)`
+    // A line keeps the category it was sold with; a line without one stays without one.
+    const category = sql`i.category_id`
     const categoryFilter = query.categoryId === undefined ? sql`true`
       : query.categoryId === null ? sql`${category} is null` : sql`${category} = ${query.categoryId}`
     // Ties end in product id and pack size so a page boundary never repeats or skips a row.
@@ -114,7 +113,6 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
           sum(i.unit_cost_satang::bigint * i.quantity) as "costSatang"
         from sale_items i
         join period_sales s on s.id = i.sale_id
-        join products p on p.id = i.product_id
         where s.status = 'completed' and ${categoryFilter}
         group by i.product_id, i.pack_size
       ),
