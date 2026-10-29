@@ -10,6 +10,7 @@ import { Panel } from '@/components/Panel'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { dailyTotalsCells, hasTotals } from '../lib/report-totals'
 import { promotionTotalsCells, hasPromotionTotals } from '../lib/promotion-totals'
 import { reportQuery, productsReportQuery, promotionsReportQuery, readReport, readProducts, readPromotions } from '../api'
 import { validRange } from '../lib/date-range'
@@ -146,7 +147,8 @@ export function ReportsPage() {
               {report.data ? <>
                 <DailySalesChart days={report.data.days.items} />
                 <ReportDataTable headers={[t('day'), t('bills'), t('revenue'), t('profit')]}
-                  rows={report.data.days.items.map((row) => [date.calendarDateShortYear(row.day), row.saleCount, money.plain(row.totalSatang), money.plain(row.profitSatang)])} />
+                  rows={report.data.days.items.map((row) => [date.calendarDateShortYear(row.day), row.saleCount, money.plain(row.totalSatang), money.plain(row.profitSatang)])}
+                  footer={hasTotals(report.data.days.items.length) ? dailyTotalsCells(t('dailyTotal'), report.data.summary, money.plain) : undefined} />
               </> : <Skeleton className="m-4 h-48" />}
             </Panel>
             <Panel title={t('methods')} description={t('methodNote')}>
@@ -154,6 +156,9 @@ export function ReportsPage() {
                 {report.data?.byMethod.map((row) => <div key={row.method} className="flex justify-between gap-3 py-4 text-sm">
                   <span>{tc(`paymentMethods.${row.method}`)}</span><strong className="tabular-nums">{money.format(row.amountSatang)}</strong>
                 </div>)}
+                {report.data && <div className="flex justify-between gap-3 py-4 text-sm font-semibold">
+                  <span>{t('methodsTotal')}</span><strong className="tabular-nums">{money.format(report.data.summary.totalSatang)}</strong>
+                </div>}
               </div>
             </Panel>
           </div>
