@@ -24,9 +24,13 @@ export interface CallOptions {
   idempotencyKey?: boolean | string
 }
 
+/** A random UUID v4, the shape the API requires. Scenarios that must repeat across runs use idempotencyKeyFor instead. */
 export function newIdempotencyKey(): string {
   const bytes = new Uint8Array(randomBytes(16))
-  return `k6-${__VU}-${__ITER}-${Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')}`
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
 }
 
 function send(session: Session, method: string, path: string, body: unknown, options: CallOptions): Response {
