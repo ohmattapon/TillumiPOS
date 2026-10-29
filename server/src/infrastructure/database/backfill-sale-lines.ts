@@ -1,4 +1,4 @@
-import { and, asc, eq, exists, inArray, isNull } from 'drizzle-orm'
+import { and, asc, eq, exists, gt, inArray, isNull } from 'drizzle-orm'
 import { allocateBillToLines } from '../../domains/bill-allocation'
 import { client, db } from '../../libs/db'
 import { saleItems, sales } from './schema/sales'
@@ -11,15 +11,23 @@ import { saleItems, sales } from './schema/sales'
  */
 export async function backfillSaleLines(batchSize = 500): Promise<number> {
   let updated = 0
+  // Paging by id keeps each batch from rescanning the sales that were already filled.
+  let lastId = 0
   for (;;) {
     const done = await db.transaction(async (tx) => {
       const batch = await tx
         .select({ id: sales.id, totalSatang: sales.totalSatang, vatSatang: sales.vatSatang })
         .from(sales)
-        .where(exists(tx.select({ one: saleItems.id }).from(saleItems).where(and(eq(saleItems.saleId, sales.id), isNull(saleItems.allocatedTotalSatang)))))
+        .where(
+          and(
+            gt(sales.id, lastId),
+            exists(tx.select({ one: saleItems.id }).from(saleItems).where(and(eq(saleItems.saleId, sales.id), isNull(saleItems.allocatedTotalSatang)))),
+          ),
+        )
         .orderBy(asc(sales.id))
         .limit(batchSize)
       if (batch.length === 0) return 0
+      lastId = batch[batch.length - 1]!.id
 
       const items = await tx
         .select({ id: saleItems.id, saleId: saleItems.saleId, lineTotalSatang: saleItems.lineTotalSatang })
