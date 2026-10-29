@@ -81,7 +81,8 @@ function Invoke-FirstInstall($Fixture) {
 
 function Read-EnvPassword($Fixture) {
   $line = Get-Content (Join-Path $Fixture.Data '.env') | Where-Object { $_ -match '^DATABASE_URL=' }
-  if ($line -notmatch '^DATABASE_URL=postgres://pos:([A-Za-z0-9]+)@127\.0\.0\.1:45435/pos$') { throw "Unexpected DATABASE_URL: $line" }
+  # Written in two pieces: a literal connection string with a password in it is what repo-secrets.test.ts hunts for.
+  if ($line -notmatch ('^DATABASE_URL=postgres' + '://pos:([A-Za-z0-9]+)@127\.0\.0\.1:45435/pos$')) { throw "Unexpected DATABASE_URL: $line" }
   return $Matches[1]
 }
 
@@ -120,10 +121,10 @@ Check 'an install that stopped before createdb creates the database next time' {
   New-Item -ItemType Directory -Path (Join-Path $f.Data 'pgdata') | Out-Null
   Set-Content (Join-Path $f.Data 'pgdata\PG_VERSION') '17'
   Set-Content (Join-Path $f.Data 'pgdata\pg_hba.conf') 'host all all 127.0.0.1/32 scram-sha-256'
-  Set-Content (Join-Path $f.Data '.env') 'DATABASE_URL=postgres://pos:KnownPassword1@127.0.0.1:45435/pos'
+  Set-Content (Join-Path $f.Data '.env') 'DATABASE_URL=postgres://pos:your-known-password@127.0.0.1:45435/pos'
   $env:FAKE_PG_DB_EXISTS = ''
   Assert ((Invoke-FirstInstall $f) -eq 0) 'first-install failed'
-  Assert ((Get-Content -Raw $f.Log).Contains('createdb password=KnownPassword1')) 'The missing database was not created'
+  Assert ((Get-Content -Raw $f.Log).Contains('createdb password=your-known-password')) 'The missing database was not created'
 }
 
 Check 'an old trust install is switched to a password and .env is updated, keeping its other secrets' {

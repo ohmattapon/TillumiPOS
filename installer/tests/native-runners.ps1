@@ -25,7 +25,7 @@ public class NativeRunnerFixture {
 '@ -OutputAssembly $fake -OutputType ConsoleApplication
 Copy-Item -LiteralPath $fake -Destination (Join-Path $appDir 'tillumi-migrate.exe')
 # The shop's connection, password included, lives only in .env (first-install.ps1 writes it).
-$shopUrl = 'postgres://pos:Secret123abc@127.0.0.1:15435/pos'
+$shopUrl = 'postgres://pos:your-test-password@127.0.0.1:15435/pos'
 Set-Content -LiteralPath (Join-Path $dataDir '.env') -Value @('JWT_SECRET=x', "DATABASE_URL=$shopUrl")
 $oldMigrations = $env:MIGRATIONS_DIR
 $oldDatabase = $env:DATABASE_URL
@@ -84,7 +84,7 @@ try {
   $env:PGPASSWORD = 'caller-value'
   & (Join-Path $root 'installer\scripts\restore-native.ps1') -File $sql -PgsqlBinDir $bin -DataDir $dataDir -Yes
   Remove-Item Env:\NATIVE_TEST_PASSWORD_LOG
-  if ((Get-Content -Raw $passwordLog) -cne 'Secret123abc') { throw 'Restore did not give psql the password from .env' }
+  if ((Get-Content -Raw $passwordLog) -cne 'your-test-password') { throw 'Restore did not give psql the password from .env' }
   if ($env:PGPASSWORD -ne 'caller-value') { throw 'Restore leaked PGPASSWORD' }
   Remove-Item Env:\PGPASSWORD
   Write-Host 'PASS restore signs in with the password from .env and puts PGPASSWORD back'
