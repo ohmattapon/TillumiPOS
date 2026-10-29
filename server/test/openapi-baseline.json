@@ -33135,11 +33135,45 @@
                           "type": "integer"
                         }
                       ]
+                    },
+                    "totals": {
+                      "properties": {
+                        "lineTotalSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "quantity": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "quantity",
+                        "lineTotalSatang"
+                      ],
+                      "type": "object"
                     }
                   },
                   "required": [
                     "items",
-                    "total"
+                    "total",
+                    "totals"
                   ],
                   "type": "object"
                 }

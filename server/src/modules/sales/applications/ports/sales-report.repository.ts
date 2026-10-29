@@ -28,6 +28,12 @@ export interface ReportProduct {
   /** Line totals before bill discounts and any VAT added at checkout. */
   lineTotalSatang: number
 }
+export interface ReportProductTotals {
+  quantity: number
+  lineTotalSatang: number
+}
+/** `totals` cover every product matching the period and filters, not only the rows of the page. */
+export type ReportProductPage = Page<ReportProduct> & { totals: ReportProductTotals }
 export interface ReportPromotion {
   promotionId: number
   /** The name on the latest sale in the range, so bills keep the name they were sold under. */
@@ -101,7 +107,7 @@ export interface ReportItemTotals {
 export type ReportItemPage = Page<ReportItem> & { totals: ReportItemTotals }
 export interface ISalesReportRepository {
   overview(period: SalesReportPeriod): Promise<ReportOverviewSums>
-  products(query: ReportPageQuery): Promise<Page<ReportProduct>>
+  products(query: ReportPageQuery): Promise<ReportProductPage>
   /** Per product and pack size, completed bills only, sorted descending by `sort` and then by product id. */
   items(query: ReportItemQuery): Promise<ReportItemPage>
   /** Per category stored on the line, completed bills only, sorted by net sales descending, then category id with no category last. */

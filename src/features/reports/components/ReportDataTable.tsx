@@ -26,7 +26,7 @@ export function ReportDataTable({ headers, rows, numberFrom = 1, footer }: {
   const tableRows: ReportRow[] = [...rows, ...(footer ? [bold(footer)] : [])].map((cells, key) => ({ key, cells }))
   return (
     <div className="max-h-96 overflow-y-auto">
-      <DataTable columns={columns} rows={tableRows} rowKey={(row) => row.key} empty={t('empty')} />
+      <DataTable columns={columns} rows={tableRows} phoneLabels rowKey={(row) => row.key} empty={t('empty')} />
     </div>
   )
 }

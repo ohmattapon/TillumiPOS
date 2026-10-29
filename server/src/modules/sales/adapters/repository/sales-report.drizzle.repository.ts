@@ -4,7 +4,7 @@ import { currentExecutor } from '../../../../libs/transaction-context'
 import type { Page } from '../../../../domains/page'
 import type { SalesReportSums } from '../../../../domains/sales-report'
 import type {
-  ISalesReportRepository, SalesReportPeriod, ReportOverviewSums, ReportProduct, ReportPageQuery, ReportPromotion, ReportPromotionPage, ReportCashier, ReportItem, ReportItemQuery, ReportItemPage, ReportCategoryPage, ReportCategorySums,
+  ISalesReportRepository, SalesReportPeriod, ReportOverviewSums, ReportProduct, ReportProductPage, ReportPageQuery, ReportPromotion, ReportPromotionPage, ReportCashier, ReportItem, ReportItemQuery, ReportItemPage, ReportCategoryPage, ReportCategorySums,
 } from '../../applications/ports/sales-report.repository'
 
 // Aggregate sale costs first: joining lines or payments directly would multiply bill totals.
@@ -70,8 +70,8 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
     return row!.overview
   }
 
-  async products(query: ReportPageQuery): Promise<Page<ReportProduct>> {
-    const [row] = await currentExecutor().execute<{ items: ReportProduct[]; total: number }>(sql`
+  async products(query: ReportPageQuery): Promise<ReportProductPage> {
+    const [row] = await currentExecutor().execute<{ items: ReportProduct[]; total: number; totals: ReportProductPage['totals'] }>(sql`
       with ${facts(query)},
       grouped as (
         select i.product_id as "productId",
@@ -84,9 +84,11 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
       paged as (select * from grouped order by quantity desc, "lineTotalSatang" desc, "productId"
         limit ${query.limit} offset ${query.offset})
       select coalesce((select jsonb_agg(to_jsonb(paged) order by quantity desc, "lineTotalSatang" desc, "productId") from paged), '[]'::jsonb) as items,
-        (select count(*)::integer from grouped) as total
+        (select count(*)::integer from grouped) as total,
+        (select jsonb_build_object('quantity', coalesce(sum(quantity), 0)::bigint,
+          'lineTotalSatang', coalesce(sum("lineTotalSatang"), 0)::bigint) from grouped) as totals
     `)
-    return { items: row!.items as ReportProduct[], total: Number(row!.total) }
+    return { items: row!.items as ReportProduct[], total: Number(row!.total), totals: row!.totals }
   }
 
   async items(query: ReportItemQuery): Promise<ReportItemPage> {

@@ -32,5 +32,12 @@ export function dailyTotalsCells(
   return [label, summary.saleCount, plain(summary.totalSatang), plain(summary.profitSatang)]
 }
 
+/** The footer of the best sellers table, in the columns SKU, product, quantity and item sales. */
+export function productTotalsCells(
+  label: string, totals: { quantity: number; lineTotalSatang: number }, plain: (satang: number) => string,
+): (string | number)[] {
+  return [label, '', totals.quantity, plain(totals.lineTotalSatang)]
+}
+
 /** A table of zero rows has nothing to total, so the empty state shows alone. */
 export const hasTotals = (rowCount: number) => rowCount > 0

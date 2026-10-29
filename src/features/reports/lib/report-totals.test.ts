@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { categoriesTotalsRow, dailyTotalsCells, hasTotals, isTotalRow, itemsTotalsRow } from './report-totals'
+import { categoriesTotalsRow, dailyTotalsCells, productTotalsCells, hasTotals, isTotalRow, itemsTotalsRow } from './report-totals'
 
 const plain = (satang: number) => `฿${satang / 100}`
 
@@ -18,6 +18,9 @@ test('a data row is not a total', () => {
 })
 test('the daily footer takes bills, revenue and profit from the summary, not from the rows', () => {
   expect(dailyTotalsCells('รวม', { saleCount: 5, totalSatang: 90000, profitSatang: 15000 }, plain)).toEqual(['รวม', 5, '฿900', '฿150'])
+})
+test('the best sellers footer puts the label first, leaves the product blank and takes the sums from the response', () => {
+  expect(productTotalsCells('รวม', { quantity: 90, lineTotalSatang: 123400 }, plain)).toEqual(['รวม', '', 90, '฿1234'])
 })
 test('a table with no rows has nothing to total', () => {
   expect(hasTotals(0)).toBe(false)
