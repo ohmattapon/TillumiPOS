@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useCreateUser, useUpdateUser } from '../api'
 import { validateUserForm, type UserFormError, type UserFormField } from '../lib/validate-user-form'
@@ -129,18 +130,25 @@ export function UserFormDialog({ user, initialRoleId, onClose }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="user-role">{t('form.role')}</Label>
-                <Select value={selectedRoleId} onValueChange={(value) => set('roleId', value)} disabled={roles.isPending || Boolean(roles.error)}>
-                  <SelectTrigger id="user-role" className="h-11! w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(roles.data ?? []).map((role) => (
-                      <SelectItem key={role.id} value={String(role.id)}>
-                        {role.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {roles.isPending && !roles.error ? (
+                  <div role="status" aria-busy="true">
+                    <span className="sr-only">{tc('loading')}</span>
+                    <Skeleton aria-hidden className="h-11 w-full" />
+                  </div>
+                ) : (
+                  <Select value={selectedRoleId} onValueChange={(value) => set('roleId', value)} disabled={Boolean(roles.error)}>
+                    <SelectTrigger id="user-role" className="h-11! w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(roles.data ?? []).map((role) => (
+                        <SelectItem key={role.id} value={String(role.id)}>
+                          {role.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
             <div className="space-y-2">

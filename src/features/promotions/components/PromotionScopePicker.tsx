@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { MultiSelectCombobox } from '@/components/MultiSelectCombobox'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { categoriesQuery } from '@/features/categories'
 import { ProductImage, productQuery, productsQuery } from '@/features/products'
@@ -42,6 +43,12 @@ export function PromotionScopePicker({ value, onChange }: { value: ScopeSelectio
   const settled = term === search.trim()
   const found = results.data?.items ?? []
 
+  const loadingStatus = (
+    <span role="status" aria-busy="true" className="block">
+      <span className="sr-only">{t('scope.loading')}</span>
+      <Skeleton aria-hidden className="h-3 w-24" />
+    </span>
+  )
   const countOr = (count: number, pick: string) => (count > 0 ? t('scope.selectedCount', { count }) : pick)
 
   const productStatus = results.error ? (
@@ -50,7 +57,7 @@ export function PromotionScopePicker({ value, onChange }: { value: ScopeSelectio
       <Button type="button" variant="outline" className="h-10" onClick={() => void results.refetch()}>{t('scope.retry')}</Button>
     </span>
   ) : !settled || results.isPending ? (
-    t('scope.loading')
+    loadingStatus
   ) : results.data && results.data.total > found.length ? (
     t('scope.showingOf', { shown: found.length, total: results.data.total })
   ) : null
@@ -72,7 +79,7 @@ export function PromotionScopePicker({ value, onChange }: { value: ScopeSelectio
           label={countOr(value.categoryIds.length, t('scope.pickCategories'))}
           searchLabel={t('scope.searchCategories')}
           emptyText={categories.data?.length === 0 ? t('scope.noCategories') : t('scope.noMatches')}
-          status={categories.isPending ? t('scope.loading') : null}
+          status={categories.isPending ? loadingStatus : null}
           items={(categories.data ?? []).map((category) => ({
             id: category.id,
             label: category.name,
@@ -130,7 +137,14 @@ export function PromotionScopePicker({ value, onChange }: { value: ScopeSelectio
               return (
                 <li key={entry.id} className="flex min-h-12 items-center gap-2 pl-2 text-sm">
                   {thumbnail(knownProducts.get(entry.id)?.imageUrl)}
-                  <span className={cn('min-w-0 flex-1 truncate', entry.status === 'missing' && 'text-warning')}>{label}</span>
+                  {entry.status === 'loading' ? (
+                    <span role="status" aria-busy="true" className="min-w-0 flex-1">
+                      <span className="sr-only">{label}</span>
+                      <Skeleton aria-hidden className="h-4 w-40 max-w-full" />
+                    </span>
+                  ) : (
+                    <span className={cn('min-w-0 flex-1 truncate', entry.status === 'missing' && 'text-warning')}>{label}</span>
+                  )}
                   {entry.status === 'inactive' && <StatusBadge tone="neutral">{t('scope.inactive')}</StatusBadge>}
                   <Button type="button" variant="ghost" className="size-10" aria-label={t('scope.remove', { name: label })} onClick={() => toggleProduct(entry.id)}>
                     <X />

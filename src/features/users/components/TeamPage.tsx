@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
+import { SkeletonPanel } from '@/components/Skeletons'
 import { PageHeader } from '@/components/PageHeader'
 import { useAuthorization } from '@/features/auth'
 import { RoleDialog, roleOptionsQuery } from '@/features/roles'
@@ -61,7 +62,7 @@ export function TeamPage() {
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
         {users.error && <p className="p-4 text-sm text-destructive">{users.error.message}</p>}
         {roles.error && <p className="p-4 text-sm text-destructive">{roles.error.message}</p>}
-        {roles.isPending && !roles.error && <p className="p-4 text-sm text-muted-foreground">{tc('loading')}</p>}
+        {roles.isPending && !roles.error && <SkeletonPanel rows={3} />}
         {groups.map(({ role, members }) => (
           <RoleCard
             key={role?.id ?? 'unassigned'}

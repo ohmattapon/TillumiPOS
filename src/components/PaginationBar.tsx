@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { getPageItems } from './lib/get-page-items'
 
 interface Props {
@@ -31,7 +32,12 @@ export function PaginationBar({ page, pageSize, total, isLoading = false, onPage
   return (
     <nav aria-label={t('pagination.label')} aria-busy={isLoading} className="flex flex-wrap items-center justify-between gap-3 p-3">
       <p aria-live="polite" className="text-xs text-muted-foreground tabular-nums basis-full sm:basis-auto">
-        {isLoading ? t('loading') : t('pagination.range', {
+        {isLoading ? (
+          <>
+            <span className="sr-only">{t('loading')}</span>
+            <Skeleton aria-hidden className="h-4 w-32" />
+          </>
+        ) : t('pagination.range', {
           from: total ? page * pageSize + 1 : 0,
           to: Math.min((page + 1) * pageSize, total ?? 0),
           total: total ?? 0,
