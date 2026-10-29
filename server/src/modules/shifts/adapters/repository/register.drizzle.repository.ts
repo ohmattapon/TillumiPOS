@@ -67,11 +67,4 @@ export class DrizzleRegisterRepository implements IRegisterRepository {
       .limit(1)
     return row !== undefined
   }
-
-  async createMainForBranch(branchId: number) {
-    await currentExecutor()
-      .insert(registers)
-      .values({ branchId, code: 'MAIN', name: 'เคาน์เตอร์หลัก', isActive: true })
-      .onConflictDoNothing({ target: [registers.branchId, registers.code] })
-  }
 }

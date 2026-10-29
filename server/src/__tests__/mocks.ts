@@ -220,7 +220,6 @@ export const mockRegisterRepository = (): Mocked<IRegisterRepository> => ({
   create: mock<IRegisterRepository['create']>(),
   update: mock<IRegisterRepository['update']>(),
   hasOpenShift: mock<IRegisterRepository['hasOpenShift']>(),
-  createMainForBranch: mock<IRegisterRepository['createMainForBranch']>(async () => {}),
 })
 
 export const mockCheckoutPolicy = (): Mocked<ICheckoutPolicy> => ({
