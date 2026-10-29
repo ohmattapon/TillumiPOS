@@ -1,7 +1,6 @@
 import { beforeEach, expect, test } from 'bun:test'
 import { ZodError } from 'zod'
-import { makeBranch } from '../../../../__tests__/factories'
-import { mockSalesReportRepository, mockReportTimeZone, mockBranchRepository } from '../../../../__tests__/mocks'
+import { mockSalesReportRepository, mockReportTimeZone, mockReportBranchNames } from '../../../../__tests__/mocks'
 import { GetSalesReportUseCase } from './get-sales-report.usecase'
 import { GetPromotionReportUseCase } from './get-promotion-report.usecase'
 import { ListReportProductsUseCase } from './list-report-products.usecase'
@@ -12,7 +11,7 @@ const owner = { role: 'owner' as const }
 const sums = { saleCount: 1, voidedCount: 1, totalSatang: 10700, vatSatang: 700, discountSatang: 500, costSatang: 6000, changeSatang: 300 }
 let reports: ReturnType<typeof mockSalesReportRepository>
 let zone: ReturnType<typeof mockReportTimeZone>
-let branches: ReturnType<typeof mockBranchRepository>
+let branchNames: ReturnType<typeof mockReportBranchNames>
 let overview: GetSalesReportUseCase
 let products: ListReportProductsUseCase
 let comparison: ListReportBranchesUseCase
@@ -20,15 +19,14 @@ let promotionReport: GetPromotionReportUseCase
 beforeEach(() => {
   reports = mockSalesReportRepository()
   zone = mockReportTimeZone('Asia/Bangkok')
-  branches = mockBranchRepository()
+  branchNames = mockReportBranchNames(new Map([[3, 'สาขาปิด']]))
   reports.overview.mockResolvedValue({ summary: sums, days: [{ day: '2026-01-01', ...sums }], tendered: [{ method: 'cash', amountSatang: 11000 }] })
   reports.products.mockResolvedValue({ items: [], total: 0 })
   reports.branches.mockResolvedValue({ items: [{ branchId: 3, ...sums }], total: 1 })
   reports.promotions.mockResolvedValue({ items: [], total: 0 })
-  branches.findAll.mockResolvedValue([makeBranch({ id: 3, name: 'สาขาปิด', isActive: false })])
   overview = new GetSalesReportUseCase(reports, zone)
   products = new ListReportProductsUseCase(reports, zone)
-  comparison = new ListReportBranchesUseCase(reports, zone, branches)
+  comparison = new ListReportBranchesUseCase(reports, zone, branchNames)
   promotionReport = new GetPromotionReportUseCase(reports, zone)
 })
 test('keeps branch scope explicit and cash net of change', async () => {
@@ -41,6 +39,10 @@ test('all-branch scope is explicit; pagination and closed branch names are prese
   await products.execute({ ...range, scope: 'all', limit: 7, offset: 14 }, owner, 9)
   expect(reports.products).toHaveBeenCalledWith({ ...range, scope: 'all', branchId: null, timeZone: 'Asia/Bangkok', limit: 7, offset: 14 })
   expect((await comparison.execute({ ...range, scope: 'all' }, owner, 9)).items[0]?.branchName).toBe('สาขาปิด')
+})
+test('a branch with no known name is shown by its id', async () => {
+  reports.branches.mockResolvedValue({ items: [{ branchId: 8, ...sums }], total: 1 })
+  expect((await comparison.execute({ ...range, scope: 'all' }, owner, 9)).items[0]?.branchName).toBe('8')
 })
 test('every report refuses cashier access before reading any port', async () => {
   for (const usecase of [overview, products, comparison, promotionReport])
