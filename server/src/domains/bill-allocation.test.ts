@@ -20,6 +20,15 @@ test('exclusive VAT above the subtotal still sums to the bill', () => {
 test('a zero subtotal gives every line zero', () => {
   expect(allocateBillToLines({ totalSatang: 0, vatSatang: 0 }, [0, 0])).toEqual([{ totalSatang: 0, vatSatang: 0 }, { totalSatang: 0, vatSatang: 0 }])
 })
+test('a negative total is refused', () => {
+  expect(() => allocateBillToLines({ totalSatang: -1, vatSatang: 0 }, [100, 100])).toThrow()
+})
+test('a negative VAT is refused', () => {
+  expect(() => allocateBillToLines({ totalSatang: 100, vatSatang: -1 }, [100, 100])).toThrow()
+})
+test('a negative line total is refused', () => {
+  expect(() => allocateBillToLines({ totalSatang: 100, vatSatang: 0 }, [200, -100])).toThrow()
+})
 test('one line takes the whole bill', () => {
   expect(allocateBillToLines({ totalSatang: 123, vatSatang: 8 }, [500])).toEqual([{ totalSatang: 123, vatSatang: 8 }])
 })
