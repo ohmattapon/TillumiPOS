@@ -7,11 +7,12 @@
 // to a file. The real bank is never called: the API is pointed at the fake in server/test/kbank-server.ts.
 import { SQL } from 'bun'
 import { randomBytes, randomInt } from 'node:crypto'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dropDatabase, inheritedEnv, migrateAndSeedBase, recreateDatabase, targetUrl } from './lib/database'
+import { buildK6Args, findK6 } from './lib/k6'
 import { createProcessGroup } from './lib/processes'
 import { redactUrls } from './lib/redact'
 import { assertLoadDatabase, assertLocalBaseUrl } from './lib/safety'
@@ -149,7 +150,24 @@ async function main() {
     await waitFor(`${baseUrl}/api/v1/health`, 'API', api)
 
     console.log(`Load run "${options.profile}"${options.scenario ? ` (scenario ${options.scenario})` : ''}: API ready at ${baseUrl}, database ${dbName}`)
-    // k6 and the checks that follow arrive in later tasks; for now the run stops once everything is up.
+
+    // The ids and logins reach k6 through its environment only: a command line can be read by other processes.
+    const k6 = await findK6()
+    const scenario = options.scenario ?? 'catalog'
+    const summaryFile = join(mediaDir, 'k6-summary.json')
+    const k6Env = {
+      ...inheritedEnv(),
+      SEED_JSON: JSON.stringify(seeded),
+      USERS_JSON: JSON.stringify(seeded.cashierUsernames.map((username) => ({ username, password: cashierPassword }))),
+    }
+    // k6 prints its own end-of-test summary on this terminal; it holds request names and numbers, no credentials.
+    const k6Run = group.spawn([k6, ...buildK6Args({ name: options.profile, baseUrl }, scenario, summaryFile)], { cwd: root, env: k6Env, stdout: 'inherit', stderr: 'inherit' })
+    const k6Exit = await k6Run.exited
+    const summary = JSON.parse(await readFile(summaryFile, 'utf8').catch(() => 'null')) as { metrics?: Record<string, { value?: number; passes?: number; fails?: number }> } | null
+    const failedRate = summary?.metrics?.expected_failed?.value
+    console.log(`k6 finished with exit code ${k6Exit}; expected_failed rate ${failedRate ?? 'unknown'}`)
+    // The invariant checks and the result file arrive in later tasks.
+    if (k6Exit !== 0) throw new Error(`k6 failed with exit code ${k6Exit} (a threshold was crossed or the script stopped)`)
   } finally {
     await cleanup()
   }
