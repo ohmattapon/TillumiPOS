@@ -37,20 +37,8 @@ export class SwitchUserUseCase {
     if (this.guard.begin(userId) === 'locked')
       throw new DomainConflictError('ใส่ PIN ผิดหลายครั้ง กรุณารอ 15 นาทีแล้วลองใหม่', 'PIN_LOCKED')
 
-    const from = { id: actor.id, displayName: actor.displayName }
-    const to = { id: target.id, displayName: target.displayName }
     if (!(await this.hasher.verify(pin, pinHash))) {
-      // Already counted by begin(). Outside any transaction, like a failed login: the audit write must never change the answer.
-      try {
-        await this.audit.record({ id: actor.id, name: actor.displayName }, target.branchId, buildAuditEntry({
-          action: 'auth.switch_failed',
-          entityType: 'user',
-          entityId: String(target.id),
-          summary: 'สลับผู้ใช้ไม่สำเร็จ PIN ไม่ถูกต้อง',
-          before: from,
-          after: to,
-        }))
-      } catch (error) { console.error('audit: switch_failed not recorded', error) }
+      await this.recordFailedSwitch(actor, target)
       throw new DomainError('PIN ไม่ถูกต้อง', 'PIN_INVALID')
     }
 
@@ -59,10 +47,24 @@ export class SwitchUserUseCase {
       entityType: 'user',
       entityId: String(target.id),
       summary: 'สลับผู้ใช้ที่จุดขาย',
-      before: from,
-      after: to,
+      before: { id: actor.id, displayName: actor.displayName },
+      after: { id: target.id, displayName: target.displayName },
     }))
     this.guard.recordSuccess(userId)
     return target
+  }
+
+  /** Already counted by begin(). Outside any transaction, like a failed login: the audit write must never change the answer. */
+  private async recordFailedSwitch(actor: { id: number; displayName: string }, target: UserEntity): Promise<void> {
+    try {
+      await this.audit.record({ id: actor.id, name: actor.displayName }, target.branchId, buildAuditEntry({
+        action: 'auth.switch_failed',
+        entityType: 'user',
+        entityId: String(target.id),
+        summary: 'สลับผู้ใช้ไม่สำเร็จ PIN ไม่ถูกต้อง',
+        before: { id: actor.id, displayName: actor.displayName },
+        after: { id: target.id, displayName: target.displayName },
+      }))
+    } catch (error) { console.error('audit: switch_failed not recorded', error) }
   }
 }

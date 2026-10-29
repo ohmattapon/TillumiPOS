@@ -62,60 +62,14 @@ export class CreateQuoteUseCase {
     const now = this.clock.now()
     const shop = await this.settings.get()
 
-    let memberId: number | null
-    let lines: QuoteLine[]
-    if (dto.orderId !== undefined) {
-      const order = await this.orders.read(dto.orderId, branch.id)
-      memberId = order.memberId
-      lines = order.items.map((item) => ({ ...item, options: [...item.options] }))
-    } else {
-      memberId = dto.memberId ?? null
-      lines = await this.priceLines(dto.lines!, branch.id)
-    }
-
-    let member: SaleMember | null = null
-    if (memberId !== null) {
-      const found = await this.members.findById(memberId)
-      if (!found) throw new DomainNotFoundError('ไม่พบสมาชิก', 'MEMBER_NOT_FOUND')
-      found.assertActive()
-      member = { id: found.id, code: found.code, name: found.name }
-    }
-
+    const { memberId, lines } = await this.readCart(dto, branch.id)
+    const member = await this.activeMember(memberId)
     const subtotalSatang = lines.reduce((total, line) => total + line.unitPriceSatang * line.quantity, 0)
-    // One question for both a cart and an order: an order's lines carry no category.
-    const categories = await this.products.categoriesOf([...new Set(lines.map((line) => line.productId))])
     const couponCode = dto.couponCode ?? null
-    const context: PromotionContext = {
-      subtotalSatang,
-      hasMember: member !== null,
-      at: now,
-      timeZone: shop.timeZone,
-      lines: lines.map((line) => ({
-        productId: line.productId,
-        categoryId: categories.get(line.productId) ?? null,
-        unitPriceSatang: line.unitPriceSatang,
-        quantity: line.quantity,
-        isPack: line.packId !== null,
-        lineTotalSatang: line.unitPriceSatang * line.quantity,
-      })),
-      couponCode,
-    }
+    const context = await this.promotionContext(lines, subtotalSatang, member !== null, now, shop.timeZone, couponCode)
 
     const promotions = await this.catalog.activePromotions()
-    let couponPromotion: PromotionEntity | null = null
-    if (couponCode !== null) {
-      // Only a promotion that is switched on answers a code: an inactive one counts as not found.
-      couponPromotion = promotions.find((candidate) => candidate.couponCode !== null && normalizeCouponCode(candidate.couponCode) === couponCode) ?? null
-      if (couponPromotion === null)
-        throw new DomainNotFoundError(`ไม่พบโค้ดคูปอง ${couponCode}`, 'COUPON_NOT_FOUND')
-      const ruleReason = couponIneligibility(couponPromotion, context)
-      const uses = await this.usage.countUses(couponPromotion.id, memberId)
-      const noMoreUses = !hasUsesLeft(couponPromotion, uses, member !== null)
-      const reason = ruleReason ?? (noMoreUses ? 'exhausted' : null)
-      if (reason !== null)
-        throw new DomainError(COUPON_INAPPLICABLE[reason]!, 'COUPON_NOT_APPLICABLE', { reason })
-    }
-
+    if (couponCode !== null) await this.assertCouponApplies(promotions, couponCode, context, memberId)
     const best = pickBestPromotion(await this.dropUsedUp(promotions, member !== null, memberId), context)
 
     // The rule is pinned on the quote, so a sale made from it redeems at the rate the cashier saw.
@@ -125,16 +79,8 @@ export class CreateQuoteUseCase {
       minRedeem: shop.pointsMinRedeem,
     }
     const redeemPoints = dto.redeemPoints ?? 0
-    let pointsDiscount = 0
-    if (redeemPoints > 0) {
-      if (memberId === null) throw new DomainError('ต้องเลือกสมาชิกก่อนใช้แต้ม', 'MEMBER_REQUIRED')
-      if (!shop.pointsEnabled) throw new DomainError('ร้านนี้ยังไม่เปิดใช้แต้มสมาชิก', 'POINTS_DISABLED')
-      // Points come off what is left after the promotion, so a cart can never pay less than nothing.
-      const payableSatang = subtotalSatang - (best?.discountSatang ?? 0)
-      const balance = await this.points.balanceOf(memberId)
-      assertRedeemable(redeemPoints, payableSatang, balance, rule)
-      pointsDiscount = discountForPoints(redeemPoints, rule)
-    }
+    // Points come off what is left after the promotion, so a cart can never pay less than nothing.
+    const pointsDiscount = await this.pointsDiscount(redeemPoints, memberId, shop.pointsEnabled, subtotalSatang - (best?.discountSatang ?? 0), rule)
 
     return this.quotes.create(
       PriceQuoteEntity.price(
@@ -157,6 +103,79 @@ export class CreateQuoteUseCase {
         now,
       ),
     )
+  }
+
+  private async readCart(dto: ReturnType<typeof createQuoteSchema.parse>, branchId: number): Promise<{ memberId: number | null; lines: QuoteLine[] }> {
+    if (dto.orderId !== undefined) {
+      const order = await this.orders.read(dto.orderId, branchId)
+      return { memberId: order.memberId, lines: order.items.map((item) => ({ ...item, options: [...item.options] })) }
+    }
+    return { memberId: dto.memberId ?? null, lines: await this.priceLines(dto.lines!, branchId) }
+  }
+
+  private async activeMember(memberId: number | null): Promise<SaleMember | null> {
+    if (memberId === null) return null
+    const found = await this.members.findById(memberId)
+    if (!found) throw new DomainNotFoundError('ไม่พบสมาชิก', 'MEMBER_NOT_FOUND')
+    found.assertActive()
+    return { id: found.id, code: found.code, name: found.name }
+  }
+
+  private async promotionContext(
+    lines: QuoteLine[],
+    subtotalSatang: number,
+    hasMember: boolean,
+    at: Date,
+    timeZone: string,
+    couponCode: string | null,
+  ): Promise<PromotionContext> {
+    // One question for both a cart and an order: an order's lines carry no category.
+    const categories = await this.products.categoriesOf([...new Set(lines.map((line) => line.productId))])
+    return {
+      subtotalSatang,
+      hasMember,
+      at,
+      timeZone,
+      lines: lines.map((line) => ({
+        productId: line.productId,
+        categoryId: categories.get(line.productId) ?? null,
+        unitPriceSatang: line.unitPriceSatang,
+        quantity: line.quantity,
+        isPack: line.packId !== null,
+        lineTotalSatang: line.unitPriceSatang * line.quantity,
+      })),
+      couponCode,
+    }
+  }
+
+  private async assertCouponApplies(
+    promotions: readonly PromotionEntity[],
+    couponCode: string,
+    context: PromotionContext,
+    memberId: number | null,
+  ): Promise<void> {
+    // Only a promotion that is switched on answers a code: an inactive one counts as not found.
+    const couponPromotion = promotions.find((candidate) => candidate.couponCode !== null && normalizeCouponCode(candidate.couponCode) === couponCode)
+    if (!couponPromotion) throw new DomainNotFoundError(`ไม่พบโค้ดคูปอง ${couponCode}`, 'COUPON_NOT_FOUND')
+    const ruleReason = couponIneligibility(couponPromotion, context)
+    const uses = await this.usage.countUses(couponPromotion.id, memberId)
+    const noMoreUses = !hasUsesLeft(couponPromotion, uses, context.hasMember)
+    const reason = ruleReason ?? (noMoreUses ? 'exhausted' : null)
+    if (reason !== null) throw new DomainError(COUPON_INAPPLICABLE[reason]!, 'COUPON_NOT_APPLICABLE', { reason })
+  }
+
+  private async pointsDiscount(
+    redeemPoints: number,
+    memberId: number | null,
+    pointsEnabled: boolean,
+    payableSatang: number,
+    rule: PointsRule,
+  ): Promise<number> {
+    if (redeemPoints <= 0) return 0
+    if (memberId === null) throw new DomainError('ต้องเลือกสมาชิกก่อนใช้แต้ม', 'MEMBER_REQUIRED')
+    if (!pointsEnabled) throw new DomainError('ร้านนี้ยังไม่เปิดใช้แต้มสมาชิก', 'POINTS_DISABLED')
+    assertRedeemable(redeemPoints, payableSatang, await this.points.balanceOf(memberId), rule)
+    return discountForPoints(redeemPoints, rule)
   }
 
   /** A quote pins a price but not a slot: a promotion every slot of which is spent is simply not offered. No row is locked, because nothing is being claimed yet. */

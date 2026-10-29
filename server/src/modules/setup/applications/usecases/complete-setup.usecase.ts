@@ -44,40 +44,51 @@ export class CompleteSetupUseCase {
     const dto = completeSetupSchema.parse(input)
 
     const owner = await this.unitOfWork.run(async () => {
-      // The lock comes first: of two setups at the same moment, the second sees the first one's owner.
-      if ((await this.guard.lockAndCountUsers()) > 0)
-        throw new DomainConflictError('ตั้งค่าร้านครั้งแรกเสร็จไปแล้ว', 'SETUP_DONE')
-
-      const check = this.code.verify(dto.setupCode)
-      if (check === 'locked')
-        throw new DomainForbiddenError('กรอกรหัสตั้งค่าผิดหลายครั้ง กรุณารอ 15 นาทีแล้วลองใหม่', 'SETUP_LOCKED')
-      if (check !== 'accepted')
-        throw new DomainForbiddenError('รหัสตั้งค่าไม่ถูกต้อง ดูรหัสได้จาก log ของระบบ', 'SETUP_CODE_INVALID')
-
-      const branch = await this.branches.findMain()
-      if (!branch) throw new DomainNotFoundError('ไม่พบสาขา', 'BRANCH_NOT_FOUND')
-      await this.branches.update(branch.with({ name: dto.branchName ?? dto.shopName }))
-      await this.settings.save((await this.settings.getForUpdate()).with({ shopName: dto.shopName, ...shopFeaturesFor(dto.shopType) }))
-      // In the same transaction, so a shop is never left half-made with its owner but not its starting options.
-      await this.starterGroups.addFor(dto.shopType)
-
-      const ownerRole = await this.roles.findBySystemKey('owner')
-      return this.users.create(
-        new UserEntity({
-          id: 0,
-          username: UserEntity.normalizeUsername(dto.username),
-          displayName: dto.displayName,
-          role: 'owner',
-          roleId: ownerRole.id,
-          branchId: branch.id,
-          isActive: true,
-        }),
-        await this.hasher.hash(dto.password),
-      )
+      await this.assertFirstRun(dto.setupCode)
+      const branch = await this.nameShop(dto)
+      return this.createOwner(dto, branch.id)
     })
 
     // Only after the owner is committed: a rolled back setup keeps its code to try again.
     this.code.retire()
     return owner
+  }
+
+  private async assertFirstRun(setupCode: string): Promise<void> {
+    // The lock comes first: of two setups at the same moment, the second sees the first one's owner.
+    if ((await this.guard.lockAndCountUsers()) > 0)
+      throw new DomainConflictError('ตั้งค่าร้านครั้งแรกเสร็จไปแล้ว', 'SETUP_DONE')
+
+    const check = this.code.verify(setupCode)
+    if (check === 'locked')
+      throw new DomainForbiddenError('กรอกรหัสตั้งค่าผิดหลายครั้ง กรุณารอ 15 นาทีแล้วลองใหม่', 'SETUP_LOCKED')
+    if (check !== 'accepted')
+      throw new DomainForbiddenError('รหัสตั้งค่าไม่ถูกต้อง ดูรหัสได้จาก log ของระบบ', 'SETUP_CODE_INVALID')
+  }
+
+  private async nameShop(dto: ReturnType<typeof completeSetupSchema.parse>) {
+    const branch = await this.branches.findMain()
+    if (!branch) throw new DomainNotFoundError('ไม่พบสาขา', 'BRANCH_NOT_FOUND')
+    await this.branches.update(branch.with({ name: dto.branchName ?? dto.shopName }))
+    await this.settings.save((await this.settings.getForUpdate()).with({ shopName: dto.shopName, ...shopFeaturesFor(dto.shopType) }))
+    // In the same transaction, so a shop is never left half-made with its owner but not its starting options.
+    await this.starterGroups.addFor(dto.shopType)
+    return branch
+  }
+
+  private async createOwner(dto: ReturnType<typeof completeSetupSchema.parse>, branchId: number): Promise<UserEntity> {
+    const ownerRole = await this.roles.findBySystemKey('owner')
+    return this.users.create(
+      new UserEntity({
+        id: 0,
+        username: UserEntity.normalizeUsername(dto.username),
+        displayName: dto.displayName,
+        role: 'owner',
+        roleId: ownerRole.id,
+        branchId,
+        isActive: true,
+      }),
+      await this.hasher.hash(dto.password),
+    )
   }
 }

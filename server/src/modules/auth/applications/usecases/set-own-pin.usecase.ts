@@ -25,21 +25,7 @@ export class SetOwnPinUseCase {
     const { currentPassword, pin } = setOwnPinSchema.parse(input)
     if (pin !== null) assertValidPin(pin)
 
-    // Checked before the unit of work, so the failure can be audited without being rolled back with it.
-    const passwordHash = await this.users.findPasswordHashById(actor.id)
-    if (!passwordHash || !(await this.hasher.verify(currentPassword, passwordHash))) {
-      // Outside any transaction, like a failed login: the audit write must never change the answer.
-      try {
-        await this.audit.record({ id: actor.id, name: actor.displayName }, null, buildAuditEntry({
-          action: 'auth.pin_password_failed',
-          entityType: 'user',
-          entityId: String(actor.id),
-          summary: 'ตั้ง PIN ของตนเองไม่สำเร็จ รหัสผ่านไม่ถูกต้อง',
-        }))
-      } catch (error) { console.error('audit: pin_password_failed not recorded', error) }
-      // 400, not 401: a 401 would make the web treat the till as signed out.
-      throw new DomainError('รหัสผ่านปัจจุบันไม่ถูกต้อง', 'INVALID_PASSWORD')
-    }
+    await this.assertCurrentPassword(currentPassword, actor)
 
     return this.unitOfWork.run(async () => {
       const before = await this.users.findById(actor.id)
@@ -55,5 +41,23 @@ export class SetOwnPinUseCase {
       }))
       return (await this.users.findById(actor.id)) ?? before
     })
+  }
+
+  /** Checked before the unit of work, so the failure can be audited without being rolled back with it. */
+  private async assertCurrentPassword(currentPassword: string, actor: { id: number; displayName: string }): Promise<void> {
+    const passwordHash = await this.users.findPasswordHashById(actor.id)
+    if (passwordHash && (await this.hasher.verify(currentPassword, passwordHash))) return
+
+    // Outside any transaction, like a failed login: the audit write must never change the answer.
+    try {
+      await this.audit.record({ id: actor.id, name: actor.displayName }, null, buildAuditEntry({
+        action: 'auth.pin_password_failed',
+        entityType: 'user',
+        entityId: String(actor.id),
+        summary: 'ตั้ง PIN ของตนเองไม่สำเร็จ รหัสผ่านไม่ถูกต้อง',
+      }))
+    } catch (error) { console.error('audit: pin_password_failed not recorded', error) }
+    // 400, not 401: a 401 would make the web treat the till as signed out.
+    throw new DomainError('รหัสผ่านปัจจุบันไม่ถูกต้อง', 'INVALID_PASSWORD')
   }
 }

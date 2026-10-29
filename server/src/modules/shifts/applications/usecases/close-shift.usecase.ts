@@ -36,35 +36,37 @@ export class CloseShiftUseCase {
     return this.uow.run(() => this.idempotency.execute(
       { actorId: actor.id, branchId, action: 'shifts.close', key: idempotencyKey },
       dto,
-      async () => {
-        const shift = await this.shifts.findByIdForUpdate(id, branchId)
-        if (!shift) throw new DomainNotFoundError('ไม่พบกะ', 'SHIFT_NOT_FOUND')
-        if (!canDo(actor, 'shifts.override') && actor.id !== shift.closingStartedById)
-          throw new DomainConflictError('เฉพาะผู้เริ่มนับหรือเจ้าของร้านยืนยันปิดกะได้', 'SHIFT_CLOSING_OWNER_REQUIRED')
-        // The bank may have confirmed a payment while the drawer was being counted.
-        if ((await this.qrReadiness.forShift(id)).paidUnclaimed > 0)
-          throw new DomainConflictError('มีเงินจาก QR เข้ามาระหว่างนับและยังไม่มีบิล กรุณายกเลิกการนับแล้วจัดการก่อน', 'QR_PAYMENT_UNRESOLVED')
-        const deltas = await this.shifts.cashDeltas(id)
-        const expected = shift.expectedCashSatang(deltas)
-        if (shift.closingExpectedCashSatang !== expected)
-          throw new DomainConflictError('ยอดเงินสดเปลี่ยนหลังเริ่มนับ กรุณายกเลิกแล้วเริ่มนับใหม่', 'SHIFT_CASH_CHANGED_DURING_CLOSING')
-        const closing = new ShiftEntity({ ...shift.toSnapshot(), closingExpectedCashSatang: expected })
-        const result = await this.shifts.update(
-          closing.close(dto.closingRevision, dto.countedCashSatang, dto.reason ?? '', actor.id, actor.displayName, this.clock.now()),
-        )
-        if (actor.id !== shift.closingStartedById) await this.audit.record({ id: actor.id, name: actor.displayName }, branchId, buildAuditEntry({
-          action: 'shift.override_close',
-          entityType: 'shift',
-          entityId: String(id),
-          summary: 'ยืนยันปิดกะแทนผู้เริ่มนับ',
-          before: { status: shift.status, closingStartedById: shift.closingStartedById },
-          after: { status: result.status },
-          reason: dto.reason,
-        }))
-        return result
-      },
+      () => this.close(id, dto, actor, branchId),
       (shift) => shift.toSnapshot(),
       async (snapshot) => restoreShiftSnapshot(snapshot),
     ))
+  }
+
+  private async close(id: number, dto: ReturnType<typeof closeShiftSchema.parse>, actor: ShiftActor, branchId: number): Promise<ShiftEntity> {
+    const shift = await this.shifts.findByIdForUpdate(id, branchId)
+    if (!shift) throw new DomainNotFoundError('ไม่พบกะ', 'SHIFT_NOT_FOUND')
+    if (!canDo(actor, 'shifts.override') && actor.id !== shift.closingStartedById)
+      throw new DomainConflictError('เฉพาะผู้เริ่มนับหรือเจ้าของร้านยืนยันปิดกะได้', 'SHIFT_CLOSING_OWNER_REQUIRED')
+    // The bank may have confirmed a payment while the drawer was being counted.
+    if ((await this.qrReadiness.forShift(id)).paidUnclaimed > 0)
+      throw new DomainConflictError('มีเงินจาก QR เข้ามาระหว่างนับและยังไม่มีบิล กรุณายกเลิกการนับแล้วจัดการก่อน', 'QR_PAYMENT_UNRESOLVED')
+    const deltas = await this.shifts.cashDeltas(id)
+    const expected = shift.expectedCashSatang(deltas)
+    if (shift.closingExpectedCashSatang !== expected)
+      throw new DomainConflictError('ยอดเงินสดเปลี่ยนหลังเริ่มนับ กรุณายกเลิกแล้วเริ่มนับใหม่', 'SHIFT_CASH_CHANGED_DURING_CLOSING')
+    const closing = new ShiftEntity({ ...shift.toSnapshot(), closingExpectedCashSatang: expected })
+    const result = await this.shifts.update(
+      closing.close(dto.closingRevision, dto.countedCashSatang, dto.reason ?? '', actor.id, actor.displayName, this.clock.now()),
+    )
+    if (actor.id !== shift.closingStartedById) await this.audit.record({ id: actor.id, name: actor.displayName }, branchId, buildAuditEntry({
+      action: 'shift.override_close',
+      entityType: 'shift',
+      entityId: String(id),
+      summary: 'ยืนยันปิดกะแทนผู้เริ่มนับ',
+      before: { status: shift.status, closingStartedById: shift.closingStartedById },
+      after: { status: result.status },
+      reason: dto.reason,
+    }))
+    return result
   }
 }

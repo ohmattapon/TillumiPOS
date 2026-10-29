@@ -34,25 +34,8 @@ export class OpenOrderUseCase {
 
     return this.unitOfWork.run(async () => {
       if (dto.tableId) await findUsableTable(this.tables, dto.tableId, actor.branch.id)
-
-      if (dto.memberId != null) {
-        const member = await this.members.findByIdForUpdate(dto.memberId)
-        if (!member) throw new DomainNotFoundError('ไม่พบสมาชิก', 'MEMBER_NOT_FOUND')
-        member.assertActive()
-      }
-      const items = []
-      for (const line of dto.items ?? []) {
-        const product = await findOrderedProduct(this.products, line.productId, actor.branch.id)
-        const chosen = await this.lineOptions.resolve(line.productId, line.options ?? [])
-        items.push({
-          ...product,
-          unitPriceSatang: product.unitPriceSatang + chosen.priceSatang,
-          quantity: line.quantity,
-          lineId: 0,
-          options: chosen.options,
-          note: null,
-        })
-      }
+      if (dto.memberId != null) await this.assertMemberActive(dto.memberId)
+      const items = await this.priceItems(dto.items ?? [], actor.branch.id)
 
       return this.orders.create(
         OrderEntity.open({
@@ -66,5 +49,28 @@ export class OpenOrderUseCase {
         }),
       )
     })
+  }
+
+  private async assertMemberActive(memberId: number): Promise<void> {
+    const member = await this.members.findByIdForUpdate(memberId)
+    if (!member) throw new DomainNotFoundError('ไม่พบสมาชิก', 'MEMBER_NOT_FOUND')
+    member.assertActive()
+  }
+
+  private async priceItems(lines: ReturnType<typeof openOrderSchema.parse>['items'] & {}, branchId: number) {
+    const items = []
+    for (const line of lines) {
+      const product = await findOrderedProduct(this.products, line.productId, branchId)
+      const chosen = await this.lineOptions.resolve(line.productId, line.options ?? [])
+      items.push({
+        ...product,
+        unitPriceSatang: product.unitPriceSatang + chosen.priceSatang,
+        quantity: line.quantity,
+        lineId: 0,
+        options: chosen.options,
+        note: null,
+      })
+    }
+    return items
   }
 }

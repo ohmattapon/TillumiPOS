@@ -76,6 +76,17 @@ export class PrintReceiptUseCase {
     })
     if (prior) return this.replay(prior.requestHash, prior.result, fingerprint, dto.saleId)
 
+    const sentBytes = await this.send(dto, actor, branchId, key)
+    return this.recordPrint(dto.saleId, sentBytes, { scope, fingerprint, actor, branchId, key })
+  }
+
+  /** Outside every transaction: a stalled printer must never hold the database. */
+  private async send(
+    dto: ReturnType<typeof printReceiptSchema.parse>,
+    actor: { id: number; displayName: string },
+    branchId: number,
+    key: string,
+  ): Promise<number> {
     const settings = await this.printer.current()
     if (!settings.enabled) throw disabled()
     if (settings.host === null) throw noHost()
@@ -83,17 +94,15 @@ export class PrintReceiptUseCase {
     const parts = [buildRasterCommand(dto.widthDots, dto.heightDots, dto.bits)]
     if (dto.cut) parts.push(buildCutCommand())
     if (dto.kickDrawer && settings.drawerEnabled) parts.push(buildDrawerCommand())
-    const bytes = concat(parts)
 
-    // Outside every transaction: a stalled printer must never hold the database.
-    let sentBytes: number
     try {
-      ;({ sentBytes } = await this.gateway.sendRaw({
+      const { sentBytes } = await this.gateway.sendRaw({
         host: settings.host,
         port: settings.port,
-        bytes,
+        bytes: concat(parts),
         timeoutMs: SEND_TIMEOUT_MS,
-      }))
+      })
+      return sentBytes
     } catch (error) {
       await this.unitOfWork.run(() =>
         this.audit.record(actor, branchId, {
@@ -106,21 +115,33 @@ export class PrintReceiptUseCase {
       )
       throw error
     }
+  }
 
+  private async recordPrint(
+    saleId: number,
+    sentBytes: number,
+    ctx: {
+      scope: { actorId: number; branchId: number; action: string; key: string }
+      fingerprint: string
+      actor: { id: number; displayName: string }
+      branchId: number
+      key: string
+    },
+  ): Promise<PrintedReceipt> {
     const printedAt = this.clock.now()
     return this.unitOfWork.run(async () => {
-      await this.receipts.lock(scope)
+      await this.receipts.lock(ctx.scope)
       // A twin request that finished first wins; this send may have doubled it, but the answer stays single.
-      const twin = await this.receipts.find(scope)
-      if (twin) return this.replay(twin.requestHash, twin.result, fingerprint, dto.saleId)
-      await this.receipts.create(scope, fingerprint, { sentBytes, printedAt: printedAt.toISOString() })
-      await this.audit.record(actor, branchId, {
+      const twin = await this.receipts.find(ctx.scope)
+      if (twin) return this.replay(twin.requestHash, twin.result, ctx.fingerprint, saleId)
+      await this.receipts.create(ctx.scope, ctx.fingerprint, { sentBytes, printedAt: printedAt.toISOString() })
+      await this.audit.record(ctx.actor, ctx.branchId, {
         action: 'receipt.printed',
-        ref: key,
-        saleId: dto.saleId,
+        ref: ctx.key,
+        saleId,
         sentBytes,
       })
-      return { saleId: dto.saleId, sentBytes, printedAt }
+      return { saleId, sentBytes, printedAt }
     })
   }
 

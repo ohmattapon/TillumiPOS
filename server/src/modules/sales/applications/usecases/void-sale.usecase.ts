@@ -1,4 +1,5 @@
 import { buildAuditEntry } from '../../../../domains/audit-entry.vo'
+import type { SaleEntity } from '../../../../domains/sale.domain'
 import { auditLogToken, type IAuditLog } from '../../../audit/applications/ports/audit-log.port'
 import { requirePermission, type Actor } from '../../../../domains/authorization'
 import { inject, injectable } from 'tsyringe'
@@ -41,19 +42,7 @@ export class VoidSaleUseCase {
 
       await this.movePoints(sale, reason, user, branchId)
 
-      // By product id, the same order sales lock products in, so a void cannot deadlock with a sale.
-      const items = [...voided.items].sort((a, b) => a.productId - b.productId)
-      for (const item of items)
-        await this.ledger.record({
-          branchId: sale.branchId,
-          productId: item.productId,
-          type: 'void',
-          // A pack line returns its pieces.
-          quantity: item.quantity * item.packSize,
-          reference: voided.receiptNo,
-          note: reason,
-          userId: user.id,
-        })
+      await this.returnStock(voided, reason, user.id)
 
       await this.audit.record({ id: user.id, name: user.displayName }, branchId, buildAuditEntry({
         action: 'sale.void',
@@ -66,6 +55,22 @@ export class VoidSaleUseCase {
       }))
       return voided
     })
+  }
+
+  private async returnStock(voided: SaleEntity, reason: string, userId: number): Promise<void> {
+    // By product id, the same order sales lock products in, so a void cannot deadlock with a sale.
+    const items = [...voided.items].sort((a, b) => a.productId - b.productId)
+    for (const item of items)
+      await this.ledger.record({
+        branchId: voided.branchId,
+        productId: item.productId,
+        type: 'void',
+        // A pack line returns its pieces.
+        quantity: item.quantity * item.packSize,
+        reference: voided.receiptNo,
+        note: reason,
+        userId,
+      })
   }
 
   /**

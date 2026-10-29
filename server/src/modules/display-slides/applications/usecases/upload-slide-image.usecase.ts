@@ -29,17 +29,7 @@ export class UploadSlideImageUseCase {
     const dto = uploadSlideImageSchema.parse(input)
     requirePermission(actor, 'promotions.write', 'เฉพาะเจ้าของร้านจัดการสไลด์ได้')
 
-    const extension = EXTENSION_BY_TYPE[dto.file.type]
-    if (!extension) throw new DomainError('ไฟล์ต้องเป็นรูป JPEG, PNG หรือ WebP', 'INVALID_FILE_TYPE')
-    if (dto.file.size > MAX_SLIDE_IMAGE_BYTES)
-      throw new DomainError('รูปต้องมีขนาดไม่เกิน 5 MB', 'IMAGE_TOO_LARGE')
-    if (!this.media.isEnabled())
-      throw new DomainExternalServiceError('ร้านนี้ปิดการใช้รูปภาพอยู่', 'MEDIA_UNAVAILABLE')
-
-    // A new key per upload lets browsers and the edge cache images forever.
-    const key = ['slides', this.ids.newId() + '.' + extension].join('/')
-    // Outside the transaction: never hold a unit of work across a call to an outside system.
-    await this.media.put(key, dto.file)
+    const key = await this.storeImage(dto.file)
 
     return this.unitOfWork.run(async () => {
       const existing = await this.slides.findAll()
@@ -61,5 +51,20 @@ export class UploadSlideImageUseCase {
       }))
       return created
     })
+  }
+
+  private async storeImage(file: Blob): Promise<string> {
+    const extension = EXTENSION_BY_TYPE[file.type]
+    if (!extension) throw new DomainError('ไฟล์ต้องเป็นรูป JPEG, PNG หรือ WebP', 'INVALID_FILE_TYPE')
+    if (file.size > MAX_SLIDE_IMAGE_BYTES)
+      throw new DomainError('รูปต้องมีขนาดไม่เกิน 5 MB', 'IMAGE_TOO_LARGE')
+    if (!this.media.isEnabled())
+      throw new DomainExternalServiceError('ร้านนี้ปิดการใช้รูปภาพอยู่', 'MEDIA_UNAVAILABLE')
+
+    // A new key per upload lets browsers and the edge cache images forever.
+    const key = ['slides', this.ids.newId() + '.' + extension].join('/')
+    // Outside the transaction: never hold a unit of work across a call to an outside system.
+    await this.media.put(key, file)
+    return key
   }
 }
