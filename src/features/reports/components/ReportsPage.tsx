@@ -11,7 +11,7 @@ import { Panel } from '@/components/Panel'
 import { SegmentedTabs } from '@/components/SegmentedTabs'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { dailyTotalsCells, hasTotals } from '../lib/report-totals'
+import { dailyTotalsCells, hasTotals, productTotalsCells } from '../lib/report-totals'
 import { promotionTotalsCells, hasPromotionTotals } from '../lib/promotion-totals'
 import { reportQuery, productsReportQuery, promotionsReportQuery, cashiersReportQuery, readReport, readItems, readCategories, readPromotions } from '../api'
 import { validRange } from '../lib/date-range'
@@ -175,7 +175,8 @@ export function ReportsPage() {
             {failure(products.error, () => void products.refetch())}
             {products.isPending ? <Skeleton className="m-4 h-24" /> : !products.error && <>
               <ReportDataTable headers={[t('sku'), t('product'), t('quantity'), t('itemSales')]} numberFrom={2}
-                rows={(products.data?.items ?? []).map((row) => [row.sku, row.productName, row.quantity, money.plain(row.lineTotalSatang)])} />
+                rows={(products.data?.items ?? []).map((row) => [row.sku, row.productName, row.quantity, money.plain(row.lineTotalSatang)])}
+                footer={products.data && hasTotals(products.data.items.length) ? productTotalsCells(t('productsTotal'), products.data.totals, money.plain) : undefined} />
               <PaginationBar page={Math.floor(productOffset / 10)} pageSize={10} total={products.data?.total ?? 0} isLoading={products.isFetching} onPageChange={(value) => setPage('products', value * 10)} />
             </>}
           </Panel>
