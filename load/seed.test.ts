@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { SQL } from 'bun'
 import { randomBytes } from 'node:crypto'
 import { baseSetupEnv, dropDatabase, migrateAndSeedBase, recreateDatabase, targetUrl } from './lib/database'
-import { seedLoadData, type SeededData } from './seed'
+import { DEFAULT_REFERENCE_DATE, seedLoadData, type SeededData } from './seed'
 
 const adminUrl = Bun.env.LOAD_DB_ADMIN_URL
 const DB_NAME = 'pos_load_seed_test'
@@ -13,8 +13,27 @@ const SIZES = { products: 20, members: 10, pastSales: 50 }
 if (!adminUrl) console.warn('seed.test.ts skipped: set LOAD_DB_ADMIN_URL to the admin connection of the local PostgreSQL server')
 
 interface Snapshot {
-  skus: string[]
+  digest: string
   totalSum: number
+}
+
+/** One md5 over every seeded row that matters: bills, their lines and payments, products, packs, stock, members, promotions, users. */
+async function datasetDigest(sql: SQL): Promise<string> {
+  const parts = await sql`
+    select
+      (select md5(string_agg(concat_ws('|', s.receipt_no, s.status, s.total_satang, s.vat_satang, s.discount_satang, s.paid_satang, s.cashier_id, s.member_id, s.promotion_id, s.created_at, s.voided_at,
+         (select string_agg(concat_ws(':', i.product_id, i.quantity, i.unit_price_satang, i.allocated_total_satang, i.allocated_vat_satang, i.category_id), ',' order by i.id) from sale_items i where i.sale_id = s.id),
+         (select string_agg(concat_ws(':', p.method, p.amount_satang), ',' order by p.id) from payments p where p.sale_id = s.id)), ';' order by s.receipt_no)) from sales s) as sales,
+      (select md5(string_agg(concat_ws('|', id, sku, barcode, name, category_id, price_satang, cost_satang, track_stock), ';' order by id)) from products) as products,
+      (select md5(string_agg(concat_ws('|', product_id, barcode, size, price_satang), ';' order by id)) from product_packs) as packs,
+      (select md5(string_agg(concat_ws('|', product_id, qty), ';' order by product_id)) from branch_stock) as stock,
+      -- The base seed's own opening movements are stamped with now(), so only the bulk seed's ledger is compared.
+      (select md5(string_agg(concat_ws('|', product_id, type, quantity, balance_after, reference, created_at), ';' order by id)) from stock_movements
+         where product_id in (select id from products where sku like 'LD-%')) as movements,
+      (select md5(string_agg(concat_ws('|', id, name, phone, points_balance), ';' order by id)) from members) as members,
+      (select md5(string_agg(concat_ws('|', id, name, kind, value, coupon_code, max_uses, category_ids), ';' order by id)) from promotions) as promotions,
+      (select md5(string_agg(concat_ws('|', id, username, display_name, role_id), ';' order by id)) from users) as users`
+  return Object.values(parts[0] as Record<string, string>).join('/')
 }
 
 async function freshSeed(): Promise<{ sql: SQL; seeded: SeededData; snapshot: Snapshot }> {
@@ -22,10 +41,10 @@ async function freshSeed(): Promise<{ sql: SQL; seeded: SeededData; snapshot: Sn
   const databaseUrl = targetUrl(adminUrl!, DB_NAME)
   await migrateAndSeedBase(baseSetupEnv(databaseUrl, randomBytes(18).toString('base64url')))
   const sql = new SQL(databaseUrl)
-  const seeded = await seedLoadData(sql, { ...SIZES, cashierPassword: randomBytes(12).toString('base64url'), cashierPin: '482913' })
-  const skus = (await sql`select sku from products where id in ${sql(seeded.productIds.concat(seeded.hotProductIds))} order by sku`).map((row: { sku: string }) => row.sku)
+  // The same fixed reference day in both runs; only the generated password and PIN differ, and no digest reads them.
+  const seeded = await seedLoadData(sql, { ...SIZES, cashierPassword: randomBytes(12).toString('base64url'), cashierPin: '482913', referenceDate: DEFAULT_REFERENCE_DATE })
   const [{ total }] = await sql`select coalesce(sum(total_satang), 0)::bigint as total from sales`
-  return { sql, seeded, snapshot: { skus, totalSum: Number(total) } }
+  return { sql, seeded, snapshot: { digest: await datasetDigest(sql), totalSum: Number(total) } }
 }
 
 describe.skipIf(!adminUrl)('seedLoadData', () => {
@@ -63,8 +82,9 @@ describe.skipIf(!adminUrl)('seedLoadData', () => {
     expect(counts).toEqual({ sales: 50, members: 10, promotions: 20, registers: 10 })
   })
 
-  test('two runs on fresh databases give the same SKUs and the same sum of sales', () => {
-    expect(second.skus).toEqual(first.skus)
+  test('two runs on fresh databases give the same data, row for row', () => {
+    expect(second.digest).toBe(first.digest)
+    expect(first.digest).not.toContain('null')
     expect(second.totalSum).toBe(first.totalSum)
     expect(first.totalSum).toBeGreaterThan(0)
   })
@@ -127,5 +147,17 @@ describe.skipIf(!adminUrl)('seedLoadData', () => {
     expect(seeded.couponCodes.length).toBeGreaterThan(0)
     const found = await sql`select coupon_code from promotions where coupon_code in ${sql(seeded.couponCodes)}`
     expect(found).toHaveLength(seeded.couponCodes.length)
+  })
+
+  test('past bills span 12 months and fall within shop hours (08:00 to 21:00 Bangkok)', async () => {
+    const [span] = await sql`
+      select (extract(year from max(created_at at time zone 'Asia/Bangkok')) * 12 + extract(month from max(created_at at time zone 'Asia/Bangkok')))
+           - (extract(year from min(created_at at time zone 'Asia/Bangkok')) * 12 + extract(month from min(created_at at time zone 'Asia/Bangkok'))) as months,
+             count(*) filter (where (created_at at time zone 'Asia/Bangkok')::time < '08:00' or (created_at at time zone 'Asia/Bangkok')::time >= '21:00')::int as outside,
+             max(created_at) < ${DEFAULT_REFERENCE_DATE} as before_reference
+      from sales`
+    expect(Number(span.months)).toBeGreaterThanOrEqual(11)
+    expect(span.outside).toBe(0)
+    expect(span.before_reference).toBe(true)
   })
 })
