@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { Navigate } from 'react-router'
+import { SkeletonPanel } from '@/components/Skeletons'
 import { settingsQuery } from '../api'
 import { useFeatures } from '../hooks/use-features'
 import { featureRoute } from '../lib/feature-route'
@@ -10,7 +11,7 @@ export function FeatureRoute({ feature, children }: { feature: keyof ReturnType<
   const features = useFeatures()
   const { isPending } = useQuery(settingsQuery)
   const state = featureRoute({ enabled: features[feature], settled: !isPending })
-  if (state === 'wait') return null
+  if (state === 'wait') return <SkeletonPanel className="p-4" />
   if (state === 'leave') return <Navigate to="/" replace />
   return children
 }
