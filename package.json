@@ -29,7 +29,7 @@
     "e2e": "bun run test:e2e-support && bun e2e/run.ts",
     "e2e:stock-receipts": "bun e2e/stock-receipts.ts",
     "screenshots": "bun e2e/shots.ts",
-    "typecheck": "tsc -b && tsc -p server && bun run --filter '*' typecheck",
+    "typecheck": "tsc -b && tsc -p server && tsc -p load && bun run --filter '*' typecheck",
     "lint": "oxlint src e2e vite.config.ts",
     "test": "bun run test:api && bun run test:web && bun run test:e2e-support",
     "test:e2e-support": "bun test ./e2e/customer-display-requests.test.ts",
