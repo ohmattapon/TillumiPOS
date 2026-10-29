@@ -28,3 +28,6 @@ updates/
 # Publisher private key for shop updates must never be committed (see scripts/sign-update.ts)
 update-signing-key*.pem
 *.update-key.pem
+
+# Visual brainstorming mockups
+.superpowers/
