@@ -251,8 +251,11 @@ function promotionDraft(index: number, categoryIds: number[]): PromotionDraft {
     imageKey: null,
   }
   switch (index % 5) {
-    case 0:
-      return { ...base, name: `${base.name} ลด ${(index % 3) + 1}0%`, value: ((index % 3) + 1) * 500, maxDiscountSatang: 20_000 }
+    case 0: {
+      // Basis points, so the name is derived from the same value the rules read: 1000 = 10%.
+      const value = ((index % 3) + 1) * 1_000
+      return { ...base, name: `${base.name} ลด ${value / 100}%`, value, maxDiscountSatang: 20_000 }
+    }
     case 1:
       return { ...base, name: `${base.name} ลดตรง`, kind: 'fixed', value: 2_000 + (index % 4) * 1_000, minSubtotalSatang: 30_000 }
     case 2:
