@@ -179,8 +179,8 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
         select (${snapshot} ->> 'id')::integer as "promotionId",
           (array_agg(${snapshot} ->> 'name' order by s.id desc))[1] as name,
           count(*)::integer as bills,
-          coalesce(sum(s.discount_satang), 0)::integer as "discountSatang",
-          coalesce(sum(s.total_satang - s.vat_satang), 0)::integer as "netSalesSatang"
+          coalesce(sum(s.discount_satang), 0)::bigint as "discountSatang",
+          coalesce(sum(s.total_satang - s.vat_satang), 0)::bigint as "netSalesSatang"
         from period_sales s
         where s.status = 'completed' and ${snapshot} ->> 'id' is not null
         group by (${snapshot} ->> 'id')::integer
@@ -189,8 +189,8 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
         limit ${query.limit} offset ${query.offset})
       select coalesce((select jsonb_agg(to_jsonb(paged) order by "discountSatang" desc, "promotionId") from paged), '[]'::jsonb) as items,
         (select count(*)::integer from grouped) as total,
-        (select jsonb_build_object('bills', coalesce(sum(bills), 0)::integer, 'discountSatang', coalesce(sum("discountSatang"), 0)::integer,
-          'netSalesSatang', coalesce(sum("netSalesSatang"), 0)::integer) from grouped) as totals,
+        (select jsonb_build_object('bills', coalesce(sum(bills), 0)::integer, 'discountSatang', coalesce(sum("discountSatang"), 0)::bigint,
+          'netSalesSatang', coalesce(sum("netSalesSatang"), 0)::bigint) from grouped) as totals,
         (select count(*)::integer from period_sales s where s.status = 'completed') as "completedBills"
     `)
     return { items: row!.items as ReportPromotion[], total: Number(row!.total), totals: row!.totals, completedBills: Number(row!.completedBills) }
