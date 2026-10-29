@@ -35,6 +35,22 @@ test('keeps branch scope explicit and cash net of change', async () => {
   expect(result.summary.profitSatang).toBe(4000)
   expect(result.byMethod.find((row) => row.method === 'cash')?.amountSatang).toBe(10700)
 })
+test('compare reads the same-length period before and returns it as previous', async () => {
+  const before = { ...sums, totalSatang: 5350, vatSatang: 350 }
+  reports.overview.mockResolvedValueOnce({ summary: sums, days: [], tendered: [] })
+  reports.overview.mockResolvedValueOnce({ summary: before, days: [], tendered: [] })
+  const result = await overview.execute({ ...range, compare: true }, owner, 9)
+  expect(reports.overview).toHaveBeenCalledTimes(2)
+  expect(reports.overview).toHaveBeenLastCalledWith({
+    from: '2025-12-01', to: '2025-12-31', scope: 'branch', branchId: 9, timeZone: 'Asia/Bangkok',
+  })
+  expect(result.previous).toMatchObject({ totalSatang: 5350, netSalesSatang: 5000 })
+})
+test('without compare the previous period is not read', async () => {
+  const result = await overview.execute(range, owner, 9)
+  expect(reports.overview).toHaveBeenCalledTimes(1)
+  expect(result).not.toHaveProperty('previous')
+})
 test('all-branch scope is explicit; pagination and closed branch names are preserved', async () => {
   await products.execute({ ...range, scope: 'all', limit: 7, offset: 14 }, owner, 9)
   expect(reports.products).toHaveBeenCalledWith({ ...range, scope: 'all', branchId: null, timeZone: 'Asia/Bangkok', limit: 7, offset: 14 })

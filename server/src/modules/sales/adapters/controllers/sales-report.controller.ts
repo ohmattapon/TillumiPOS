@@ -20,7 +20,7 @@ export class SalesReportElysiaController {
     return new Elysia({ name: 'sales-reports', prefix: '/sales/reports', detail: { tags: ['Sales'] } })
       .use(auth)
       .get('/', async ({ query, user, branch }) => this.overview.execute(query, user, (await branch()).id), {
-        auth: { can: 'reports.read' }, query: reportSchemas.query, response: reportSchemas.overview,
+        auth: { can: 'reports.read' }, query: reportSchemas.overviewQuery, response: reportSchemas.overview,
         detail: { summary: 'ยอดขายย้อนหลังตามวันและเขตเวลาของร้าน (สูงสุด 366 วัน)' },
       })
       .get('/products', async ({ query, user, branch }) => this.products.execute(query, user, (await branch()).id), {

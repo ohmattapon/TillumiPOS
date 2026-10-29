@@ -10,6 +10,7 @@ const query = t.Object({
   from: t.String({ format: 'date' }), to: t.String({ format: 'date' }),
   scope: t.Optional(t.Union([t.Literal('branch'), t.Literal('all')])),
 })
+const overviewQuery = t.Object({ ...query.properties, compare: t.Optional(t.BooleanString()) })
 const product = t.Object({
   productId: t.Integer(), productName: t.String(), sku: t.String(),
   quantity: t.Integer(), lineTotalSatang: t.Integer(),
@@ -23,6 +24,7 @@ const overview = t.Object({
   from: t.String(), to: t.String(), timeZone: t.String(),
   scope: t.Union([t.Literal('branch'), t.Literal('all')]),
   summary: metrics,
+  previous: t.Optional(metrics),
   days: page(t.Intersect([metrics, t.Object({ day: t.String() })])),
   byMethod: t.Array(t.Object({
     method: t.Union([t.Literal('cash'), t.Literal('promptpay'), t.Literal('card')]),
@@ -30,7 +32,7 @@ const overview = t.Object({
   })),
 })
 export const reportSchemas = {
-  query,
+  query, overviewQuery,
   pageQuery: t.Object({ ...query.properties,
     limit: t.Optional(t.Numeric({ minimum: 1, maximum: 500 })),
     offset: t.Optional(t.Numeric({ minimum: 0 })),

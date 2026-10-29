@@ -1,6 +1,6 @@
 import { inject, injectable } from 'tsyringe'
 import { requirePermission, type Actor } from '../../../../domains/authorization'
-import { calculateReportMetrics } from '../../../../domains/sales-report'
+import { calculateReportMetrics, previousPeriod } from '../../../../domains/sales-report'
 import { PAYMENT_METHODS } from '../../../../domains/sale.domain'
 import { reportTimeZoneToken, type IReportTimeZone } from '../ports/report-time-zone.port'
 import { salesReportRepositoryToken, type ISalesReportRepository } from '../ports/sales-report.repository'
@@ -14,13 +14,16 @@ export class GetSalesReportUseCase {
     @inject(reportTimeZoneToken) private readonly zone: IReportTimeZone,
   ) {}
   async execute(input: unknown, actor: Actor, branchId: number) {
-    const query = salesReportSchema.parse(input)
+    const { compare, ...query } = salesReportSchema.parse(input)
     requirePermission(actor, 'reports.read', 'เฉพาะเจ้าของร้านดูรายงานได้')
     const timeZone = await this.zone.timeZone()
-    const result = await this.reports.overview({ ...query, timeZone, branchId: query.scope === 'all' ? null : branchId })
+    const scoped = { scope: query.scope, timeZone, branchId: query.scope === 'all' ? null : branchId }
+    const result = await this.reports.overview({ ...query, ...scoped })
+    const before = compare ? await this.reports.overview({ ...previousPeriod(query.from, query.to), ...scoped }) : null
     return {
       from: query.from, to: query.to, timeZone, scope: query.scope,
       summary: calculateReportMetrics(result.summary),
+      ...(before ? { previous: calculateReportMetrics(before.summary) } : {}),
       days: { items: result.days.map(({ day, ...sums }) => ({ day, ...calculateReportMetrics(sums) })), total: result.days.length },
       byMethod: PAYMENT_METHODS.map((method) => ({
         method,

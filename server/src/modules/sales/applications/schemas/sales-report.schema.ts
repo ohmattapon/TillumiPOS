@@ -1,14 +1,19 @@
 import { z } from 'zod'
 
-export const salesReportSchema = z.object({
+const rangeFields = {
   from: z.iso.date(),
   to: z.iso.date(),
   scope: z.enum(['branch', 'all']).default('branch'),
-}).refine(({ from, to }) => {
+}
+const inRange = ({ from, to }: { from: string; to: string }) => {
   const days = (Date.parse(to) - Date.parse(from)) / 86400000
   return days >= 0 && days <= 365
-}, { message: 'เลือกช่วงวันตามลำดับและไม่เกิน 366 วัน' })
-export const salesReportPageSchema = salesReportSchema.safeExtend({
+}
+const rangeMessage = { message: 'เลือกช่วงวันตามลำดับและไม่เกิน 366 วัน' }
+const rangeSchema = z.object(rangeFields).refine(inRange, rangeMessage)
+/** Only the overview compares; the other reports must not carry a `compare` flag to their repositories. */
+export const salesReportSchema = z.object({ ...rangeFields, compare: z.coerce.boolean().default(false) }).refine(inRange, rangeMessage)
+export const salesReportPageSchema = rangeSchema.safeExtend({
   limit: z.number().int().min(1).max(500).default(20),
   offset: z.number().int().min(0).default(0),
 })

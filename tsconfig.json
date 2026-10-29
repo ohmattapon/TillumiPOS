@@ -21,7 +21,8 @@
       "@pos/api/receipt-raster": ["./server/src/domains/receipt-raster.domain.ts"],
       "@pos/api/permissions": ["./server/src/permissions.ts"],
       "@pos/api/packs": ["./server/src/domains/product-pack.ts"],
-      "@pos/api/points": ["./server/src/domains/member-points.ts"]
+      "@pos/api/points": ["./server/src/domains/member-points.ts"],
+      "@pos/api/reports": ["./server/src/domains/sales-report.ts"]
     }
   },
   "references": [
