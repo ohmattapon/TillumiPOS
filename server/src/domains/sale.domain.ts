@@ -1,3 +1,4 @@
+import { allocateBillToLines } from './bill-allocation'
 import { DomainConflictError } from './errors/domain-conflict.error'
 import { DomainError } from './errors/domain-error'
 import type { PointsRule } from './member-points'
@@ -29,6 +30,12 @@ export interface SaleItem {
   packSize: number
   /** The options chosen, as they were. Their price and cost are already in the unit price and cost. */
   options: LineOption[]
+  /** The product's category when sold, kept so a report by category never follows a later move. Null when none. */
+  categoryId?: number | null
+  /** This line's share of the bill's total after discount; the shares of all lines add up to the bill. Null on older lines. */
+  allocatedTotalSatang?: number | null
+  /** This line's share of the bill's VAT; the shares of all lines add up to the bill. Null on older lines. */
+  allocatedVatSatang?: number | null
 }
 
 export interface SalePayment {
@@ -249,7 +256,16 @@ export class SaleEntity {
     this.createdAt = props.createdAt
     // `??` fallbacks: a sale restored from a snapshot stored before packs or options were kept
     // has none of them on its lines; every older line was pieces.
-    this.items = props.items.map((item) => ({ ...item, packId: item.packId ?? null, packSize: item.packSize ?? 1, options: item.options ?? [] }))
+    // The category and shares are null on lines sold before reports kept them.
+    this.items = props.items.map((item) => ({
+      ...item,
+      packId: item.packId ?? null,
+      packSize: item.packSize ?? 1,
+      options: item.options ?? [],
+      categoryId: item.categoryId ?? null,
+      allocatedTotalSatang: item.allocatedTotalSatang ?? null,
+      allocatedVatSatang: item.allocatedVatSatang ?? null,
+    }))
     this.payments = props.payments
   }
 
@@ -282,6 +298,7 @@ export class SaleEntity {
           packId: pack.id,
           packSize: pack.size,
           options: [],
+          categoryId: product.categoryId,
         }
       }
       const unitPriceSatang = product.priceSatang + sum(options.map((option) => option.priceSatang))
@@ -296,6 +313,7 @@ export class SaleEntity {
         packId: null,
         packSize: 1,
         options: [...options],
+        categoryId: product.categoryId,
       }
     })
 
@@ -305,6 +323,15 @@ export class SaleEntity {
     const { vatSatang, totalSatang } = calculateTotals({ subtotalSatang, discountSatang, vatMode, vatRateBp })
     // Exclusive VAT is added on top, so the total can pass the ceiling even when the subtotal did not.
     if (totalSatang > MAX_AMOUNT_SATANG) throw tooLarge()
+    const shares = allocateBillToLines(
+      { totalSatang, vatSatang },
+      items.map((item) => item.lineTotalSatang),
+    )
+    const sharedItems = items.map((item, index) => ({
+      ...item,
+      allocatedTotalSatang: shares[index]!.totalSatang,
+      allocatedVatSatang: shares[index]!.vatSatang,
+    }))
 
     const paidSatang = sum(payments.map((payment) => payment.amountSatang))
     if (paidSatang > MAX_AMOUNT_SATANG) throw tooLarge()
@@ -330,7 +357,7 @@ export class SaleEntity {
       cashierId: cashier.id,
       cashierName: cashier.displayName,
       ...(seller ?? UNKNOWN_SELLER),
-      items,
+      items: sharedItems,
       payments: payments.map(({ method, amountSatang }) => ({ method, amountSatang })),
     }
   }

@@ -5,6 +5,7 @@ import { GetSalesReportUseCase } from './applications/usecases/get-sales-report.
 import { GetPromotionReportUseCase } from './applications/usecases/get-promotion-report.usecase'
 import { ListReportProductsUseCase } from './applications/usecases/list-report-products.usecase'
 import { ListReportBranchesUseCase } from './applications/usecases/list-report-branches.usecase'
+import { ListReportCashiersUseCase } from './applications/usecases/list-report-cashiers.usecase'
 import { SalesReportElysiaController } from './adapters/controllers/sales-report.controller'
 
 container.register(salesReportRepositoryToken, { useClass: DrizzleSalesReportRepository })
@@ -12,6 +13,7 @@ container.registerSingleton(GetSalesReportUseCase)
 container.registerSingleton(GetPromotionReportUseCase)
 container.registerSingleton(ListReportProductsUseCase)
 container.registerSingleton(ListReportBranchesUseCase)
+container.registerSingleton(ListReportCashiersUseCase)
 container.registerSingleton(SalesReportElysiaController)
 import { SaleElysiaController } from './adapters/controllers/sale.controller'
 import { DrizzleSaleRepository } from './adapters/repository/sale.drizzle.repository'

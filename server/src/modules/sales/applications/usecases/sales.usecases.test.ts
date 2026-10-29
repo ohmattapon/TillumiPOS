@@ -221,6 +221,9 @@ describe('CompleteSaleUseCase', () => {
         options: [],
         packId: 5,
         packSize: 6,
+        categoryId: null,
+        allocatedTotalSatang: 20000,
+        allocatedVatSatang: 1308,
       },
     ])
     expect(ledger.record.mock.calls.map(([movement]) => movement)).toEqual([

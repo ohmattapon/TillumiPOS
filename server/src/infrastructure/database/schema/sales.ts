@@ -104,6 +104,12 @@ export const saleItems = pgTable(
     packId: integer().references(() => productPacks.id),
     // Units of the product in one of this line's quantity; 1 for a single unit.
     packSize: integer().notNull().default(1),
+    // Snapshots for reports, with no foreign key so a later category change or delete never rewrites a sold line.
+    // Null on lines sold before reports kept them.
+    categoryId: integer(),
+    // This line's share of the bill's total after discount and of its VAT; the shares add up to the bill.
+    allocatedTotalSatang: integer(),
+    allocatedVatSatang: integer(),
   },
   (table) => [
     index().on(table.saleId),

@@ -1,4 +1,11 @@
-export interface ReportFilters { from: string; to: string }
+export interface ReportFilters {
+  from: string
+  to: string
+  cashierId?: number
+  customer?: 'member' | 'guest'
+  /** Asks the overview for the period before it as well. Only the overview reads it. */
+  compare: boolean
+}
 
 /** Eden decodes ISO calendar-date response strings into Date objects at runtime. */
 export function calendarDate(value: string | Date): string {

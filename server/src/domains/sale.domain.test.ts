@@ -184,6 +184,9 @@ describe('SaleEntity.complete: lines', () => {
         packId: null,
         packSize: 1,
         options: [],
+        categoryId: null,
+        allocatedTotalSatang: 5000,
+        allocatedVatSatang: 327,
       },
     ])
     expect(sale).toMatchObject({ cashierId: 7, cashierName: 'สมชาย' })
@@ -291,5 +294,37 @@ describe('sale membership snapshot', () => {
   test('old sales and anonymous checkout expose null membership', () => {
     expect(complete().member).toBeNull()
     expect(makeSale().member).toBeNull()
+  })
+})
+
+describe('SaleEntity.complete: line snapshots for reports', () => {
+  const twoLines = () => [
+    { product: makeProduct({ id: 1, priceSatang: 600, categoryId: 5, name: 'A', sku: 'A' }), quantity: 1 },
+    { product: makeProduct({ id: 2, priceSatang: 400, categoryId: null, name: 'B', sku: 'B' }), quantity: 1 },
+  ]
+
+  test('gives each line a share of the discounted total and VAT that adds up to the bill', () => {
+    const sale = complete({ lines: twoLines(), discountSatang: 100, payments: cash(900) })
+
+    expect(sale.totalSatang).toBe(900)
+    expect(sale.items.reduce((sum, item) => sum + item.allocatedTotalSatang!, 0)).toBe(sale.totalSatang)
+    expect(sale.items.reduce((sum, item) => sum + item.allocatedVatSatang!, 0)).toBe(sale.vatSatang)
+    expect(sale.items.map((item) => item.allocatedTotalSatang)).toEqual([540, 360])
+  })
+
+  test("keeps each product's category as it was sold, including none", () => {
+    const sale = complete({ lines: twoLines(), discountSatang: 100, payments: cash(900) })
+
+    expect(sale.items.map((item) => item.categoryId)).toEqual([5, null])
+  })
+
+  test('a restored line stored before these existed reads null', () => {
+    const { allocatedTotalSatang, allocatedVatSatang, categoryId } = makeSale().items[0]!
+
+    expect({ allocatedTotalSatang, allocatedVatSatang, categoryId }).toEqual({
+      allocatedTotalSatang: null,
+      allocatedVatSatang: null,
+      categoryId: null,
+    })
   })
 })

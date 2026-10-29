@@ -54,6 +54,9 @@ const itemColumns = {
   packId: saleItems.packId,
   packSize: saleItems.packSize,
   options: saleItems.options,
+  categoryId: saleItems.categoryId,
+  allocatedTotalSatang: saleItems.allocatedTotalSatang,
+  allocatedVatSatang: saleItems.allocatedVatSatang,
 }
 
 const total = (expression: SQL) => sql<number>`coalesce(sum(${expression}), 0)`.mapWith(Number)

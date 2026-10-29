@@ -4,7 +4,7 @@ import { buildReportWorkbook, downloadReportWorkbook, type ReportExportData } fr
 const metrics = { saleCount: 1, voidedCount: 0, totalSatang: 10700, vatSatang: 700, discountSatang: 0, costSatang: 6000, netSalesSatang: 10000, profitSatang: 4000 }
 const fixture: ReportExportData = {
   report: {
-    from: '2026-01-01', to: '2026-01-01', timeZone: 'Asia/Bangkok', scope: 'all',
+    from: '2026-01-01', to: '2026-01-01', timeZone: 'Asia/Bangkok', scope: 'all', unallocatedLines: 0,
     summary: metrics, days: { items: [{ day: '2026-01-01', ...metrics }], total: 1 },
     byMethod: [{ method: 'cash', amountSatang: 10700 }],
   },
