@@ -323,3 +323,41 @@ test('a line sold without a category stays without one when the product is given
   expect(await rows(String(drinks.id))).toEqual([])
   expect(await rows('none')).toEqual([[plain.id, 1]])
 })
+test('the promotion and item totals leave out a voided bill and follow the member or guest filter', async () => {
+  const tea = await seedProduct(owner, { priceSatang: 2500, costSatang: 1000, stock: 40 })
+  const member = ok(await owner.api.members.post({ name: 'สมาชิกรายงาน', phone: '0812345679' }))
+  ok(await owner.api.promotions.post({ name: 'คูปองลด 10%', kind: 'percent', value: 1000, couponCode: 'SUMMER10' }))
+  const sellWithCoupon = async (memberId?: number) => {
+    const quote = ok(await owner.api.quotes.post({
+      lines: [{ productId: tea.id, quantity: 2 }], couponCode: 'SUMMER10', ...(memberId === undefined ? {} : { memberId }),
+    }))
+    const bill = ok(await owner.api.sales.post({
+      items: [{ productId: tea.id, quantity: 2 }], ...(memberId === undefined ? {} : { memberId }),
+      payments: [{ method: 'cash' as const, amountSatang: quote.totalSatang }], quoteId: quote.id,
+    }))
+    await dateSale(bill.id, '2026-01-02T03:00:00Z')
+    return bill
+  }
+  const guestBill = await sellWithCoupon()
+  const memberBill = await sellWithCoupon(member.id)
+  const voided = await sellWithCoupon()
+  ok(await owner.api.sales({ id: voided.id }).void.post({ reason: 'ผิดรายการ' }))
+  const net = (bill: typeof guestBill) => bill.totalSatang - bill.vatSatang
+
+  const all = ok(await owner.api.sales.reports.promotions.get({ query: range }))
+  expect(all.totals).toEqual({
+    bills: 2, discountSatang: guestBill.discountSatang + memberBill.discountSatang, netSalesSatang: net(guestBill) + net(memberBill),
+  })
+  expect(all.completedBills).toBe(2)
+  const members = ok(await owner.api.sales.reports.promotions.get({ query: { ...range, customer: 'member' } }))
+  expect(members.totals).toEqual({ bills: 1, discountSatang: memberBill.discountSatang, netSalesSatang: net(memberBill) })
+  const guests = ok(await owner.api.sales.reports.promotions.get({ query: { ...range, customer: 'guest' } }))
+  expect(guests.totals).toEqual({ bills: 1, discountSatang: guestBill.discountSatang, netSalesSatang: net(guestBill) })
+
+  const items = ok(await owner.api.sales.reports.items.get({ query: range }))
+  expect(items.totals.quantity).toBe(4)
+  expect(ok(await owner.api.sales.reports.categories.get({ query: range })).totals.quantity).toBe(4)
+  expect(ok(await owner.api.sales.reports.categories.get({ query: { ...range, customer: 'member' } })).totals.quantity).toBe(2)
+  expect(ok(await owner.api.sales.reports.items.get({ query: { ...range, customer: 'member' } })).totals.quantity).toBe(2)
+  expect(ok(await owner.api.sales.reports.items.get({ query: { ...range, customer: 'guest' } })).totals.quantity).toBe(2)
+})
