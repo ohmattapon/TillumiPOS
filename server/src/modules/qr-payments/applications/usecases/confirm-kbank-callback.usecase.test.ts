@@ -48,3 +48,12 @@ describe('ConfirmKbankCallbackUseCase', () => {
     expect(refresher.refresh).not.toHaveBeenCalled()
   })
 })
+
+describe('ConfirmKbankCallbackUseCase input bound', () => {
+  test('a reference longer than any we issue is rejected before touching the database', async () => {
+    const { payments, usecase } = setup()
+
+    await expect(usecase.execute({ partnerTxnUid: 'A'.repeat(65) })).rejects.toThrow()
+    expect(payments.findByReferenceForUpdate).not.toHaveBeenCalled()
+  })
+})
