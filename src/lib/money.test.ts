@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { createDateFormat, createMoney } from './money'
+import { createCountFormat, createDateFormat, createMoney } from './money'
 
 describe('createMoney: Thai baht', () => {
   const baht = createMoney('THB', 'th')
@@ -91,5 +91,13 @@ describe('createDateFormat', () => {
     expect(createDateFormat('th').calendarYear('2026-01-01')).toBe('2569')
     expect(createDateFormat('en').calendarDate('2026-01-01')).toBe('Jan 1, 2026')
     expect(createDateFormat('en').calendarYear('2026-01-01')).toBe('2026')
+  })
+})
+
+describe('createCountFormat', () => {
+  test('groups thousands and drops fractions in both languages', () => {
+    expect(createCountFormat('en')(1250)).toBe('1,250')
+    expect(createCountFormat('th')(1250)).toBe('1,250')
+    expect(createCountFormat('en')(0)).toBe('0')
   })
 })

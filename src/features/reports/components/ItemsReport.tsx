@@ -29,13 +29,13 @@ export function ItemsReport({ filters, categoryId, sort, offset, enabled, onCate
   onPage: (offset: number) => void
 }) {
   const { t } = useTranslation('reports')
-  const { money } = useFormat()
+  const { money, count } = useFormat()
   const categories = useQuery(categoriesQuery)
   const items = useQuery({ ...itemsReportQuery(filters, { categoryId, sort }, offset), enabled })
   const columns: Column<ItemRow>[] = [
     { id: 'product', header: t('product'), priority: 'primary', cell: (row) => row.productName },
     { id: 'pack', header: t('pack'), priority: 'secondary', cell: (row) => row.packSize > 1 ? t('packOf', { size: row.packSize }) : t('singlePiece') },
-    { id: 'quantity', header: t('quantity'), priority: 'secondary', align: 'right', cell: (row) => row.quantity.toLocaleString() },
+    { id: 'quantity', header: t('quantity'), priority: 'secondary', align: 'right', cell: (row) => count(row.quantity) },
     { id: 'netSales', header: t('netSales'), priority: 'secondary', align: 'right', cell: (row) => money.plain(row.netSalesSatang) },
     { id: 'cost', header: t('cost'), priority: 'wide-only', align: 'right', cell: (row) => money.plain(row.costSatang) },
     { id: 'profit', header: t('profit'), priority: 'secondary', align: 'right', cell: (row) => money.plain(row.profitSatang) },

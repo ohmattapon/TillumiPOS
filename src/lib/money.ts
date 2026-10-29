@@ -88,3 +88,9 @@ export function createDateFormat(locale: Locale): DateFormat {
     calendarYear: (value) => calendarYear.formatToParts(new Date(value)).find((part) => part.type === 'year')!.value,
   }
 }
+
+/** A whole number for a count (bills, pieces) grouped the way the shop's language writes it: "1,250". */
+export function createCountFormat(locale: Locale): (value: number) => string {
+  const count = new Intl.NumberFormat(INTL_LOCALE[locale], { maximumFractionDigits: 0 })
+  return (value) => count.format(value)
+}

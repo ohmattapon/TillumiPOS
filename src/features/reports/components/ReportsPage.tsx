@@ -22,13 +22,14 @@ import { DailySalesChart } from './DailySalesChart'
 import { ChangeNote } from './ChangeNote'
 import { ItemsReport } from './ItemsReport'
 import { CategoriesReport } from './CategoriesReport'
+import { UnallocatedNote } from './UnallocatedNote'
 
 export function ReportsPage() {
   const { t } = useTranslation('reports')
   const { t: tc } = useTranslation()
   const shop = useSettings()
   const settings = useQuery(settingsQuery)
-  const { money, currency, locale, date } = useFormat()
+  const { money, count, currency, locale, date } = useFormat()
   const [params, setParams] = useSearchParams()
   const [exporting, setExporting] = useState(false)
   const today = todayIn(shop.timeZone)
@@ -47,7 +48,8 @@ export function ReportsPage() {
   const categoryOffset = offset('categories')
   const enabled = Boolean(settings.data) && validRange(filters.from, filters.to)
   const report = useQuery({ ...reportQuery(filters), enabled })
-  const products = useQuery({ ...productsReportQuery(filters, productOffset), enabled })
+  // Only the overview tab lists best sellers, so the other tabs do not fetch them.
+  const products = useQuery({ ...productsReportQuery(filters, productOffset), enabled: enabled && tab === 'overview' })
   const promotions = useQuery({ ...promotionsReportQuery(filters, promotionOffset), enabled: enabled && tab === 'promotions' })
   const summary = report.data?.summary
   const previous = report.data?.previous
@@ -111,6 +113,7 @@ export function ReportsPage() {
               { value: 'overview', label: t('tabOverview') }, { value: 'items', label: t('tabItems') },
               { value: 'categories', label: t('tabCategories') }, { value: 'promotions', label: t('tabPromotions') },
             ]} />
+          {tab === 'items' || tab === 'categories' ? <UnallocatedNote lines={report.data?.unallocatedLines ?? 0} format={count} /> : null}
           {tab === 'items' ? <ItemsReport filters={filters} categoryId={search.categoryId} sort={search.sort} offset={itemOffset} enabled={enabled}
             onCategory={(categoryId) => go({ ...search, categoryId })} onSort={(sort) => go({ ...search, sort })}
             onPage={(value) => setPage('items', value)} />
@@ -121,7 +124,7 @@ export function ReportsPage() {
             <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={t('summarySheet')}>
               {[
                 { title: t('revenue'), current: summary.totalSatang, before: previous?.totalSatang, shown: money.format, note: t('revenueNote') },
-                { title: t('bills'), current: summary.saleCount, before: previous?.saleCount, shown: (n: number) => n.toLocaleString(), note: t('voids', { count: summary.voidedCount }) },
+                { title: t('bills'), current: summary.saleCount, before: previous?.saleCount, shown: count, note: t('voids', { count: summary.voidedCount }) },
                 { title: t('profit'), current: summary.profitSatang, before: previous?.profitSatang, shown: money.format, note: t('profitNote') },
                 { title: t('average'), current: average(summary), before: previous && average(previous), shown: money.format, note: t('revenueNote') },
               ].map((stat) => <div key={stat.title} className="rounded-[10px] border bg-card p-4">
