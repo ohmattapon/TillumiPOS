@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 import { Download, LoaderCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { categoriesQuery } from '@/features/categories'
 import { settingsQuery, useFormat, useSettings } from '@/features/settings'
 import { PageHeader } from '@/components/PageHeader'
 import { Panel } from '@/components/Panel'
@@ -12,10 +13,10 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { dailyTotalsCells, hasTotals } from '../lib/report-totals'
 import { promotionTotalsCells, hasPromotionTotals } from '../lib/promotion-totals'
-import { reportQuery, productsReportQuery, promotionsReportQuery, readReport, readProducts, readPromotions } from '../api'
+import { reportQuery, productsReportQuery, promotionsReportQuery, cashiersReportQuery, readReport, readItems, readCategories, readPromotions } from '../api'
 import { validRange } from '../lib/date-range'
 import { readReportSearch, writeReportSearch, type ReportSearch, type ReportTab } from '../lib/report-search-params'
-import { collectPages } from '../lib/collect-pages'
+import { collectPagesWith } from '../lib/collect-pages'
 import { ReportFilters } from './ReportFilters'
 import { ReportDataTable } from './ReportDataTable'
 import { PaginationBar } from '@/components/PaginationBar'
@@ -53,6 +54,8 @@ export function ReportsPage() {
   // Only the overview tab lists best sellers, so the other tabs do not fetch them.
   const products = useQuery({ ...productsReportQuery(filters, productOffset), enabled: enabled && tab === 'overview' })
   const promotions = useQuery({ ...promotionsReportQuery(filters, promotionOffset), enabled: enabled && tab === 'promotions' })
+  const cashiers = useQuery({ ...cashiersReportQuery({ from: filters.from, to: filters.to }), enabled })
+  const categoryList = useQuery(categoriesQuery)
   const summary = report.data?.summary
   const previous = report.data?.previous
   const average = (sums: { totalSatang: number; saleCount: number }) => sums.saleCount ? Math.round(sums.totalSatang / sums.saleCount) : 0
@@ -65,22 +68,27 @@ export function ReportsPage() {
     if (exporting || !enabled) return
     setExporting(true)
     try {
-      const [fresh, allProducts, { downloadReportWorkbook }] = await Promise.all([
+      const itemOptions = { categoryId: tab === 'items' ? search.categoryId : undefined, sort: search.sort }
+      const [fresh, items, categories, promotions, { downloadReportWorkbook }] = await Promise.all([
         readReport(filters),
-        collectPages((offset, limit) => readProducts(filters, offset, limit)),
+        collectPagesWith((pageOffset, limit) => readItems(filters, itemOptions, pageOffset, limit), (page) => page.totals),
+        collectPagesWith((pageOffset, limit) => readCategories(filters, pageOffset, limit), (page) => page.totals),
+        collectPagesWith((pageOffset, limit) => readPromotions(filters, pageOffset, limit), (page) => ({ totals: page.totals, completedBills: page.completedBills })),
         import('../lib/export-workbook'),
       ])
-      if (new Set(allProducts.map((row) => row.productId)).size !== allProducts.length) throw new Error('REPORT_CHANGED')
-      // The promotions sheet goes out only from its own tab, so an export from the sales tab keeps
-      // the four sheets the shop already knows.
-      const allPromotions = tab === 'promotions'
-        ? await collectPages((pageOffset, limit) => readPromotions(filters, pageOffset, limit))
-        : undefined
-      if (allPromotions && new Set(allPromotions.map((row) => row.promotionId)).size !== allPromotions.length) {
-        throw new Error('REPORT_CHANGED')
-      }
+      if (new Set(items.items.map((row) => `${row.productId}-${row.packSize}`)).size !== items.items.length) throw new Error('REPORT_CHANGED')
+      if (new Set(categories.items.map((row) => row.categoryId)).size !== categories.items.length) throw new Error('REPORT_CHANGED')
+      if (new Set(promotions.items.map((row) => row.promotionId)).size !== promotions.items.length) throw new Error('REPORT_CHANGED')
+      const cashierName = filters.cashierId === undefined ? undefined
+        : cashiers.data?.items.find((row) => row.cashierId === filters.cashierId)?.cashierName ?? t('unknownCashier', { id: filters.cashierId })
+      const categoryName = itemOptions.categoryId === undefined ? undefined
+        : itemOptions.categoryId === 'none' ? t('noCategory')
+          : categoryList.data?.find((row) => row.id === itemOptions.categoryId)?.name ?? t('deletedCategory')
       await downloadReportWorkbook({
-        report: fresh, products: allProducts, promotions: allPromotions,
+        report: fresh, items: items.items, itemTotals: items.extra,
+        categories: categories.items, categoryTotals: categories.extra,
+        promotions: promotions.items, promotionTotals: promotions.extra.totals, completedBills: promotions.extra.completedBills,
+        filters: { cashierName, customer: filters.customer, categoryName },
         currency, fractionDigits: money.fractionDigits, locale,
       })
       toast.success(t('exported'))
