@@ -10,11 +10,26 @@ import { randomBytes } from 'node:crypto'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createProcessGroup } from './lib/processes'
+import { redactUrls } from './lib/redact'
 import { assertLoadDatabase, assertLocalBaseUrl } from './lib/safety'
 
 const PROFILES = ['smoke', 'load', 'stress', 'spike', 'soak'] as const
-const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1').replace(/\/$/, '')
+const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '')
+
+// What a child process may inherit: only what Windows and Bun need to start. Bun auto-loads the repo's .env into
+// this process, so passing everything on would hand unrelated secrets and alternate database settings to the API.
+const INHERITED_ENV = ['PATH', 'Path', 'PATHEXT', 'SystemRoot', 'SYSTEMROOT', 'SystemDrive', 'ComSpec', 'WINDIR', 'TEMP', 'TMP', 'TMPDIR', 'HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'LANG', 'TZ']
+
+function inheritedEnv(): Record<string, string> {
+  const kept: Record<string, string> = {}
+  for (const key of INHERITED_ENV) {
+    const value = process.env[key]
+    if (value !== undefined) kept[key] = value
+  }
+  return kept
+}
 
 interface Options {
   profile: (typeof PROFILES)[number]
@@ -40,6 +55,9 @@ function parseArgs(argv: string[]): Options {
 function targetUrl(adminUrl: string, name: string): string {
   const url = new URL(adminUrl)
   url.pathname = `/${name}`
+  // Only the server and login are taken over: a query string could carry host or dbname overrides.
+  url.search = ''
+  url.hash = ''
   return url.toString()
 }
 
@@ -50,8 +68,9 @@ async function freePort(): Promise<number> {
   return port
 }
 
-async function waitFor(url: string, label: string) {
+async function waitFor(url: string, label: string, child: { exitCode: number | null }) {
   for (let attempt = 0; attempt < 120; attempt++) {
+    if (child.exitCode !== null) throw new Error(`${label} stopped with exit code ${child.exitCode} before it answered at ${url}`)
     try {
       if ((await fetch(url)).status < 500) return
     } catch {
@@ -66,7 +85,9 @@ async function main() {
   const options = parseArgs(process.argv.slice(2))
   const adminUrl = Bun.env.LOAD_DB_ADMIN_URL
   if (!adminUrl) throw new Error('Set LOAD_DB_ADMIN_URL to the admin connection of the local PostgreSQL server')
-  const dbName = Bun.env.LOAD_DB_NAME ?? 'pos_load'
+  // The target URL drops the query string, but the admin connection itself is opened from this URL as given.
+  if (adminUrl.includes('?') || adminUrl.includes('#')) throw new Error('LOAD_DB_ADMIN_URL must not have a query string or fragment (query rule)')
+  const dbName =Bun.env.LOAD_DB_NAME ?? 'pos_load'
   // The name goes into DROP/CREATE statements, so beyond the prefix rule it may hold plain identifier characters only.
   if (!/^pos_load[a-z0-9_]*$/.test(dbName)) throw new Error('LOAD_DB_NAME must start with pos_load and hold only a-z, 0-9 and _ (database name rule)')
   const databaseUrl = targetUrl(adminUrl, dbName)
@@ -74,14 +95,14 @@ async function main() {
 
   const group = createProcessGroup()
   const mediaDir = await mkdtemp(join(tmpdir(), 'pos-load-media-'))
-  let cleaned = false
-  const cleanup = async () => {
-    if (cleaned) return
-    cleaned = true
-    await group.stopAll()
-    await rm(mediaDir, { recursive: true, force: true }).catch(() => {})
-    if (!options.keepDb) await dropDatabase(adminUrl, dbName).catch(() => {})
-  }
+  // One cleanup however many times it is asked for, so a second Ctrl+C waits for the first instead of exiting early.
+  let cleaning: Promise<void> | null = null
+  const cleanup = () =>
+    (cleaning ??= (async () => {
+      await group.stopAll()
+      await rm(mediaDir, { recursive: true, force: true }).catch(() => {})
+      if (!options.keepDb) await dropDatabase(adminUrl, dbName).catch(() => {})
+    })())
   for (const signal of ['SIGINT', 'SIGTERM'] as const)
     process.on(signal, () => void cleanup().finally(() => process.exit(130)))
   // 'exit' cannot wait: stopAll starts the kills synchronously, which is all that is needed here.
@@ -94,9 +115,8 @@ async function main() {
     const baseUrl = `http://127.0.0.1:${port}`
     assertLocalBaseUrl(baseUrl)
 
-    const { LOAD_DB_ADMIN_URL: _admin, ...inherited } = process.env
     const apiEnv: Record<string, string | undefined> = {
-      ...inherited,
+      ...inheritedEnv(),
       PORT: String(port),
       DATABASE_URL: databaseUrl,
       JWT_SECRET: randomBytes(32).toString('hex'),
@@ -118,11 +138,15 @@ async function main() {
 
     for (const script of ['migrate.ts', 'seed.ts']) {
       const child = group.spawn(['bun', `src/infrastructure/database/${script}`], { cwd: join(root, 'server'), env: apiEnv, stdout: 'pipe', stderr: 'pipe' })
-      if ((await child.exited) !== 0) throw new Error(`${script} failed: ${await new Response(child.stderr as ReadableStream).text()}`)
+      if ((await child.exited) !== 0) throw new Error(`${script} failed: ${redactUrls(await new Response(child.stderr as ReadableStream).text())}`)
     }
 
-    group.spawn(['bun', 'src/index.ts'], { cwd: join(root, 'server'), env: apiEnv, stdout: 'ignore', stderr: 'inherit' })
-    await waitFor(`${baseUrl}/api/v1/health`, 'API')
+    const api = group.spawn(['bun', 'src/index.ts'], { cwd: join(root, 'server'), env: apiEnv, stdout: 'ignore', stderr: 'pipe' })
+    // The API's own error output can name the connection string, so it is shown redacted.
+    void (async () => {
+      for await (const chunk of api.stderr as ReadableStream<Uint8Array>) process.stderr.write(redactUrls(new TextDecoder().decode(chunk)))
+    })()
+    await waitFor(`${baseUrl}/api/v1/health`, 'API', api)
 
     console.log(`Load run "${options.profile}"${options.scenario ? ` (scenario ${options.scenario})` : ''}: API ready at ${baseUrl}, database ${dbName}`)
     // k6 and the checks that follow arrive in later tasks; for now the run stops once everything is up.

@@ -42,3 +42,33 @@ describe('assertLocalBaseUrl', () => {
     expect(() => assertLocalBaseUrl(url)).toThrow()
   })
 })
+
+describe('assertLoadDatabase edge cases', () => {
+  test.each([
+    ['postgres://u:p@localhost.evil.com:5434/pos_load', 'host'],
+    ['postgres://127.0.0.1@evil.com:5434/pos_load', 'host'],
+    ['postgres://u:p@127.0.0.1:5434@evil.com/pos_load', 'host'],
+    ['postgres://u:p@127.0.0.1:5434/pos_load?host=db.evil.com', 'query'],
+    ['postgres://u:p@127.0.0.1:5434/pos_load?hostaddr=10.0.0.5', 'query'],
+    ['postgres://u:p@127.0.0.1:5434/pos_load?dbname=pos', 'query'],
+    ['postgres://u:p@127.0.0.1:5434/pos_load?', 'query'],
+    ['postgres://u:p@127.0.0.1:5434/pos_load#x', 'fragment'],
+    ['postgres://u:p@a:1,b:2/pos_load', 'valid'],
+    ['postgres://u:p@127.0.0.1:5434,10.0.0.5:5434/pos_load', 'valid'],
+    ['postgres://u:p@127.0.0.1:5434/POS_LOAD', 'database name'],
+    ['postgres://u:p@127.0.0.1:5434/pos%5Fload', 'database name'],
+    ['postgres://u:p@127.0.0.1:5434/pos_load/extra', 'database name'],
+    ['postgres://u:p@[::1]:5434/pos_load', 'host'],
+  ])('refuses %s', (url, rule) => {
+    expect(() => assertLoadDatabase(url)).toThrow(rule)
+  })
+})
+
+describe('assertLocalBaseUrl edge cases', () => {
+  test.each(['http://localhost.evil.com', 'http://127.0.0.1.evil.com', 'http://localhost@evil.com', 'http://evil.com@localhost.evil.com:3190', 'https://localhost:3190'])(
+    'refuses %s',
+    (url) => {
+      expect(() => assertLocalBaseUrl(url)).toThrow()
+    },
+  )
+})
