@@ -24,3 +24,9 @@ export const salesReportPageSchema = rangeSchema.safeExtend({
   limit: z.number().int().min(1).max(500).default(20),
   offset: z.number().int().min(0).default(0),
 })
+export const REPORT_ITEM_SORTS = ['quantity', 'sales', 'profit', 'margin'] as const
+/** `categoryId` is a category id, or the word `none` for products with no category (stored as null). */
+export const salesReportItemsSchema = salesReportPageSchema.safeExtend({
+  categoryId: z.union([z.literal('none').transform(() => null), z.coerce.number().int().positive()]).optional(),
+  sort: z.enum(REPORT_ITEM_SORTS).default('quantity'),
+})

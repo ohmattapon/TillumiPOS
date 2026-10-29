@@ -43,9 +43,33 @@ export interface ReportCashier {
   bills: number
 }
 export type ReportPageQuery = SalesReportPeriod & { limit: number; offset: number }
+export type ReportItemSort = 'quantity' | 'sales' | 'profit' | 'margin'
+export interface ReportItem {
+  productId: number
+  productName: string
+  sku: string
+  /** Units of the product in one of this row's quantity; 1 for a piece. */
+  packSize: number
+  /** How many of this pack size were sold. */
+  quantity: number
+  /** quantity × packSize: stock units sold. */
+  pieces: number
+  /** The lines' share of bill totals after discount, net of VAT. */
+  netSalesSatang: number
+  vatSatang: number
+  costSatang: number
+  profitSatang: number
+}
+export type ReportItemQuery = ReportPageQuery & {
+  /** A category id; null means lines with no category. Absent means every category. */
+  categoryId?: number | null
+  sort: ReportItemSort
+}
 export interface ISalesReportRepository {
   overview(period: SalesReportPeriod): Promise<ReportOverviewSums>
   products(query: ReportPageQuery): Promise<Page<ReportProduct>>
+  /** Per product and pack size, completed bills only, sorted descending by `sort` and then by product id. */
+  items(query: ReportItemQuery): Promise<Page<ReportItem>>
   branches(query: ReportPageQuery): Promise<Page<SalesReportSums & { branchId: number }>>
   promotions(query: ReportPageQuery): Promise<Page<ReportPromotion>>
   /** Ignores `cashierId` and `customer`, so the list shows everyone who sold in the range. */

@@ -7,6 +7,7 @@ import { GetPromotionReportUseCase } from '../../applications/usecases/get-promo
 import { ListReportProductsUseCase } from '../../applications/usecases/list-report-products.usecase'
 import { ListReportBranchesUseCase } from '../../applications/usecases/list-report-branches.usecase'
 import { ListReportCashiersUseCase } from '../../applications/usecases/list-report-cashiers.usecase'
+import { ListReportItemsUseCase } from '../../applications/usecases/list-report-items.usecase'
 import { reportSchemas } from './schemas/sales-report.schema'
 
 @injectable()
@@ -17,6 +18,7 @@ export class SalesReportElysiaController {
     @inject(ListReportBranchesUseCase) private readonly branches: ListReportBranchesUseCase,
     @inject(GetPromotionReportUseCase) private readonly promotions: GetPromotionReportUseCase,
     @inject(ListReportCashiersUseCase) private readonly cashiers: ListReportCashiersUseCase,
+    @inject(ListReportItemsUseCase) private readonly items: ListReportItemsUseCase,
   ) {}
   getRoutes() {
     return new Elysia({ name: 'sales-reports', prefix: '/sales/reports', detail: { tags: ['Sales'] } })
@@ -28,6 +30,10 @@ export class SalesReportElysiaController {
       .get('/products', async ({ query, user, branch }) => this.products.execute(query, user, (await branch()).id), {
         auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: page(reportSchemas.product),
         detail: { summary: 'สินค้าขายดี เรียงตามจำนวน ใช้ข้อมูล ณ ตอนขาย' },
+      })
+      .get('/items', async ({ query, user, branch }) => this.items.execute(query, user, (await branch()).id), {
+        auth: { can: 'reports.read' }, query: reportSchemas.itemsQuery, response: page(reportSchemas.item),
+        detail: { summary: 'ยอดขาย ต้นทุน และกำไรแยกตามสินค้าและขนาดแพ็ก ใช้ข้อมูล ณ ตอนขาย' },
       })
       .get('/branches', async ({ query, user, branch }) => this.branches.execute(query, user, (await branch()).id), {
         auth: { can: 'reports.read' }, query: reportSchemas.pageQuery, response: page(reportSchemas.branch),

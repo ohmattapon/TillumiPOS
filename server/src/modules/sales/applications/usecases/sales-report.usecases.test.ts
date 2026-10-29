@@ -6,6 +6,7 @@ import { GetPromotionReportUseCase } from './get-promotion-report.usecase'
 import { ListReportProductsUseCase } from './list-report-products.usecase'
 import { ListReportBranchesUseCase } from './list-report-branches.usecase'
 import { ListReportCashiersUseCase } from './list-report-cashiers.usecase'
+import { ListReportItemsUseCase } from './list-report-items.usecase'
 
 const range = { from: '2026-01-01', to: '2026-01-31' }
 const owner = { role: 'owner' as const }
@@ -18,6 +19,7 @@ let products: ListReportProductsUseCase
 let comparison: ListReportBranchesUseCase
 let promotionReport: GetPromotionReportUseCase
 let cashierList: ListReportCashiersUseCase
+let itemList: ListReportItemsUseCase
 beforeEach(() => {
   reports = mockSalesReportRepository()
   zone = mockReportTimeZone('Asia/Bangkok')
@@ -31,6 +33,8 @@ beforeEach(() => {
   comparison = new ListReportBranchesUseCase(reports, zone, branchNames)
   promotionReport = new GetPromotionReportUseCase(reports, zone)
   cashierList = new ListReportCashiersUseCase(reports, zone)
+  itemList = new ListReportItemsUseCase(reports, zone)
+  reports.items.mockResolvedValue({ items: [], total: 0 })
 })
 test('keeps branch scope explicit and cash net of change', async () => {
   const result = await overview.execute(range, owner, 9)
@@ -138,4 +142,36 @@ test('the cashier list refuses a cashier and a bad range before reading any port
   await expect(cashierList.execute({ from: '2026-02-01', to: '2026-01-01' }, owner, 1)).rejects.toBeInstanceOf(ZodError)
   expect(zone.timeZone).not.toHaveBeenCalled()
   expect(reports.cashiers).not.toHaveBeenCalled()
+})
+test('the item report sorts by quantity by default and passes the filters, scope and paging to the repository', async () => {
+  const row = {
+    productId: 4, productName: 'ชา', sku: 'T-1', packSize: 12, quantity: 2, pieces: 24,
+    netSalesSatang: 5000, vatSatang: 327, costSatang: 3000, profitSatang: 2000,
+  }
+  reports.items.mockResolvedValue({ items: [row], total: 1 })
+  expect(await itemList.execute({ ...range, cashierId: '7', customer: 'guest', limit: 7, offset: 14 }, owner, 9)).toEqual({ items: [row], total: 1 })
+  expect(reports.items).toHaveBeenCalledWith({
+    ...range, scope: 'branch', branchId: 9, timeZone: 'Asia/Bangkok', cashierId: 7, customer: 'guest', sort: 'quantity', limit: 7, offset: 14,
+  })
+  await itemList.execute({ ...range, scope: 'all', sort: 'margin' }, owner, 9)
+  expect(reports.items).toHaveBeenLastCalledWith({
+    ...range, scope: 'all', branchId: null, timeZone: 'Asia/Bangkok', sort: 'margin', limit: 20, offset: 0,
+  })
+})
+test('the item report reads a category id as a number and the word none as no category', async () => {
+  await itemList.execute({ ...range, categoryId: '3' }, owner, 9)
+  expect(reports.items).toHaveBeenLastCalledWith(expect.objectContaining({ categoryId: 3 }))
+  await itemList.execute({ ...range, categoryId: 5 }, owner, 9)
+  expect(reports.items).toHaveBeenLastCalledWith(expect.objectContaining({ categoryId: 5 }))
+  await itemList.execute({ ...range, categoryId: 'none' }, owner, 9)
+  expect(reports.items).toHaveBeenLastCalledWith(expect.objectContaining({ categoryId: null }))
+  await itemList.execute(range, owner, 9)
+  expect(reports.items.mock.calls.at(-1)?.[0]).not.toHaveProperty('categoryId')
+})
+test('the item report refuses a cashier, a bad range, a bad sort and a bad category before reading any port', async () => {
+  await expect(itemList.execute(range, { role: 'cashier' }, 1)).rejects.toMatchObject({ code: 'PERMISSION_DENIED', params: { permission: 'reports.read' } })
+  for (const bad of [{ from: '2026-02-01', to: '2026-01-01' }, { ...range, sort: 'name' }, { ...range, categoryId: 0 }, { ...range, categoryId: 'abc' }, { ...range, limit: 501 }])
+    await expect(itemList.execute(bad, owner, 1)).rejects.toBeInstanceOf(ZodError)
+  expect(zone.timeZone).not.toHaveBeenCalled()
+  expect(reports.items).not.toHaveBeenCalled()
 })

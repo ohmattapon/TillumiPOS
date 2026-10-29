@@ -25,6 +25,7 @@ export const mockReportBranchNames = (names: Map<number, string> = new Map()): M
 export const mockSalesReportRepository = (): Mocked<ISalesReportRepository> => ({
   overview: mock<ISalesReportRepository['overview']>(),
   products: mock<ISalesReportRepository['products']>(),
+  items: mock<ISalesReportRepository['items']>(),
   branches: mock<ISalesReportRepository['branches']>(),
   promotions: mock<ISalesReportRepository['promotions']>(),
   cashiers: mock<ISalesReportRepository['cashiers']>(),

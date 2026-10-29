@@ -20,6 +20,11 @@ const product = t.Object({
   productId: t.Integer(), productName: t.String(), sku: t.String(),
   quantity: t.Integer(), lineTotalSatang: t.Integer(),
 })
+const item = t.Object({
+  productId: t.Integer(), productName: t.String(), sku: t.String(), packSize: t.Integer(),
+  quantity: t.Integer(), pieces: t.Integer(), netSalesSatang: t.Integer(), vatSatang: t.Integer(),
+  costSatang: t.Integer(), profitSatang: t.Integer(),
+})
 const branch = t.Intersect([metrics, t.Object({ branchId: t.Integer(), branchName: t.String() })])
 const promotionRow = t.Object({
   promotionId: t.Integer(), name: t.String(), bills: t.Integer(),
@@ -43,9 +48,21 @@ export const reportSchemas = {
     limit: t.Optional(t.Numeric({ minimum: 1, maximum: 500 })),
     offset: t.Optional(t.Numeric({ minimum: 0 })),
   }),
-  overview, product, branch, promotion: promotionRow, cashier,
+  // categoryId is a category id or the word `none`; the use case parses it.
+  itemsQuery: t.Object({
+    from: t.String({ format: 'date' }), to: t.String({ format: 'date' }),
+    scope: t.Optional(t.Union([t.Literal('branch'), t.Literal('all')])),
+    cashierId: t.Optional(t.Numeric()),
+    customer: t.Optional(t.Union([t.Literal('member'), t.Literal('guest')])),
+    categoryId: t.Optional(t.String({ pattern: '^(none|[1-9][0-9]*)$' })),
+    sort: t.Optional(t.Union([t.Literal('quantity'), t.Literal('sales'), t.Literal('profit'), t.Literal('margin')])),
+    limit: t.Optional(t.Numeric({ minimum: 1, maximum: 500 })),
+    offset: t.Optional(t.Numeric({ minimum: 0 })),
+  }),
+  overview, product, item, branch, promotion: promotionRow, cashier,
 }
 export type SalesReportResponse = Static<typeof overview>
 export type ReportProductResponse = Static<typeof product>
+export type ReportItemResponse = Static<typeof item>
 export type ReportBranchResponse = Static<typeof branch>
 export type ReportPromotionResponse = Static<typeof promotionRow>
