@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  TillumiPOS native Windows installer — API service wrapper (WinSW v2).
+
+  PLACEHOLDER CONTRACT (substituted at install time by installer/tillumi.iss, Task 3;
+  the installed copy must contain NO {{...}} token — Task 3 asserts that):
+    {{APP_EXE}}   full path of the compiled API, e.g.
+                  C:\Program Files\TillumiPOS\app-1.2.3\tillumi-pos.exe
+                  (Task 4 moves this pointer on update; the data dir never moves)
+    {{DATA_DIR}}  writable data root, e.g. C:\ProgramData\TillumiPOS
+                  (holds .env, data\media, backups, logs)
+    {{APP_DIR}}   versioned app folder, e.g. C:\Program Files\TillumiPOS\app-1.0.0
+                  (the web page the API serves and the database migrations;
+                  Task 4 moves this pointer on update, the data dir never moves)
+    {{PORT_API}}  API TCP port, default 3000
+    {{PORT_DB}}   postgres TCP port, default 5435
+
+  SECRETS: this file must stay FREE of secrets — it sits in Program Files where
+  every local user can read it. JWT_SECRET and friends live ONLY in
+  {{DATA_DIR}}\.env (written once by installer/scripts/first-install.ps1).
+
+  ENV CONTRACT:
+  - <workingdirectory> is {{DATA_DIR}} so the Bun runtime picks up
+    {{DATA_DIR}}\.env at boot. A real process variable wins over .env, so the
+    PORT <env> entry below is a backstop (substituted at install time).
+  - DATABASE_URL is deliberately NOT set here: it carries the database password,
+    so it lives only in {{DATA_DIR}}\.env. A passwordless value here would win
+    over .env and lock the API out of its database.
+  - NATIVE_UPDATES=1 tells the API this install can apply updates
+    (installer/scripts/apply-update.ps1); other installs hide the update screen.
+  - WEB_DIST points at the shop page shipped beside the API ({{APP_DIR}}\web,
+    the `vite build` output). It MUST move with {{APP_EXE}} on update (Task 4):
+    the page and the API are one version.
+  - Migrations run at API boot (Task 3 wires the migrate step before the first
+    start; Task 1 proved the compiled exe boots in ~3s and serves everything).
+  - The API binds 127.0.0.1 literally: resolving "localhost" may hang on some
+    shop machines (Task 1 spike). That bind is app-side (PORT env), not here.
+
+  WINSW RULES (do not break):
+  - The WinSW binary must sit next to the INSTALLED copy of this file and share
+    its basename: tillumi-pos.exe + tillumi-pos.xml (Task 3 copies the
+    downloaded WinSW-x64.exe twice, once per service). Never committed to git.
+  - <depend>tillumi-postgres</depend> guarantees postgres starts first and stops
+    last. Do not remove it: without the database the API only crashes in a loop.
+
+  SERVICE COMMANDS (need an ELEVATED shell — documented only, Task 2 does not
+  test service installation):
+    tillumi-pos.exe install
+    net start tillumi-pos
+    net stop tillumi-pos
+    tillumi-pos.exe uninstall
+-->
+<service>
+  <id>tillumi-pos</id>
+  <name>TillumiPOS API</name>
+  <description>TillumiPOS shop server (sales, stock, receipts; serves the shop page)</description>
+  <executable>{{APP_EXE}}</executable>
+  <workingdirectory>{{DATA_DIR}}</workingdirectory>
+  <depend>tillumi-postgres</depend>
+  <startmode>Automatic</startmode>
+  <env name="PORT" value="{{PORT_API}}"/>
+  <env name="NATIVE_UPDATES" value="1"/>
+  <env name="WEB_DIST" value="{{APP_DIR}}\web"/>
+  <logpath>{{DATA_DIR}}\logs</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>8</keepFiles>
+  </log>
+  <onfailure action="restart" delay="10 sec"/>
+</service>

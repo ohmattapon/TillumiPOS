@@ -118,6 +118,19 @@ const th = {
   save: 'บันทึก',
   saving: 'กำลังบันทึก…',
   saved: 'บันทึกการตั้งค่าแล้ว',
+  update: {
+    title: 'อัปเดตโปรแกรม',
+    current: 'รุ่นที่ใช้อยู่ {{version}}',
+    latest: 'รุ่นล่าสุด {{version}}',
+    check: 'ตรวจอัปเดต',
+    checking: 'กำลังตรวจอัปเดต…',
+    apply: 'โหลดรุ่นใหม่',
+    applying: 'กำลังโหลดรุ่นใหม่…',
+    upToDate: 'เป็นรุ่นล่าสุดแล้ว ไม่ต้องทำอะไร',
+    available: 'มีรุ่นใหม่พร้อมติดตั้ง',
+    staged: 'โหลดรุ่น {{version}} มาตรวจครบแล้ว ให้รันสคริปต์ติดตั้งบนเครื่องหลัก (ต้องสิทธิ์แอดมิน) แล้วเปิดร้านตามปกติ',
+    checkFailed: 'ตรวจอัปเดตไม่ได้ ลองใหม่อีกครั้ง',
+  },
 }
 
 const en = {
@@ -240,6 +253,19 @@ const en = {
   save: 'Save',
   saving: 'Saving…',
   saved: 'Settings saved',
+  update: {
+    title: 'Program updates',
+    current: 'Running version {{version}}',
+    latest: 'Latest version {{version}}',
+    check: 'Check for updates',
+    checking: 'Checking for updates…',
+    apply: 'Download the new version',
+    applying: 'Downloading the new version…',
+    upToDate: 'Already on the latest version. Nothing to do.',
+    available: 'A new version is ready to install',
+    staged: 'Version {{version}} is downloaded and verified. Run the installer script on the main computer (needs admin rights), then open the shop as usual.',
+    checkFailed: 'Could not check for updates. Please try again.',
+  },
 } satisfies typeof th
 
 export const locales = { th, en }

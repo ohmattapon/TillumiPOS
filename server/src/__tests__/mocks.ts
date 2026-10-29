@@ -417,9 +417,44 @@ export const mockLoginAttemptGuard = (): Mocked<ILoginAttemptGuard> => {
 }
 
 import type { IStockReceiptRepository } from '../modules/stock-receipts/applications/ports/stock-receipt.repository'
+import type { IUpdateDownloader } from '../modules/update/applications/ports/update-downloader.port'
+import type { IUpdateFeed } from '../modules/update/applications/ports/update-feed.port'
+import type { IUpdateChannel } from '../modules/update/applications/ports/update-channel.port'
+import type { IUpdateHasher } from '../modules/update/applications/ports/update-hasher.port'
+import type { IUpdateSignatureVerifier } from '../modules/update/applications/ports/update-signature.port'
+import type { IUpdateStaging } from '../modules/update/applications/ports/update-staging.port'
+import type { IUpdateAudit } from '../modules/update/applications/ports/update-audit.port'
 export const mockStockReceiptRepository = (): Mocked<IStockReceiptRepository> => ({
   create: mock<IStockReceiptRepository['create']>(),
   appendItems: mock<IStockReceiptRepository['appendItems']>(),
   findById: mock<IStockReceiptRepository['findById']>(),
   findAll: mock<IStockReceiptRepository['findAll']>(),
+})
+
+export const mockUpdateFeed = (): Mocked<IUpdateFeed> => ({
+  fetchFeed: mock<IUpdateFeed['fetchFeed']>(),
+})
+
+export const mockUpdateDownloader = (): Mocked<IUpdateDownloader> => ({
+  download: mock<IUpdateDownloader['download']>(),
+})
+
+export const mockUpdateHasher = (): Mocked<IUpdateHasher> => ({
+  sha256Hex: mock<IUpdateHasher['sha256Hex']>(() => '0'.repeat(64)),
+})
+
+export const mockUpdateChannel = (enabled = true): Mocked<IUpdateChannel> => ({
+  isEnabled: mock<IUpdateChannel['isEnabled']>(() => enabled),
+})
+
+export const mockUpdateSignatureVerifier = (): Mocked<IUpdateSignatureVerifier> => ({
+  verify: mock<IUpdateSignatureVerifier['verify']>(() => true),
+})
+
+export const mockUpdateStaging =(): Mocked<IUpdateStaging> => ({
+  stagePackage: mock<IUpdateStaging['stagePackage']>(async (input) => ({ path: `/updates/${input.version}/package.zip` })),
+})
+
+export const mockUpdateAudit = (): Mocked<IUpdateAudit> => ({
+  recordUpdate: mock<IUpdateAudit['recordUpdate']>(async () => {}),
 })

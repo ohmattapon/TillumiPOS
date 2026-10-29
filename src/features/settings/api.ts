@@ -54,3 +54,24 @@ export function useRemoveShopLogo() {
     onSuccess: (settings) => queryClient.setQueryData(settingsKeys.all, settings),
   })
 }
+
+export const updateKeys = {
+  status: ['update', 'status'] as const,
+}
+
+/** This build beside the newest published release. Checked on purpose, never polled: the shop updates by hand. */
+export const updateStatusQuery = queryOptions({
+  queryKey: updateKeys.status,
+  queryFn: () => unwrap(api.update.status.get()),
+  staleTime: 60_000,
+})
+
+export function useApplyUpdate() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    // No body: the feed location is fixed server-side, so there is nothing to send.
+    mutationFn: () => unwrap(api.update.apply.post()),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: updateKeys.status }),
+  })
+}

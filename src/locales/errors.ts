@@ -120,5 +120,13 @@ export const errors = {
     POINTS_REDEEM_INVALID: 'Redeem between {{min}} and {{max}} points',
     MEMBER_NOT_FOUND: 'This member is not in the system',
     POINTS_ALREADY_RECORDED: 'These points were already recorded',
+    UPDATE_FEED_UNAVAILABLE: 'The update information could not be reached. Check the connection and try again.',
+    UPDATE_FEED_INVALID: 'The update information is not valid. Please tell your technician.',
+    UPDATE_DOWNLOAD_FAILED: 'The update package could not be downloaded. Please try again.',
+    UPDATE_NOT_AVAILABLE: 'This is already the latest version.',
+    UPDATE_HASH_MISMATCH: 'The update file does not match its signature. Please try again.',
+    UPDATE_NOT_SUPPORTED: 'Updates for this installation are not applied from this screen.',
+    UPDATE_SIGNATURE_INVALID: 'This update is not signed by the publisher, so it was not installed. Please tell your technician.',
+    UPDATE_SIGNING_NOT_CONFIGURED: 'This program has no key to check updates with. Please tell your technician.',
   },
 }
