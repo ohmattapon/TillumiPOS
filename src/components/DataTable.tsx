@@ -23,6 +23,8 @@ interface Props<T> {
   /** Accessible name of a list item on a phone. */
   rowLabel?: (row: T) => string
   muted?: (row: T) => boolean
+  /** Names each secondary value in the phone list with its column header, for tables of bare numbers. */
+  phoneLabels?: boolean
 }
 
 /**
@@ -36,7 +38,7 @@ const wideOnly = <T,>(column: Column<T>) => column.priority === 'wide-only' && '
 const PLACEHOLDER_ROWS = 5
 const PHONE_PLACEHOLDER_ROWS = 4
 
-export function DataTable<T>({ columns, rows, rowKey, empty, toolbar, isPending, actions, onSelect, rowLabel, muted }: Props<T>) {
+export function DataTable<T>({ columns, rows, rowKey, empty, toolbar, isPending, actions, onSelect, rowLabel, muted, phoneLabels }: Props<T>) {
   const { primary, secondary } = splitColumns(columns)
   const { t } = useTranslation()
   const isEmpty = !isPending && rows.length === 0
@@ -139,7 +141,14 @@ export function DataTable<T>({ columns, rows, rowKey, empty, toolbar, isPending,
               {secondary.length > 0 && (
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   {secondary.map((column) => (
-                    <span key={column.id} className={cn(column.align === 'right' && 'tabular-nums')}>{column.cell(row)}</span>
+                    phoneLabels ? (
+                      <span key={column.id}>
+                        <span className="font-light">{column.header}</span>{' '}
+                        <span className={cn(column.align === 'right' && 'tabular-nums')}>{column.cell(row)}</span>
+                      </span>
+                    ) : (
+                      <span key={column.id} className={cn(column.align === 'right' && 'tabular-nums')}>{column.cell(row)}</span>
+                    )
                   ))}
                 </div>
               )}

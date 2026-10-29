@@ -83,7 +83,7 @@ export function ItemsReport({ filters, categoryId, sort, offset, enabled, onCate
       {items.error ? <div role="alert" className="flex items-center gap-3 p-4 text-sm text-destructive">
         <span>{items.error.message}</span><Button variant="outline" size="sm" onClick={() => void items.refetch()}>{t('retry')}</Button>
       </div> : <>
-        <DataTable columns={columns} rows={rows} isPending={items.isPending && enabled} toolbar={toolbar}
+        <DataTable phoneLabels columns={columns} rows={rows} isPending={items.isPending && enabled} toolbar={toolbar}
           rowKey={(row) => isTotalRow(row) ? 'total' : `${row.productId}-${row.packSize}`} empty={t('noItems')} />
         <PaginationBar page={Math.floor(offset / 10)} pageSize={10} total={items.data?.total ?? 0} isLoading={items.isFetching}
           onPageChange={(value) => onPage(value * 10)} />

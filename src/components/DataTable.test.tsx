@@ -151,3 +151,25 @@ describe('DataTable toolbar', () => {
     expect(render()).not.toContain('border-b px-4 py-3')
   })
 })
+
+describe('DataTable phoneLabels', () => {
+  const columns: Column<Row>[] = [
+    { id: 'p', header: 'ชื่อ', priority: 'primary', cell: (row) => row.name },
+    { id: 's', header: 'จำนวนขาย', priority: 'secondary', align: 'right', cell: () => '8' },
+  ]
+  const phoneList = (html: string) => html.slice(html.indexOf('<ul'))
+
+  test('puts the column header before each secondary value in the phone list', () => {
+    const list = phoneList(render({ columns, phoneLabels: true }))
+    expect(list).toMatch(/จำนวนขาย[^<]*<\/span>\s*<span[^>]*>8</)
+    expect(list).toContain('tabular-nums')
+  })
+
+  test('leaves the phone list unlabelled by default', () => {
+    expect(phoneList(render({ columns }))).not.toContain('จำนวนขาย')
+  })
+
+  test('does not label the primary column', () => {
+    expect(phoneList(render({ columns, phoneLabels: true }))).not.toContain('ชื่อ</span>')
+  })
+})

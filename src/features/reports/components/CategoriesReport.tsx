@@ -43,7 +43,7 @@ export function CategoriesReport({ filters, offset, enabled, onPage }: {
       {categories.error ? <div role="alert" className="flex items-center gap-3 p-4 text-sm text-destructive">
         <span>{categories.error.message}</span><Button variant="outline" size="sm" onClick={() => void categories.refetch()}>{t('retry')}</Button>
       </div> : <>
-        <DataTable columns={columns} rows={rows} isPending={categories.isPending && enabled}
+        <DataTable phoneLabels columns={columns} rows={rows} isPending={categories.isPending && enabled}
           rowKey={(row) => isTotalRow(row) ? 'total' : row.categoryId ?? 'none'} empty={t('noCategories')} />
         <PaginationBar page={Math.floor(offset / 10)} pageSize={10} total={categories.data?.total ?? 0} isLoading={categories.isFetching}
           onPageChange={(value) => onPage(value * 10)} />
