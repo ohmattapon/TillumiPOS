@@ -1,6 +1,6 @@
 import { and, asc, eq, exists, gt, inArray, isNull } from 'drizzle-orm'
 import { allocateBillToLines } from '../../domains/bill-allocation'
-import { client, db } from '../../libs/db'
+import { db } from '../../libs/db'
 import { saleItems, sales } from './schema/sales'
 
 /**
@@ -49,13 +49,5 @@ export async function backfillSaleLines(batchSize = 500): Promise<number> {
     })
     if (done === 0) return updated
     updated += done
-  }
-}
-
-if (import.meta.main) {
-  try {
-    console.log(`Backfilled the line shares of ${await backfillSaleLines()} sales`)
-  } finally {
-    await client.close()
   }
 }
