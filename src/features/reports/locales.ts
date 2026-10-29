@@ -39,6 +39,8 @@ const th = {
   noPromotions: 'ไม่มีบิลที่ใช้โปรโมชันในช่วงนี้',
   itemsTotal: 'รวมทุกรายการ', categoriesTotal: 'รวมทุกหมวดหมู่', dailyTotal: 'รวมทั้งช่วง', methodsTotal: 'รวมทุกช่องทาง',
   promotionTotal: 'รวมทุกโปรโมชัน', promotionUsage: 'มี {{used}} จาก {{all}} บิลที่ใช้โปรโมชัน',
+  filtersHeading: 'ตัวกรองที่ใช้', period: 'ช่วงวันที่', previousPeriod: 'ช่วงก่อนหน้า', change: 'เปลี่ยนแปลง', pieces: 'จำนวนชิ้น', categoriesSheet: 'หมวดหมู่',
+  exportUnallocated: 'ยังมี {{count}} รายการของการขายก่อนหน้าที่ยังไม่ได้แบ่งยอด ตัวเลขในชีตสินค้าและหมวดหมู่จึงอาจต่างจากสรุป',
   cash: 'เงินสด', promptpay: 'พร้อมเพย์', card: 'บัตร',
 }
 const en = {
@@ -82,6 +84,8 @@ const en = {
   noPromotions: 'No bill used a promotion in this period',
   itemsTotal: 'All items', categoriesTotal: 'All categories', dailyTotal: 'Whole period', methodsTotal: 'All methods',
   promotionTotal: 'All promotions', promotionUsage: '{{used}} of {{all}} bills used a promotion',
+  filtersHeading: 'Filters applied', period: 'Period', previousPeriod: 'Previous period', change: 'Change', pieces: 'Pieces', categoriesSheet: 'Categories',
+  exportUnallocated: '{{count}} lines of earlier sales have no share yet, so the Products and Categories sheets may differ from the summary',
   cash: 'Cash', promptpay: 'PromptPay', card: 'Card',
 } satisfies typeof th
 export const reportsLocales = { th, en }

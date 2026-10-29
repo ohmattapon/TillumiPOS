@@ -12,3 +12,25 @@ export async function collectPages<T>(load: (offset: number, limit: number) => P
   }
   return items
 }
+
+/**
+ * Like collectPages, for routes that also send a figure over every row (totals). The figure must be the
+ * same on every page, otherwise the data moved while it was being read and the export is refused.
+ */
+export async function collectPagesWith<P extends { items: unknown[]; total: number }, X>(
+  load: (offset: number, limit: number) => Promise<P>,
+  pick: (page: P) => X,
+): Promise<{ items: P["items"]; extra: X }> {
+  let seen: string | undefined
+  let extra: X | undefined
+  const items = await collectPages<P["items"][number]>(async (offset, limit) => {
+    const page = await load(offset, limit)
+    const value = pick(page)
+    const text = JSON.stringify(value)
+    if (seen !== undefined && seen !== text) throw new Error('REPORT_CHANGED')
+    seen = text
+    extra = value
+    return page
+  })
+  return { items, extra: extra as X }
+}
