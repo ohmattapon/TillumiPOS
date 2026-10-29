@@ -19,6 +19,8 @@ test('percent change is in basis points, rounded half away from zero', () => {
   expect(percentChange(10005, 80000)).toBe(-8749)
   expect(percentChange(3, 2000)).toBe(-9985)
   expect(percentChange(10, 8)).toBe(2500)
+  expect(percentChange(33, 32)).toBe(313)
+  expect(percentChange(31, 32)).toBe(-313)
 })
 test('percent change is null when there is no previous figure', () => {
   expect(percentChange(0, 0)).toBeNull()

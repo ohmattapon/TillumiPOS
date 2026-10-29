@@ -51,6 +51,11 @@ test('without compare the previous period is not read', async () => {
   expect(reports.overview).toHaveBeenCalledTimes(1)
   expect(result).not.toHaveProperty('previous')
 })
+test('compare given as the string false does not read the previous period', async () => {
+  const result = await overview.execute({ ...range, compare: 'false' }, owner, 9)
+  expect(reports.overview).toHaveBeenCalledTimes(1)
+  expect(result).not.toHaveProperty('previous')
+})
 test('all-branch scope is explicit; pagination and closed branch names are preserved', async () => {
   await products.execute({ ...range, scope: 'all', limit: 7, offset: 14 }, owner, 9)
   expect(reports.products).toHaveBeenCalledWith({ ...range, scope: 'all', branchId: null, timeZone: 'Asia/Bangkok', limit: 7, offset: 14 })
