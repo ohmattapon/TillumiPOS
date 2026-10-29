@@ -108,3 +108,37 @@ test('sums bills, discount and net sales per promotion and leaves out voided bil
   expect(ok(await owner.api.sales.reports.promotions.get({ query: { ...range, limit: 1 } })))
     .toMatchObject({ total: 2, items: [{ promotionId: bundle.id }] })
 })
+test('filters every report by cashier and by member or guest, and lists the cashiers', async () => {
+  const cashier = await signIn('cashier')
+  const p = await seedProduct(owner, { stock: 20 })
+  const member = ok(await owner.api.members.post({ name: 'สมาชิกรายงาน', phone: '0812345678' }))
+  const bills = [
+    await sell(owner, p.id),
+    ok(await owner.api.sales.post({
+      memberId: member.id, items: [{ productId: p.id, quantity: 1 }], payments: [{ method: 'cash', amountSatang: 100000 }],
+    })),
+    await sell(cashier, p.id),
+  ]
+  for (const bill of bills) await dateSale(bill.id, '2026-01-02T03:00:00Z')
+  const count = async (query: Record<string, string | number>) =>
+    ok(await owner.api.sales.reports.get({ query: { ...range, ...query } })).summary.saleCount
+  expect(await count({})).toBe(3)
+  expect(await count({ cashierId: owner.user.id })).toBe(2)
+  expect(await count({ cashierId: cashier.user.id })).toBe(1)
+  expect(await count({ customer: 'member' })).toBe(1)
+  expect(await count({ customer: 'guest' })).toBe(2)
+  expect(await count({ cashierId: owner.user.id, customer: 'guest' })).toBe(1)
+  const sold = async (query: Record<string, string | number>) =>
+    ok(await owner.api.sales.reports.products.get({ query: { ...range, ...query } })).items[0]?.quantity
+  expect(await sold({ cashierId: cashier.user.id })).toBe(1)
+  expect(await sold({ customer: 'guest' })).toBe(2)
+  const listed = ok(await owner.api.sales.reports.cashiers.get({ query: range }))
+  expect(listed).toEqual({
+    items: [
+      { cashierId: owner.user.id, cashierName: owner.user.displayName, bills: 2 },
+      { cashierId: cashier.user.id, cashierName: cashier.user.displayName, bills: 1 },
+    ],
+    total: 2,
+  })
+  expect(Number((await cashier.api.sales.reports.cashiers.get({ query: range })).error?.status)).toBe(403)
+})
