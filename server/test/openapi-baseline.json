@@ -32520,11 +32520,71 @@
                           "type": "integer"
                         }
                       ]
+                    },
+                    "totals": {
+                      "properties": {
+                        "costSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "netSalesSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "profitSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "quantity": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "quantity",
+                        "netSalesSatang",
+                        "costSatang",
+                        "profitSatang"
+                      ],
+                      "type": "object"
                     }
                   },
                   "required": [
                     "items",
-                    "total"
+                    "total",
+                    "totals"
                   ],
                   "type": "object"
                 }
@@ -32805,11 +32865,84 @@
                           "type": "integer"
                         }
                       ]
+                    },
+                    "totals": {
+                      "properties": {
+                        "costSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "netSalesSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "pieces": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "profitSatang": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "quantity": {
+                          "anyOf": [
+                            {
+                              "default": 0,
+                              "format": "integer",
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "quantity",
+                        "pieces",
+                        "netSalesSatang",
+                        "costSatang",
+                        "profitSatang"
+                      ],
+                      "type": "object"
                     }
                   },
                   "required": [
                     "items",
-                    "total"
+                    "total",
+                    "totals"
                   ],
                   "type": "object"
                 }

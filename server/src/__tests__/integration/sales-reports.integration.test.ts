@@ -236,6 +236,46 @@ test('the item report filters by category, with none for products without one, a
   expect(Number((await cashier.api.sales.reports.items.get({ query: range })).error?.status)).toBe(403)
   expect(Number((await owner.api.sales.reports.items.get({ query: { ...range, sort: 'name' as 'profit' } })).error?.status)).toBe(422)
 })
+test('the item report totals equal the sum of every row, the overview, and follow the page, the category and the cashier', async () => {
+  const drinks = ok(await owner.api.catalog.categories.post({ name: 'เครื่องดื่ม' }))
+  const cashier = await signIn('cashier')
+  const { tea } = await sellPieceAndPack()
+  const other = await seedProduct(owner, { categoryId: drinks.id, priceSatang: 1000, costSatang: 100, stock: 5 })
+  const plain = await seedProduct(owner, { priceSatang: 700, costSatang: 200, stock: 5 })
+  await dateSale((await sell(owner, other.id)).id, '2026-01-02T04:00:00Z')
+  await dateSale((await sell(cashier, plain.id)).id, '2026-01-02T05:00:00Z')
+  const sumOf = (rows: { quantity: number; pieces: number; netSalesSatang: number; costSatang: number; profitSatang: number }[]) => ({
+    quantity: rows.reduce((n, row) => n + row.quantity, 0), pieces: rows.reduce((n, row) => n + row.pieces, 0),
+    netSalesSatang: rows.reduce((n, row) => n + row.netSalesSatang, 0), costSatang: rows.reduce((n, row) => n + row.costSatang, 0),
+    profitSatang: rows.reduce((n, row) => n + row.profitSatang, 0),
+  })
+  const whole = ok(await owner.api.sales.reports.items.get({ query: { ...range, limit: 500 } }))
+  expect(whole.total).toBe(4)
+  expect(whole.totals).toEqual(sumOf(whole.items))
+  const summary = ok(await owner.api.sales.reports.get({ query: range })).summary
+  expect(whole.totals).toMatchObject({ netSalesSatang: summary.netSalesSatang, costSatang: summary.costSatang, profitSatang: summary.profitSatang })
+  // A page of one row still carries the totals of all of them.
+  const paged = ok(await owner.api.sales.reports.items.get({ query: { ...range, limit: 1, offset: 2 } }))
+  expect(paged.items).toHaveLength(1)
+  expect(paged.totals).toEqual(whole.totals)
+  const byCashier = ok(await owner.api.sales.reports.items.get({ query: { ...range, cashierId: cashier.user.id, limit: 500 } }))
+  expect(byCashier.totals).toEqual(sumOf(byCashier.items))
+  expect(byCashier.totals.quantity).toBe(1)
+  expect(byCashier.totals).not.toEqual(whole.totals)
+  const inDrinks = ok(await owner.api.sales.reports.items.get({ query: { ...range, categoryId: String(drinks.id) } }))
+  expect(inDrinks.totals).toEqual(sumOf(inDrinks.items))
+  expect(inDrinks.items.map((row) => row.productId)).toEqual([other.id])
+  expect(tea.id).not.toBe(other.id)
+})
+test('the item report totals count a line with no share as zero net sales with its cost, and are zero for an empty period', async () => {
+  const tea = await seedProduct(owner, { priceSatang: 2500, costSatang: 900, stock: 10 })
+  await dateSale((await sell(owner, tea.id)).id, '2026-01-02T03:00:00Z')
+  await sql`update sale_items set allocated_total_satang = null, allocated_vat_satang = null`
+  const report = ok(await owner.api.sales.reports.items.get({ query: range }))
+  expect(report.totals).toEqual({ quantity: 1, pieces: 1, netSalesSatang: 0, costSatang: 900, profitSatang: -900 })
+  expect(ok(await owner.api.sales.reports.items.get({ query: { from: '2026-02-01', to: '2026-02-01' } })).totals)
+    .toEqual({ quantity: 0, pieces: 0, netSalesSatang: 0, costSatang: 0, profitSatang: 0 })
+})
 test('a bill backfilled after the line shares were added matches the overview, and its lines keep no category', async () => {
   const drinks = ok(await owner.api.catalog.categories.post({ name: 'เครื่องดื่ม' }))
   const tea = await seedProduct(owner, { categoryId: drinks.id, priceSatang: 3333, stock: 10 })

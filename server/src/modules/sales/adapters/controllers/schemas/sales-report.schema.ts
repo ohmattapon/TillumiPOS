@@ -30,6 +30,16 @@ const categoryRow = t.Object({
   quantity: t.Integer(), netSalesSatang: t.Integer(), vatSatang: t.Integer(),
   costSatang: t.Integer(), profitSatang: t.Integer(), shareBp: t.Integer(),
 })
+const itemPage = t.Object({
+  items: t.Array(item), total: t.Integer(),
+  totals: t.Object({
+    quantity: t.Integer(), pieces: t.Integer(), netSalesSatang: t.Integer(), costSatang: t.Integer(), profitSatang: t.Integer(),
+  }),
+})
+const categoryPage = t.Object({
+  items: t.Array(categoryRow), total: t.Integer(),
+  totals: t.Object({ quantity: t.Integer(), netSalesSatang: t.Integer(), costSatang: t.Integer(), profitSatang: t.Integer() }),
+})
 const branch = t.Intersect([metrics, t.Object({ branchId: t.Integer(), branchName: t.String() })])
 const promotionRow = t.Object({
   promotionId: t.Integer(), name: t.String(), bills: t.Integer(),
@@ -70,7 +80,7 @@ export const reportSchemas = {
     limit: t.Optional(t.Numeric({ minimum: 1, maximum: 500 })),
     offset: t.Optional(t.Numeric({ minimum: 0 })),
   }),
-  overview, product, item, category: categoryRow, branch, promotion: promotionRow, promotionPage, cashier,
+  overview, product, item, category: categoryRow, itemPage, categoryPage, branch, promotion: promotionRow, promotionPage, cashier,
 }
 export type SalesReportResponse = Static<typeof overview>
 export type ReportProductResponse = Static<typeof product>

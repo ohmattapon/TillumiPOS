@@ -4,7 +4,7 @@ import { currentExecutor } from '../../../../libs/transaction-context'
 import type { Page } from '../../../../domains/page'
 import type { SalesReportSums } from '../../../../domains/sales-report'
 import type {
-  ISalesReportRepository, SalesReportPeriod, ReportOverviewSums, ReportProduct, ReportPageQuery, ReportPromotion, ReportPromotionPage, ReportCashier, ReportItem, ReportItemQuery, ReportCategorySums,
+  ISalesReportRepository, SalesReportPeriod, ReportOverviewSums, ReportProduct, ReportPageQuery, ReportPromotion, ReportPromotionPage, ReportCashier, ReportItem, ReportItemQuery, ReportItemPage, ReportCategoryPage, ReportCategorySums,
 } from '../../applications/ports/sales-report.repository'
 
 // Aggregate sale costs first: joining lines or payments directly would multiply bill totals.
@@ -89,7 +89,7 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
     return { items: row!.items as ReportProduct[], total: Number(row!.total) }
   }
 
-  async items(query: ReportItemQuery): Promise<Page<ReportItem>> {
+  async items(query: ReportItemQuery): Promise<ReportItemPage> {
     // A line keeps the category it was sold with; a line without one stays without one.
     const category = sql`i.category_id`
     const categoryFilter = query.categoryId === undefined ? sql`true`
@@ -102,7 +102,7 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
       // A row with no net sales has no margin, so it goes last.
       margin: sql`("netSalesSatang" = 0), "profitSatang"::numeric / nullif("netSalesSatang", 0) desc, "productId", "packSize"`,
     }[query.sort]
-    const [row] = await currentExecutor().execute<{ items: ReportItem[]; total: number }>(sql`
+    const [row] = await currentExecutor().execute<{ items: ReportItem[]; total: number; totals: ReportItemPage['totals'] }>(sql`
       with ${facts(query)},
       grouped as (
         select i.product_id as "productId", i.pack_size as "packSize",
@@ -122,14 +122,17 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
       ranked as (select *, row_number() over (order by ${order}) as rn from profits),
       paged as (select * from ranked order by rn limit ${query.limit} offset ${query.offset})
       select coalesce((select jsonb_agg(to_jsonb(paged) - 'rn' order by rn) from paged), '[]'::jsonb) as items,
-        (select count(*)::integer from grouped) as total
+        (select count(*)::integer from grouped) as total,
+        (select jsonb_build_object('quantity', coalesce(sum(quantity), 0), 'pieces', coalesce(sum(pieces), 0),
+          'netSalesSatang', coalesce(sum("netSalesSatang"), 0), 'costSatang', coalesce(sum("costSatang"), 0),
+          'profitSatang', coalesce(sum("profitSatang"), 0)) from profits) as totals
     `)
-    return { items: row!.items as ReportItem[], total: Number(row!.total) }
+    return { items: row!.items as ReportItem[], total: Number(row!.total), totals: row!.totals }
   }
 
-  async categories(query: ReportPageQuery): Promise<Page<ReportCategorySums>> {
+  async categories(query: ReportPageQuery): Promise<ReportCategoryPage> {
     // A line keeps the category it was sold with, even if the category was deleted since; no fallback to the product.
-    const [row] = await currentExecutor().execute<{ items: ReportCategorySums[]; total: number }>(sql`
+    const [row] = await currentExecutor().execute<{ items: ReportCategorySums[]; total: number; totals: ReportCategoryPage['totals'] }>(sql`
       with ${facts(query)},
       grouped as (
         select i.category_id as "categoryId",
@@ -145,9 +148,11 @@ export class DrizzleSalesReportRepository implements ISalesReportRepository {
       ranked as (select *, row_number() over (order by "netSalesSatang" desc, "categoryId" nulls last) as rn from grouped),
       paged as (select * from ranked order by rn limit ${query.limit} offset ${query.offset})
       select coalesce((select jsonb_agg(to_jsonb(paged) - 'rn' order by rn) from paged), '[]'::jsonb) as items,
-        (select count(*)::integer from grouped) as total
+        (select count(*)::integer from grouped) as total,
+        (select jsonb_build_object('quantity', coalesce(sum(quantity), 0), 'netSalesSatang', coalesce(sum("netSalesSatang"), 0),
+          'costSatang', coalesce(sum("costSatang"), 0)) from grouped) as totals
     `)
-    return { items: row!.items as ReportCategorySums[], total: Number(row!.total) }
+    return { items: row!.items as ReportCategorySums[], total: Number(row!.total), totals: row!.totals }
   }
 
   async branches(query: ReportPageQuery): Promise<Page<SalesReportSums & { branchId: number }>> {
