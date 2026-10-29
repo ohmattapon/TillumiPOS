@@ -11,13 +11,17 @@ import { SegmentedTabs } from '@/components/SegmentedTabs'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { reportQuery, productsReportQuery, promotionsReportQuery, readReport, readProducts, readPromotions } from '../api'
-import { validRange, type ReportFilters as Filters } from '../lib/date-range'
+import { validRange } from '../lib/date-range'
+import { readReportSearch, writeReportSearch, type ReportSearch, type ReportTab } from '../lib/report-search-params'
 import { collectPages } from '../lib/collect-pages'
 import { ReportFilters } from './ReportFilters'
 import { ReportDataTable } from './ReportDataTable'
 import { PaginationBar } from '@/components/PaginationBar'
 import { todayIn } from '@/lib/calendar-date'
 import { DailySalesChart } from './DailySalesChart'
+import { ChangeNote } from './ChangeNote'
+import { ItemsReport } from './ItemsReport'
+import { CategoriesReport } from './CategoriesReport'
 
 export function ReportsPage() {
   const { t } = useTranslation('reports')
@@ -27,23 +31,27 @@ export function ReportsPage() {
   const { money, currency, locale, date } = useFormat()
   const [params, setParams] = useSearchParams()
   const [exporting, setExporting] = useState(false)
-  const [tab, setTab] = useState<'sales' | 'promotions'>('sales')
   const today = todayIn(shop.timeZone)
-  const filters: Filters = {
-    from: params.get('from') ?? today.slice(0, 7) + '-01',
-    to: params.get('to') ?? today,
-  }
+  const search = readReportSearch(params, today)
+  const { tab } = search
+  // The filters are the URL minus the tab, the sort and the category, which only the tabs read.
+  const filters = { from: search.from, to: search.to, cashierId: search.cashierId, customer: search.customer, compare: search.compare }
+  const go = (next: ReportSearch) => setParams(writeReportSearch(next))
   const offset = (name: string) => {
     const value = Number(params.get(name) ?? 0)
     return Number.isSafeInteger(value) && value >= 0 && value <= 1000000 ? value : 0
   }
   const productOffset = offset('products')
   const promotionOffset = offset('promotions')
+  const itemOffset = offset('items')
+  const categoryOffset = offset('categories')
   const enabled = Boolean(settings.data) && validRange(filters.from, filters.to)
   const report = useQuery({ ...reportQuery(filters), enabled })
   const products = useQuery({ ...productsReportQuery(filters, productOffset), enabled })
   const promotions = useQuery({ ...promotionsReportQuery(filters, promotionOffset), enabled: enabled && tab === 'promotions' })
   const summary = report.data?.summary
+  const previous = report.data?.previous
+  const average = (sums: { totalSatang: number; saleCount: number }) => sums.saleCount ? Math.round(sums.totalSatang / sums.saleCount) : 0
   const setPage = (name: string, value: number) => {
     const next = new URLSearchParams(params)
     next.set(name, String(value))
@@ -91,26 +99,35 @@ export function ReportsPage() {
         </Button>
       </PageHeader>
       <main className="flex-1 space-y-4 overflow-y-auto p-4">
-        <ReportFilters key={`${filters.from}-${filters.to}-${shop.timeZone}`}
+        <ReportFilters key={`${filters.from}-${filters.to}-${filters.cashierId}-${filters.customer}-${filters.compare}-${shop.timeZone}`}
           filters={filters} today={today}
-          onApply={(next) => setParams({ ...next })} />
+          onApply={(next) => go({ ...search, ...next })} />
         <p className="text-xs text-muted-foreground">{t('zone', { zone: report.data?.timeZone ?? shop.timeZone })}, {currency}</p>
         {failure(settings.error, () => void settings.refetch())}
         {!validRange(filters.from, filters.to) ? <p role="alert" className="text-sm text-destructive">{t('invalidRange')}</p> : <>
           {failure(report.error, () => void report.refetch())}
-          <SegmentedTabs value={tab} onChange={setTab} className="w-fit"
-            options={[{ value: 'sales', label: t('tabSales') }, { value: 'promotions', label: t('tabPromotions') }]} />
-          {tab === 'sales' ? <>
+          <SegmentedTabs<ReportTab> value={tab} onChange={(next) => go({ ...search, tab: next })} className="max-w-full overflow-x-auto"
+            options={[
+              { value: 'overview', label: t('tabOverview') }, { value: 'items', label: t('tabItems') },
+              { value: 'categories', label: t('tabCategories') }, { value: 'promotions', label: t('tabPromotions') },
+            ]} />
+          {tab === 'items' ? <ItemsReport filters={filters} categoryId={search.categoryId} sort={search.sort} offset={itemOffset} enabled={enabled}
+            onCategory={(categoryId) => go({ ...search, categoryId })} onSort={(sort) => go({ ...search, sort })}
+            onPage={(value) => setPage('items', value)} />
+          : tab === 'categories' ? <CategoriesReport filters={filters} offset={categoryOffset} enabled={enabled}
+            onPage={(value) => setPage('categories', value)} />
+          : tab === 'overview' ? <>
           {summary ? <>
             <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={t('summarySheet')}>
               {[
-                { title: t('revenue'), value: money.format(summary.totalSatang), note: t('revenueNote') },
-                { title: t('bills'), value: summary.saleCount.toLocaleString(), note: t('voids', { count: summary.voidedCount }) },
-                { title: t('profit'), value: money.format(summary.profitSatang), note: t('profitNote') },
-                { title: t('average'), value: money.format(summary.saleCount ? Math.round(summary.totalSatang / summary.saleCount) : 0), note: t('revenueNote') },
+                { title: t('revenue'), current: summary.totalSatang, before: previous?.totalSatang, shown: money.format, note: t('revenueNote') },
+                { title: t('bills'), current: summary.saleCount, before: previous?.saleCount, shown: (n: number) => n.toLocaleString(), note: t('voids', { count: summary.voidedCount }) },
+                { title: t('profit'), current: summary.profitSatang, before: previous?.profitSatang, shown: money.format, note: t('profitNote') },
+                { title: t('average'), current: average(summary), before: previous && average(previous), shown: money.format, note: t('revenueNote') },
               ].map((stat) => <div key={stat.title} className="rounded-[10px] border bg-card p-4">
                 <p className="text-xs text-muted-foreground">{stat.title}</p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">{stat.value}</p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums">{stat.shown(stat.current)}</p>
+                <ChangeNote current={stat.current} previous={stat.before} previousText={stat.before === undefined ? '' : stat.shown(stat.before)} />
                 <p className="mt-2 text-xs text-muted-foreground">{stat.note}</p>
               </div>)}
             </section>

@@ -832,7 +832,7 @@ async function main() {
         const screen = await signIn(browser, 'admin', OWNER_PASSWORD, size)
         try {
           const wide: string[] = []
-          for (const path of ['/', '/sell', '/today', '/shifts', '/products', '/categories', '/modifiers', '/tables', '/users', '/promotions', '/settings', '/audit', '/stock-receipts', '/stock-receipts/new']) {
+          for (const path of ['/', '/sell', '/today', '/shifts', '/products', '/categories', '/modifiers', '/tables', '/users', '/promotions', '/reports?tab=items', '/reports?tab=categories', '/settings', '/audit', '/stock-receipts', '/stock-receipts/new']) {
             await screen.goto(`${WEB}${path}`)
             await screen.waitForLoadState('networkidle')
             const overflow = await screen.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
