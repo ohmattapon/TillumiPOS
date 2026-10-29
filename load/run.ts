@@ -5,31 +5,18 @@
 // It refuses any database whose name does not start with pos_load, and any host but this machine. Every value
 // (the admin URL, the generated passwords) comes from the environment or is made here at run time; none is written
 // to a file. The real bank is never called: the API is pointed at the fake in server/test/kbank-server.ts.
-import { SQL } from 'bun'
 import { randomBytes } from 'node:crypto'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { dropDatabase, inheritedEnv, migrateAndSeedBase, recreateDatabase, targetUrl } from './lib/database'
 import { createProcessGroup } from './lib/processes'
 import { redactUrls } from './lib/redact'
 import { assertLoadDatabase, assertLocalBaseUrl } from './lib/safety'
 
 const PROFILES = ['smoke', 'load', 'stress', 'spike', 'soak'] as const
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '')
-
-// What a child process may inherit: only what Windows and Bun need to start. Bun auto-loads the repo's .env into
-// this process, so passing everything on would hand unrelated secrets and alternate database settings to the API.
-const INHERITED_ENV = ['PATH', 'Path', 'PATHEXT', 'SystemRoot', 'SYSTEMROOT', 'SystemDrive', 'ComSpec', 'WINDIR', 'TEMP', 'TMP', 'TMPDIR', 'HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'LANG', 'TZ']
-
-function inheritedEnv(): Record<string, string> {
-  const kept: Record<string, string> = {}
-  for (const key of INHERITED_ENV) {
-    const value = process.env[key]
-    if (value !== undefined) kept[key] = value
-  }
-  return kept
-}
 
 interface Options {
   profile: (typeof PROFILES)[number]
@@ -49,16 +36,6 @@ function parseArgs(argv: string[]): Options {
     else throw new Error(usage)
   }
   return { profile: profile as Options['profile'], scenario, keepDb }
-}
-
-/** The target database URL: the admin URL's server and login, with the load database's name. */
-function targetUrl(adminUrl: string, name: string): string {
-  const url = new URL(adminUrl)
-  url.pathname = `/${name}`
-  // Only the server and login are taken over: a query string could carry host or dbname overrides.
-  url.search = ''
-  url.hash = ''
-  return url.toString()
 }
 
 async function freePort(): Promise<number> {
@@ -136,10 +113,7 @@ async function main() {
     for (const key of KBANK_ENV_KEYS) delete apiEnv[key]
     fakeKbank.enableIn(apiEnv)
 
-    for (const script of ['migrate.ts', 'seed.ts']) {
-      const child = group.spawn(['bun', `src/infrastructure/database/${script}`], { cwd: join(root, 'server'), env: apiEnv, stdout: 'pipe', stderr: 'pipe' })
-      if ((await child.exited) !== 0) throw new Error(`${script} failed: ${redactUrls(await new Response(child.stderr as ReadableStream).text())}`)
-    }
+    await migrateAndSeedBase(apiEnv, group.spawn)
 
     const api = group.spawn(['bun', 'src/index.ts'], { cwd: join(root, 'server'), env: apiEnv, stdout: 'ignore', stderr: 'pipe' })
     // The API's own error output can name the connection string, so it is shown redacted.
@@ -153,26 +127,6 @@ async function main() {
   } finally {
     await cleanup()
   }
-}
-
-async function withAdmin<T>(adminUrl: string, work: (admin: SQL) => Promise<T>): Promise<T> {
-  const admin = new SQL(adminUrl)
-  try {
-    return await work(admin)
-  } finally {
-    await admin.close()
-  }
-}
-
-async function dropDatabase(adminUrl: string, name: string) {
-  await withAdmin(adminUrl, (admin) => admin.unsafe(`drop database if exists "${name}" with (force)`))
-}
-
-async function recreateDatabase(adminUrl: string, name: string) {
-  await withAdmin(adminUrl, async (admin) => {
-    await admin.unsafe(`drop database if exists "${name}" with (force)`)
-    await admin.unsafe(`create database "${name}"`)
-  })
 }
 
 try {
