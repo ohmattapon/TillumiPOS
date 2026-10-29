@@ -1,9 +1,11 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { makeQrPayment } from '../../../../__tests__/factories'
-import { mockQrPaymentRepository } from '../../../../__tests__/mocks'
+import { mockClock, mockQrPaymentRepository } from '../../../../__tests__/mocks'
 import type { IUnitOfWork } from '../../../shared/ports/unit-of-work.port'
 import type { QrPaymentRefresher } from '../services/qr-payment-refresher'
-import { ConfirmKbankCallbackUseCase } from './confirm-kbank-callback.usecase'
+import { CALLBACK_MIN_CHECK_INTERVAL_MS, ConfirmKbankCallbackUseCase } from './confirm-kbank-callback.usecase'
+
+const now = new Date('2026-10-29T03:00:00Z')
 
 const setup = () => {
   const payments = mockQrPaymentRepository()
@@ -13,6 +15,7 @@ const setup = () => {
     payments,
     refresher as unknown as QrPaymentRefresher,
     unitOfWork,
+    mockClock(now),
   )
   return { payments, refresher, usecase }
 }
@@ -39,6 +42,15 @@ describe('ConfirmKbankCallbackUseCase', () => {
     expect(refresher.refresh).toHaveBeenCalledWith(payment, { force: true })
   })
 
+  test('a callback right after a check is acknowledged without asking the bank again', async () => {
+    const { payments, refresher, usecase } = setup()
+    const checked = makeQrPayment({ reference: 'QRID1', lastCheckedAt: new Date(now.getTime() - CALLBACK_MIN_CHECK_INTERVAL_MS + 1) })
+    payments.findByReferenceForUpdate.mockResolvedValue(checked)
+
+    expect(await usecase.execute({ partnerTxnUid: 'QRID1' })).toEqual({ partnerTxnUid: 'QRID1' })
+    expect(refresher.refresh).not.toHaveBeenCalled()
+  })
+
   test('body without a reference is acknowledged with an empty echo', async () => {
     const { refresher, usecase } = setup()
 
@@ -46,5 +58,14 @@ describe('ConfirmKbankCallbackUseCase', () => {
 
     expect(answer).toEqual({ partnerTxnUid: '' })
     expect(refresher.refresh).not.toHaveBeenCalled()
+  })
+})
+
+describe('ConfirmKbankCallbackUseCase input bound', () => {
+  test('a reference longer than any we issue is rejected before touching the database', async () => {
+    const { payments, usecase } = setup()
+
+    await expect(usecase.execute({ partnerTxnUid: 'A'.repeat(65) })).rejects.toThrow()
+    expect(payments.findByReferenceForUpdate).not.toHaveBeenCalled()
   })
 })

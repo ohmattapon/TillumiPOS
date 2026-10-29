@@ -22,6 +22,26 @@ export interface KbankConfig {
 const isSet = (value: string | undefined): value is string =>
   value !== undefined && value.trim() !== '' && !value.trim().startsWith('your-')
 
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]'])
+
+/**
+ * The bearer token and partner secrets travel to this host and its answers are what marks a QR paid,
+ * so it must be https; plain http is for the fake bank on this machine only. Throws rather than
+ * returning null: null means "not configured", which would lift the rule that PromptPay needs a QR.
+ */
+function checkedBaseUrl(raw: string): string {
+  const url = raw.trim().replace(/\/+$/, '')
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    throw new Error('KBANK_API_BASE_URL ไม่ใช่ URL ที่ถูกต้อง')
+  }
+  if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && LOCAL_HOSTS.has(parsed.hostname)))
+    throw new Error('KBANK_API_BASE_URL ต้องเป็น https:// (http:// ใช้ได้เฉพาะ localhost)')
+  return url
+}
+
 /**
  * The KBank settings from the environment, or null when QR payment is not configured.
  * Read on every call rather than once at start-up so that tests (and a restart-free edit of the
@@ -39,7 +59,7 @@ export function readKbankConfig(): KbankConfig | null {
   const certPath = Bun.env.KBANK_CERT_PATH
   const keyPath = Bun.env.KBANK_KEY_PATH
   return {
-    baseUrl: (isSet(Bun.env.KBANK_API_BASE_URL) ? Bun.env.KBANK_API_BASE_URL : KBANK_SANDBOX_URL).replace(/\/+$/, ''),
+    baseUrl: checkedBaseUrl(isSet(Bun.env.KBANK_API_BASE_URL) ? Bun.env.KBANK_API_BASE_URL : KBANK_SANDBOX_URL),
     consumerId: consumerId.trim(),
     consumerSecret: consumerSecret.trim(),
     merchantId: merchantId.trim(),

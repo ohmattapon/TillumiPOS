@@ -15,7 +15,8 @@ export const createQrPaymentSchema = z.object({
  */
 export const kbankConfirmationSchema = z
   .object({
-    partnerTxnUid: z.string().optional(),
+    // The route is public: bound what an anonymous caller can make us echo and bind into a query.
+    partnerTxnUid: z.string().max(64).optional(),
   })
   .passthrough()
 
