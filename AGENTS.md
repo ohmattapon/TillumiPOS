@@ -484,6 +484,7 @@ The repo is one package (`package.json` at the root holds the API and the web), 
 - `drizzle/` and `drizzle.config.ts`: migrations and their config. `e2e/`: browser tests and screenshots.
 - `workers/media`: a Cloudflare Worker that stores product images in R2
 - `workers/cloud`: a Cloudflare Worker that runs the Docker image (API and web) in one Cloudflare Container, see `docs/cloudflare.md`
+- `load/`: the k6 load tests, their runner, seed and post-run checks, see `docs/load-test.md`
 - `Dockerfile`, `docker-compose.yml`, `docker-compose.dev.yml`, `Caddyfile`, `docker/entrypoint.sh`, `scripts/`: the install kit for shops (the guide for installers is `docs/install.md`), per the section "Installation and first-run setup"
 - `LICENSE` and `NOTICE`: Apache-2.0
 - `DESIGN.md`: the design system of the web pages (colors, typography, components and interaction rules). Read it before changing or adding a screen.
@@ -511,6 +512,8 @@ Run from the root of the repo:
 | `bun run lint` | Lint the web |
 | `bun run e2e` | Test the real web app in headless Chrome (shift work, two sessions), using the `pos_e2e` database and its own server, without touching the dev database |
 | `bun run screenshots` | Take images of every page at 390, 390×500, 768 and 1366px into `screenshots/` (git-ignored), using the `pos_e2e_shots` database, without touching the dev database |
+| `bun run load:smoke` (also `load:shop-day`, `load:stress`, `load:spike`, `load:soak`; `bun run load <profile> [--scenario <name>]`) | Run a k6 load test on its own `pos_load` database, API and fake bank, check the data afterwards and write `load/results/*.json`. Needs k6 and `LOAD_DB_ADMIN_URL`, see `docs/load-test.md` |
+| `bun run test:load` | Run the unit tests of `load/` (not part of `bun run test`; the ones that need a database skip without `LOAD_DB_ADMIN_URL`) |
 
 ## Other rules
 
@@ -520,6 +523,7 @@ Run from the root of the repo:
 - A sales bill must never be edited or deleted. Mistakes are fixed by voiding the bill.
 - The receipt header (shop name, tax id, branch name, address, phone number) is stored on the bill at sale time in `SaleCheckout`. New bills take the address and phone from shop settings and store no branch name. A receipt must be shown from the values on the bill, and current data is used only for old bills whose values are null (see `receiptHeading` in `src/features/sales/lib`).
 - Stock changes only through the `IStockLedger` port of the `inventory` module, and every change must have a movement record with the branch
+- Load tests run only against throwaway `pos_load*` databases on this machine (the runner refuses any other name or host), never against the development database or a shop database, and never call the real bank. No result file, log or committed file may hold a credential, including `LOAD_DB_ADMIN_URL`.
 - Before saying that work is done, `bun run typecheck` and `bun run test` must pass
 
 ## Reporting finished work
