@@ -52,6 +52,9 @@ function expectOnlyFailure(results: InvariantResult[], name: (typeof INVARIANT_N
   expect(failed.sample!.length).toBeLessThanOrEqual(5)
 }
 
+/** The running API stores its jsonb values as a JSON string holding the object, so the tests write them that way. */
+const apiJson = (value: unknown) => JSON.stringify(JSON.stringify(value))
+
 const ownerId = async (sql: SQL) => (await sql`select id from users where username = 'admin'`)[0].id as number
 
 /** A completed bill with at least one line of a tracked product. */
@@ -135,7 +138,7 @@ describe.skipIf(!adminUrl)('checkInvariants', () => {
       for (const sale of [a, b])
         await sql`
           insert into command_receipts (actor_id, branch_id, action, key, request_hash, result)
-          values (${a.cashier_id}, ${a.branch_id}, 'sales.checkout', ${key}, 'same', ${JSON.stringify({ id: sale.id })}::text::jsonb)`
+          values (${a.cashier_id}, ${a.branch_id}, 'sales.checkout', ${key}, 'same', ${apiJson({ id: sale.id })}::text::jsonb)`
     })
     expectOnlyFailure(results, 'one_bill_per_idempotency_key')
   })
@@ -191,7 +194,7 @@ describe.skipIf(!adminUrl)('checkInvariants', () => {
     const results = await checkAfter(async (sql) => {
       const shiftId = await closedShift(sql)
       const summary = { saleCount: 1, grossSalesSatang: 0, voidedCount: 0, voidedSatang: 0, changeSatang: 0, tendered: [] }
-      await sql`insert into shift_summaries (shift_id, summary, captured_at) values (${shiftId}, ${JSON.stringify(summary)}::text::jsonb, now())`
+      await sql`insert into shift_summaries (shift_id, summary, captured_at) values (${shiftId}, ${apiJson(summary)}::text::jsonb, now())`
     })
     expectOnlyFailure(results, 'closed_shift_has_matching_summary')
   })

@@ -13,6 +13,12 @@ export interface InvariantResult {
 
 const SAMPLE_SIZE = 5
 
+/**
+ * The API's jsonb columns arrive in two shapes: an object (the seed, older rows) and a JSON string holding the object
+ * (rows the running API writes, double-encoded on the way in). Both are read as the object.
+ */
+const asObject = (column: string) => `(case jsonb_typeof(${column}) when 'string' then (${column} #>> '{}')::jsonb else ${column} end)`
+
 /** Each query selects the violating rows; the runner counts them and keeps a sample. */
 const CHECKS = {
   // The unique constraint should make this impossible; the check proves it held under load.
@@ -46,7 +52,7 @@ const CHECKS = {
   // bill is never the result of two commands. A receipt naming a bill that does not exist is just as wrong.
   one_bill_per_idempotency_key: `
     with bills as (
-      select id, actor_id, action, key, (result->>'id')::int as sale_id from command_receipts
+      select id, actor_id, action, key, (${asObject('result')}->>'id')::int as sale_id from command_receipts
       where action in ('sales.checkout', 'orders.pay'))
     select 'one key, several receipts' as problem, actor_id, action, min(sale_id) as sale_id, count(*)::int as receipts
     from bills group by actor_id, action, key having count(*) > 1
@@ -102,20 +108,21 @@ const CHECKS = {
       select shift_id, jsonb_agg(jsonb_build_object('method', method, 'amountSatang', amount) order by method) as tendered
       from (select s.shift_id, p.method, sum(p.amount_satang) as amount from payments p join sales s on s.id = p.sale_id
             where s.shift_id is not null group by s.shift_id, p.method) per_method
-      group by shift_id)
+      group by shift_id),
+    summaries as (select shift_id, ${asObject('summary')} as summary from shift_summaries)
     select sh.id as shift_id, ss.shift_id is not null as has_summary,
            (ss.summary->>'saleCount')::bigint as summary_sales, coalesce(t.sales, 0)::bigint as sales,
            (ss.summary->>'grossSalesSatang')::bigint as summary_gross, coalesce(t.gross, 0)::bigint as gross
     from shifts sh
-    left join shift_summaries ss on ss.shift_id = sh.id
+    left join summaries ss on ss.shift_id = sh.id
     left join totals t on t.shift_id = sh.id
     left join tendered td on td.shift_id = sh.id
     where sh.status = 'closed'
       and (ss.shift_id is null
-        or (ss.summary->>'saleCount')::bigint <> coalesce(t.sales, 0)
-        or (ss.summary->>'grossSalesSatang')::bigint <> coalesce(t.gross, 0)
-        or (ss.summary->>'changeSatang')::bigint <> coalesce(t.change, 0)
-        or coalesce(ss.summary->'tendered', '[]'::jsonb) <> coalesce(td.tendered, '[]'::jsonb))`,
+        or (ss.summary->>'saleCount')::bigint is distinct from coalesce(t.sales, 0)
+        or (ss.summary->>'grossSalesSatang')::bigint is distinct from coalesce(t.gross, 0)
+        or (ss.summary->>'changeSatang')::bigint is distinct from coalesce(t.change, 0)
+        or coalesce(ss.summary->'tendered', '[]'::jsonb) is distinct from coalesce(td.tendered, '[]'::jsonb))`,
 
   // Every line carries its share of the bill's total and VAT, and the shares add up to the bill exactly.
   line_shares_add_up_to_bill: `
