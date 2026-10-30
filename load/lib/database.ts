@@ -53,7 +53,16 @@ export async function recreateDatabase(adminUrl: string, name: string) {
   })
 }
 
-type Spawn = (command: string[], options: { cwd: string; env: Record<string, string | undefined>; stdout: 'pipe'; stderr: 'pipe' }) => {
+/** Recreates `name` as a copy of `template` (which must have no open connection); both names pass the guard. */
+export async function cloneDatabase(adminUrl: string, template: string, name: string) {
+  assertLoadDatabase(targetUrl(adminUrl, template))
+  await withAdmin(adminUrl, name, async (admin) => {
+    await admin.unsafe(`drop database if exists "${name}" with (force)`)
+    await admin.unsafe(`create database "${name}" template "${template}"`)
+  })
+}
+
+type Spawn =(command: string[], options: { cwd: string; env: Record<string, string | undefined>; stdout: 'pipe'; stderr: 'pipe' }) => {
   exited: Promise<number>
   stderr: unknown
 }
