@@ -1,0 +1,98 @@
+name: Load test
+
+# Run by hand only (Actions, then Run workflow): a load run is slow and a hosted runner is too noisy to judge a pull request.
+# Latency never fails the job (baseline is on by default). A failed invariant, a failed k6 check or an error rate over its
+# limit always does. The numbers show a trend; see docs/load-test.md.
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: smoke runs the smoke check only; load runs it and then the shop-day profile
+        type: choice
+        options:
+          - load
+          - smoke
+        default: load
+      scale:
+        description: LOAD_SCALE, the share of the shop-day arrival rates (above 0, at most 100)
+        type: string
+        default: '0.2'
+      baseline:
+        description: LOAD_BASELINE, latency thresholds do not fail the run
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        # The throwaway database of this job; the same credentials as the service in ci.yml.
+        env:
+          POSTGRES_USER: pos
+          POSTGRES_PASSWORD: pos
+          POSTGRES_DB: pos
+        # The runner takes the port from LOAD_DB_ADMIN_URL below; the two must match.
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U pos -d pos"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      LOAD_DB_ADMIN_URL: postgres://pos:pos@127.0.0.1:5434/postgres
+      # Passed through the environment, never into the script text, so an input cannot become a command.
+      LOAD_SCALE: ${{ inputs.scale }}
+      LOAD_BASELINE: ${{ inputs.baseline && '1' || '0' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+
+      - run: bun install --frozen-lockfile
+
+      # v1.2.2. 2.3.0 is the first k6 that runs the TypeScript scripts in load/k6 directly.
+      - uses: grafana/setup-k6-action@43b9fc21641a76002687994433dd586f56e791b1
+        with:
+          k6-version: 2.3.0
+
+      # The smoke run uses the default scale: it is one virtual user, so LOAD_SCALE does not apply to it.
+      - name: Smoke
+        run: bun run load:smoke
+        env:
+          LOAD_SCALE: '1'
+
+      # The unknown-outcome path of the bank and the races (two voids of one bill, one idempotency key sent twice, a shift
+      # closed with a QR pending) run in CI too, one virtual user each.
+      - name: Smoke QR
+        run: bun run load smoke --scenario qr
+        env:
+          LOAD_SCALE: '1'
+
+      - name: Smoke contention
+        run: bun run load smoke --scenario contention
+        env:
+          LOAD_SCALE: '1'
+
+      - name: Shop day
+        if: inputs.profile == 'load'
+        run: bun run load:shop-day
+
+      - name: Upload the result files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-results
+          path: load/results/
+          if-no-files-found: ignore

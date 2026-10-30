@@ -31,3 +31,4 @@ update-signing-key*.pem
 
 # Visual brainstorming mockups
 .superpowers/
+load/results/
