@@ -5,13 +5,14 @@
 // It refuses any database whose name does not start with pos_load, and any host but this machine. Every value
 // (the admin URL, the generated passwords) comes from the environment or is made here at run time; none is written
 // to a file. The real bank is never called: the API is pointed at the fake in server/test/kbank-server.ts.
-import { SQL } from 'bun'
+import { SQL, type Server } from 'bun'
 import { randomBytes, randomInt } from 'node:crypto'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dropDatabase, inheritedEnv, migrateAndSeedBase, recreateDatabase, targetUrl } from './lib/database'
+import { startFakeBankControl, startFakeBankFront } from './lib/fake-bank-control'
 import { buildK6Args, findK6 } from './lib/k6'
 import { createProcessGroup } from './lib/processes'
 import { redactUrls } from './lib/redact'
@@ -86,12 +87,15 @@ async function main() {
   assertLoadDatabase(databaseUrl)
 
   const group = createProcessGroup()
+  // The fake bank's own servers live in this process, so they are stopped here rather than by the process group.
+  const bankServers: Server<unknown>[] = []
   const mediaDir = await mkdtemp(join(tmpdir(), 'pos-load-media-'))
   // One cleanup however many times it is asked for, so a second Ctrl+C waits for the first instead of exiting early.
   let cleaning: Promise<void> | null = null
   const cleanup = () =>
     (cleaning ??= (async () => {
       await group.stopAll()
+      for (const server of bankServers.splice(0)) await server.stop(true).catch(() => {})
       await rm(mediaDir, { recursive: true, force: true }).catch(() => {})
       if (!options.keepDb) await dropDatabase(adminUrl, dbName).catch(() => {})
     })())
@@ -127,6 +131,13 @@ async function main() {
     const { fakeKbank, KBANK_ENV_KEYS } = await import('../server/test/kbank-server')
     for (const key of KBANK_ENV_KEYS) delete apiEnv[key]
     fakeKbank.enableIn(apiEnv)
+    // The API reaches the fake through a front that can hold back one bank call, and k6 plays the customer through
+    // a control on 127.0.0.1 (see load/lib/fake-bank-control.ts).
+    const bankFront = startFakeBankFront(fakeKbank)
+    bankServers.push(bankFront.server)
+    apiEnv.KBANK_API_BASE_URL = bankFront.url
+    const bankControl = startFakeBankControl(fakeKbank, await freePort(), bankFront)
+    bankServers.push(bankControl)
 
     await migrateAndSeedBase(apiEnv, group.spawn)
     // Made here and handed to the scenarios later; never printed or written down.
@@ -158,6 +169,9 @@ async function main() {
     const k6Env = {
       ...inheritedEnv(),
       SEED_JSON: JSON.stringify(seeded),
+      FAKE_BANK_CONTROL_URL: `http://127.0.0.1:${bankControl.port}`,
+      // Every seeded user shares this PIN (the auth scenario uses it); it is never printed.
+      USER_PIN: cashierPin,
       USERS_JSON: JSON.stringify(seeded.cashierUsernames.map((username) => ({ username, password: cashierPassword }))),
     }
     // k6 prints its own end-of-test summary on this terminal; it holds request names and numbers, no credentials.
