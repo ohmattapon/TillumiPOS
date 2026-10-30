@@ -1,13 +1,5 @@
-import { contextBridge, ipcRenderer } from 'electron'
-import { channels } from './channels'
-import type { TillumiDesktop } from './channels'
-
-// The whole surface the shop page gets. The main process checks who is calling on every call
-// in the ipcMain handlers in main.ts (eventIsTrusted), because a check made here could be
-// skipped by the page.
-const api: TillumiDesktop = {
-  printReceipt: (html) => ipcRenderer.invoke(channels.printReceipt, html) as ReturnType<TillumiDesktop['printReceipt']>,
-  listPrinters: () => ipcRenderer.invoke(channels.listPrinters) as ReturnType<TillumiDesktop['listPrinters']>,
-}
-
-contextBridge.exposeInMainWorld('tillumiDesktop', api)
+// The shop page gets nothing from the desktop app for now: this preload exposes no API.
+// It stays (rather than being dropped from the window options) so the sandboxed preload wiring in
+// main.ts and window.ts, and the bundling step that produces preload.js, stay valid for the day a
+// bridge is needed again. Do not add an API here without an origin check in the main process.
+export {}

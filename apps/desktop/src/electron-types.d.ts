@@ -29,22 +29,6 @@ declare module 'electron' {
     readonly isDefault: boolean
   }
 
-  interface WebContentsPrintOptions {
-    silent?: boolean
-    deviceName?: string
-    printBackground?: boolean
-  }
-
-  interface WebFrameMain {
-    readonly url: string
-    readonly parent: WebFrameMain | null
-  }
-
-  interface IpcMainInvokeEvent {
-    // null when the frame was destroyed before the message arrived
-    readonly senderFrame: WebFrameMain | null
-  }
-
   /** What `setWindowOpenHandler` answers: drop the request, or open a window with these options. */
   type WindowOpenHandlerResponse =
     | { action: 'deny' }
@@ -53,7 +37,6 @@ declare module 'electron' {
   interface WebContents {
     loadURL(url: string): Promise<void>
     getPrintersAsync(): Promise<PrinterInfo[]>
-    print(options: WebContentsPrintOptions, callback: (success: boolean, failureReason: string) => void): void
     setWindowOpenHandler(handler: (details: { url: string }) => WindowOpenHandlerResponse): void
     on(event: 'will-navigate' | 'will-redirect', listener: (details: NavigationEvent) => void): this
     // fired for a window opened because the handler answered 'allow'
@@ -141,17 +124,5 @@ declare module 'electron' {
 
   const dialog: {
     showErrorBox(title: string, content: string): void
-  }
-
-  const ipcMain: {
-    handle(channel: string, listener: (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown): void
-  }
-
-  const ipcRenderer: {
-    invoke(channel: string, ...args: unknown[]): Promise<unknown>
-  }
-
-  const contextBridge: {
-    exposeInMainWorld(apiKey: string, api: object): void
   }
 }
