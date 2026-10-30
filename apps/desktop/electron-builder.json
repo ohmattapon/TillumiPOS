@@ -1,0 +1,14 @@
+{
+  "appId": "com.tillumi.pos",
+  "productName": "TillumiPOS",
+  "artifactName": "TillumiPOS-${version}-${arch}.${ext}",
+  "directories": {
+    "output": "release"
+  },
+  "asar": true,
+  "files": ["dist/**/*", "package.json"],
+  "beforeBuild": "./before-build.cjs",
+  "win": {
+    "target": [{ "target": "dir", "arch": ["x64"] }]
+  }
+}

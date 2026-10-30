@@ -1,9 +1,13 @@
 {
   "name": "@pos/desktop",
   "private": true,
+  "version": "0.1.0",
+  "description": "TillumiPOS desktop shell: opens the shop web app full screen",
+  "author": "TillumiPOS",
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
+    "build": "bun build.ts",
     "dev": "electron . --enable-logging",
     "start": "electron .",
     "test": "bun test",

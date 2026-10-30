@@ -41,6 +41,8 @@
     "coverage:api": "cd server && bun --env-file=.env.test test --coverage",
     "coverage:web": "bun test ./src --coverage",
     "openapi:check": "cd server && bun --env-file=.env.test test/openapi-snapshot.ts check",
+    "desktop:build": "bun run --filter @pos/desktop build",
+    "desktop:start": "bun run --filter @pos/desktop start",
     "hooks:install": "lefthook install"
   },
   "dependencies": {

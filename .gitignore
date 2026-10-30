@@ -31,3 +31,6 @@ update-signing-key*.pem
 
 # Visual brainstorming mockups
 .superpowers/
+
+# Electron shell build output
+apps/desktop/release/
