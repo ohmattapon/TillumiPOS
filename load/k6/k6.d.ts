@@ -29,6 +29,10 @@ declare module 'k6/http' {
 }
 
 declare module 'k6/metrics' {
+  export class Counter {
+    constructor(name: string)
+    add(value: number, tags?: Record<string, string>): void
+  }
   export class Rate {
     constructor(name: string)
     add(value: boolean | number, tags?: Record<string, string>): void

@@ -5,7 +5,7 @@
 // table move runs only when the shop has tables.
 import { check, sleep } from 'k6'
 import type { Response } from 'k6/http'
-import { pickCart } from '../lib/cart.ts'
+import { pickCart, pickExtraProduct } from '../lib/cart.ts'
 import { api, type Session } from '../lib/client.ts'
 import { config } from '../lib/config.ts'
 import { idempotencyKeyFor } from '../lib/keys.ts'
@@ -49,7 +49,16 @@ function checkSale(response: Response, total: number, shiftId: number, label: st
   })
 }
 
+/** One pass; a step that fails ends this pass only. The pause after it always runs, so a broken step is not retried in a tight loop. */
 export function orders(slots: ShiftSlot[]) {
+  try {
+    runOrders(slots)
+  } finally {
+    sleep(1)
+  }
+}
+
+function runOrders(slots: ShiftSlot[]) {
   const slot = slotOfThisVu(slots)
   session ??= loginForSlot(slot)
   random ??= vuRandom('orders', __VU)
@@ -62,7 +71,7 @@ export function orders(slots: ShiftSlot[]) {
 
   const cart = pickCart(random, seed)
   const lines = cart.items.slice(0, 2)
-  const extraProduct = seed.productIds[Math.floor(random() * seed.productIds.length)]!
+  const extraProduct = pickExtraProduct(random, seed, cart)
   const label = `load-${__VU}-${__ITER}`
 
   const opened = client.post('/api/v1/orders/', { items: lines, label }, { expect: [200], name: 'orders.open' })
@@ -113,5 +122,4 @@ export function orders(slots: ShiftSlot[]) {
     { expect: [200], name: 'orders.pay', idempotencyKey: idempotencyKeyFor('orders', __VU, __ITER, 'pay') },
   )
   checkSale(paid, mergedOrder!.subtotalSatang, slot.shiftId, 'merged order')
-  sleep(1)
 }

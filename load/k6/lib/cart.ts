@@ -33,3 +33,14 @@ export function pickCart(rand: () => number, seed: Pick<SeededData, 'productIds'
   }
   return { items }
 }
+
+/**
+ * A product for an extra order line that is never one already in the cart: the same product would merge into that
+ * line and change its quantity, and splitting off a line that is the whole order is refused.
+ */
+export function pickExtraProduct(rand: () => number, seed: Pick<SeededData, 'productIds'>, cart: Cart): number {
+  const inCart = new Set(cart.items.map((item) => item.productId))
+  const candidates = seed.productIds.filter((id) => !inCart.has(id))
+  if (candidates.length === 0) throw new Error('The seed has no product left outside the cart')
+  return candidates[Math.floor(rand() * candidates.length)]!
+}

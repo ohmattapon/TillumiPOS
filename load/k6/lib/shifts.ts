@@ -2,10 +2,15 @@
 // register holds only one open shift. `setup` opens one shift per virtual user, each on its own register, and
 // `teardown` closes them all, so the test never leaves a shift open and a closed shift always has its summary.
 import { check, fail } from 'k6'
+import { Counter } from 'k6/metrics'
 import { api, type Session } from './client.ts'
 import { config } from './config.ts'
 import { login } from './auth.ts'
 import { idempotencyKeyFor } from './keys.ts'
+import { openAllOrRollBack } from './rollback.ts'
+
+/** Shifts that could not be closed in teardown; they stay open and block the next run on this database. */
+export const shiftCloseFailed = new Counter('shift_close_failed')
 
 /** Cash in the drawer when the shift opens. */
 export const OPENING_CASH_SATANG = 100_000
@@ -46,24 +51,33 @@ export function closeShiftFor(session: Session, shiftId: number): boolean {
 
 /**
  * k6 `setup`: one till for each of the first `count` virtual users. User i works register i, and virtual user i+1
- * signs in as that same user, so a shift is always used by the person who opened it.
+ * signs in as that same user, so a shift is always used by the person who opened it. If one cannot be opened, the
+ * ones already open are closed first, because teardown does not run after a failed setup.
  */
 export function openShifts(count: number): ShiftSlot[] {
   const { users, seed } = config()
   if (count > seed.registerIds.length) fail(`${count} virtual users need ${count} registers but the seed has ${seed.registerIds.length}; a register holds one open shift`)
-  return Array.from({ length: count }, (_, index) => {
-    const user = users[index % users.length]!
-    const registerId = seed.registerIds[index]!
-    return { username: user.username, registerId, ...openShiftFor(login(user), registerId) }
-  })
+  return openAllOrRollBack(
+    count,
+    (index) => {
+      const user = users[index % users.length]!
+      const registerId = seed.registerIds[index]!
+      return { username: user.username, registerId, ...openShiftFor(login(user), registerId) }
+    },
+    (slot) => closeShifts([slot]),
+  )
 }
 
-/** k6 `teardown`: closes every shift `openShifts` opened. */
+/** k6 `teardown`: closes every shift `openShifts` opened. One that fails is counted and the others are still closed. */
 export function closeShifts(slots: ShiftSlot[]): void {
-  const { users } = config()
   for (const slot of slots) {
-    const user = users.find((candidate) => candidate.username === slot.username)!
-    closeShiftFor(login(user), slot.shiftId)
+    let closed = false
+    try {
+      closed = closeShiftFor(loginForSlot(slot), slot.shiftId)
+    } catch {
+      // counted below; the remaining shifts still need closing
+    }
+    if (!closed) shiftCloseFailed.add(1)
   }
 }
 

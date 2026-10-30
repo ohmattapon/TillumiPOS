@@ -25,6 +25,9 @@ interface ScenarioDefinition {
 
 const COMMON_THRESHOLDS = { expected_failed: ['rate<0.01'] }
 
+/** A selling scenario must leave no shift open at the end. */
+const SHIFT_THRESHOLDS = { shift_close_failed: ['count==0'] }
+
 /** Every register holds one open shift, and the seed has 10 registers, so a selling scenario never runs more than 10 users. */
 export const TILLS = 10
 
@@ -64,5 +67,5 @@ export function profileOptions(profile: string, scenario: string): ProfileOption
     profile === 'load'
       ? { executor: 'ramping-vus', exec: scenario, startVUs: 0, stages: LOAD_STAGES, gracefulRampDown: '30s' }
       : { executor: 'constant-vus', exec: scenario, vus: users, duration: '1m' }
-  return { scenarios: { [scenario]: shape }, thresholds: { ...COMMON_THRESHOLDS, ...definition.thresholds } }
+  return { scenarios: { [scenario]: shape }, thresholds: { ...COMMON_THRESHOLDS, ...(definition.tills ? SHIFT_THRESHOLDS : {}), ...definition.thresholds } }
 }

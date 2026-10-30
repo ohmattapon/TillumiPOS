@@ -15,7 +15,8 @@ export { openShiftFor } from '../lib/shifts.ts'
 
 export const options = {
   thresholds: {
-    'http_req_duration{name:checkout.quote}': ['p(95)<800'],
+    // A quote is a POST that only reads and prices, so it gets the read limit.
+    'http_req_duration{name:checkout.quote}': ['p(95)<300'],
     'http_req_duration{name:checkout.sale}': ['p(95)<800'],
   },
 }
