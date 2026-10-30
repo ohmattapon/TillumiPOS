@@ -2,7 +2,7 @@
 // the same keys. The API wants a UUID (see isIdempotencyKey in the server's command-idempotency.ts).
 
 /** 32-bit FNV-1a of `text`, started from `salt` so four salts give four independent words. */
-function fnv1a(text: string, salt: number): number {
+export function fnv1a(text: string, salt: number): number {
   let hash = (0x811c9dc5 ^ Math.imul(salt, 0x9e3779b1)) >>> 0
   for (let index = 0; index < text.length; index++) hash = Math.imul(hash ^ text.charCodeAt(index), 0x01000193) >>> 0
   return hash
