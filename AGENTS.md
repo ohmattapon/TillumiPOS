@@ -477,7 +477,7 @@ The rules above have no exceptions. The code below predates them: it is a fix li
 
 ## Project structure
 
-The repo is one package (`package.json` at the root holds the API and the web), laid out like the team's other projects. Only the Workers keep a `package.json` of their own, because wrangler builds them.
+The repo is one package (`package.json` at the root holds the API and the web), laid out like the team's other projects. Only the Workers and `apps/desktop` keep a `package.json` of their own, because wrangler builds the Workers and electron-builder packages the desktop shell.
 
 - `server/`: the API. Bun + Elysia + Drizzle + tsyringe, per the architecture section above. `server/test/` holds the test harness, the fake SCB and the OpenAPI baselines. API tests run with `server/` as the working directory so `server/bunfig.toml` preloads `test/setup.ts`.
 - `src/`, `public/`, `index.html`, `vite.config.ts`: the web. React + Vite + Tailwind + shadcn/ui + TanStack Query + zustand, split by feature per the web architecture section, calling the API through an Eden client typed from `server/`. The web imports the server's shared code as `@pos/api/...`, a path alias listed in three places that must match: `vite.config.ts`, `tsconfig.json` (read by Bun) and `tsconfig.app.json` (read by `tsc -b`).
