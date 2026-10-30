@@ -27,6 +27,7 @@ import { fileURLToPath } from 'node:url'
 import { dropDatabase, inheritedEnv, migrateAndSeedBase, recreateDatabase, targetUrl } from './lib/database'
 import { startFakeBankControl, startFakeBankFront } from './lib/fake-bank-control'
 import { buildK6Args, findK6 } from './lib/k6'
+import { checkInvariants, formatInvariants, type InvariantResult } from './invariants'
 import { createProcessGroup } from './lib/processes'
 import { redactUrls } from './lib/redact'
 import { assertLoadDatabase, assertLocalBaseUrl } from './lib/safety'
@@ -111,6 +112,21 @@ function k6Failure(exit: number, profile: string): string {
   if (exit !== 99) return `k6 failed with exit code ${exit} (the script stopped; see its output above)`
   const finding = profile === 'stress' || profile === 'spike' ? `; for the ${profile} profile that is the finding, not a broken script` : ''
   return `k6 crossed a threshold (exit code 99): the summary above marks which${finding}`
+}
+
+/** Runs the post-run checks on their own connection and prints them; a check that cannot run counts as failed. */
+async function runInvariants(databaseUrl: string): Promise<InvariantResult[]> {
+  const sql = new SQL(databaseUrl)
+  let results: InvariantResult[]
+  try {
+    results = await checkInvariants(sql)
+  } catch (error) {
+    results = [{ name: 'invariants_ran', passed: false, violations: 1, sample: [redactUrls(error instanceof Error ? error.message : String(error))] }]
+  } finally {
+    await sql.close()
+  }
+  console.log(formatInvariants(results))
+  return results
 }
 
 async function main() {
@@ -233,8 +249,17 @@ async function main() {
     const failedRate = summary?.metrics?.expected_failed?.value
     console.log(`k6 finished with exit code ${k6Exit}; expected_failed rate ${failedRate ?? 'unknown'}`)
     printSummary(summary, options.profile, knobs.baseline)
-    // The invariant checks and the result file arrive in later tasks.
-    if (k6Exit !== 0) throw new Error(k6Failure(k6Exit, options.profile))
+    // Checked whatever k6 said, and before the database is dropped: a run with good latency and broken data fails.
+    const invariants = await runInvariants(databaseUrl)
+    const failedInvariants = invariants.filter((result) => !result.passed)
+    if (failedInvariants.length > 0)
+      console.log(`Invariants failed in database ${dbName}${options.keepDb ? ' (kept)' : '; it is dropped now, rerun with --keep-db to look at it'}`)
+    // The result file arrives in a later task.
+    const failures = [
+      ...(k6Exit !== 0 ? [k6Failure(k6Exit, options.profile)] : []),
+      ...(failedInvariants.length > 0 ? [`${failedInvariants.length} invariant(s) failed: ${failedInvariants.map((result) => result.name).join(', ')}`] : []),
+    ]
+    if (failures.length > 0) throw new Error(failures.join('\n'))
   } finally {
     await cleanup()
   }
