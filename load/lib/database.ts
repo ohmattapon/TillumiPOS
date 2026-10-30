@@ -8,8 +8,9 @@ import { assertLoadDatabase } from './safety'
 
 const root = fileURLToPath(new URL('../..', import.meta.url)).replace(/[\\/]$/, '')
 
-// What a child process may inherit: only what Windows and Bun need to start. Bun auto-loads the repo's .env into
-// this process, so passing everything on would hand unrelated secrets and alternate database settings to the API.
+// What a child process may inherit: only what Windows and Bun need to start. bunfig.toml sets env = false, so Bun does not load
+// the repo's .env here, but the shell can still hold unrelated secrets and alternate database settings; passing
+// everything on would hand them to the API.
 const INHERITED_ENV = ['PATH', 'Path', 'PATHEXT', 'SystemRoot', 'SYSTEMROOT', 'SystemDrive', 'ComSpec', 'WINDIR', 'TEMP', 'TMP', 'TMPDIR', 'HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'LANG', 'TZ']
 
 export function inheritedEnv(): Record<string, string> {
