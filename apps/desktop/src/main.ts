@@ -25,6 +25,12 @@ const PRELOAD = fileURLToPath(new URL('./preload.js', import.meta.url))
 // The window that a second launch brings to the front. Set once the window exists.
 let activeWindow: BrowserWindow | null = null
 
+// The menu runs from event callbacks nobody awaits, so a failure is logged and shown, never lost.
+function reportFailure(error: unknown, message: string = strings.errors.menuFailed): void {
+  console.error(error)
+  dialog.showErrorBox(strings.appName, message)
+}
+
 function start(): void {
   let shopOrigin: string
   try {
@@ -67,7 +73,7 @@ function start(): void {
   const shopWindow: BrowserWindow = createShopWindow({
     shopOrigin,
     preloadPath: PRELOAD,
-    onOwnerShortcut: () => void showOwnerMenu(),
+    onOwnerShortcut: () => void showOwnerMenu().catch(reportFailure),
   })
 
   activeWindow = shopWindow
@@ -78,7 +84,13 @@ function start(): void {
       window: shopWindow,
       printers,
       savedPrinter: loadSettings(settingsDir).printer,
-      onChoosePrinter: (printer) => saveSettings(settingsDir, { printer }),
+      onChoosePrinter: (printer) => {
+        try {
+          saveSettings(settingsDir, { printer })
+        } catch (error) {
+          reportFailure(error, strings.errors.saveFailed)
+        }
+      },
       onReload: () => void openShop(),
       onQuit: () => app.quit(),
     })

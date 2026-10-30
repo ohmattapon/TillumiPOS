@@ -14,6 +14,11 @@ export const strings = {
     invalidShopUrlMessage: 'TILLUMI_SHOP_URL ต้องเป็น http://127.0.0.1:<พอร์ต> หรือ http://localhost:<พอร์ต> เท่านั้น',
   },
 
+  errors: {
+    menuFailed: 'เปิดเมนูเจ้าของร้านไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
+    saveFailed: 'บันทึกการตั้งค่าเครื่องพิมพ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
+  },
+
   menu: {
     owner: 'เจ้าของร้าน',
     exitFullScreen: 'ออกจากโหมดเต็มจอ',
