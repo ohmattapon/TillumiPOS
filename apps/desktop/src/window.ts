@@ -1,15 +1,33 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, screen, shell } from 'electron'
 import type { Event, WebContents, WebPreferences } from 'electron'
+import { createDebouncedRunner } from './debounce'
 import { isOwnerShortcut } from './owner-shortcut'
 import { navigationDecision } from './shop-origin'
 import { strings } from './strings'
 import { windowOpenDecision } from './window-open'
+import type { WindowState } from './window-mode'
+import { windowOptionsFor } from './window-options'
+import { loadWindowState, saveWindowState } from './window-state-file'
 
 export interface ShopWindowInput {
   shopOrigin: string
   /** Absolute path of the bundled preload script. */
   preloadPath: string
   onOwnerShortcut: () => void
+  /** Folder for window-state.json (the caller passes app.getPath('userData')). */
+  userDataDir: string
+}
+
+// A drag or resize fires many events; one write follows the last of them.
+const SAVE_DELAY_MS = 500
+
+/** Saves the window state; a failed write is logged and never stops the shop. */
+export function rememberWindowState(userDataDir: string, state: WindowState): void {
+  try {
+    saveWindowState(userDataDir, state)
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 /**
@@ -38,11 +56,12 @@ function applyWindowPolicy(contents: WebContents, shopOrigin: string, webPrefere
 }
 
 /**
- * The one full-screen window of the app. It carries no menu and cannot be closed except by
+ * The one window of the app: full screen (kiosk) or a normal framed window, as the owner last
+ * chose (window-state.json; kiosk on first run). It carries no menu and cannot be closed except by
  * quitting from the owner menu (or by Windows shutting down). Anything that is not the shop
  * is sent to the system browser or dropped, never loaded here.
  */
-export function createShopWindow({ shopOrigin, preloadPath, onOwnerShortcut }: ShopWindowInput): BrowserWindow {
+export function createShopWindow({ shopOrigin, preloadPath, onOwnerShortcut, userDataDir }: ShopWindowInput): BrowserWindow {
   const webPreferences: WebPreferences = {
     contextIsolation: true,
     nodeIntegration: false,
@@ -51,11 +70,14 @@ export function createShopWindow({ shopOrigin, preloadPath, onOwnerShortcut }: S
     devTools: false,
     preload: preloadPath,
   }
+  const state = loadWindowState(userDataDir)
   const window = new BrowserWindow({
     title: strings.appName,
     show: true,
-    fullscreen: true,
-    kiosk: true,
+    ...windowOptionsFor(
+      state,
+      screen.getAllDisplays().map((display) => display.workArea),
+    ),
     autoHideMenuBar: true,
     backgroundColor: '#f6f5f2',
     webPreferences,
@@ -70,6 +92,16 @@ export function createShopWindow({ shopOrigin, preloadPath, onOwnerShortcut }: S
     onOwnerShortcut()
   })
 
+  // Only the windowed bounds are remembered: while the window covers the screen there is nothing to save.
+  // getNormalBounds gives the restored size even if the owner maximized the window.
+  const saveBounds = createDebouncedRunner(() => {
+    if (window.isDestroyed() || window.isFullScreen() || window.isKiosk() || window.isMinimized()) return
+    const { x, y, width, height } = window.getNormalBounds()
+    rememberWindowState(userDataDir, { mode: 'window', width, height, x, y })
+  }, SAVE_DELAY_MS)
+  window.on('resize', saveBounds.schedule)
+  window.on('move', saveBounds.schedule)
+
   let quitting = false
   app.on('before-quit', () => {
     quitting = true
@@ -79,6 +111,8 @@ export function createShopWindow({ shopOrigin, preloadPath, onOwnerShortcut }: S
     quitting = true
   })
   window.on('close', (event) => {
+    // A move in the last half second must not be lost when the app quits.
+    saveBounds.flush()
     if (!quitting) event.preventDefault()
   })
 

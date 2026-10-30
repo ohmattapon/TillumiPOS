@@ -23,6 +23,7 @@ export const strings = {
     owner: 'เจ้าของร้าน',
     exitFullScreen: 'ออกจากโหมดเต็มจอ',
     enterFullScreen: 'กลับเข้าโหมดเต็มจอ',
+    minimize: 'ย่อหน้าต่าง',
     reload: 'โหลดหน้าใหม่',
     quit: 'ปิดโปรแกรม',
   },

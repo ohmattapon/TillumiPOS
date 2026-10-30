@@ -71,9 +71,13 @@ function start(): void {
     }
   }
 
+  // window-state.json (mode and bounds only) lives here.
+  const userDataDir = app.getPath('userData')
+
   const shopWindow: BrowserWindow = createShopWindow({
     shopOrigin,
     preloadPath: PRELOAD,
+    userDataDir,
     onOwnerShortcut: () => {
       try {
         showOwnerMenu()
@@ -88,6 +92,7 @@ function start(): void {
   function showOwnerMenu(): void {
     popupOwnerMenu({
       window: shopWindow,
+      userDataDir,
       onReload: () => void openShop().catch(reportOpenFailure),
       onQuit: () => app.quit(),
     })

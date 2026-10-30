@@ -13,8 +13,10 @@ export interface WindowState {
 /** The shop starts full screen on first run, as before; 1280x720 is the size when it is first windowed. */
 export const DEFAULT_WINDOW_STATE: Readonly<WindowState> = Object.freeze({ mode: 'kiosk', width: 1280, height: 720 })
 
-const WIDTH_RANGE = { min: 640, max: 7680 }
-const HEIGHT_RANGE = { min: 480, max: 4320 }
+export const MIN_WINDOW_WIDTH = 640
+export const MIN_WINDOW_HEIGHT = 480
+const WIDTH_RANGE = { min: MIN_WINDOW_WIDTH, max: 7680 }
+const HEIGHT_RANGE = { min: MIN_WINDOW_HEIGHT, max: 4320 }
 const POSITION_RANGE = { min: -10_000, max: 10_000 }
 
 function isIntegerWithin(value: unknown, range: { min: number; max: number }): value is number {
