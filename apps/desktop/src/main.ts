@@ -22,6 +22,9 @@ const WAIT_PAGE = fileURLToPath(new URL('./wait-page.html', import.meta.url))
 // The preload is bundled to a single file next to this one (sandboxed preloads cannot load others).
 const PRELOAD = fileURLToPath(new URL('./preload.js', import.meta.url))
 
+// The window that a second launch brings to the front. Set once the window exists.
+let activeWindow: BrowserWindow | null = null
+
 function start(): void {
   let shopOrigin: string
   try {
@@ -67,6 +70,8 @@ function start(): void {
     onOwnerShortcut: () => void showOwnerMenu(),
   })
 
+  activeWindow = shopWindow
+
   async function showOwnerMenu(): Promise<void> {
     const printers = await shopWindow.webContents.getPrintersAsync()
     popupOwnerMenu({
@@ -101,12 +106,6 @@ function start(): void {
 
   void openShop()
 
-  app.on('second-instance', () => {
-    if (shopWindow.isDestroyed()) return
-    if (shopWindow.isMinimized()) shopWindow.restore()
-    shopWindow.show()
-    shopWindow.focus()
-  })
   app.on('window-all-closed', () => app.quit())
 }
 
@@ -114,5 +113,12 @@ function start(): void {
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
+  // Registered now, not after the app is ready, so a launch during startup is not missed.
+  app.on('second-instance', () => {
+    if (!activeWindow || activeWindow.isDestroyed()) return
+    if (activeWindow.isMinimized()) activeWindow.restore()
+    activeWindow.show()
+    activeWindow.focus()
+  })
   void app.whenReady().then(start)
 }
