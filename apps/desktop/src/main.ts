@@ -1,4 +1,4 @@
-import { app, dialog, ipcMain } from 'electron'
+import { app, dialog, ipcMain, Menu } from 'electron'
 import type { BrowserWindow } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { nextDelayMs } from './backoff'
@@ -41,6 +41,8 @@ function start(): void {
     return
   }
   const settingsDir = app.getPath('userData')
+  // The default application menu has reload and developer shortcuts; the shop window has no menu at all.
+  Menu.setApplicationMenu(null)
 
   // Shows the shop when its API is up and the waiting page until then. Only one loop runs at a time.
   let opening = false
