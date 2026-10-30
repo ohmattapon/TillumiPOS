@@ -45,12 +45,19 @@ declare module 'electron' {
     readonly senderFrame: WebFrameMain | null
   }
 
+  /** What `setWindowOpenHandler` answers: drop the request, or open a window with these options. */
+  type WindowOpenHandlerResponse =
+    | { action: 'deny' }
+    | { action: 'allow'; overrideBrowserWindowOptions?: BrowserWindowConstructorOptions }
+
   interface WebContents {
     loadURL(url: string): Promise<void>
     getPrintersAsync(): Promise<PrinterInfo[]>
     print(options: WebContentsPrintOptions, callback: (success: boolean, failureReason: string) => void): void
-    setWindowOpenHandler(handler: (details: { url: string }) => { action: 'deny' }): void
+    setWindowOpenHandler(handler: (details: { url: string }) => WindowOpenHandlerResponse): void
     on(event: 'will-navigate' | 'will-redirect', listener: (details: NavigationEvent) => void): this
+    // fired for a window opened because the handler answered 'allow'
+    on(event: 'did-create-window', listener: (window: BrowserWindow, details: { url: string }) => void): this
     on(event: 'before-input-event', listener: (event: Event, input: Input) => void): this
     on(
       event: 'did-fail-load',
