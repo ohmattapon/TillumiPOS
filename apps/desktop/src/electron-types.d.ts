@@ -20,6 +20,7 @@ declare module 'electron' {
     readonly shift: boolean
     readonly alt: boolean
     readonly meta: boolean
+    readonly isAutoRepeat: boolean
   }
 
   interface PrinterInfo {
