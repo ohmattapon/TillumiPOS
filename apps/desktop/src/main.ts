@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { nextDelayMs } from './backoff'
 import { isShopHealthy } from './health'
 import { popupOwnerMenu } from './owner-menu'
+import { shouldReopenShop } from './render-gone'
 import { parseShopOrigin } from './shop-origin'
 import { strings } from './strings'
 import { createShopWindow } from './window'
@@ -22,6 +23,12 @@ let activeWindow: BrowserWindow | null = null
 function reportFailure(error: unknown): void {
   console.error(error)
   dialog.showErrorBox(strings.appName, strings.errors.menuFailed)
+}
+
+// openShop is started from event callbacks nobody awaits, so a failure is logged and shown, never lost.
+function reportOpenFailure(error: unknown): void {
+  console.error(error)
+  dialog.showErrorBox(strings.appName, strings.errors.openShopFailed)
 }
 
 function start(): void {
@@ -81,17 +88,22 @@ function start(): void {
   function showOwnerMenu(): void {
     popupOwnerMenu({
       window: shopWindow,
-      onReload: () => void openShop(),
+      onReload: () => void openShop().catch(reportOpenFailure),
       onQuit: () => app.quit(),
     })
   }
 
   // A page that fails to load (the service stopped, then the shop was reloaded) goes back to waiting.
   shopWindow.webContents.on('did-fail-load', (_event, errorCode, _description, _url, isMainFrame) => {
-    if (isMainFrame && errorCode !== ERR_ABORTED) void openShop()
+    if (isMainFrame && errorCode !== ERR_ABORTED) void openShop().catch(reportOpenFailure)
   })
 
-  void openShop()
+  // A crashed page stays blank, so it goes through the same wait-then-load path as a failed load.
+  shopWindow.webContents.on('render-process-gone', (_event, details) => {
+    if (shouldReopenShop(details.reason)) void openShop().catch(reportOpenFailure)
+  })
+
+  void openShop().catch(reportOpenFailure)
 
   app.on('window-all-closed', () => app.quit())
 }
