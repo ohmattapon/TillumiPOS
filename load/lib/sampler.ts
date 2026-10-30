@@ -16,6 +16,8 @@ export interface ResourceSample {
   rssMb: number | null
   connections: number | null
   waitingLocks: number | null
+  /** True when the CPU counter went back (a child process exited): not a sampling failure, the CPU figure is just unknown. */
+  cpuReset?: boolean
 }
 
 export interface ProcessReading {
@@ -23,19 +25,49 @@ export interface ProcessReading {
   rssBytes: number
 }
 
-const LINUX_CLOCK_TICKS = 100
-const LINUX_PAGE_BYTES = 4096
+const DEFAULT_CLOCK_TICKS = 100
+const DEFAULT_PAGE_BYTES = 4096
+const DEFAULT_TIMEOUT_MS = 3000
 export const MAX_SERIES_POINTS = 600
 
+/** The sampler could not be set up (not the safety guard refusing): the run goes on without samples. */
+export class SamplerStartError extends Error {}
+
+export interface Timers {
+  setTimeout(fn: () => void, ms: number): ReturnType<typeof setTimeout>
+  clearTimeout(handle: ReturnType<typeof setTimeout>): void
+}
+
+const realTimers: Timers = { setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: (handle) => clearTimeout(handle) }
+
+class TimedOut extends Error {}
+
+/** Rejects with TimedOut when the work takes longer than `ms`; the work itself is not cancelled. */
+function withTimeout<T>(work: Promise<T>, ms: number, timers: Timers): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const handle = timers.setTimeout(() => reject(new TimedOut(`no answer within ${ms} ms`)), ms)
+    work.then(
+      (value) => {
+        timers.clearTimeout(handle)
+        resolve(value)
+      },
+      (error) => {
+        timers.clearTimeout(handle)
+        reject(error)
+      },
+    )
+  })
+}
+
 /** Parses /proc/<pid>/stat (utime + stime in clock ticks) and /proc/<pid>/statm (resident pages). */
-export function parseProcReading(stat: string, statm: string): ProcessReading | null {
+export function parseProcReading(stat: string, statm: string, units: { clockTicks?: number; pageBytes?: number } = {}): ProcessReading | null {
   // The command name is in parentheses and may hold spaces or parentheses, so count fields after the last ")".
   const afterName = stat.slice(stat.lastIndexOf(')') + 2).split(' ')
   const utime = Number(afterName[11])
   const stime = Number(afterName[12])
   const residentPages = Number(statm.trim().split(/\s+/)[1])
   if (![utime, stime, residentPages].every(Number.isFinite)) return null
-  return { cpuSeconds: (utime + stime) / LINUX_CLOCK_TICKS, rssBytes: residentPages * LINUX_PAGE_BYTES }
+  return { cpuSeconds: (utime + stime) / (units.clockTicks ?? DEFAULT_CLOCK_TICKS), rssBytes: residentPages * (units.pageBytes ?? DEFAULT_PAGE_BYTES) }
 }
 
 /** Parses the one line the PowerShell loop prints: "<cpu seconds> <working set bytes>" or "ERR". */
@@ -60,11 +92,45 @@ export function downsample<T>(items: T[], max = MAX_SERIES_POINTS): T[] {
   return Array.from({ length: max }, (_, index) => items[Math.round((index * (items.length - 1)) / (max - 1))]!)
 }
 
+/**
+ * Keeps at most `max` samples in time order. Each stretch of the series keeps the sample with the highest value of
+ * every field, so a graph of the series still shows every peak; the first and last samples are always kept.
+ */
+export function downsampleSamples(samples: ResourceSample[], max = MAX_SERIES_POINTS): ResourceSample[] {
+  if (samples.length <= max) return samples
+  const fields = ['cpuPercent', 'rssMb', 'connections', 'waitingLocks'] as const
+  const buckets = Math.max(1, Math.floor((max - 2) / fields.length))
+  const kept = new Set<ResourceSample>([samples[0]!, samples.at(-1)!])
+  for (let bucket = 0; bucket < buckets; bucket++) {
+    const part = samples.slice(Math.floor((bucket * samples.length) / buckets), Math.floor(((bucket + 1) * samples.length) / buckets))
+    for (const field of fields) {
+      let best: ResourceSample | null = null
+      for (const sample of part) if (sample[field] !== null && (best === null || sample[field]! > best[field]!)) best = sample
+      if (best) kept.add(best)
+    }
+  }
+  return [...kept].sort((a, b) => a.t - b.t)
+}
+
 export type ReadProcess = () => Promise<ProcessReading | null>
 
+/** `getconf <name>` as a positive number, or the fallback (with a note on stderr) when it cannot be asked. */
+function getconf(name: string, fallback: number): number {
+  try {
+    const value = Number(Bun.spawnSync(['getconf', name], { stdout: 'pipe', stderr: 'ignore' }).stdout.toString().trim())
+    if (Number.isInteger(value) && value > 0) return value
+  } catch {
+    // falls through
+  }
+  console.error(`getconf ${name} failed; assuming ${fallback} for the CPU and memory figures`)
+  return fallback
+}
+
+// Linux follows the one pid only (the API is a single process there); Windows sums the pid and the children it had at start.
 function linuxReader(pid: number): { read: ReadProcess; close(): void } {
+  const units = { clockTicks: getconf('CLK_TCK', DEFAULT_CLOCK_TICKS), pageBytes: getconf('PAGESIZE', DEFAULT_PAGE_BYTES) }
   return {
-    read: async () => parseProcReading(await readFile(`/proc/${pid}/stat`, 'utf8'), await readFile(`/proc/${pid}/statm`, 'utf8')),
+    read: async () => parseProcReading(await readFile(`/proc/${pid}/stat`, 'utf8'), await readFile(`/proc/${pid}/statm`, 'utf8'), units),
     close() {},
   }
 }
@@ -133,43 +199,72 @@ export interface SamplerOptions {
   /** Its own connection, opened on a pos_load* database; the sampler only reads and does not close it. */
   sql: SQL
   everyMs?: number
+  /** How long a process reading or a database query may take before the sample records null for it (default 3000). */
+  timeoutMs?: number
   /** For tests. */
   reader?: { read: ReadProcess; close(): void }
   now?: () => number
+  timers?: Timers
 }
 
 export async function startSampler(options: SamplerOptions): Promise<{ stop(): Promise<ResourceSample[]> }> {
   const everyMs = options.everyMs ?? 2000
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
   const now = options.now ?? (() => performance.now())
-  // Refuses to sample anything but a load database, like the invariant checks do.
-  const [connected] = await options.sql.unsafe('select current_database() as name')
+  const timers = options.timers ?? realTimers
+  const limited = <T>(work: Promise<T>) => withTimeout(work, timeoutMs, timers)
+
+  let connected: Record<string, unknown> | undefined
+  try {
+    ;[connected] = await limited(options.sql.unsafe('select current_database() as name') as Promise<Record<string, unknown>[]>)
+  } catch (error) {
+    throw new SamplerStartError(`cannot ask the database: ${error instanceof Error ? error.message : String(error)}`)
+  }
+  // Refuses to sample anything but a load database, like the invariant checks do. This error is not a SamplerStartError.
   assertLoadDatabaseName(String(connected?.name ?? ''))
-  const reader = options.reader ?? createProcessReader(options.pid)
+  let reader: { read: ReadProcess; close(): void }
+  try {
+    reader = options.reader ?? createProcessReader(options.pid)
+  } catch (error) {
+    throw new SamplerStartError(`cannot read the API process: ${error instanceof Error ? error.message : String(error)}`)
+  }
   const samples: ResourceSample[] = []
   const started = now()
   let last: { cpuSeconds: number; atMs: number } | null = null
-  let running = true
+  // After one reading that never came back the reader (a PowerShell loop) may answer out of step, so it is not used again.
+  let readerLost = false
+  let stopping: Promise<ResourceSample[]> | null = null
   let timer: ReturnType<typeof setTimeout> | null = null
   let inFlight: Promise<void> = Promise.resolve()
+
+  async function readProcess(): Promise<ProcessReading | null> {
+    if (readerLost) return null
+    try {
+      return await limited(reader.read())
+    } catch (error) {
+      if (error instanceof TimedOut) readerLost = true
+      return null
+    }
+  }
 
   async function sampleOnce() {
     const atMs = now()
     const sample: ResourceSample = { t: Math.round(atMs - started), cpuPercent: null, rssMb: null, connections: null, waitingLocks: null }
-    try {
-      const reading = await reader.read()
-      if (reading) {
-        sample.rssMb = Math.round((reading.rssBytes / 1024 / 1024) * 10) / 10
-        const point = { cpuSeconds: reading.cpuSeconds, atMs }
-        if (last) sample.cpuPercent = cpuPercentBetween(last, point)
-        last = point
+    const reading = await readProcess()
+    if (reading) {
+      sample.rssMb = Math.round((reading.rssBytes / 1024 / 1024) * 10) / 10
+      const point = { cpuSeconds: reading.cpuSeconds, atMs }
+      if (last) {
+        sample.cpuPercent = cpuPercentBetween(last, point)
+        // The counter going back means a child process exited: the figure is unknown, but nothing failed.
+        if (sample.cpuPercent === null && point.cpuSeconds < last.cpuSeconds) sample.cpuReset = true
       }
-    } catch {
-      // stays null
+      last = point
     }
     try {
-      const [row] = await options.sql.unsafe(DATABASE_QUERY)
-      sample.connections = Number(row.connections)
-      sample.waitingLocks = Number(row.waiting)
+      const [row] = (await limited(options.sql.unsafe(DATABASE_QUERY) as Promise<Record<string, unknown>[]>)) as Record<string, unknown>[]
+      sample.connections = Number(row!.connections)
+      sample.waitingLocks = Number(row!.waiting)
     } catch {
       // stays null
     }
@@ -177,32 +272,31 @@ export async function startSampler(options: SamplerOptions): Promise<{ stop(): P
   }
 
   // The first reading only sets the CPU baseline, so it is not kept as a sample.
-  try {
-    const first = await reader.read()
-    if (first) last = { cpuSeconds: first.cpuSeconds, atMs: now() }
-  } catch {
-    // the first real sample will show null
-  }
+  const first = await readProcess()
+  if (first) last = { cpuSeconds: first.cpuSeconds, atMs: now() }
 
   const schedule = () => {
-    timer = setTimeout(() => {
+    timer = timers.setTimeout(() => {
       // A sample still running (a slow database) is waited for, never overlapped.
       inFlight = sampleOnce().finally(() => {
-        if (running) schedule()
+        if (!stopping) schedule()
       })
     }, everyMs)
   }
   schedule()
 
   return {
-    async stop() {
-      running = false
-      if (timer) clearTimeout(timer)
-      await inFlight
-      // One last sample so a short run still has a closing point.
-      await sampleOnce()
-      reader.close()
-      return samples
+    stop() {
+      // Idempotent: the run stops the sampler after k6 and again in its cleanup.
+      stopping ??= (async () => {
+        if (timer) timers.clearTimeout(timer)
+        await inFlight
+        // One last sample so a short run still has a closing point.
+        await sampleOnce()
+        reader.close()
+        return samples
+      })()
+      return stopping
     },
   }
 }

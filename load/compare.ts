@@ -35,10 +35,17 @@ const LATENCY_FIELDS: [string, string][] = [['p(95)', 'p95'], ['p(99)', 'p99'], 
 const HIGHER_IS_BETTER_COUNTS = /^(http_reqs|iterations)(\{|$)/
 const LOWER_IS_BETTER_COUNTS = /^dropped_iterations(\{|$)/
 
+// A request that the display scenario holds open for seconds on purpose. k6 cannot leave one request out of its built-in
+// metrics, so while it is in a run the overall figures below are a mix of real latency and this hold time and mean nothing.
+const HELD_OPEN_REQUEST = 'http_req_duration{name:display.stream}'
+const POLLUTED_BY_HELD_OPEN = /^(http_req_duration|http_req_duration\{expected_response:true\}|http_req_waiting|http_req_receiving)$/
+
 /** Every comparable number of a result, by a stable name. */
 export function measuresOf(result: LoadResult): Map<string, Measure> {
   const measures = new Map<string, Measure>()
+  const heldOpen = HELD_OPEN_REQUEST in result.k6.metrics
   for (const [name, aggregate] of Object.entries(result.k6.metrics)) {
+    if (heldOpen && POLLUTED_BY_HELD_OPEN.test(name)) continue
     const isTime = name.startsWith('http_req_') || /duration|latency|time/.test(name)
     for (const [field, label] of LATENCY_FIELDS) {
       const value = aggregate[field]
@@ -68,6 +75,8 @@ export function measuresOf(result: LoadResult): Map<string, Measure> {
     ['waiting locks peak', peak.waitingLocks, 'count'],
   ]
   for (const [name, value, unit] of resource) if (value !== null) measures.set(name, { value, better: 'lower', unit })
+  measures.set('run passed', { value: result.passed ? 1 : 0, better: 'higher', unit: 'count' })
+  if (typeof result.k6.exitCode === 'number') measures.set('k6 exit code', { value: result.k6.exitCode, better: 'lower', unit: 'count' })
   for (const invariant of result.invariants) measures.set(`invariant ${invariant.name}`, { value: invariant.passed ? 1 : 0, better: 'higher', unit: 'count' })
   return measures
 }
@@ -76,6 +85,14 @@ function percentChange(before: number, after: number): number {
   if (before === after) return 0
   if (before === 0) return after > 0 ? Infinity : -Infinity
   return ((after - before) / Math.abs(before)) * 100
+}
+
+/** A failure the first file did not have is worse whatever the tolerance. */
+function newFailure(name: string, left: number | undefined, right: number): boolean {
+  if (name.startsWith('invariant ')) return right === 0
+  if (name === 'run passed') return right === 0 && left !== 0
+  if (name === 'k6 exit code') return right !== 0 && (left ?? 0) === 0
+  return false
 }
 
 /**
@@ -91,7 +108,7 @@ export function compareResults(a: LoadResult, b: LoadResult, tolerancePercent = 
     const left = before.get(name)
     const right = after.get(name)
     if (!left || !right) {
-      changes.push({ metric: name, before: left?.value ?? NaN, after: right?.value ?? NaN, changePercent: NaN, worse: false, note: left ? 'only in the first file' : 'only in the second file' })
+      changes.push({ metric: name, before: left?.value ?? NaN, after: right?.value ?? NaN, changePercent: NaN, worse: right !== undefined && newFailure(name, undefined, right.value), note: left ? 'only in the first file' : 'only in the second file' })
       continue
     }
     if (left.value === right.value) continue
@@ -99,8 +116,10 @@ export function compareResults(a: LoadResult, b: LoadResult, tolerancePercent = 
     const grew = right.value > left.value
     const wrongWay = (left.better === 'lower' && grew) || (left.better === 'higher' && !grew)
     const big = Math.abs(right.value - left.value) >= MIN_ABSOLUTE[left.unit] && Math.abs(changePercent) > tolerancePercent
-    const invariantBroke = name.startsWith('invariant ') && left.value === 1 && right.value === 0
-    changes.push({ metric: name, before: left.value, after: right.value, changePercent, worse: invariantBroke || (wrongWay && big) })
+    const failed = newFailure(name, left.value, right.value)
+    // A failure the first file already had is not "newly worse", and a recovery is never worse.
+    const judged = name.startsWith('invariant ') || name === 'run passed' || name === 'k6 exit code' ? failed && left.value !== right.value : wrongWay && big
+    changes.push({ metric: name, before: left.value, after: right.value, changePercent, worse: judged })
   }
   return changes
 }
@@ -113,6 +132,7 @@ export function notComparableReasons(a: LoadResult, b: LoadResult): string[] {
   }
   differ('profile', a.profile, b.profile)
   differ('scenario', a.scenario, b.scenario)
+  for (const field of ['cpus', 'memoryGb', 'os', 'k6Version'] as const) differ(`machine ${field}`, a.machine[field], b.machine[field])
   differ('LOAD_SCALE', a.knobs.scale, b.knobs.scale)
   differ('LOAD_DURATION_SCALE', a.knobs.durationScale, b.knobs.durationScale)
   const keys = new Set([...Object.keys(a.seed), ...Object.keys(b.seed)])
@@ -120,18 +140,33 @@ export function notComparableReasons(a: LoadResult, b: LoadResult): string[] {
   return reasons
 }
 
-/** Throws a short message unless `value` looks like a result file of the schema this code reads. */
+const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+const isNumber = (value: unknown) => typeof value === 'number' && Number.isFinite(value)
+const isNumberOrNull = (value: unknown) => value === null || isNumber(value)
+
+/** Throws a short message unless `text` is a result file of the schema this code reads, with every field compare uses. */
 export function parseResult(text: string, label: string): LoadResult {
-  let value: Partial<LoadResult>
+  let value: unknown
   try {
     value = JSON.parse(text)
   } catch {
     throw new Error(`${label} is not valid JSON`)
   }
-  if (!value || typeof value !== 'object' || value.schemaVersion !== SCHEMA_VERSION)
-    throw new Error(`${label} has schema version ${String((value as { schemaVersion?: unknown } | null)?.schemaVersion)}; this compare reads version ${SCHEMA_VERSION}`)
-  if (!value.k6?.metrics || !value.resources?.peak || !value.knobs || !value.seed || !Array.isArray(value.invariants)) throw new Error(`${label} is missing fields of schema version ${SCHEMA_VERSION}`)
-  return value as LoadResult
+  if (!isObject(value) || value.schemaVersion !== SCHEMA_VERSION)
+    throw new Error(`${label} has schema version ${String(isObject(value) ? value.schemaVersion : value)}; this compare reads version ${SCHEMA_VERSION}`)
+  const bad = (what: string) => new Error(`${label} is missing or has a wrong ${what} (schema version ${SCHEMA_VERSION})`)
+  const { machine, knobs, seed, k6, resources, invariants } = value
+  if (typeof value.profile !== 'string' || typeof value.scenario !== 'string' || typeof value.passed !== 'boolean') throw bad('profile, scenario or passed')
+  if (!isObject(machine) || !isNumber(machine.cpus) || !isNumber(machine.memoryGb) || typeof machine.os !== 'string') throw bad('machine')
+  if (!isObject(knobs) || !isNumber(knobs.scale) || !isNumber(knobs.durationScale)) throw bad('knobs')
+  if (!isObject(seed) || !Object.values(seed).every(isNumber)) throw bad('seed')
+  if (!isObject(k6) || !isObject(k6.metrics) || !Object.values(k6.metrics).every((metric) => isObject(metric) && Object.values(metric).every(isNumber))) throw bad('k6.metrics')
+  if (!isObject(resources)) throw bad('resources')
+  for (const part of [resources.peak, resources.mean]) {
+    if (!isObject(part) || !['cpuPercent', 'rssMb', 'connections', 'waitingLocks'].every((key) => isNumberOrNull(part[key]))) throw bad('resources.peak or resources.mean')
+  }
+  if (!Array.isArray(invariants) || !invariants.every((item) => isObject(item) && typeof item.name === 'string' && typeof item.passed === 'boolean')) throw bad('invariants')
+  return value as unknown as LoadResult
 }
 
 const show = (value: number) => (Number.isNaN(value) ? '-' : Number.isInteger(value) ? String(value) : value.toFixed(2))
@@ -151,7 +186,16 @@ export function formatChanges(changes: Difference[], tolerancePercent: number): 
   return `${table}\n${worse} metric(s) worse by more than ${tolerancePercent}%`
 }
 
-async function main(argv: string[]): Promise<number> {
+export async function runCompare(argv: string[]): Promise<number> {
+  try {
+    return await compareFiles(argv)
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error))
+    return 2
+  }
+}
+
+async function compareFiles(argv: string[]): Promise<number> {
   const usage = 'Usage: bun load/compare.ts <before.json> <after.json> [--tolerance 10] [--force]'
   const files: string[] = []
   let tolerance = 10
@@ -193,4 +237,4 @@ async function main(argv: string[]): Promise<number> {
   return changes.some((change) => change.worse) ? 1 : 0
 }
 
-if (import.meta.main) process.exit(await main(process.argv.slice(2)))
+if (import.meta.main) process.exit(await runCompare(process.argv.slice(2)))

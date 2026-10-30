@@ -29,7 +29,7 @@ import { startFakeBankControl, startFakeBankFront } from './lib/fake-bank-contro
 import { buildK6Args, findK6 } from './lib/k6'
 import { checkInvariants, formatInvariants, type InvariantResult } from './invariants'
 import { createProcessGroup } from './lib/processes'
-import { startSampler, type ResourceSample } from './lib/sampler'
+import { SamplerStartError, startSampler, type ResourceSample } from './lib/sampler'
 import { buildResult, formatResultTable, resultFileName } from './lib/summary'
 import { redactUrls } from './lib/redact'
 import { assertLoadDatabase, assertLocalBaseUrl } from './lib/safety'
@@ -236,9 +236,16 @@ async function main() {
     })()
     await waitFor(`${baseUrl}/api/v1/health`, 'API', api)
     // Its own connection, so the samples never wait behind the API's pool; it only reads.
-    sampleSql = new SQL(databaseUrl, { max: 1 })
-    const sampler = await startSampler({ pid: api.pid, sql: sampleSql, everyMs: SAMPLE_EVERY_MS })
-    stopSampler = () => sampler.stop()
+    // Sampling is a convenience: if it cannot start the run goes on without samples. Only the safety guard (a database
+    // that is not pos_load*) stops the run, because that error is not a SamplerStartError.
+    try {
+      sampleSql = new SQL(databaseUrl, { max: 1 })
+      const sampler = await startSampler({ pid: api.pid, sql: sampleSql, everyMs: SAMPLE_EVERY_MS })
+      stopSampler = () => sampler.stop()
+    } catch (error) {
+      if (!(error instanceof SamplerStartError)) throw error
+      console.warn(`Resource sampling is off for this run: ${redactUrls(error.message)}`)
+    }
     const startedAt = new Date()
 
     console.log(`Load run "${options.profile}" (scenario ${options.scenario}, LOAD_SCALE ${knobs.scale}, LOAD_DURATION_SCALE ${knobs.durationScale}${knobs.baseline ? ', baseline' : ''}): API ready at ${baseUrl}, database ${dbName}`)

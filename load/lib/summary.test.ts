@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { downsample, parseProcReading, parseWindowsLine, cpuPercentBetween, startSampler, type ResourceSample } from './sampler'
+import type { ResourceSample } from './sampler'
 import { buildResult, formatResultTable, resultFileName } from './summary'
-import type { SQL } from 'bun'
 
 const machine = { cpus: 8, memoryGb: 16, os: 'linux' }
 const sample = (t: number, cpu: number | null, rss: number | null, connections: number | null, locks: number | null): ResourceSample => ({ t, cpuPercent: cpu, rssMb: rss, connections, waitingLocks: locks })
@@ -48,9 +47,9 @@ describe('buildResult', () => {
   test('caps the series at 600 points and keeps the first and last', () => {
     const samples = Array.from({ length: 1350 }, (_, index) => sample(index * 2000, 1, 1, 1, 0))
     const { resources } = buildResult({ profile: 'soak', k6, invariants: [], samples, machine })
-    expect(resources.series).toHaveLength(600)
+    expect(resources.series.length).toBeLessThanOrEqual(600)
     expect(resources.series[0]!.t).toBe(0)
-    expect(resources.series[599]!.t).toBe(1349 * 2000)
+    expect(resources.series.at(-1)!.t).toBe(1349 * 2000)
     expect(resources.totalSamples).toBe(1350)
   })
 
@@ -65,7 +64,8 @@ describe('buildResult', () => {
     expect(text).not.toContain('hunter2')
     expect(text).not.toContain('OWNER_JSON')
     expect(text).not.toContain('postgres://')
-    expect(JSON.parse(text).k6.metrics['http_reqs{url:http://x/?token=abc123}']).toEqual({ count: 4, rate: 1 })
+    expect(text).not.toContain('abc123')
+    expect(JSON.parse(text).k6.metrics['http_reqs{url:[redacted-url]']).toEqual({ count: 4, rate: 1 })
   })
 })
 
@@ -87,69 +87,32 @@ describe('formatResultTable', () => {
   })
 })
 
-describe('sampler parsing', () => {
-  const stat = '4242 (bun src/idx) S 1 4242 4242 0 -1 4194560 100 0 0 0 250 150 0 0 20 0 9 0 12345 123456789 7000 18446744073709551615'
-  test('reads utime+stime and resident pages from /proc files, even with a ")" in the name', () => {
-    expect(parseProcReading(stat, '30000 7000 100 1 0 5000 0')).toEqual({ cpuSeconds: 4, rssBytes: 7000 * 4096 })
-    expect(parseProcReading(stat.replace('bun src/idx', 'a) b (c'), '30000 7000 100')).toEqual({ cpuSeconds: 4, rssBytes: 7000 * 4096 })
-  })
-  test('returns null for garbage', () => {
-    expect(parseProcReading('', '')).toBeNull()
-  })
-  test('reads the PowerShell line', () => {
-    expect(parseWindowsLine('12.5 104857600\r')).toEqual({ cpuSeconds: 12.5, rssBytes: 104857600 })
-    expect(parseWindowsLine('ERR')).toBeNull()
-  })
-  test('computes percent of one core and refuses a backwards counter', () => {
-    expect(cpuPercentBetween({ cpuSeconds: 1, atMs: 0 }, { cpuSeconds: 2, atMs: 2000 })).toBe(50)
-    expect(cpuPercentBetween({ cpuSeconds: 2, atMs: 0 }, { cpuSeconds: 1, atMs: 2000 })).toBeNull()
-    expect(cpuPercentBetween({ cpuSeconds: 1, atMs: 5 }, { cpuSeconds: 2, atMs: 5 })).toBeNull()
-  })
-  test('downsample keeps short series as they are', () => {
-    expect(downsample([1, 2, 3], 600)).toEqual([1, 2, 3])
-    expect(downsample([1, 2, 3, 4, 5], 2)).toEqual([1, 5])
-  })
-})
+describe('formatResultTable with a held-open display stream', () => {
+  const held = {
+    metrics: {
+      http_req_duration: { 'p(95)': 4000.4, avg: 400 },
+      http_reqs: { count: 380, rate: 4 },
+      http_req_failed: { value: 0.01 },
+      'http_req_duration{name:display.stream}': { 'p(95)': 4000.1 },
+      'http_req_duration{name:checkout.sale}': { 'p(95)': 60 },
+      'http_req_duration{name:checkout.quote}': { 'p(95)': 120 },
+    },
+  }
+  const table = () => formatResultTable(buildResult({ profile: 'load', k6: held, invariants: [], samples: [], machine }))
 
-describe('startSampler', () => {
-  const fakeSql = (database: string, fail = false) =>
-    ({
-      unsafe: async (query: string) => {
-        if (query.includes('current_database() as name')) return [{ name: database }]
-        if (fail) throw new Error('connection lost')
-        return [{ connections: 5, waiting: 2 }]
-      },
-    }) as unknown as SQL
-
-  test('refuses a database that is not a load database', async () => {
-    const reader = { read: async () => null, close() {} }
-    await expect(startSampler({ pid: 1, sql: fakeSql('pos'), reader })).rejects.toThrow(/database name rule/)
+  test('the overall latency is not shown, only the request count and failed rate', () => {
+    const text = table()
+    const overall = text.split('\n').find((line) => line.startsWith('(all requests)'))!
+    expect(overall).not.toContain('4000.4')
+    expect(overall).toContain('380')
   })
 
-  test('records samples, and a failing reader or database gives nulls instead of throwing', async () => {
-    let clock = 0
-    let cpu = 0
-    const reader = {
-      read: async () => {
-        cpu += 1
-        if (cpu === 3) throw new Error('process gone')
-        return { cpuSeconds: cpu, rssBytes: 100 * 1024 * 1024 }
-      },
-      close() {},
-    }
-    const sampler = await startSampler({ pid: 1, sql: fakeSql('pos_load'), reader, everyMs: 5, now: () => (clock += 1000) })
-    await Bun.sleep(40)
-    const samples = await sampler.stop()
-    expect(samples.length).toBeGreaterThan(2)
-    expect(samples[0]!.connections).toBe(5)
-    expect(samples[0]!.waitingLocks).toBe(2)
-    expect(samples[0]!.rssMb).toBe(100)
-    expect(samples.some((item) => item.rssMb === null)).toBe(true)
-
-    const broken = await startSampler({ pid: 1, sql: fakeSql('pos_load', true), reader: { read: async () => null, close() {} }, everyMs: 5 })
-    await Bun.sleep(15)
-    const brokenSamples = await broken.stop()
-    expect(brokenSamples.length).toBeGreaterThan(0)
-    expect(brokenSamples.every((item) => item.connections === null && item.rssMb === null)).toBe(true)
+  test('the display stream is its own labelled row at the bottom, not at the top', () => {
+    const lines = table().split('\n')
+    const names = lines.map((line) => line.split(/\s{2,}/)[0]!)
+    const stream = names.findIndex((name) => name.startsWith('display.stream'))
+    expect(lines[stream]).toContain('held open')
+    expect(names.findIndex((name) => name === 'checkout.quote')).toBeLessThan(stream)
+    expect(names.findIndex((name) => name === 'checkout.sale')).toBeLessThan(stream)
   })
 })

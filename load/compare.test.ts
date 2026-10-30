@@ -75,7 +75,7 @@ describe('parseResult and formatChanges', () => {
     expect(() => parseResult('{"schemaVersion":2}', 'x.json')).toThrow(/schema version 2/)
     expect(() => parseResult('nope', 'x.json')).toThrow(/not valid JSON/)
     expect(() => parseResult('null', 'x.json')).toThrow(/schema version/)
-    expect(() => parseResult(JSON.stringify({ schemaVersion: 1 }), 'x.json')).toThrow(/missing fields/)
+    expect(() => parseResult(JSON.stringify({ schemaVersion: 1 }), 'x.json')).toThrow(/missing or has a wrong/)
     expect(parseResult(JSON.stringify(make(100)), 'x.json').profile).toBe('load')
   })
   test('prints a table that marks the worse rows', () => {

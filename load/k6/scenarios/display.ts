@@ -29,6 +29,9 @@ export const options = {
     'http_req_duration{name:display.pair}': ['p(95)<300'],
     'http_req_duration{name:display.publish}': ['p(95)<300'],
     display_stream_incomplete: ['count==0'],
+    // Bookkeeping (p(95)>=0 never fails): without a threshold k6 leaves this tag out of the summary, and the result file needs
+    // the stream's own row to tell the seconds it is held open from the latency of the other requests.
+    'http_req_duration{name:display.stream}': ['p(95)>=0'],
   },
 }
 

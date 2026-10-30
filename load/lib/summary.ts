@@ -15,7 +15,8 @@
 //
 // No URL, password, token or environment value is stored: only the knobs, the sizes and metric aggregates.
 import type { InvariantResult } from '../invariants'
-import { downsample, MAX_SERIES_POINTS, type ResourceSample } from './sampler'
+import { redactUrls } from './redact'
+import { downsampleSamples, MAX_SERIES_POINTS, type ResourceSample } from './sampler'
 
 export const SCHEMA_VERSION = 1
 
@@ -80,7 +81,8 @@ export function numericMetrics(k6: unknown): Record<string, MetricAggregate> {
     if (!value || typeof value !== 'object') continue
     const numbers: MetricAggregate = {}
     for (const [field, number] of Object.entries(value)) if (typeof number === 'number' && Number.isFinite(number)) numbers[field] = number
-    kept[name] = numbers
+    // A metric name can carry a tag value (a URL, say), so it is redacted like any child output.
+    kept[redactUrls(name)] = numbers
   }
   return kept
 }
@@ -95,7 +97,7 @@ function stats(samples: ResourceSample[], pick: (values: number[]) => number): R
 }
 
 export function buildResult(parts: ResultParts): LoadResult {
-  const failedSamples = parts.samples.filter((sample) => KEYS.some((key) => sample[key] === null)).length
+  const failedSamples = parts.samples.filter((sample) => KEYS.some((key) => sample[key] === null && !(key === 'cpuPercent' && sample.cpuReset))).length
   const invariantsFailed = parts.invariants.some((result) => !result.passed)
   const k6Failed = parts.k6ExitCode !== undefined && parts.k6ExitCode !== null && parts.k6ExitCode !== 0
   return {
@@ -115,7 +117,7 @@ export function buildResult(parts: ResultParts): LoadResult {
       failedSamples,
       peak: stats(parts.samples, (values) => Math.max(...values)),
       mean: stats(parts.samples, (values) => values.reduce((sum, value) => sum + value, 0) / values.length),
-      series: downsample(parts.samples, MAX_SERIES_POINTS),
+      series: downsampleSamples(parts.samples, MAX_SERIES_POINTS),
     },
   }
 }
@@ -132,6 +134,7 @@ function padRows(rows: string[][]): string {
 }
 
 const MAX_TABLE_ROWS = 10
+const HELD_OPEN_NAME = 'display.stream'
 const dash = (value: number | null | undefined, digits = 1) => (value === null || value === undefined ? '-' : value.toFixed(digits))
 
 /** The short terminal table: per scenario p95 and error rate, then resources and the invariant verdict. */
@@ -145,13 +148,21 @@ export function formatResultTable(result: LoadResult): string {
   const tag = labelsOf('scenario').length > 0 ? 'scenario' : 'name'
   const percent = (rate: number | undefined) => (rate === undefined ? '-' : (rate * 100).toFixed(2))
   const rows: string[][] = [[tag === 'scenario' ? 'Scenario' : 'Request', 'p95 ms', 'requests', 'failed %']]
-  const slowest = labelsOf(tag).sort((x, y) => (metrics[`http_req_duration{${tag}:${y}}`]?.["p(95)"] ?? 0) - (metrics[`http_req_duration{${tag}:${x}}`]?.["p(95)"] ?? 0))
-  for (const label of slowest.slice(0, MAX_TABLE_ROWS)) {
+  const p95Of = (label: string) => metrics[`http_req_duration{${tag}:${label}}`]?.['p(95)']
+  const rowOf = (label: string, name = label) => {
     const count = metrics[`http_reqs{${tag}:${label}}`]?.count
-    rows.push([label, dash(metrics[`http_req_duration{${tag}:${label}}`]?.['p(95)']), count === undefined ? '-' : String(count), percent(metrics[`http_req_failed{${tag}:${label}}`]?.value)])
+    return [name, dash(p95Of(label)), count === undefined ? '-' : String(count), percent(metrics[`http_req_failed{${tag}:${label}}`]?.value)]
   }
+  // The display stream is held open for seconds on purpose: it gets its own row at the bottom, outside the ranking.
+  const heldOpen = tag === 'name' && labelsOf(tag).includes(HELD_OPEN_NAME)
+  const slowest = labelsOf(tag)
+    .filter((label) => !(heldOpen && label === HELD_OPEN_NAME))
+    .sort((x, y) => (p95Of(y) ?? 0) - (p95Of(x) ?? 0))
+  for (const label of slowest.slice(0, MAX_TABLE_ROWS)) rows.push(rowOf(label))
   if (slowest.length > MAX_TABLE_ROWS) rows.push([`(${slowest.length - MAX_TABLE_ROWS} faster ones not shown)`, '', '', ''])
-  rows.push(['(all requests)', dash(metrics.http_req_duration?.['p(95)']), metrics.http_reqs?.count === undefined ? '-' : String(metrics.http_reqs.count), percent(metrics.http_req_failed?.value)])
+  if (heldOpen) rows.push(rowOf(HELD_OPEN_NAME, `${HELD_OPEN_NAME} (held open)`))
+  // With a held-open request in the run, k6's overall latency mixes real latency with the hold time, so it is left out.
+  rows.push(['(all requests)', heldOpen ? '-' : dash(metrics.http_req_duration?.['p(95)']), metrics.http_reqs?.count === undefined ? '-' : String(metrics.http_reqs.count), percent(metrics.http_req_failed?.value)])
   const { peak, mean, failedSamples, totalSamples } = result.resources
   const failedInvariants = result.invariants.filter((item) => !item.passed).map((item) => item.name)
   return [
