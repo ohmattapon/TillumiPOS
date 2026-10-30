@@ -17,7 +17,11 @@
 ;      ไม่เอา pgAdmin/StackBuilder) ไว้ที่ <stage>\payload\pgsql\
 ;   6. โหลด WinSW v2 (พิสูจน์ด้วย v2.12.0 จาก https://github.com/winsw/winsw/releases)
 ;      ไฟล์เดียวชื่อ WinSW-x64.exe ไว้ที่ <stage>\payload\
-;   7. คอมไพล์: iscc /DPayloadDir="<stage>\payload" installer\tillumi.iss
+;   7. (ไม่บังคับ) แอปหน้าต่างเดสก์ท็อป: bun run desktop:build จะได้ apps\desktop\release\win-unpacked\
+;      (มี TillumiPOS.exe) ส่งโฟลเดอร์นั้นด้วย /DDesktopDir="<path>\win-unpacked" ตัวติดตั้งจะคัดทั้งโฟลเดอร์ไปที่
+;      {app}\desktop\ และทางลัด "เปิดหน้าร้าน" จะเปิดแอปนั้น ถ้าไม่ส่ง /DDesktopDir จะไม่มีแอปในตัวติดตั้ง
+;      และทางลัดเปิดเบราว์เซอร์ Chrome/Edge/เบราว์เซอร์ปกติเหมือนเดิม (ส่งโฟลเดอร์ที่ไม่มี TillumiPOS.exe คอมไพล์ไม่ผ่าน)
+;   8. คอมไพล์: iscc /DPayloadDir="<stage>\payload" [/DDesktopDir="<path>\win-unpacked"] installer\tillumi.iss
 ;      (ไม่ส่ง /D จะใช้ installer\payload\ ซึ่ง CI เป็นคนเตรียมให้)
 ;
 ; ไฟล์ .exe ที่ได้ห้าม commit เข้า git เด็ดขาด (ออกที่ installer\output\ ซึ่งอยู่ใน .gitignore)
@@ -51,6 +55,12 @@
 #define AppVersion "1.0.0"
 #ifndef PayloadDir
   #define PayloadDir SourcePath + "\\payload"
+#endif
+; DesktopDir ไม่มีค่าเริ่มต้นโดยตั้งใจ: ไม่ส่ง /DDesktopDir = ตัวติดตั้งไม่มีแอปเดสก์ท็อป (ห้ามส่งค่าว่าง)
+#ifdef DesktopDir
+  #if !FileExists(DesktopDir + "\\TillumiPOS.exe")
+    #error "DesktopDir must be an existing folder that contains TillumiPOS.exe (the output of bun run desktop:build)"
+  #endif
 #endif
 #define DataDirName "TillumiPOS"
 #define PortApi "3000"
@@ -111,9 +121,17 @@ Source: "..\server\src\modules\update\update-public-key.json"; DestDir: "{app}";
 ; ต้นแบบ xml มี {{...}} อยู่ เอาไปแทนค่าที่ {tmp} แล้วเขียนไฟล์จริงที่ {app} ใน [Code] (ห้ามติดตั้งตรง ๆ)
 Source: "winsw\tillumi-postgres.xml"; DestDir: "{tmp}\tillumi-templates"; Flags: deleteafterinstall
 Source: "winsw\tillumi-pos.xml"; DestDir: "{tmp}\tillumi-templates"; Flags: deleteafterinstall
+#ifdef DesktopDir
+; แอปหน้าต่างเดสก์ท็อป (Electron) ทั้งโฟลเดอร์ ติดตั้งเมื่อส่ง /DDesktopDir เท่านั้น แอปไม่เก็บรหัสลับใดเลย
+Source: "{#DesktopDir}\*"; DestDir: "{app}\desktop"; Flags: ignoreversion recursesubdirs createallsubdirs
+#endif
 
 [Icons]
-; ทางลัด "เปิดหน้าร้าน" เลือกตามเบราว์เซอร์ที่มีในเครื่องตอนติดตั้ง (อันเดียวเท่านั้นที่ถูกสร้าง)
+; ทางลัด "เปิดหน้าร้าน" เปิดแอปเดสก์ท็อปถ้ามี ไม่มีก็เลือกตามเบราว์เซอร์ที่มีในเครื่องตอนติดตั้ง (อันเดียวเท่านั้นที่ถูกสร้าง)
+; แอปอ่านที่อยู่ร้านจากตัวแปร TILLUMI_SHOP_URL ถ้าไม่ตั้งใช้ http://127.0.0.1:3000 ซึ่งตรงกับ PortApi ที่นี่
+; ถ้าร้านเปลี่ยนพอร์ต ช่างต้องตั้งตัวแปรนั้นเอง (ไม่ส่งทางบรรทัดคำสั่ง)
+Name: "{autodesktop}\เปิดหน้าร้าน"; Filename: "{app}\desktop\TillumiPOS.exe"; WorkingDir: "{app}\desktop"; Check: HaveDesktopApp
+Name: "{group}\เปิดหน้าร้าน"; Filename: "{app}\desktop\TillumiPOS.exe"; WorkingDir: "{app}\desktop"; Check: HaveDesktopApp
 Name: "{autodesktop}\เปิดหน้าร้าน"; Filename: "{code:ChromePath}"; Parameters: "--kiosk {#ShopUrl}"; Check: HaveChrome
 Name: "{autodesktop}\เปิดหน้าร้าน"; Filename: "{code:EdgePath}"; Parameters: "--kiosk {#ShopUrl}"; Check: HaveEdgeOnly
 Name: "{autodesktop}\เปิดหน้าร้าน"; Filename: "{#ShopUrl}"; Check: HaveNoKioskBrowser
@@ -167,24 +185,35 @@ begin
     Result := ExpandConstant('{pf32}\Microsoft\Edge\Application\msedge.exe');
 end;
 
+// True only when this installer carried the desktop app (/DDesktopDir) and it is on disk. Tested at run time,
+// so an installer built without the app, or an app that failed to copy, falls back to the browser shortcuts.
+function HaveDesktopApp(): Boolean;
+begin
+  Result := FileExists(ExpandConstant('{app}\desktop\TillumiPOS.exe'));
+end;
+
+// The three browser checks are false when the desktop app is there, so each place gets exactly one shortcut.
 function HaveChrome(): Boolean;
 begin
-  Result := FileExists(ChromePath(''));
+  Result := (not HaveDesktopApp()) and FileExists(ChromePath(''));
 end;
 
 function HaveEdgeOnly(): Boolean;
 begin
-  Result := (not HaveChrome()) and FileExists(EdgePath(''));
+  Result := (not HaveDesktopApp()) and (not FileExists(ChromePath(''))) and FileExists(EdgePath(''));
 end;
 
 function HaveNoKioskBrowser(): Boolean;
 begin
-  Result := (not HaveChrome()) and (not FileExists(EdgePath('')));
+  Result := (not HaveDesktopApp()) and (not FileExists(ChromePath(''))) and (not FileExists(EdgePath('')));
 end;
 
 function GetShopLink(Param: String): String;
 begin
-  Result := ExpandConstant('{autodesktop}\เปิดหน้าร้าน.lnk');
+  if HaveDesktopApp() then
+    Result := ExpandConstant('{app}\desktop\TillumiPOS.exe')
+  else
+    Result := ExpandConstant('{autodesktop}\เปิดหน้าร้าน.lnk');
 end;
 
 function RunHidden(const Exe, Params, WorkDir: String; var ExitCode: Integer): Boolean;

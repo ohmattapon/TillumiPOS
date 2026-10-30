@@ -45,6 +45,35 @@ Check 'native setup code is accessible without Podman' {
   Assert ($iss.Contains('show-setup-code.ps1')) 'No native setup-code action'
   Assert (Test-Path (Join-Path $root 'installer\scripts\show-setup-code.ps1')) 'No native setup-code viewer'
 }
+Check 'the desktop app is copied only when DesktopDir is given, and the shortcuts prefer it' {
+  $files = $iss.Substring($iss.IndexOf('[Files]'), $iss.IndexOf('[Icons]') - $iss.IndexOf('[Files]'))
+  $icons = $iss.Substring($iss.IndexOf('[Icons]'), $iss.IndexOf('[Run]') - $iss.IndexOf('[Icons]'))
+  Assert ($iss.Contains('DesktopDir')) 'No DesktopDir define'
+  Assert ($iss -match '(?m)^#ifdef DesktopDir\s*$') 'The desktop entries are not guarded by the DesktopDir define'
+  Assert ($iss -match 'FileExists\(DesktopDir \+ "\\\\TillumiPOS\.exe"\)') 'A DesktopDir without TillumiPOS.exe is not refused at compile time'
+  $guarded = $files.Substring($files.IndexOf('#ifdef DesktopDir'))
+  $guarded = $guarded.Substring(0, $guarded.IndexOf('#endif'))
+  Assert ($guarded.Contains('{#DesktopDir}') -and $guarded.Contains('DestDir: "{app}\desktop"')) 'The desktop folder is not copied to {app}\desktop inside the guard'
+  Assert (([regex]::Matches($files, '\{#DesktopDir\}')).Count -eq 1) 'DesktopDir is used outside its single guarded entry'
+  Assert ($iss -match 'function HaveDesktopApp\(\): Boolean') 'No HaveDesktopApp check'
+  Assert ($iss -match "FileExists\(ExpandConstant\('\{app\}\\desktop\\TillumiPOS\.exe'\)\)") 'HaveDesktopApp does not test the installed exe'
+  foreach ($place in '{autodesktop}', '{group}') {
+    $lines = @($icons -split "`n" | Where-Object { $_.StartsWith('Name: "' + $place + '\เปิดหน้าร้าน"') })
+    Assert ($lines.Count -eq 4) "Expected the app shortcut and three browser fallbacks in $place, found $($lines.Count)"
+    Assert ($lines[0].Contains('{app}\desktop\TillumiPOS.exe') -and $lines[0].Contains('Check: HaveDesktopApp')) "The desktop app shortcut is not first in $place"
+    Assert (-not $lines[0].Contains('TILLUMI_SHOP_URL')) "The shortcut passes the shop URL on the command line in $place"
+    Assert ($lines[1].Contains('{code:ChromePath}') -and $lines[1].Contains('--kiosk') -and $lines[1].Contains('HaveChrome')) "Chrome fallback missing in $place"
+    Assert ($lines[2].Contains('{code:EdgePath}') -and $lines[2].Contains('--kiosk') -and $lines[2].Contains('HaveEdgeOnly')) "Edge fallback missing in $place"
+    Assert ($lines[3].Contains('Filename: "{#ShopUrl}"') -and $lines[3].Contains('HaveNoKioskBrowser')) "Plain browser fallback missing in $place"
+  }
+  # One shortcut per place: every browser check is false when the desktop app is there.
+  foreach ($name in 'HaveChrome', 'HaveEdgeOnly', 'HaveNoKioskBrowser') {
+    $body = [regex]::Match($iss, "(?s)function $name\(\): Boolean;\s*begin(.*?)\nend;").Groups[1].Value
+    Assert ($body.Contains('not HaveDesktopApp()')) "$name does not stand down for the desktop app"
+  }
+  $link = [regex]::Match($iss, '(?s)function GetShopLink\(Param: String\): String;\s*begin(.*?)\nend;').Groups[1].Value
+  Assert ($link.Contains('HaveDesktopApp()') -and $link.Contains('autodesktop')) 'Open-the-shop-now does not prefer the desktop app and keep the old choice'
+}
 Check 'restore only reopens the shop after media restoration' {
   $restore = Get-Content -Raw (Join-Path $root 'installer\scripts\restore-native.ps1')
   $normalStart = $restore.LastIndexOf("if (`$stoppedByMe) { Start-Service 'tillumi-pos' }")
