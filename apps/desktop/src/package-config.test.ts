@@ -57,3 +57,17 @@ describe('beforeBuild hook', () => {
     expect(await hook()).toBe(false)
   })
 })
+
+describe('shop icon', () => {
+  test('win.icon points to an .ico file that holds a 256 px image', () => {
+    const win = config.win as { icon: string }
+    expect(win.icon).toBe('build/icon.ico')
+    const ico = readFileSync(join(import.meta.dir, '..', win.icon))
+    // ICONDIR: reserved 0, type 1 (icon), then the entry count; an entry width byte of 0 means 256 px.
+    expect(ico.readUInt16LE(0)).toBe(0)
+    expect(ico.readUInt16LE(2)).toBe(1)
+    const count = ico.readUInt16LE(4)
+    const widths = Array.from({ length: count }, (_, i) => ico[6 + i * 16] || 256)
+    expect(widths).toContain(256)
+  })
+})

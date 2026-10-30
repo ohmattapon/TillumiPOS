@@ -9,6 +9,7 @@
   "files": ["dist/**/*", "package.json"],
   "beforeBuild": "./before-build.cjs",
   "win": {
+    "icon": "build/icon.ico",
     "target": [{ "target": "dir", "arch": ["x64"] }]
   }
 }
