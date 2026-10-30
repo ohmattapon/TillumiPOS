@@ -49,13 +49,16 @@ export function isShopUrl(shopOrigin: string, url: string): boolean {
 /**
  * What to do with a navigation or a new window:
  * allow = stay inside the app, external = hand to the system browser, deny = drop it.
- * Only http and https can ever be external or allowed; `blob:` is checked by scheme first
+ * Only credential-free http and https can ever be external or allowed; `blob:` is checked by scheme first
  * because its origin is the origin of the page that made it.
  */
 export function navigationDecision(shopOrigin: string, url: string): NavigationDecision {
   const target = tryParse(url)
   if (!target) return 'deny'
   if (target.protocol !== 'http:' && target.protocol !== 'https:') return 'deny'
+  // A link with credentials is a spoofing pattern (the text before "@" looks like the host)
+  // and the shop never needs one, so it is dropped even when the real host is the shop.
+  if (target.username !== '' || target.password !== '') return 'deny'
 
   const shop = tryParse(shopOrigin)
   if (shop && shop.protocol === 'http:' && target.origin === shop.origin) return 'allow'

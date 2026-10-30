@@ -17,11 +17,15 @@ const table: [string, string, 'allow' | 'external' | 'deny'][] = [
   ['http://127.0.0.1:3000/', NAME_SHOP, 'external'],
   // the host is judged after parsing, so a lookalike prefix gives nothing away
   ['http://127.0.0.1.evil.com:3000/', IP_SHOP, 'external'],
-  ['http://127.0.0.1:3000@evil.com/', IP_SHOP, 'external'],
+  ['http://127.0.0.1:3000@evil.com/', IP_SHOP, 'deny'],
   ['http://localhost.evil.com:3000/', NAME_SHOP, 'external'],
-  ['http://localhost:3000@evil.com/', NAME_SHOP, 'external'],
-  // userinfo in front of the real host does not change which host is contacted
-  ['http://evil.com@127.0.0.1:3000/', IP_SHOP, 'allow'],
+  ['http://localhost:3000@evil.com/', NAME_SHOP, 'deny'],
+  // A link with credentials is a spoofing pattern (the text before "@" looks like the host)
+  // and the shop never needs one, so it is dropped even when the real host is the shop.
+  ['http://evil.com@127.0.0.1:3000/', IP_SHOP, 'deny'],
+  ['http://user:pass@127.0.0.1:3000/', IP_SHOP, 'deny'],
+  ['http://user@localhost:3000/', NAME_SHOP, 'deny'],
+  ['http://user:pass@evil.com/', IP_SHOP, 'deny'],
   ['http://127.0.0.1:3001/', IP_SHOP, 'external'],
   ['http://127.0.0.1/', IP_SHOP, 'external'],
   ['https://127.0.0.1:3000/', IP_SHOP, 'external'],
