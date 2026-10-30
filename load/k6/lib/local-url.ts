@@ -3,11 +3,11 @@
 // Nothing may be imported into this file: the Bun test loads it directly.
 
 // http only; the host is exactly 127.0.0.1 or localhost; then a port, a path, a query, a fragment or the end. Anything
-// else after the host (a user name, a dot, a backslash) is refused, which is stricter than the Bun guard on purpose.
+// else after the host (a user name, a dot) is refused, and a backslash anywhere is refused, which is stricter than the Bun guard on purpose.
 const LOCAL_BASE_URL = /^http:\/\/(127\.0\.0\.1|localhost)(:[0-9]{1,5})?([/?#]|$)/i
 
 export function isLocalBaseUrl(url: string): boolean {
-  return LOCAL_BASE_URL.test(url)
+  return !url.includes(String.fromCharCode(92)) && LOCAL_BASE_URL.test(url)
 }
 
 /** Throws unless the URL is this machine's own address, so a script can never hit a real shop. */

@@ -11,6 +11,8 @@ const accepted = (guard: (url: string) => void, url: string) => {
   }
 }
 
+const BACKSLASH = String.fromCharCode(92)
+
 // Both guards must give the same answer on every one of these.
 const SHARED_CASES: [url: string, allowed: boolean][] = [
   ['http://localhost:3190', true],
@@ -35,10 +37,14 @@ const SHARED_CASES: [url: string, allowed: boolean][] = [
   ['localhost:3190', false],
   ['not a url', false],
   ['', false],
+  // A URL parser reads a backslash as a slash, so these would pass a host check by looks; both guards refuse any.
+  [`http://127.0.0.1${BACKSLASH}@evil.com`, false],
+  [`http://evil.com${BACKSLASH}@localhost`, false],
+  [`http://localhost${BACKSLASH}`, false],
 ]
 
 // The k6 copy is stricter on purpose where a URL parser would quietly rewrite the address.
-const K6_STRICTER: string[] = ['http://user@127.0.0.1:3190', ' http://localhost:3190', 'http://127.0.0.1\@evil.com']
+const K6_STRICTER: string[] = ['http://user@127.0.0.1:3190', ' http://localhost:3190', `http://localhost:3190/x${BACKSLASH}y`]
 
 describe('the local base URL guards agree', () => {
   test.each(SHARED_CASES)('%s -> %p', (url, allowed) => {

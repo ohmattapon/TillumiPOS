@@ -37,6 +37,8 @@ export function assertLoadDatabaseName(name: string): void {
 /** Throws unless the URL is this machine's own address, so a script can never hit a real shop. */
 export function assertLocalBaseUrl(url: string): void {
   const parsed = parse(url, 'base URL')
+  // A parser reads a backslash as a slash, so the host it reports can differ from what the text says.
+  if (url.includes(String.fromCharCode(92))) throw new Error('Refusing a base URL with a backslash (local base URL rule)')
   if (parsed.protocol !== 'http:' || !LOCAL_HOSTS.has(parsed.hostname))
     throw new Error(`Refusing the base URL host "${parsed.hostname}": only http://127.0.0.1 or http://localhost is allowed (local base URL rule)`)
 }
