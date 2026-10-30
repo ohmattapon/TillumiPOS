@@ -48,6 +48,7 @@ LOAD_DB_ADMIN_URL='postgres://<user>:<password>@127.0.0.1:<port>/postgres' bun r
 - ใส่ค่านี้ทางตัวแปรสภาพแวดล้อมของคำสั่งเท่านั้น ห้ามเขียนลงไฟล์ `.env` เอกสาร หรือ commit
 - ห้ามมี `?` หรือ `#` ใน URL (ตัวรันปฏิเสธ)
 - ใช้ PostgreSQL ที่แยกจากฐานข้อมูลพัฒนา (ไม่ใช่ `pos` ที่ใช้เขียนโค้ดทุกวัน) แม้ตัวรันจะแตะเฉพาะ `pos_load*` ก็ตาม
+- ตัวรันตรวจแค่ว่าโฮสต์เป็น `127.0.0.1` หรือ `localhost` และชื่อฐานข้อมูลขึ้นต้น `pos_load` มันรับ **พอร์ตใดก็ได้** ถ้ามีอุโมงค์ (SSH tunnel) หรือพอร์ตที่ส่งต่อไปยังเซิร์ฟเวอร์อื่น ตัวรันจะมองไม่เห็นและจะลบ/สร้างฐานข้อมูลที่นั่น ชี้ `LOAD_DB_ADMIN_URL` ไปที่ PostgreSQL ชั่วคราวบนเครื่องนี้จริงๆ เท่านั้น (ไม่ใช่ 5433 ที่ใช้พัฒนา และไม่ใช่พอร์ตที่ส่งต่อไปที่อื่น)
 
 ตัวแปรอื่น (ไม่บังคับ)
 
@@ -76,7 +77,7 @@ bun run load <profile> [--scenario <name>] [--keep-db]
 ```
 
 - `--scenario` เลือกส่วนเดียวของวัน: `checkout`, `orders`, `qr`, `members`, `reports`, `stock`, `display` หรือ `contention` (โปรไฟล์ที่ไม่ใช่ smoke ใช้ `shop-day` เป็นค่าตั้งต้น) `catalog` และ `auth` รันได้ใน smoke เท่านั้น คู่ที่ไม่มีความหมายถูกปฏิเสธก่อนสร้างฐานข้อมูล
-- `contention` เน้นความถูกต้อง: เครื่องคิดเงินหลายเครื่องขายสินค้าที่สต็อกน้อยพร้อมกัน ยกเลิกบิลพร้อมขาย ส่ง idempotency key เดิมซ้ำพร้อมกัน และปิดกะระหว่างมี QR ค้าง
+- `contention` เน้นความถูกต้อง: เครื่องคิดเงินหลายเครื่องขายสินค้าที่สต็อกน้อยพร้อมกัน, ส่ง idempotency key เดิมซ้ำพร้อมกัน, ยกเลิกบิลใบเดียวกันสองครั้งพร้อมกัน (ต้องสำเร็จครั้งเดียว อีกครั้งถูกปฏิเสธว่ายกเลิกแล้ว) และปิดกะระหว่างมี QR ค้าง
 - `--keep-db` ไม่ลบฐานข้อมูลเมื่อจบ ไว้ตรวจด้วยมือหลังรันที่ invariant ล้ม
 
 ### LOAD_BASELINE และรอบแรก
@@ -106,7 +107,7 @@ LOAD_SCALE=0.2 LOAD_BASELINE=1 LOAD_DURATION_SCALE=0.15 bun run load:shop-day
 - ตาราง invariant ว่าแต่ละข้อผ่านหรือไม่
 - ตารางสรุป: p95 ของแต่ละคำขอ (ตาม tag `name`, แสดง 10 รายการที่ช้าที่สุด) อัตรา error CPU/RSS/connection/lock ที่รอ และ `Result file:` ตามด้วยที่อยู่ไฟล์
 
-รหัสออกของ `bun run load*`: `0` = ผ่านทั้ง k6 และ invariant, `1` = k6 ข้ามเกณฑ์ (รหัส 99) หรือสคริปต์หยุด หรือมี invariant ล้ม ข้อความบอกว่าข้อไหน
+รหัสออกของ `bun run load*`: `0` = ผ่านทั้ง k6 และ invariant, `1` = k6 ข้ามเกณฑ์ (รหัส 99) หรือสคริปต์หยุด หรือมี invariant ล้ม ข้อความบอกว่าข้อไหน, `130` = ถูกขัดจังหวะ (Ctrl+C หรือ SIGTERM) ตัวรันปิด process และลบฐานข้อมูล แล้วไม่เขียนไฟล์ผลของรอบนั้น
 
 ### ไฟล์ผล (`load/results/*.json`, schemaVersion 1)
 
@@ -200,6 +201,8 @@ bun load/compare.ts load/results/<ก่อน>.json load/results/<หลัง>
 - เครื่องเดียวกันรันทั้ง k6 API และฐานข้อมูล แย่งซีพียูกัน ตัวเลขจึงเป็นขอบล่างของเครื่องจริง ไฟล์ผลบันทึกสเปกเครื่องไว้
 - fake bank ไม่ช้าเหมือนธนาคารจริง สถานการณ์ QR จึงวัดเฉพาะฝั่งของเรา
 - stress ถูกจำกัดด้วยเครื่องคิดเงิน 10 เครื่อง (เครื่องหนึ่งรับลูกค้าได้ทีละคน) เมื่อระบบช้ากว่าอัตราที่ลูกค้ามา ผลจะออกมาเป็น `dropped_iterations` ไม่ใช่ latency ที่พุ่งไปเรื่อยๆ
+- stress และ spike ขายพร้อมกันได้ไม่เกิน 10 เครื่องคิดเงิน (checkout 5, orders 3, qr 2) เมื่อโหลดเกินนั้นจะเห็นเป็น `dropped_iterations` ไม่ใช่การขายพร้อมกันที่มากขึ้น
+- `catalog` และ `auth` รันเป็น smoke ที่ผู้ใช้เสมือนคนเดียวเท่านั้น ไม่อยู่ใน shop-day จึงไม่ได้วัด p95 ของ catalog เมื่อมีผู้ใช้หลายคน และไม่ได้วัดการ login พร้อมกัน
 - session และตัวล็อก PIN/login อยู่ในหน่วยความจำของ API (instance เดียว) สถานการณ์ auth จึงใช้ผู้ใช้ของตัวเอง ไม่ปนกับผู้ใช้ที่ขายของ
 - รอบ time-lapse (`LOAD_DURATION_SCALE` ไม่ใช่ 1) แกว่งมาก ส่วนที่มาไม่บ่อย (รับสินค้า รายงาน) มีตัวอย่างเพียง 1-2 ครั้ง p95 ของมันจึงเป็นค่าเดียว
 - ใน shop-day คำขอสตรีมของจอลูกค้า (`display.stream`) ถูกค้างไว้หลายวินาทีโดยตั้งใจ ตัวเลข "(all requests)" ในรอบนั้นไม่มีความหมาย ให้ดูตามชื่อคำขอ และ `compare.ts` ข้ามตัวเลขรวมนั้นให้
@@ -207,15 +210,15 @@ bun load/compare.ts load/results/<ก่อน>.json load/results/<หลัง>
 
 ## สิ่งที่พบจากการรันรอบแรก
 
-ข้อสังเกตเท่านั้น ไม่ได้แก้ API (การตัดสินใจเป็นของเจ้าของโปรเจกต์) รายงานเต็มอยู่ใน `.superpowers/sdd/2026-10-30-k6-load-test/` (`task-8-report.md`, `task-9-report.md`)
+ข้อสังเกตเท่านั้น branch นี้ไม่ได้แก้ API (การตัดสินใจเป็นของเจ้าของโปรเจกต์) และข้อเท็จจริงอยู่ในหัวข้อนี้ทั้งหมด
 
-- **deadlock ของ PostgreSQL ใน stress:** รอบ stress ย่อเวลา (`LOAD_DURATION_SCALE=0.0625`) พบ `deadlock detected` 7 ครั้งใน log ของ API (0 ครั้งใน load และ spike) ทำให้ขาย 3 ครั้งและจ่ายออเดอร์ที่มี quote 3 ครั้งตอบ 500 วงรอที่เห็นเกี่ยวกับ: การ insert ลง `sales` (foreign key ไปที่ `promotions` แบบ `FOR KEY SHARE`), การล็อกแถวโปรโมชันด้วย `lockForUse` และการ insert ลง `receipt_counters` ลำดับล็อกใน AGENTS.md (order, QR, quote, promotion, member, product) ไม่ได้พูดถึง `receipt_counters`
-- **เงิน QR ค้างไม่มีบิลหลัง deadlock:** ในรอบ stress เดียวกัน invariant `paid_qr_has_bill` ล้ม 4 รายการ (QR สถานะ paid ไม่มี `sale_id` ไม่ได้ dismiss) ใน `task-9-report.md` อธิบายว่าธนาคารรับเงินแล้ว แต่ transaction ขายถูก rollback จาก deadlock และ API ปฏิเสธปิดกะที่เกี่ยวข้อง ข้อมูลอื่นผ่านทุก invariant สถานการณ์ `qr` ยังไม่ลองขายซ้ำด้วย QR ใบเดิมหลังได้ 500 และไม่ให้เจ้าของ dismiss
+- **deadlock ของ PostgreSQL ใน stress:** รอบ stress ย่อเวลา (`LOAD_DURATION_SCALE=0.0625`) พบ `deadlock detected` 7 ครั้งใน log ของ API (0 ครั้งใน load และ spike) ทำให้ขาย 3 ครั้งและจ่ายออเดอร์ที่มี quote 3 ครั้งตอบ 500 วงรอที่เห็นเกี่ยวกับ: การ insert ลง `sales` (foreign key ไปที่ `promotions` แบบ `FOR KEY SHARE`), การล็อกแถวโปรโมชันก่อนนับจำนวนครั้งที่ใช้ (`lockForUse`) และแถวใน `receipt_counters` ลำดับล็อกใน AGENTS.md (order, QR, quote, promotion, member, product) ไม่ได้พูดถึง `receipt_counters`
+- **เงิน QR ค้างไม่มีบิลหลัง deadlock:** ในรอบ stress เดียวกัน invariant `paid_qr_has_bill` ล้ม 4 รายการ (QR สถานะ paid ไม่มี `sale_id` ไม่ได้ dismiss) ธนาคารรับเงินแล้ว แต่ transaction ขายถูก rollback จาก deadlock และ API ปฏิเสธปิดกะของ QR ที่ค้าง ข้อมูลอื่นผ่านทุก invariant สถานการณ์ `qr` ยังไม่ลองขายซ้ำด้วย QR ใบเดิมหลังได้ 500 และไม่ให้เจ้าของ dismiss
 - **jsonb ถูกเข้ารหัสซ้ำ:** `command_receipts.result` และ `shift_summaries.summary` ที่ API เขียนเป็น jsonb ที่เก็บ *สตริง* ของ JSON ส่วน seed เขียนเป็นออบเจ็กต์ invariant อ่านได้ทั้งสองแบบ ถ้าเขียน SQL เองกับสองคอลัมน์นี้ต้องใช้ `#>> '{}'`
 
 ## รันใน CI
 
-Workflow `.github/workflows/load-test.yml` รันด้วยมือเท่านั้น (Actions แล้วเลือก Run workflow) ไม่รันกับ PR มันรัน `load:smoke` แล้วรันโปรไฟล์ load ตาม `scale` ที่เลือก (ค่าตั้งต้น 0.2) และอัปโหลด `load/results/` เป็น artifact ค่าตั้งต้น `baseline` เป็นจริง latency จึงไม่ทำให้ job ล้ม เพราะ runner ผันผวน แต่ invariant และ check ที่ผิดทำให้ล้มเสมอ ตัวเลขใน CI ใช้ดูแนวโน้ม
+Workflow `.github/workflows/load-test.yml` รันด้วยมือเท่านั้น (Actions แล้วเลือก Run workflow) ไม่รันกับ PR มันรัน `load:smoke` แล้วรัน smoke ของสถานการณ์ `qr` (เส้นทางที่ผลจากธนาคารไม่แน่ชัด) และ `contention` (การแข่งกัน) แล้วรันโปรไฟล์ load ตาม `scale` ที่เลือก (ค่าตั้งต้น 0.2) และอัปโหลด `load/results/` เป็น artifact ค่าตั้งต้น `baseline` เป็นจริง latency จึงไม่ทำให้ job ล้ม เพราะ runner ผันผวน แต่ invariant และ check ที่ผิดทำให้ล้มเสมอ ตัวเลขใน CI ใช้ดูแนวโน้ม
 
 ## เทสต์ของชุดนี้
 
