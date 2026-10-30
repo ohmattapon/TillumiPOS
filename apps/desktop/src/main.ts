@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url'
 import { nextDelayMs } from './backoff'
 import { isShopHealthy } from './health'
 import { popupOwnerMenu } from './owner-menu'
-import { loadSettings, saveSettings } from './settings'
 import { parseShopOrigin } from './shop-origin'
 import { strings } from './strings'
 import { createShopWindow } from './window'
@@ -20,9 +19,9 @@ const PRELOAD = fileURLToPath(new URL('./preload.js', import.meta.url))
 let activeWindow: BrowserWindow | null = null
 
 // The menu runs from event callbacks nobody awaits, so a failure is logged and shown, never lost.
-function reportFailure(error: unknown, message: string = strings.errors.menuFailed): void {
+function reportFailure(error: unknown): void {
   console.error(error)
-  dialog.showErrorBox(strings.appName, message)
+  dialog.showErrorBox(strings.appName, strings.errors.menuFailed)
 }
 
 function start(): void {
@@ -34,7 +33,6 @@ function start(): void {
     app.quit()
     return
   }
-  const settingsDir = app.getPath('userData')
   // The default application menu has reload and developer shortcuts; the shop window has no menu at all.
   Menu.setApplicationMenu(null)
 
@@ -69,24 +67,20 @@ function start(): void {
   const shopWindow: BrowserWindow = createShopWindow({
     shopOrigin,
     preloadPath: PRELOAD,
-    onOwnerShortcut: () => void showOwnerMenu().catch(reportFailure),
+    onOwnerShortcut: () => {
+      try {
+        showOwnerMenu()
+      } catch (error) {
+        reportFailure(error)
+      }
+    },
   })
 
   activeWindow = shopWindow
 
-  async function showOwnerMenu(): Promise<void> {
-    const printers = await shopWindow.webContents.getPrintersAsync()
+  function showOwnerMenu(): void {
     popupOwnerMenu({
       window: shopWindow,
-      printers,
-      savedPrinter: loadSettings(settingsDir).printer,
-      onChoosePrinter: (printer) => {
-        try {
-          saveSettings(settingsDir, { printer })
-        } catch (error) {
-          reportFailure(error, strings.errors.saveFailed)
-        }
-      },
       onReload: () => void openShop(),
       onQuit: () => app.quit(),
     })

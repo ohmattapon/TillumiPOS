@@ -23,12 +23,6 @@ declare module 'electron' {
     readonly isAutoRepeat: boolean
   }
 
-  interface PrinterInfo {
-    readonly name: string
-    readonly displayName: string
-    readonly isDefault: boolean
-  }
-
   /** What `setWindowOpenHandler` answers: drop the request, or open a window with these options. */
   type WindowOpenHandlerResponse =
     | { action: 'deny' }
@@ -36,7 +30,6 @@ declare module 'electron' {
 
   interface WebContents {
     loadURL(url: string): Promise<void>
-    getPrintersAsync(): Promise<PrinterInfo[]>
     setWindowOpenHandler(handler: (details: { url: string }) => WindowOpenHandlerResponse): void
     on(event: 'will-navigate' | 'will-redirect', listener: (details: NavigationEvent) => void): this
     // fired for a window opened because the handler answered 'allow'
@@ -97,11 +90,8 @@ declare module 'electron' {
 
   interface MenuItemConstructorOptions {
     label?: string
-    type?: 'normal' | 'separator' | 'radio'
-    checked?: boolean
-    enabled?: boolean
+    type?: 'normal' | 'separator'
     click?: () => void
-    submenu?: MenuItemConstructorOptions[]
   }
 
   class Menu {
@@ -112,7 +102,6 @@ declare module 'electron' {
 
   const app: {
     requestSingleInstanceLock(): boolean
-    getPath(name: 'userData'): string
     whenReady(): Promise<void>
     quit(): void
     on(event: 'second-instance' | 'window-all-closed' | 'before-quit', listener: () => void): void
