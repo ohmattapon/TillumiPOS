@@ -3,9 +3,18 @@ param(
   [Parameter(Mandatory = $true)][string]$AppDir,
   [Parameter(Mandatory = $true)][string]$DataDir,
   # Kept for callers that still pass it; the port now comes from DATABASE_URL in .env.
-  [int]$PortDb = 5435
+  [int]$PortDb = 5435,
+  # Where to write install-error.txt (the program folder). Falls back to AppDir.
+  [string]$InstallDir = ''
 )
 $ErrorActionPreference = 'Stop'
+if ($InstallDir -eq '') { $InstallDir = $AppDir }
+
+# A failure here must reach the shop in words, not as an exit code (the installer runs hidden).
+. (Join-Path $PSScriptRoot 'install-error.ps1')
+Clear-InstallErrorLog $InstallDir
+trap { Write-InstallErrorLog $InstallDir (Get-InstallErrorMessage $_); exit 1 }
+
 . (Join-Path $PSScriptRoot 'shop-database.ps1')
 # The same connection (and password) the API uses: DATABASE_URL in <DataDir>\.env.
 $databaseUrl = Read-ShopDatabaseUrl $DataDir

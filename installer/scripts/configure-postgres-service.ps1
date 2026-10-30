@@ -5,6 +5,11 @@ param(
   [Parameter(Mandatory = $true)][string]$DataDir
 )
 $ErrorActionPreference = 'Stop'
+
+# A failure here must reach the shop in words, not as an exit code (the installer runs hidden).
+. (Join-Path $PSScriptRoot 'install-error.ps1')
+Clear-InstallErrorLog $InstallDir
+trap { Write-InstallErrorLog $InstallDir (Get-InstallErrorMessage $_); exit 1 }
 $service = Get-CimInstance Win32_Service -Filter "Name='tillumi-postgres'" -ErrorAction Stop
 if (-not $service) { throw 'PostgreSQL service registration is missing.' }
 if ($service.State -ne 'Stopped') { throw 'Stop PostgreSQL before changing its service account.' }

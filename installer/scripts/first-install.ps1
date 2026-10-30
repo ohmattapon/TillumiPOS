@@ -38,6 +38,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# The installer runs this script hidden, so a failure would only show an exit code to the shop.
+# Write the real reason next to the program, where the installer and the technician can read it.
+. (Join-Path $PSScriptRoot 'install-error.ps1')
+Clear-InstallErrorLog $InstallDir
+trap { Write-InstallErrorLog $InstallDir (Get-InstallErrorMessage $_); exit 1 }
+
 function Test-PortFree([string]$TargetHost, [int]$Port) {
   # True when nothing listens: refused fast (EndConnect throws) or filtered (timeout).
   $client = New-Object Net.Sockets.TcpClient

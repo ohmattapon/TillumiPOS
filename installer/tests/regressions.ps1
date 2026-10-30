@@ -50,6 +50,25 @@ Check 'a service left registered without its program folder does not block the i
   Assert ($iss -match "HadApiService and FileExists\(ExpandConstant\('\{app\}\\tillumi-pos\.xml'\)\)") 'A service whose xml file is gone still fails the install'
   Assert ($iss -match "HadPostgresService and FileExists\(ExpandConstant\('\{app\}\\tillumi-postgres\.xml'\)\)") 'A database service whose xml file is gone still fails the install'
 }
+Check 'the shop can choose the install folder' {
+  Assert ($iss -match '(?m)^DisableDirPage=no\r?$') 'The folder page is hidden, so the shop cannot pick where the program goes'
+  Assert ($iss -match '(?m)^UsePreviousAppDir=no\r?$') 'A previous install folder is forced, so the shop cannot move the program'
+}
+Check 'a failed hidden step shows the reason, not just an exit code' {
+  Assert (Test-Path (Join-Path $root 'installer\scripts\install-error.ps1')) 'No shared error log helper for the hidden scripts'
+  foreach ($script in @('first-install.ps1', 'configure-postgres-service.ps1', 'migrate-native.ps1')) {
+    $body = Get-Content -Raw -LiteralPath (Join-Path $root "installer\scripts\$script")
+    Assert ($body.Contains("'install-error.ps1'")) "$script does not write its reason to install-error.txt"
+    Assert ($body.Contains('Get-InstallErrorMessage')) "$script reports no message"
+  }
+  $mustScript = [regex]::Match($iss, '(?s)procedure MustRunScript\(.*?\nend;').Value
+  Assert ($mustScript.Contains('FailStep(')) 'A failed script step still shows only an exit code'
+  $mustCaptured = [regex]::Match($iss, '(?s)procedure MustRunCaptured\(.*?\nend;').Value
+  Assert ($mustCaptured.Contains('install-error.txt')) 'A failed service command does not keep the message Windows printed'
+  Assert ($mustCaptured.Contains('FailStep(')) 'A failed service command still shows only an exit code'
+  Assert ($iss.Contains('-InstallDir "'' + ExpandConstant(''{app}'')')) 'The migration step cannot write its reason next to the program'
+  Assert ($iss.Contains('tillumi-pos.err.log')) 'A shop that never answers shows no log line explaining why'
+}
 Check 'native setup code is accessible without Podman' {
   Assert ($iss.Contains('show-setup-code.ps1')) 'No native setup-code action'
   Assert (Test-Path (Join-Path $root 'installer\scripts\show-setup-code.ps1')) 'No native setup-code viewer'

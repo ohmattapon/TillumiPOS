@@ -79,6 +79,9 @@ AppPublisher={#AppName}
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
+; ร้านเลือกโฟลเดอร์ติดตั้งเองได้ และไม่บังคับใช้โฟลเดอร์เดิม (เครื่องที่ลงรุ่นเก่าไว้ที่อื่น)
+DisableDirPage=no
+UsePreviousAppDir=no
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -221,6 +224,30 @@ begin
   Result := Exec(Exe, Params, WorkDir, SW_HIDE, ewWaitUntilTerminated, ExitCode);
 end;
 
+{ เหตุผลจริงที่สคริปต์เขียนไว้ข้างโปรแกรม (ตัวติดตั้งรันแบบซ่อนหน้าต่างจึงไม่เห็นข้อความ) }
+function ReadErrorDetail(): String;
+var
+  Text: AnsiString;
+begin
+  Result := '';
+  if not FileExists(ExpandConstant('{app}\install-error.txt')) then
+    Exit;
+  if not LoadStringFromFile(ExpandConstant('{app}\install-error.txt'), Text) then
+    Exit;
+  Text := Trim(Text);
+  if Length(Text) > 700 then
+    Text := Copy(Text, 1, 700) + '...';
+  if Text <> '' then
+    Result := #13#10#13#10 + 'สาเหตุ: ' + Text;
+end;
+
+procedure FailStep(const StepName: String; ExitCode: Integer);
+begin
+  RaiseException('ทำ' + StepName + 'ไม่สำเร็จ (รหัส ' + IntToStr(ExitCode) + ')' + ReadErrorDetail()
+    + #13#10#13#10 + 'ลองติดตั้งอีกครั้ง หากยังไม่ได้ โปรดติดต่อช่าง'
+    + #13#10 + 'ช่างดูรายละเอียดเพิ่มเติมได้ในไฟล์ Setup Log ของ Windows (โฟลเดอร์ Temp ของผู้ใช้ที่ติดตั้ง)');
+end;
+
 procedure MustRun(const Exe, Params, WorkDir, StepName: String);
 var
   ExitCode: Integer;
@@ -229,7 +256,34 @@ begin
   if not RunHidden(Exe, Params, WorkDir, ExitCode) then
     RaiseException('ทำ' + StepName + 'ไม่สำเร็จ (เรียกโปรแกรมไม่ได้) ลองติดตั้งอีกครั้ง หากยังไม่ได้ โปรดติดต่อช่าง');
   if ExitCode <> 0 then
-    RaiseException('ทำ' + StepName + 'ไม่สำเร็จ (รหัส ' + IntToStr(ExitCode) + ') ลองติดตั้งอีกครั้ง หากยังไม่ได้ โปรดติดต่อช่าง');
+    FailStep(StepName, ExitCode);
+end;
+
+{ เหมือน MustRun แต่เก็บข้อความที่โปรแกรมพิมพ์ออกมา (net start, sc, schtasks พิมพ์เหตุผลไว้) }
+procedure MustRunCaptured(const Exe, Params, WorkDir, StepName: String);
+var
+  ExitCode: Integer;
+  Cmd: String;
+begin
+  FailedStep := StepName;
+  Cmd := '/c ""' + Exe + '" ' + Params + ' > "' + ExpandConstant('{app}\install-error.txt') + '" 2>&1"';
+  if not RunHidden(ExpandConstant('{sys}\cmd.exe'), Cmd, WorkDir, ExitCode) then
+    RaiseException('ทำ' + StepName + 'ไม่สำเร็จ (เรียกโปรแกรมไม่ได้) ลองติดตั้งอีกครั้ง หากยังไม่ได้ โปรดติดต่อช่าง');
+  if ExitCode <> 0 then
+    FailStep(StepName, ExitCode);
+end;
+
+{ สคริปต์ PowerShell ที่เขียนเหตุผลของตัวเองลง install-error.txt ผ่าน scripts\install-error.ps1 }
+procedure MustRunScript(const ScriptPath, ScriptParams, StepName: String);
+var
+  ExitCode: Integer;
+begin
+  FailedStep := StepName;
+  if not RunHidden('powershell.exe', '-NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '" ' + ScriptParams,
+                   ExpandConstant('{tmp}'), ExitCode) then
+    RaiseException('ทำ' + StepName + 'ไม่สำเร็จ (เรียกโปรแกรมไม่ได้) ลองติดตั้งอีกครั้ง หากยังไม่ได้ โปรดติดต่อช่าง');
+  if ExitCode <> 0 then
+    FailStep(StepName, ExitCode);
 end;
 
 procedure StopAndRemoveServices();
@@ -363,10 +417,26 @@ begin
     RaiseException('ทำ' + FailedStep + 'ไม่สำเร็จ (รหัส ' + IntToStr(ExitCode) + ') ลองติดตั้งอีกครั้ง หากยังไม่ได้ โปรดติดต่อช่าง');
 end;
 
+function ReadLogTail(const FileName: String; MaxChars: Integer): AnsiString;
+var
+  Text: AnsiString;
+begin
+  Result := '';
+  if not FileExists(FileName) then
+    Exit;
+  if not LoadStringFromFile(FileName, Text) then
+    Exit;
+  Text := Trim(Text);
+  if Length(Text) > MaxChars then
+    Text := '...' + Copy(Text, Length(Text) - MaxChars + 1, MaxChars);
+  Result := Text;
+end;
+
 procedure WaitForShop();
 var
   Cmd: String;
   ExitCode: Integer;
+  Tail: AnsiString;
 begin
   { หน้า /api/v1/setup อ่านตาราง users แปลว่าต่อฐานข้อมูลที่อัปแล้วได้จริง ไม่ใช่แค่โปรแกรมติด }
   Cmd := '-NoProfile -ExecutionPolicy Bypass -Command "'
@@ -378,7 +448,16 @@ begin
   if not RunHidden('powershell.exe', Cmd, ExpandConstant('{tmp}'), ExitCode) then
     RaiseException('ทำ' + FailedStep + 'ไม่สำเร็จ (เรียกโปรแกรมไม่ได้) ลองติดตั้งอีกครั้ง หากยังไม่ได้ โปรดติดต่อช่าง');
   if ExitCode <> 0 then
-    RaiseException('ติดตั้งไฟล์เสร็จแล้วแต่เปิดหน้าร้านไม่ติด ลองเปิดเครื่องใหม่แล้วเปิดทางลัด "เปิดหน้าร้าน" หากยังไม่ได้ โปรดติดต่อช่าง');
+  begin
+    { บันทึกของ service หน้าร้านบอกสาเหตุที่เปิดไม่ติด (สิทธิ์อ่านมีเฉพาะตอนติดตั้ง) }
+    Tail := ReadLogTail(ExpandConstant('{commonappdata}\{#DataDirName}\logs\tillumi-pos.err.log'), 600);
+    if Trim(Tail) = '' then
+      Tail := ReadLogTail(ExpandConstant('{commonappdata}\{#DataDirName}\logs\tillumi-pos.out.log'), 600);
+    if Trim(Tail) <> '' then
+      Tail := #13#10#13#10 + 'บันทึกของหน้าร้าน: ' + Trim(Tail);
+    RaiseException('ติดตั้งไฟล์เสร็จแล้วแต่เปิดหน้าร้านไม่ติด' + Tail
+      + #13#10#13#10 + 'ลองเปิดเครื่องใหม่แล้วเปิดทางลัด "เปิดหน้าร้าน" หากยังไม่ได้ โปรดติดต่อช่าง');
+  end;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -390,13 +469,11 @@ begin
 
   try
     { 1. ฐานข้อมูล + รหัส: รันซ้ำได้ ของเดิมไม่หาย }
-    MustRun('powershell.exe',
-      '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\scripts\first-install.ps1') + '"'
-      + ' -InstallDir "' + ExpandConstant('{app}') + '"'
+    MustRunScript(ExpandConstant('{app}\scripts\first-install.ps1'),
+      '-InstallDir "' + ExpandConstant('{app}') + '"'
       + ' -DataDir "' + DataDirPath() + '"'
       + ' -PgsqlDir "' + ExpandConstant('{app}\pgsql') + '"'
       + ' -PortDb {#PortDb} -PortApi {#PortApi}',
-      ExpandConstant('{tmp}'),
       'เตรียมฐานข้อมูลของร้าน');
 
     { 2. ไฟล์ service ทั้งสอง (ตรวจว่าไม่เหลือ token ค้างทุกไฟล์) }
@@ -406,23 +483,23 @@ begin
     { 3. ฐานข้อมูลก่อน แล้วอัปตาราง แล้วค่อยตัวร้าน (ผูกลำดับไว้ใน xml ด้วย <depend>) }
     if not HadPostgresService then
     begin
-      MustRun(ExpandConstant('{app}\tillumi-postgres.exe'), 'install', ExpandConstant('{app}'), 'ติดตั้ง service ฐานข้อมูล');
+      MustRunCaptured(ExpandConstant('{app}\tillumi-postgres.exe'), 'install', ExpandConstant('{app}'), 'ติดตั้ง service ฐานข้อมูล');
       CreatedPostgresService := True;
     end;
-    MustRun('powershell.exe',
-      '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\scripts\configure-postgres-service.ps1') + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + DataDirPath() + '"',
-      DataDirPath(), 'กำหนดสิทธิ์บัญชีฐานข้อมูล');
-    MustRun(ExpandConstant('{sys}\net.exe'), 'start ' + PostgresService, '', 'สตาร์ทฐานข้อมูล');
-    MustRun('powershell.exe',
-      '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\scripts\migrate-native.ps1') + '" -AppDir "' + AppVerDir() + '" -DataDir "' + DataDirPath() + '" -PortDb {#PortDb}',
-      DataDirPath(),
+    MustRunScript(ExpandConstant('{app}\scripts\configure-postgres-service.ps1'),
+      '-InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + DataDirPath() + '"',
+      'กำหนดสิทธิ์บัญชีฐานข้อมูล');
+    MustRunCaptured(ExpandConstant('{sys}\net.exe'), 'start ' + PostgresService, '', 'สตาร์ทฐานข้อมูล');
+    MustRunScript(ExpandConstant('{app}\scripts\migrate-native.ps1'),
+      '-AppDir "' + AppVerDir() + '" -DataDir "' + DataDirPath() + '" -PortDb {#PortDb}'
+      + ' -InstallDir "' + ExpandConstant('{app}') + '"',
       'อัปฐานข้อมูลให้เป็นรุ่นล่าสุด');
     if not HadApiService then
     begin
-      MustRun(ExpandConstant('{app}\tillumi-pos.exe'), 'install', ExpandConstant('{app}'), 'ติดตั้ง service หน้าร้าน');
+      MustRunCaptured(ExpandConstant('{app}\tillumi-pos.exe'), 'install', ExpandConstant('{app}'), 'ติดตั้ง service หน้าร้าน');
       CreatedApiService := True;
     end;
-    MustRun(ExpandConstant('{sys}\net.exe'), 'start ' + ApiService, '', 'สตาร์ทหน้าร้าน');
+    MustRunCaptured(ExpandConstant('{sys}\net.exe'), 'start ' + ApiService, '', 'สตาร์ทหน้าร้าน');
 
     { 4. หน้าร้านต้องตอบจริงจึงนับว่าเสร็จ }
     WaitForShop();
@@ -434,7 +511,7 @@ begin
         '', 'เปิดให้เครื่องอื่นในร้านเชื่อมต่อ');
 
     { 6. งานสำรองข้อมูลตีสองทุกคืน }
-    MustRun(ExpandConstant('{sys}\schtasks.exe'),
+    MustRunCaptured(ExpandConstant('{sys}\schtasks.exe'),
       '/create /tn "{#BackupTaskName}"'
       + ' /tr "\"powershell.exe\" -NoProfile -ExecutionPolicy Bypass -File \"' + ExpandConstant('{app}\scripts\backup-native.ps1') + '\" -PgsqlBinDir \"' + ExpandConstant('{app}\pgsql\bin') + '\" -DataDir \"' + DataDirPath() + '\""'
       + ' /sc daily /st 02:00 /ru SYSTEM /f',
