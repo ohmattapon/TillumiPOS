@@ -10,6 +10,7 @@
     "typecheck": "tsc -p . --noEmit"
   },
   "devDependencies": {
-    "electron": "45.1.0"
+    "electron": "45.1.0",
+    "electron-builder": "26.18.0"
   }
 }
