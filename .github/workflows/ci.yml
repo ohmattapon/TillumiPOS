@@ -72,6 +72,8 @@ jobs:
       - run: bun run lint
       # The same tests as `bun run test`, and the build fails when a line of the API or of the web's logic is not covered.
       - run: bun run coverage
+      # The desktop shell's tests are pure Bun tests; the shell itself never starts in CI.
+      - run: bun run test:desktop
 
   # The browser checks, in parallel with `check`: they drive the Chrome that is installed on the runner, and
   # create their own databases on the same PostgreSQL port the tests use.
