@@ -39,6 +39,13 @@
     "coverage": "bun run coverage:api && bun run coverage:web",
     "coverage:api": "cd server && bun --env-file=.env.test test --coverage",
     "coverage:web": "bun test ./src --coverage",
+    "load": "bun load/run.ts",
+    "load:smoke": "bun load/run.ts smoke",
+    "load:shop-day": "bun load/run.ts load",
+    "load:stress": "bun load/run.ts stress",
+    "load:spike": "bun load/run.ts spike",
+    "load:soak": "bun load/run.ts soak",
+    "test:load": "bun test ./load",
     "openapi:check": "cd server && bun --env-file=.env.test test/openapi-snapshot.ts check",
     "hooks:install": "lefthook install"
   },
