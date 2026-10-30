@@ -20,8 +20,8 @@
 // to a file. The real bank is never called: the API is pointed at the fake in server/test/kbank-server.ts.
 import { SQL, type Server } from 'bun'
 import { randomBytes, randomInt } from 'node:crypto'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { arch, cpus, release, tmpdir, totalmem, type as osType } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dropDatabase, inheritedEnv, migrateAndSeedBase, recreateDatabase, targetUrl } from './lib/database'
@@ -29,12 +29,16 @@ import { startFakeBankControl, startFakeBankFront } from './lib/fake-bank-contro
 import { buildK6Args, findK6 } from './lib/k6'
 import { checkInvariants, formatInvariants, type InvariantResult } from './invariants'
 import { createProcessGroup } from './lib/processes'
+import { startSampler, type ResourceSample } from './lib/sampler'
+import { buildResult, formatResultTable, resultFileName } from './lib/summary'
 import { redactUrls } from './lib/redact'
 import { assertLoadDatabase, assertLocalBaseUrl } from './lib/safety'
 import { droppedNote, timeLapseNote } from './lib/run-notes'
 import { createSlotClaims } from './lib/slot-claims'
 import { claimCapacities, defaultScenario, parseKnobs, PROFILES, validateRun } from './k6/lib/mix'
 import { SEED_DEFAULTS, seedLoadData, type SeedOptions } from './seed'
+
+const SAMPLE_EVERY_MS = 2000
 
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '')
 
@@ -108,6 +112,16 @@ function printSummary(summary: Summary, profile: string, baseline: boolean) {
     console.log(`  ${key.slice('http_req_duration'.length)} ${value['p(95)']?.toFixed(1) ?? 'no samples'}`)
 }
 
+/** The version k6 reports about itself (for example 'v2.3.0'), or 'unknown'. */
+function k6VersionOf(k6: string): string {
+  try {
+    const out = Bun.spawnSync([k6, 'version'], { stdout: 'pipe', stderr: 'pipe' })
+    return `${out.stdout}${out.stderr}`.match(/v\d+\.\d+\.\d+/)?.[0] ?? 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
 function k6Failure(exit: number, profile: string): string {
   if (exit !== 99) return `k6 failed with exit code ${exit} (the script stopped; see its output above)`
   const finding = profile === 'stress' || profile === 'spike' ? `; for the ${profile} profile that is the finding, not a broken script` : ''
@@ -161,6 +175,8 @@ async function main() {
   // 'exit' cannot wait: stopAll starts the kills synchronously, which is all that is needed here.
   process.on('exit', () => void group.stopAll())
 
+  let sampleSql: SQL | null = null
+  let stopSampler: () => Promise<ResourceSample[]> = async () => []
   try {
     await recreateDatabase(adminUrl, dbName)
 
@@ -219,6 +235,11 @@ async function main() {
       for await (const chunk of api.stderr as ReadableStream<Uint8Array>) process.stderr.write(redactUrls(new TextDecoder().decode(chunk)))
     })()
     await waitFor(`${baseUrl}/api/v1/health`, 'API', api)
+    // Its own connection, so the samples never wait behind the API's pool; it only reads.
+    sampleSql = new SQL(databaseUrl, { max: 1 })
+    const sampler = await startSampler({ pid: api.pid, sql: sampleSql, everyMs: SAMPLE_EVERY_MS })
+    stopSampler = () => sampler.stop()
+    const startedAt = new Date()
 
     console.log(`Load run "${options.profile}" (scenario ${options.scenario}, LOAD_SCALE ${knobs.scale}, LOAD_DURATION_SCALE ${knobs.durationScale}${knobs.baseline ? ', baseline' : ''}): API ready at ${baseUrl}, database ${dbName}`)
     const lapse = timeLapseNote(knobs.durationScale)
@@ -245,6 +266,7 @@ async function main() {
     // k6 prints its own end-of-test summary on this terminal; it holds request names and numbers, no credentials.
     const k6Run = group.spawn([k6, ...buildK6Args({ name: options.profile, baseUrl }, scenario, summaryFile)], { cwd: root, env: k6Env, stdout: 'inherit', stderr: 'inherit' })
     const k6Exit = await k6Run.exited
+    const samples = await stopSampler()
     const summary = JSON.parse(await readFile(summaryFile, 'utf8').catch(() => 'null')) as Summary
     const failedRate = summary?.metrics?.expected_failed?.value
     console.log(`k6 finished with exit code ${k6Exit}; expected_failed rate ${failedRate ?? 'unknown'}`)
@@ -254,13 +276,35 @@ async function main() {
     const failedInvariants = invariants.filter((result) => !result.passed)
     if (failedInvariants.length > 0)
       console.log(`Invariants failed in database ${dbName}${options.keepDb ? ' (kept)' : '; it is dropped now, rerun with --keep-db to look at it'}`)
-    // The result file arrives in a later task.
+    const result = buildResult({
+      profile: options.profile,
+      scenario,
+      startedAt: startedAt.toISOString(),
+      k6: summary,
+      k6ExitCode: k6Exit,
+      invariants,
+      samples,
+      intervalMs: SAMPLE_EVERY_MS,
+      machine: { cpus: cpus().length, memoryGb: Math.round((totalmem() / 1024 ** 3) * 10) / 10, os: `${osType()} ${release()} ${arch()}`, k6Version: k6VersionOf(k6) },
+      knobs,
+      seed: Object.fromEntries((Object.keys(SEED_DEFAULTS) as (keyof typeof SEED_DEFAULTS)[]).map((key) => [key, seedSizes[key] ?? SEED_DEFAULTS[key]])),
+    })
+    const resultsDir = join(root, 'load', 'results')
+    await mkdir(resultsDir, { recursive: true })
+    const resultFile = join(resultsDir, resultFileName(startedAt, options.profile))
+    await writeFile(resultFile, `${JSON.stringify(result, null, 1)}
+`)
+    console.log(`
+${formatResultTable(result)}
+Result file: ${resultFile}`)
     const failures = [
       ...(k6Exit !== 0 ? [k6Failure(k6Exit, options.profile)] : []),
       ...(failedInvariants.length > 0 ? [`${failedInvariants.length} invariant(s) failed: ${failedInvariants.map((result) => result.name).join(', ')}`] : []),
     ]
     if (failures.length > 0) throw new Error(failures.join('\n'))
   } finally {
+    await stopSampler().catch(() => [])
+    await sampleSql?.close().catch(() => {})
     await cleanup()
   }
 }
