@@ -484,6 +484,7 @@ The repo is one package (`package.json` at the root holds the API and the web), 
 - `drizzle/` and `drizzle.config.ts`: migrations and their config. `e2e/`: browser tests and screenshots.
 - `workers/media`: a Cloudflare Worker that stores product images in R2
 - `workers/cloud`: a Cloudflare Worker that runs the Docker image (API and web) in one Cloudflare Container, see `docs/cloudflare.md`
+- `apps/desktop/`: the Electron shell around the local service. It loads only the shop origin and holds no secrets. The native installer ships its build with `/DDesktopDir`, see `docs/windows-native-installer.md`.
 - `Dockerfile`, `docker-compose.yml`, `docker-compose.dev.yml`, `Caddyfile`, `docker/entrypoint.sh`, `scripts/`: the install kit for shops (the guide for installers is `docs/install.md`), per the section "Installation and first-run setup"
 - `LICENSE` and `NOTICE`: Apache-2.0
 - `DESIGN.md`: the design system of the web pages (colors, typography, components and interaction rules). Read it before changing or adding a screen.
@@ -503,6 +504,8 @@ Run from the root of the repo:
 | `bun run db:seed:demo` | Put 3 weeks of demo data up to now (bills, shifts, drawers, stock, table orders, QR) into the database in `.env`. For demo databases only: it stops by itself if the database already has bills, and `db:seed` must be run first. |
 | `bun run scb:inquiry <ref1>` | Ask SCB whether it knows this QR record and print the raw answer (read-only, uses your `.env`) |
 | `bun run dev` | Start the API (3000, routes under `/api/v1`), the web (5173) and the local Worker (8787) |
+| `bun run desktop:build` | Build the Electron shell into `apps/desktop/release/win-unpacked/` (the folder given to the installer as `/DDesktopDir`) |
+| `bun run desktop:start` | Run the Electron shell against the local service (`TILLUMI_SHOP_URL`, default `http://127.0.0.1:3000`) |
 | `bun run hooks:install` | Install the git hooks from `lefthook.yml` (once per clone) |
 | `bun run typecheck` | Type-check the web, the server and the Workers |
 | `bun run test` | Run all API and web tests (the database must be running) |
@@ -520,6 +523,7 @@ Run from the root of the repo:
 - A sales bill must never be edited or deleted. Mistakes are fixed by voiding the bill.
 - The receipt header (shop name, tax id, branch name, address, phone number) is stored on the bill at sale time in `SaleCheckout`. New bills take the address and phone from shop settings and store no branch name. A receipt must be shown from the values on the bill, and current data is used only for old bills whose values are null (see `receiptHeading` in `src/features/sales/lib`).
 - Stock changes only through the `IStockLedger` port of the `inventory` module, and every change must have a movement record with the branch
+- The desktop shell (`apps/desktop/`) loads only the shop origin and opens every other URL in the system browser. It holds no secret, setup code or password, and nothing of that kind may be put in `TILLUMI_SHOP_URL` or on a shortcut's command line.
 - Before saying that work is done, `bun run typecheck` and `bun run test` must pass
 
 ## Reporting finished work
