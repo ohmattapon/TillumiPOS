@@ -13,8 +13,10 @@ export interface Config {
   scenario: string
   profile: string
   users: LoadUser[]
-  /** The shop owner, for what a cashier may not do (reports, stock receipts, point adjustments); not one of `users`, so it never works a till. */
-  owner: LoadUser
+  /** The shop owner, only when the runner passed OWNER_JSON, for what a cashier may not do (reports, stock receipts, point adjustments); not one of `users`, so it never works a till. */
+  owner?: LoadUser
+  /** The day the seeded history ends before (the runner's REFERENCE_DATE); the scenarios that read dates count back from it. */
+  referenceDate: Date
   seed: SeededData
 }
 
@@ -41,8 +43,11 @@ export function config(): Config {
   assertLocalBaseUrl(baseUrl)
   const users = parseJson<LoadUser[]>('USERS_JSON')
   if (!Array.isArray(users) || users.length === 0) throw new Error('USERS_JSON must hold at least one user')
-  const owner = parseJson<LoadUser>('OWNER_JSON')
-  if (!owner?.username || !owner?.password) throw new Error('OWNER_JSON must hold a username and a password')
-  cached = { baseUrl, scenario: requiredEnv('SCENARIO'), profile: requiredEnv('PROFILE'), users, owner, seed: parseJson<SeededData>('SEED_JSON') }
+  const owner = __ENV.OWNER_JSON ? parseJson<LoadUser>('OWNER_JSON') : undefined
+  if (owner && (!owner.username || !owner.password)) throw new Error('OWNER_JSON must hold a username and a password')
+  // Unset only when k6 is started by hand; the runner always sets it from the date it seeded with.
+  const referenceDate = __ENV.REFERENCE_DATE ? new Date(__ENV.REFERENCE_DATE) : new Date()
+  if (Number.isNaN(referenceDate.getTime())) throw new Error('REFERENCE_DATE is not a date')
+  cached = { baseUrl, scenario: requiredEnv('SCENARIO'), profile: requiredEnv('PROFILE'), users, owner, referenceDate, seed: parseJson<SeededData>('SEED_JSON') }
   return cached
 }

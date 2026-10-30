@@ -8,6 +8,7 @@ import { Counter } from 'k6/metrics'
 import { loginOwner } from '../lib/auth.ts'
 import { api, type Session } from '../lib/client.ts'
 import { expectPage } from '../lib/checks.ts'
+import { config } from '../lib/config.ts'
 import { walkPages } from '../lib/paging.ts'
 import { RANGE_NAMES, reportRange, type RangeName, type ReportRange } from '../lib/report-range.ts'
 
@@ -31,7 +32,6 @@ const SCREEN_PAGE_SIZE = 10
 type Filter = { cashierId?: number; customer?: 'member' | 'guest' }
 
 let session: Session | undefined
-let reference: Date | undefined
 let cashierIds: number[] | undefined
 
 function query(range: ReportRange, filter: Filter, extra: Record<string, string | number> = {}): string {
@@ -39,16 +39,15 @@ function query(range: ReportRange, filter: Filter, extra: Record<string, string 
   return parts.map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`).join('&')
 }
 
-/** The filters an owner can put on a report: none, one cashier, members only, guests only. */
-function filterFor(iteration: number, cashiers: number[]): Filter {
-  const cashierId = cashiers[iteration % Math.max(cashiers.length, 1)]
-  const filters: Filter[] = [{}, cashierId === undefined ? {} : { cashierId }, { customer: 'member' }, { customer: 'guest' }]
-  return filters[iteration % filters.length]!
+/** The filters an owner can put on a report, in the order the iterations take them. */
+function filtersFor(cashiers: number[]): Filter[] {
+  return [{}, ...cashiers.map((cashierId): Filter => ({ cashierId })), { customer: 'member' }, { customer: 'guest' }]
 }
 
 export function reports() {
   session ??= loginOwner()
-  reference ??= new Date()
+  // The day the seeded history ends before, handed over by the runner, so the ranges match the seed.
+  const reference = config().referenceDate
   const client = api(session)
   const tags = (range: RangeName) => ({ range })
 
@@ -58,7 +57,11 @@ export function reports() {
     const response = client.get(`/api/v1/sales/reports/cashiers?${query(year, {})}`, { expect: [200], name: 'reports.cashiers', tags: tags('year') })
     cashierIds = expectPage<{ cashierId: number }>(response, 'cashiers report (year)', { minItems: 1 }).map((row) => row.cashierId)
   }
-  const filter = filterFor(__ITER, cashierIds)
+  // One counter walks every filter in turn, so each cashier gets its turn however many cashiers there are.
+  const filters = filtersFor(cashierIds)
+  const filter = filters[__ITER % filters.length]!
+  // A slice that cannot be empty (a month or a year, or no filter at all) must hold rows; a day with a filter may not.
+  const minItemsFor = (name: RangeName) => (name === 'day' && Object.keys(filter).length > 0 ? 0 : 1)
 
   // The overview of every range, with this iteration's filter.
   for (const name of RANGE_NAMES) {
@@ -75,9 +78,9 @@ export function reports() {
   const listed = RANGE_NAMES[__ITER % RANGE_NAMES.length]!
   const listedRange = reportRange(listed, reference)
   const page = { limit: SCREEN_PAGE_SIZE, offset: 0 }
-  expectPage(client.get(`/api/v1/sales/reports/items?${query(listedRange, filter, { sort: 'sales', ...page })}`, { expect: [200], name: 'reports.items', tags: tags(listed) }), `items report (${listed})`, { minItems: 1 })
-  expectPage(client.get(`/api/v1/sales/reports/categories?${query(listedRange, filter, page)}`, { expect: [200], name: 'reports.categories', tags: tags(listed) }), `categories report (${listed})`, { minItems: 1 })
-  expectPage(client.get(`/api/v1/sales/reports/products?${query(listedRange, filter, page)}`, { expect: [200], name: 'reports.products', tags: tags(listed) }), `products report (${listed})`, { minItems: 1 })
+  expectPage(client.get(`/api/v1/sales/reports/items?${query(listedRange, filter, { sort: 'sales', ...page })}`, { expect: [200], name: 'reports.items', tags: tags(listed) }), `items report (${listed})`, { minItems: minItemsFor(listed) })
+  expectPage(client.get(`/api/v1/sales/reports/categories?${query(listedRange, filter, page)}`, { expect: [200], name: 'reports.categories', tags: tags(listed) }), `categories report (${listed})`, { minItems: minItemsFor(listed) })
+  expectPage(client.get(`/api/v1/sales/reports/products?${query(listedRange, filter, page)}`, { expect: [200], name: 'reports.products', tags: tags(listed) }), `products report (${listed})`, { minItems: minItemsFor(listed) })
   expectPage(client.get(`/api/v1/sales/reports/promotions?${query(listedRange, filter, page)}`, { expect: [200], name: 'reports.promotions', tags: tags(listed) }), `promotions report (${listed})`)
   expectPage(client.get(`/api/v1/sales/reports/cashiers?${query(listedRange, {})}`, { expect: [200], name: 'reports.cashiers', tags: tags(listed) }), `cashiers report (${listed})`, { minItems: 1 })
 

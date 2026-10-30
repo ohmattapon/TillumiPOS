@@ -19,6 +19,7 @@ export const options = {
     'http_req_duration{name:stock.receipts}': ['p(95)<300'],
     'http_req_duration{name:stock.receive}': ['p(95)<800'],
     'http_req_duration{name:stock.receive-batch}': ['p(95)<800'],
+    'http_req_duration{name:stock.receive-batch.replay}': ['p(95)<800'],
     'http_req_duration{name:stock.adjust}': ['p(95)<800'],
   },
 }

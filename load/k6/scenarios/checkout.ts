@@ -8,6 +8,7 @@ import { pickCart } from '../lib/cart.ts'
 import { api, type Session } from '../lib/client.ts'
 import { config } from '../lib/config.ts'
 import { idempotencyKeyFor } from '../lib/keys.ts'
+import { splitMembers } from '../lib/member-slices.ts'
 import { vuRandom } from '../lib/random.ts'
 import { loginForSlot, slotOfThisVu, type ShiftSlot } from '../lib/shifts.ts'
 
@@ -35,9 +36,11 @@ export function checkout(slots: ShiftSlot[]) {
   random ??= vuRandom('checkout', __VU)
   const { seed } = config()
   const client = api(session)
+  const { selling } = splitMembers(seed.memberIds)
 
   const cart = pickCart(random, seed)
-  const memberId = random() < MEMBER_SHARE ? seed.memberIds[Math.floor(random() * seed.memberIds.length)]! : null
+  // The last members are reserved for the members scenario, whose point balances must not move under it.
+  const memberId = random() < MEMBER_SHARE ? selling[Math.floor(random() * selling.length)]! : null
   const tendersBanknote = random() < BANKNOTE_SHARE
 
   const quoted = client.post('/api/v1/quotes/', { lines: cart.items, ...(memberId === null ? {} : { memberId }) }, { expect: [200], name: 'checkout.quote' })

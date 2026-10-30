@@ -144,10 +144,12 @@ async function main() {
     const cashierPassword = randomBytes(18).toString('base64url')
     const cashierPin = String(randomInt(0, 1_000_000)).padStart(6, '0')
     const seedSizes = seedSizesFromEnv()
+    // History ends at the start of this day; k6 counts its report ranges back from the same instant.
+    const referenceDate = new Date()
     const seedSql = new SQL(databaseUrl)
     const seedStarted = performance.now()
     // History ends at the start of today, so the reports have this month and this year to compute.
-    const seeded = await seedLoadData(seedSql, { ...seedSizes, cashierPassword, cashierPin, referenceDate: new Date() }).finally(() => seedSql.close())
+    const seeded = await seedLoadData(seedSql, { ...seedSizes, cashierPassword, cashierPin, referenceDate }).finally(() => seedSql.close())
     console.log(
       `Seeded in ${((performance.now() - seedStarted) / 1000).toFixed(1)}s: ${seeded.productIds.length + seeded.hotProductIds.length} products (${seeded.hotProductIds.length} hot), ` +
         `${seedSizes.pastSales ?? SEED_DEFAULTS.pastSales} past bills, ${seeded.memberIds.length} members, ${seeded.couponCodes.length} coupons, ${seeded.cashierUsernames.length} cashiers + ${seeded.authUsers.length} auth users, ${seeded.registerIds.length} registers`,
@@ -173,6 +175,7 @@ async function main() {
       // Every seeded user shares this PIN (the auth scenario uses it); it is never printed.
       USER_PIN: cashierPin,
       // The owner's login is the one the API was seeded with ("admin"); only k6's environment holds it.
+      REFERENCE_DATE: referenceDate.toISOString(),
       OWNER_JSON: JSON.stringify({ username: 'admin', password: apiEnv.SEED_OWNER_PASSWORD }),
       USERS_JSON: JSON.stringify(seeded.cashierUsernames.map((username) => ({ username, password: cashierPassword }))),
     }

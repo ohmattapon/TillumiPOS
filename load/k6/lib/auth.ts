@@ -12,5 +12,7 @@ export function login(user: LoadUser): Session {
 
 /** Signs in as the shop owner (see Config.owner). */
 export function loginOwner(): Session {
-  return login(config().owner)
+  const { owner } = config()
+  if (!owner) throw new Error('OWNER_JSON is not set; the runner sets it for the scenarios that need the owner')
+  return login(owner)
 }
