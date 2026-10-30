@@ -1,5 +1,5 @@
 import { app, BrowserWindow, shell } from 'electron'
-import type { NavigationEvent, WebContents, WebPreferences } from 'electron'
+import type { Event, WebContents, WebPreferences } from 'electron'
 import { isOwnerShortcut } from './owner-shortcut'
 import { navigationDecision } from './shop-origin'
 import { strings } from './strings'
@@ -20,7 +20,7 @@ export interface ShopWindowInput {
  */
 function applyWindowPolicy(contents: WebContents, shopOrigin: string, webPreferences: WebPreferences): void {
   // Server redirects do not fire will-navigate, so both events get the same rule.
-  const guard = (details: NavigationEvent): void => {
+  const guard = (details: Event<{ url: string }>): void => {
     const decision = navigationDecision(shopOrigin, details.url)
     if (decision === 'allow') return
     details.preventDefault()
