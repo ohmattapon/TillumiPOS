@@ -20,6 +20,8 @@ export interface CallOptions {
   /** The request's `name` tag, so every URL of one kind is one series (no ids in it). */
   name: string
   headers?: Record<string, string>
+  /** Extra tags for the request's metrics (for example `range`), so a threshold can pick out one kind of call. */
+  tags?: Record<string, string>
   /** `true` makes a fresh Idempotency-Key; a string uses that key (to repeat one on purpose). */
   idempotencyKey?: boolean | string
   /** How long k6 waits for the whole answer, for a request that is meant to be held open (an SSE stream). */
@@ -43,7 +45,7 @@ function send(session: Session, method: string, path: string, body: unknown, opt
   const response = http.request(method, `${config().baseUrl}${path}`, hasBody ? JSON.stringify(body) : null, {
     headers,
     jar: session.jar,
-    tags: { name: options.name },
+    tags: { ...options.tags, name: options.name },
     ...(options.timeout === undefined ? {} : { timeout: options.timeout }),
     // Without this k6 counts every 4xx as http_req_failed, even the ones a scenario expects.
     responseCallback: http.expectedStatuses(...options.expect),

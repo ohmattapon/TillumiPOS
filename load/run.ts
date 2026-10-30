@@ -172,6 +172,8 @@ async function main() {
       FAKE_BANK_CONTROL_URL: `http://127.0.0.1:${bankControl.port}`,
       // Every seeded user shares this PIN (the auth scenario uses it); it is never printed.
       USER_PIN: cashierPin,
+      // The owner's login is the one the API was seeded with ("admin"); only k6's environment holds it.
+      OWNER_JSON: JSON.stringify({ username: 'admin', password: apiEnv.SEED_OWNER_PASSWORD }),
       USERS_JSON: JSON.stringify(seeded.cashierUsernames.map((username) => ({ username, password: cashierPassword }))),
     }
     // k6 prints its own end-of-test summary on this terminal; it holds request names and numbers, no credentials.
