@@ -28,7 +28,7 @@ permissions:
 jobs:
   load:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
 
     services:
       postgres:
@@ -38,7 +38,7 @@ jobs:
           POSTGRES_USER: pos
           POSTGRES_PASSWORD: pos
           POSTGRES_DB: pos
-        # The port the load runner is documented to use (docs/load-test.md).
+        # The runner takes the port from LOAD_DB_ADMIN_URL below; the two must match.
         ports:
           - 5434:5432
         options: >-
@@ -70,6 +70,18 @@ jobs:
       # The smoke run uses the default scale: it is one virtual user, so LOAD_SCALE does not apply to it.
       - name: Smoke
         run: bun run load:smoke
+        env:
+          LOAD_SCALE: '1'
+
+      # The unknown-outcome path of the bank and the races (two voids of one bill, one idempotency key sent twice, a shift
+      # closed with a QR pending) run in CI too, one virtual user each.
+      - name: Smoke QR
+        run: bun run load smoke --scenario qr
+        env:
+          LOAD_SCALE: '1'
+
+      - name: Smoke contention
+        run: bun run load smoke --scenario contention
         env:
           LOAD_SCALE: '1'
 
