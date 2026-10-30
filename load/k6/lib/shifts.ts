@@ -1,6 +1,7 @@
 // Shifts for the scenarios that sell. The server runs in shift mode, so every sale needs an open shift, and a
-// register holds only one open shift. `setup` opens one shift per virtual user, each on its own register, and
-// `teardown` closes them all, so the test never leaves a shift open and a closed shift always has its summary.
+// register holds only one open shift. `setup` opens one shift per till of the run (`openTills`, or `openShifts` for
+// the contention run), each on its own register, and `teardown` closes them all, so the test never leaves a shift
+// open and a closed shift always has its summary. k6 runs teardown after a threshold abort too (checked on v2.3.0).
 import { check, fail } from 'k6'
 import { Counter } from 'k6/metrics'
 import { claimSlot } from './claim.ts'
@@ -91,7 +92,7 @@ export function openShifts(count: number): ShiftSlot[] {
   )
 }
 
-/** k6 `teardown`: closes every shift `openShifts` opened. One that fails is counted and the others are still closed. */
+/** k6 `teardown`: closes every shift `openTills` or `openShifts` opened. One that fails is counted and the others are still closed. */
 export function closeShifts(slots: ShiftSlot[]): void {
   for (const slot of slots) {
     let closed = false

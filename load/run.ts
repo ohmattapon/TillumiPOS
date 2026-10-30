@@ -9,7 +9,9 @@
 // is created (load/k6/lib/mix.ts validateRun).
 //
 //   LOAD_SCALE=0.2            multiplies every arrival rate (default 1)
-//   LOAD_DURATION_SCALE=0.15  multiplies every stage's length: a short version of a profile (default 1)
+//   LOAD_DURATION_SCALE=0.15  a time-lapse (default 1): every stage's length x f and every rate / f, so a short run
+//                             keeps all the arrivals of the profile and is 1/f times as intense (0.15 on load is
+//                             about 6.7x the lunch peak); its numbers are not comparable with a full-length run
 //   LOAD_BASELINE=1           latency thresholds cannot fail the run (a first run records the baseline); checks,
 //                             error rates and the scenario counters stay strict (default off)
 //
@@ -28,6 +30,7 @@ import { buildK6Args, findK6 } from './lib/k6'
 import { createProcessGroup } from './lib/processes'
 import { redactUrls } from './lib/redact'
 import { assertLoadDatabase, assertLocalBaseUrl } from './lib/safety'
+import { droppedNote, timeLapseNote } from './lib/run-notes'
 import { createSlotClaims } from './lib/slot-claims'
 import { claimCapacities, defaultScenario, parseKnobs, PROFILES, validateRun } from './k6/lib/mix'
 import { SEED_DEFAULTS, seedLoadData, type SeedOptions } from './seed'
@@ -92,12 +95,12 @@ async function waitFor(url: string, label: string, child: { exitCode: number | n
 type Summary = { metrics?: Record<string, Record<string, number | undefined>> } | null
 
 /** What each scenario of the run did, the arrivals k6 could not start, and in baseline mode the latency it recorded. */
-function printSummary(summary: Summary, baseline: boolean) {
+function printSummary(summary: Summary, profile: string, baseline: boolean) {
   const metrics = summary?.metrics ?? {}
   const perScenario = Object.entries(metrics).filter(([key]) => key.startsWith('iterations{scenario:'))
   if (perScenario.length > 0) console.log(`Iterations: ${perScenario.map(([key, value]) => `${key.slice('iterations{scenario:'.length, -1)} ${value.count ?? 0}`).join(', ')}`)
-  const dropped = metrics.dropped_iterations?.count
-  if (dropped) console.log(`Dropped iterations: ${dropped} (arrivals the tills could not take in time; a till serves one customer at a time)`)
+  const dropped = droppedNote(profile, metrics.dropped_iterations?.count, metrics.iterations?.count)
+  if (dropped) console.log(dropped)
   if (!baseline) return
   console.log('Baseline latency (p95 ms; not judged in this run):')
   for (const [key, value] of Object.entries(metrics).filter(([name]) => name.startsWith('http_req_duration{')))
@@ -202,6 +205,8 @@ async function main() {
     await waitFor(`${baseUrl}/api/v1/health`, 'API', api)
 
     console.log(`Load run "${options.profile}" (scenario ${options.scenario}, LOAD_SCALE ${knobs.scale}, LOAD_DURATION_SCALE ${knobs.durationScale}${knobs.baseline ? ', baseline' : ''}): API ready at ${baseUrl}, database ${dbName}`)
+    const lapse = timeLapseNote(knobs.durationScale)
+    if (lapse) console.log(lapse)
 
     // The ids and logins reach k6 through its environment only: a command line can be read by other processes.
     const k6 = await findK6()
@@ -227,7 +232,7 @@ async function main() {
     const summary = JSON.parse(await readFile(summaryFile, 'utf8').catch(() => 'null')) as Summary
     const failedRate = summary?.metrics?.expected_failed?.value
     console.log(`k6 finished with exit code ${k6Exit}; expected_failed rate ${failedRate ?? 'unknown'}`)
-    printSummary(summary, knobs.baseline)
+    printSummary(summary, options.profile, knobs.baseline)
     // The invariant checks and the result file arrive in later tasks.
     if (k6Exit !== 0) throw new Error(k6Failure(k6Exit, options.profile))
   } finally {
