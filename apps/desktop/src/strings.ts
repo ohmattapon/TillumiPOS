@@ -9,6 +9,11 @@ export const strings = {
     retrying: 'กำลังลองใหม่อีกครั้ง',
   },
 
+  config: {
+    invalidShopUrlTitle: 'ตั้งค่าที่อยู่ของระบบหน้าร้านไม่ถูกต้อง',
+    invalidShopUrlMessage: 'TILLUMI_SHOP_URL ต้องเป็น http://127.0.0.1:<พอร์ต> หรือ http://localhost:<พอร์ต> เท่านั้น',
+  },
+
   menu: {
     owner: 'เจ้าของร้าน',
     exitFullScreen: 'ออกจากโหมดเต็มจอ',
