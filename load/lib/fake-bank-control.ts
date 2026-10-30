@@ -6,13 +6,16 @@
 //   POST /cancel/:reference         the shop's cancel reached the bank (the bank reports the QR cancelled)
 //   POST /latency/:ms               the next bank call waits at least that long (0 to 30000 ms)
 //   POST /lose-next-create/:made    the next QR creation reaches the bank but its answer is lost (made = true|false)
+//   POST /claim/:scenario           the next free slot of that scenario, { "slot": n } (409 when all are taken);
+//                                   only when the runner passes the run's claims (see slot-claims.ts)
 //
 // Both servers listen on 127.0.0.1 only and refuse a request whose Host is not this machine (DNS rebinding) or that
 // carries an Origin or Sec-Fetch-Site header (a page in a browser adds one to every cross-site request, even a simple
 // no-cors POST; k6, Bun and the API send neither). They have no credentials to protect: they can only make the fake
-// bank behave.
+// bank behave and hand out slot numbers.
 import type { Server } from 'bun'
 import type { FakeKbank } from '../../server/test/kbank-server'
+import type { SlotClaims } from './slot-claims'
 
 const LOCAL_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '[::1]'])
 export const MAX_LATENCY_MS = 30_000
@@ -70,7 +73,7 @@ export function startFakeBankFront(fake: FakeKbank): FakeBankFront {
   return { url: `http://127.0.0.1:${server.port}`, server, delayNext: (ms) => void (pendingDelayMs = ms) }
 }
 
-export function startFakeBankControl(fake: FakeKbank, port: number, front?: Pick<FakeBankFront, 'delayNext'>): Server<unknown> {
+export function startFakeBankControl(fake: FakeKbank, port: number, front?: Pick<FakeBankFront, 'delayNext'>, claims?: SlotClaims): Server<unknown> {
   return Bun.serve({
     hostname: '127.0.0.1',
     port,
@@ -80,8 +83,15 @@ export function startFakeBankControl(fake: FakeKbank, port: number, front?: Pick
       const { pathname } = new URL(request.url)
       const [, action, ...rest] = pathname.split('/')
       const argument = decodeURIComponent(rest.join('/'))
-      if (!['pay', 'cancel', 'latency', 'lose-next-create'].includes(action ?? '') || argument === '') return new Response('not found', { status: 404 })
+      const actions = ['pay', 'cancel', 'latency', 'lose-next-create', ...(claims ? ['claim'] : [])]
+      if (!actions.includes(action ?? '') || argument === '') return new Response('not found', { status: 404 })
       if (request.method !== 'POST') return new Response('method not allowed', { status: 405, headers: { allow: 'POST' } })
+
+      if (action === 'claim') {
+        const claimed = claims!.claim(argument)
+        if ('slot' in claimed) return Response.json({ slot: claimed.slot })
+        return claimed.refused === 'full' ? new Response('every slot of this scenario is taken', { status: 409 }) : new Response('this run has no slots for that scenario', { status: 404 })
+      }
 
       if (action === 'pay' || action === 'cancel') {
         if (!fake.created.has(argument)) return new Response('unknown QR', { status: 404 })

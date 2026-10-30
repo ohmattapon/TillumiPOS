@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import type { Server } from 'bun'
 import { fakeKbank } from '../../server/test/kbank-server'
 import { startFakeBankControl, startFakeBankFront, type FakeBankFront } from './fake-bank-control'
+import { createSlotClaims } from './slot-claims'
 
 const servers: Server<unknown>[] = []
 afterEach(() => {
@@ -126,6 +127,46 @@ describe('startFakeBankControl', () => {
 
     test('without a front the control says it cannot add latency', async () => {
       expect((await fetch(`${control()}/latency/50`, { method: 'POST' })).status).toBe(501)
+    })
+  })
+
+  describe('claims', () => {
+    const claimControl = (capacities: Record<string, number>) => {
+      const server = startFakeBankControl(fakeKbank, 0, undefined, createSlotClaims(capacities))
+      servers.push(server)
+      return `http://127.0.0.1:${server.port}`
+    }
+
+    test('POST /claim/:scenario hands out the next slot of that scenario, then 409 when the scenario is full', async () => {
+      const base = claimControl({ checkout: 2, members: 1 })
+      const slot = async (scenario: string) => {
+        const response = await fetch(`${base}/claim/${scenario}`, { method: 'POST' })
+        return { status: response.status, body: response.status === 200 ? await response.json() : null }
+      }
+      expect(await slot('checkout')).toEqual({ status: 200, body: { slot: 0 } })
+      expect(await slot('members')).toEqual({ status: 200, body: { slot: 0 } })
+      expect(await slot('checkout')).toEqual({ status: 200, body: { slot: 1 } })
+      expect((await slot('checkout')).status).toBe(409)
+      expect((await slot('members')).status).toBe(409)
+    })
+
+    test('a scenario the run did not allot is 404, and a GET is 405', async () => {
+      const base = claimControl({ checkout: 1 })
+      expect((await fetch(`${base}/claim/stock`, { method: 'POST' })).status).toBe(404)
+      expect((await fetch(`${base}/claim/checkout`)).status).toBe(405)
+      // The refused GET took no slot.
+      expect((await fetch(`${base}/claim/checkout`, { method: 'POST' })).status).toBe(200)
+    })
+
+    test('a control started without claims has no claim route', async () => {
+      expect((await fetch(`${control()}/claim/checkout`, { method: 'POST' })).status).toBe(404)
+    })
+
+    test('a claim with a foreign Host, an Origin or a Sec-Fetch-Site is refused and takes no slot', async () => {
+      const base = claimControl({ checkout: 1 })
+      for (const header of [{ host: 'evil.example.com' }, { origin: 'http://evil.example.com' }, { origin: 'null' }, { 'sec-fetch-site': 'cross-site' }] as Record<string, string>[])
+        expect((await fetch(`${base}/claim/checkout`, { method: 'POST', headers: header })).status).toBe(403)
+      expect(await (await fetch(`${base}/claim/checkout`, { method: 'POST' })).json()).toEqual({ slot: 0 })
     })
   })
 })
