@@ -1,0 +1,111 @@
+import { afterEach, describe, expect, test } from 'bun:test'
+import type { Server } from 'bun'
+import { fakeKbank } from '../../server/test/kbank-server'
+import { startFakeBankControl, startFakeBankFront, type FakeBankFront } from './fake-bank-control'
+
+const servers: Server<unknown>[] = []
+afterEach(() => {
+  while (servers.length) void servers.pop()!.stop(true)
+  fakeKbank.reset()
+})
+
+/** The token the fake bank hands out, then a QR for `reference`, the way the API's gateway asks for one. */
+async function makeQr(reference: string, baseUrl: string = fakeKbank.url) {
+  const basic = Buffer.from(`${fakeKbank.credentials.consumerId}:${fakeKbank.credentials.consumerSecret}`).toString('base64')
+  const token = (await (await fetch(`${baseUrl}/v2/oauth/token`, { method: 'POST', headers: { authorization: `Basic ${basic}`, 'content-type': 'application/json' }, body: '{}' })).json()) as { accessToken: string }
+  const auth = { authorization: `Bearer ${token.accessToken}`, 'content-type': 'application/json' }
+  const { merchantId, partnerId, partnerSecret } = fakeKbank.credentials
+  await fetch(`${baseUrl}/v1/qrpayment/request`, {
+    method: 'POST',
+    headers: auth,
+    body: JSON.stringify({ qrType: 3, txnCurrencyCode: 'THB', merchantId, partnerId, partnerSecret, partnerTxnUid: reference, txnAmount: '10.00', requestDt: new Date().toISOString(), reference1: reference }),
+  })
+  const inquire = async () =>
+    (await (await fetch(`${baseUrl}/v1/qrpayment/v4/inquiry`, { method: 'POST', headers: auth, body: JSON.stringify({ partnerId, partnerSecret, merchantId, partnerTxnUid: reference }) })).json()) as { txnStatus: string }
+  return { inquire }
+}
+
+function control(front?: FakeBankFront) {
+  const server = startFakeBankControl(fakeKbank, 0, front)
+  servers.push(server)
+  return `http://127.0.0.1:${server.port}`
+}
+
+describe('startFakeBankControl', () => {
+  test('POST /pay/:reference makes the fake bank report that reference paid', async () => {
+    const qr = await makeQr('LOADREF1')
+    expect((await qr.inquire()).txnStatus).toBe('REQUESTED')
+    expect((await fetch(`${control()}/pay/LOADREF1`, { method: 'POST' })).status).toBe(200)
+    expect((await qr.inquire()).txnStatus).toBe('PAID')
+  })
+
+  test('POST /cancel/:reference makes the fake bank report that reference cancelled', async () => {
+    const qr = await makeQr('LOADREF2')
+    expect((await fetch(`${control()}/cancel/LOADREF2`, { method: 'POST' })).status).toBe(200)
+    expect((await qr.inquire()).txnStatus).toBe('CANCELLED')
+  })
+
+  test('an unknown reference is 404 and nothing is paid', async () => {
+    const base = control()
+    expect((await fetch(`${base}/pay/NOSUCHREF`, { method: 'POST' })).status).toBe(404)
+    expect((await fetch(`${base}/cancel/NOSUCHREF`, { method: 'POST' })).status).toBe(404)
+  })
+
+  test('only POST is accepted, and other paths are 404', async () => {
+    const base = control()
+    expect((await fetch(`${base}/pay/X`)).status).toBe(405)
+    expect((await fetch(`${base}/elsewhere`, { method: 'POST' })).status).toBe(404)
+  })
+
+  test('a request whose Host is not this machine is refused', async () => {
+    const qr = await makeQr('LOADREF3')
+    const base = control()
+    const refused = await fetch(`${base}/pay/LOADREF3`, { method: 'POST', headers: { host: 'evil.example.com' } })
+    expect(refused.status).toBe(403)
+    expect((await qr.inquire()).txnStatus).toBe('REQUESTED')
+  })
+
+  test('it listens on 127.0.0.1 only', () => {
+    const server = startFakeBankControl(fakeKbank, 0)
+    servers.push(server)
+    expect(server.hostname).toBe('127.0.0.1')
+  })
+
+  test('POST /lose-next-create/:made arms the fake bank to lose the next QR answer', async () => {
+    const base = control()
+    expect((await fetch(`${base}/lose-next-create/true`, { method: 'POST' })).status).toBe(200)
+    expect((await fetch(`${base}/lose-next-create/maybe`, { method: 'POST' })).status).toBe(400)
+  })
+
+  describe('latency', () => {
+    test('POST /latency/200 makes the next bank call take at least 200 ms, and only that one', async () => {
+      const front = startFakeBankFront(fakeKbank)
+      servers.push(front.server)
+      const base = control(front)
+
+      expect((await fetch(`${base}/latency/200`, { method: 'POST' })).status).toBe(200)
+      let started = performance.now()
+      await makeQr('LOADREF4', front.url).then((qr) => qr.inquire())
+      const slow = performance.now() - started
+
+      started = performance.now()
+      await (await makeQr('LOADREF5', front.url)).inquire()
+      const normal = performance.now() - started
+
+      expect(slow).toBeGreaterThanOrEqual(195)
+      expect(normal).toBeLessThan(slow)
+    })
+
+    test('a delay that is not a whole number of milliseconds in range is 400', async () => {
+      const front = startFakeBankFront(fakeKbank)
+      servers.push(front.server)
+      const base = control(front)
+      for (const bad of ['abc', '-5', '1.5', '999999'])
+        expect((await fetch(`${base}/latency/${bad}`, { method: 'POST' })).status).toBe(400)
+    })
+
+    test('without a front the control says it cannot add latency', async () => {
+      expect((await fetch(`${control()}/latency/50`, { method: 'POST' })).status).toBe(501)
+    })
+  })
+})
