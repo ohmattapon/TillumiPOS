@@ -13,6 +13,8 @@ declare module 'k6/http' {
   export interface Response {
     status: number
     body: string | null
+    error: string
+    error_code: number
     json(selector?: string): any
   }
   export class CookieJar {}
@@ -21,6 +23,8 @@ declare module 'k6/http' {
     tags?: Record<string, string>
     jar?: CookieJar
     responseCallback?: unknown
+    /** Milliseconds, or a string such as "5s". */
+    timeout?: string | number
   }
   export function expectedStatuses(...statuses: number[]): unknown
   export function request(method: string, url: string, body?: string | null, params?: Params): Response

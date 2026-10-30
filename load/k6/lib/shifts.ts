@@ -52,16 +52,18 @@ export function closeShiftFor(session: Session, shiftId: number): boolean {
 /**
  * k6 `setup`: one till for each of the first `count` virtual users. User i works register i, and virtual user i+1
  * signs in as that same user, so a shift is always used by the person who opened it. If one cannot be opened, the
- * ones already open are closed first, because teardown does not run after a failed setup.
+ * ones already open are closed first, because teardown does not run after a failed setup. `from` says which end of
+ * the register list the tills are taken from: the QR scenario takes them from the end, the cash ones from the start.
  */
-export function openShifts(count: number): ShiftSlot[] {
+export function openShifts(count: number, from: 'start' | 'end' = 'start'): ShiftSlot[] {
   const { users, seed } = config()
   if (count > seed.registerIds.length) fail(`${count} virtual users need ${count} registers but the seed has ${seed.registerIds.length}; a register holds one open shift`)
   return openAllOrRollBack(
     count,
     (index) => {
-      const user = users[index % users.length]!
-      const registerId = seed.registerIds[index]!
+      // 'end' counts from the last register and the last cashier, so a scenario placed there never meets one placed at the start.
+      const user = users[(from === 'end' ? users.length - 1 - (index % users.length) : index % users.length)]!
+      const registerId = seed.registerIds[from === 'end' ? seed.registerIds.length - 1 - index : index]!
       return { username: user.username, registerId, ...openShiftFor(login(user), registerId) }
     },
     (slot) => closeShifts([slot]),

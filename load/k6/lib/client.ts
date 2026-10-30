@@ -22,6 +22,8 @@ export interface CallOptions {
   headers?: Record<string, string>
   /** `true` makes a fresh Idempotency-Key; a string uses that key (to repeat one on purpose). */
   idempotencyKey?: boolean | string
+  /** How long k6 waits for the whole answer, for a request that is meant to be held open (an SSE stream). */
+  timeout?: string | number
 }
 
 /** A random UUID v4, the shape the API requires. Scenarios that must repeat across runs use idempotencyKeyFor instead. */
@@ -42,6 +44,7 @@ function send(session: Session, method: string, path: string, body: unknown, opt
     headers,
     jar: session.jar,
     tags: { name: options.name },
+    ...(options.timeout === undefined ? {} : { timeout: options.timeout }),
     // Without this k6 counts every 4xx as http_req_failed, even the ones a scenario expects.
     responseCallback: http.expectedStatuses(...options.expect),
   })
@@ -60,6 +63,7 @@ export function api(session: Session) {
     },
     post: (path: string, body: unknown, options: CallOptions) => send(session, 'POST', path, body, options),
     patch: (path: string, body: unknown, options: CallOptions) => send(session, 'PATCH', path, body, options),
+    put: (path: string, body: unknown, options: CallOptions) => send(session, 'PUT', path, body, options),
   }
 }
 
