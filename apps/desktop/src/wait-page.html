@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TillumiPOS</title>
+<style>
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f6f5f2;
+    color: #1f1d1a;
+    font-family: "Segoe UI", "Leelawadee UI", Tahoma, sans-serif;
+  }
+  main { max-width: 36rem; padding: 2rem; text-align: center; }
+  .spinner {
+    width: 3rem;
+    height: 3rem;
+    margin: 0 auto 1.5rem;
+    border: 0.3rem solid #d8d4cc;
+    border-top-color: #1f1d1a;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  h1 { margin: 0 0 0.75rem; font-size: 1.75rem; }
+  p { margin: 0 0 0.75rem; font-size: 1.125rem; line-height: 1.6; }
+  .hint { color: #5c574f; font-size: 1rem; }
+  .status { color: #5c574f; font-size: 1rem; animation: pulse 2s ease-in-out infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 50% { opacity: 0.4; } }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner, .status { animation: none; }
+  }
+</style>
+</head>
+<body>
+<main role="status" aria-live="polite">
+  <div class="spinner" aria-hidden="true"></div>
+  <h1>กำลังเตรียมระบบหน้าร้าน</h1>
+  <p>ระบบกำลังเริ่มทำงาน กรุณารอสักครู่ ระบบจะเปิดหน้าขายให้เองเมื่อพร้อม</p>
+  <p class="hint">ถ้ารอนานเกินไป ให้ตรวจว่าเครื่องเปิดอยู่และบริการ TillumiPOS ทำงานอยู่</p>
+  <p class="status">กำลังลองใหม่อีกครั้ง</p>
+</main>
+</body>
+</html>
