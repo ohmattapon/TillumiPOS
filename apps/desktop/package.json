@@ -1,0 +1,9 @@
+{
+  "name": "@pos/desktop",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc -p . --noEmit"
+  }
+}
