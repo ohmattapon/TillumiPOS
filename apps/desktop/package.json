@@ -2,8 +2,14 @@
   "name": "@pos/desktop",
   "private": true,
   "type": "module",
+  "main": "dist/main.js",
   "scripts": {
+    "dev": "electron . --enable-logging",
+    "start": "electron .",
     "test": "bun test",
     "typecheck": "tsc -p . --noEmit"
+  },
+  "devDependencies": {
+    "electron": "45.1.0"
   }
 }
