@@ -16,6 +16,8 @@ export const options = {
     'http_req_duration{name:auth.login}': ['p(95)<800'],
     'http_req_duration{name:auth.me}': ['p(95)<300'],
     'http_req_duration{name:auth.switch}': ['p(95)<800'],
+    // The PIN lock test is one pass of a few checks, so the 1% allowance of the common threshold would hide a failure.
+    'checks{scenario:auth_lock}': ['rate==1'],
   },
 }
 

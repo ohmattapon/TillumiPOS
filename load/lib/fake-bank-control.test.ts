@@ -65,6 +65,26 @@ describe('startFakeBankControl', () => {
     expect((await qr.inquire()).txnStatus).toBe('REQUESTED')
   })
 
+  test('a cross-site request is refused: a browser page adds Origin or Sec-Fetch-Site, k6 sends neither', async () => {
+    const qr = await makeQr('LOADREF6')
+    const base = control()
+    const variants: Record<string, string>[] = [{ origin: 'http://evil.example.com' }, { origin: 'null' }, { 'sec-fetch-site': 'cross-site' }, { 'sec-fetch-site': 'same-site' }]
+    for (const header of variants) {
+      const refused = await fetch(`${base}/pay/LOADREF6`, { method: 'POST', headers: header })
+      expect(refused.status).toBe(403)
+    }
+    expect((await qr.inquire()).txnStatus).toBe('REQUESTED')
+  })
+
+  test('the front refuses a request whose Host is not this machine, and one with Origin or Sec-Fetch-Site', async () => {
+    const front = startFakeBankFront(fakeKbank)
+    servers.push(front.server)
+    expect((await fetch(`${front.url}/v2/oauth/token`, { method: 'POST', headers: { host: 'evil.example.com' } })).status).toBe(403)
+    expect((await fetch(`${front.url}/v2/oauth/token`, { method: 'POST', headers: { origin: 'http://evil.example.com' } })).status).toBe(403)
+    expect((await fetch(`${front.url}/v2/oauth/token`, { method: 'POST', headers: { 'sec-fetch-site': 'cross-site' } })).status).toBe(403)
+    expect(fakeKbank.requests.length).toBe(0)
+  })
+
   test('it listens on 127.0.0.1 only', () => {
     const server = startFakeBankControl(fakeKbank, 0)
     servers.push(server)

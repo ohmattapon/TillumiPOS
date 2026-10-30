@@ -1,6 +1,7 @@
 // The script k6 runs. The runner picks the profile and the scenario through the environment (see load/lib/k6.ts).
 import { config } from './lib/config.ts'
 import { closeShifts, openShifts, type ShiftSlot } from './lib/shifts.ts'
+import { settleQrAttempts } from './scenarios/qr.ts'
 import { needsShifts, profileOptions, registersFrom, virtualUsers } from './profiles.ts'
 
 export { auth, authLock } from './scenarios/auth.ts'
@@ -20,5 +21,7 @@ export function setup(): ShiftSlot[] {
 }
 
 export function teardown(slots: ShiftSlot[]) {
+  // Unsettled QR requests would block a shift from closing.
+  if (scenario === 'qr') settleQrAttempts(slots)
   closeShifts(slots)
 }

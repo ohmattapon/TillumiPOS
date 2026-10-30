@@ -7,13 +7,22 @@
 //   POST /latency/:ms               the next bank call waits at least that long (0 to 30000 ms)
 //   POST /lose-next-create/:made    the next QR creation reaches the bank but its answer is lost (made = true|false)
 //
-// It listens on 127.0.0.1 only and refuses any request whose Host is not this machine, so a web page in a browser
-// cannot reach it through DNS rebinding. It has no credentials to protect: it can only make the fake bank behave.
+// Both servers listen on 127.0.0.1 only and refuse a request whose Host is not this machine (DNS rebinding) or that
+// carries an Origin or Sec-Fetch-Site header (a page in a browser adds one to every cross-site request, even a simple
+// no-cors POST; k6, Bun and the API send neither). They have no credentials to protect: they can only make the fake
+// bank behave.
 import type { Server } from 'bun'
 import type { FakeKbank } from '../../server/test/kbank-server'
 
 const LOCAL_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '[::1]'])
 export const MAX_LATENCY_MS = 30_000
+
+/** Refuses what a browser page could send; null when the request may go on. */
+function refusal(request: Request): Response | null {
+  if (!hostIsLocal(request)) return new Response('forbidden host', { status: 403 })
+  if (request.headers.has('origin') || request.headers.has('sec-fetch-site')) return new Response('forbidden cross-site request', { status: 403 })
+  return null
+}
 
 function hostIsLocal(request: Request): boolean {
   const host = request.headers.get('host')
@@ -40,6 +49,8 @@ export function startFakeBankFront(fake: FakeKbank): FakeBankFront {
     hostname: '127.0.0.1',
     port: 0,
     async fetch(request) {
+      const refused = refusal(request)
+      if (refused) return refused
       const delay = pendingDelayMs
       pendingDelayMs = 0
       if (delay > 0) await Bun.sleep(delay)
@@ -64,7 +75,8 @@ export function startFakeBankControl(fake: FakeKbank, port: number, front?: Pick
     hostname: '127.0.0.1',
     port,
     fetch(request) {
-      if (!hostIsLocal(request)) return new Response('forbidden host', { status: 403 })
+      const refused = refusal(request)
+      if (refused) return refused
       const { pathname } = new URL(request.url)
       const [, action, ...rest] = pathname.split('/')
       const argument = decodeURIComponent(rest.join('/'))
