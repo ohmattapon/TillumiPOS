@@ -288,19 +288,42 @@ begin
   if ApiWasRunning then RunHidden(ExpandConstant('{sys}\net.exe'), 'start ' + ApiService, '', ExitCode);
 end;
 
+function ServiceIsOurs(const Name, ExeName: String): Boolean;
+begin
+  { service ที่ลงทะเบียนไว้อยู่ได้แม้โฟลเดอร์ติดตั้งถูกลบไปแล้ว หรือชี้ไปโฟลเดอร์อื่น
+    (รุ่นก่อนที่ติดตั้งไว้คนละที่) จึงดูไฟล์ service ในโฟลเดอร์ติดตั้งนี้เป็นหลักฐานว่าเป็นของร้านนี้จริง }
+  Result := ServiceExists(Name) and FileExists(ExpandConstant('{app}\' + ExeName));
+end;
+
+procedure RemoveStaleService(const Name: String);
+var
+  ExitCode: Integer;
+begin
+  { ไม่ใช่ service ของโฟลเดอร์นี้: หยุดแล้วถอนทะเบียนทิ้ง
+    เพื่อให้ขั้นติดตั้งสร้างใหม่ที่พาธของรุ่นนี้ ไม่ใช่สตาร์ทโปรแกรมเก่าจากที่อื่น }
+  RunHidden(ExpandConstant('{sys}\net.exe'), 'stop ' + Name, '', ExitCode);
+  RunHidden(ExpandConstant('{sys}\sc.exe'), 'delete ' + Name, '', ExitCode);
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
   if ServicesPrepared then Exit;
   RecoveryAttempted := False;
-  HadPostgresService := ServiceExists(PostgresService);
-  HadApiService := ServiceExists(ApiService);
+  HadPostgresService := ServiceIsOurs(PostgresService, 'tillumi-postgres.exe');
+  HadApiService := ServiceIsOurs(ApiService, 'tillumi-pos.exe');
+  if ServiceExists(ApiService) and (not HadApiService) then RemoveStaleService(ApiService);
+  if ServiceExists(PostgresService) and (not HadPostgresService) then RemoveStaleService(PostgresService);
   PostgresWasRunning := HadPostgresService and ServiceRunning(PostgresService);
   ApiWasRunning := HadApiService and ServiceRunning(ApiService);
   try
-    if HadApiService and (not FileCopy(ExpandConstant('{app}\tillumi-pos.xml'), ExpandConstant('{tmp}\tillumi-old-api.xml'), False)) then
+    { service ที่ลงทะเบียนไว้อยู่ได้แม้โฟลเดอร์ Program Files หายไป (ลบด้วยมือ หรือติดตั้งรอบก่อนล้มกลางทาง)
+      ตอนนั้นไม่มีไฟล์ตั้งค่าให้เก็บ จึงเก็บสำรองเฉพาะไฟล์ที่มีจริง แล้วให้ xml ที่เขียนใหม่ชี้ service กลับมาเอง }
+    if HadApiService and FileExists(ExpandConstant('{app}\tillumi-pos.xml')) and
+       (not FileCopy(ExpandConstant('{app}\tillumi-pos.xml'), ExpandConstant('{tmp}\tillumi-old-api.xml'), False)) then
       RaiseException('เก็บไฟล์ตั้งค่าระบบเดิมไม่สำเร็จ ยังไม่ได้เปลี่ยนไฟล์ร้าน');
-    if HadPostgresService and (not FileCopy(ExpandConstant('{app}\tillumi-postgres.xml'), ExpandConstant('{tmp}\tillumi-old-postgres.xml'), False)) then
+    if HadPostgresService and FileExists(ExpandConstant('{app}\tillumi-postgres.xml')) and
+       (not FileCopy(ExpandConstant('{app}\tillumi-postgres.xml'), ExpandConstant('{tmp}\tillumi-old-postgres.xml'), False)) then
       RaiseException('เก็บไฟล์ตั้งค่าฐานข้อมูลเดิมไม่สำเร็จ ยังไม่ได้เปลี่ยนไฟล์ร้าน');
     { Stop before copying binaries, rather than after Inno has replaced them. }
     if HadApiService then

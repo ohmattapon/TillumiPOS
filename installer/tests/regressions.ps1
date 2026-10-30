@@ -41,6 +41,15 @@ Check 'reinstallation reuses existing services and preserves them on failure' {
   $failure = $postInstall.Substring($postInstall.IndexOf('  except'), $postInstall.IndexOf('procedure CurUninstallStepChanged') - $postInstall.IndexOf('  except'))
   Assert (-not $failure.Contains('StopAndRemoveServices();')) 'Install failure deletes existing services'
 }
+Check 'a service left registered without its program folder does not block the install' {
+  Assert ($iss -match "HadApiService := ServiceIsOurs\(ApiService, 'tillumi-pos\.exe'\)") 'An API service is reused without checking it belongs to this folder'
+  Assert ($iss -match "HadPostgresService := ServiceIsOurs\(PostgresService, 'tillumi-postgres\.exe'\)") 'A database service is reused without checking it belongs to this folder'
+  Assert ($iss -match 'if ServiceExists\(ApiService\) and \(not HadApiService\) then RemoveStaleService\(ApiService\)') 'A service pointing at another folder is not removed before the install'
+  $remove = [regex]::Match($iss, '(?s)procedure RemoveStaleService\(const Name: String\);(.*?)\nend;').Groups[1].Value
+  Assert ($remove.Contains("'stop ' + Name") -and $remove.Contains("'delete ' + Name")) 'A stale service is deleted without stopping it first'
+  Assert ($iss -match "HadApiService and FileExists\(ExpandConstant\('\{app\}\\tillumi-pos\.xml'\)\)") 'A service whose xml file is gone still fails the install'
+  Assert ($iss -match "HadPostgresService and FileExists\(ExpandConstant\('\{app\}\\tillumi-postgres\.xml'\)\)") 'A database service whose xml file is gone still fails the install'
+}
 Check 'native setup code is accessible without Podman' {
   Assert ($iss.Contains('show-setup-code.ps1')) 'No native setup-code action'
   Assert (Test-Path (Join-Path $root 'installer\scripts\show-setup-code.ps1')) 'No native setup-code viewer'
