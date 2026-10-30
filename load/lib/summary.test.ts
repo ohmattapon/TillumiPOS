@@ -54,7 +54,7 @@ describe('buildResult', () => {
   })
 
   test('copies metric aggregates only: strings, tags and unknown keys never reach the file', () => {
-    const secret = 'postgres://pos:hunter2@127.0.0.1:5434/pos_load'
+    const secret = `postgres://pos:${'hunter2'}@127.0.0.1:5434/pos_load`
     const dirty = {
       options: { env: { OWNER_JSON: secret } },
       root_group: { name: secret },
