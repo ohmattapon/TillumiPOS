@@ -31,7 +31,7 @@ let session: Session | undefined
 let random: (() => number) | undefined
 
 export function checkout(slots: ShiftSlot[]) {
-  const slot = slotOfThisVu(slots)
+  const slot = slotOfThisVu(slots, 'checkout')
   session ??= loginForSlot(slot)
   random ??= vuRandom('checkout', __VU)
   const { seed } = config()

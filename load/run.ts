@@ -2,6 +2,17 @@
 //
 //   LOAD_DB_ADMIN_URL=<admin connection to the local server> bun load/run.ts <profile> [--scenario <name>] [--keep-db]
 //
+// Profiles: smoke (1 VU for a minute; any one scenario, catalog by default), load (the shop-day mix for 10 minutes),
+// stress (steps up until it breaks), spike (ten times the load for a minute), soak (moderate, 45 minutes). The four
+// non-smoke profiles take shop-day (the default), one part of it alone (checkout, orders, qr, members, reports, stock,
+// display) or contention; catalog and auth run in smoke only. A pair that makes no sense is refused before anything
+// is created (load/k6/lib/mix.ts validateRun).
+//
+//   LOAD_SCALE=0.2            multiplies every arrival rate (default 1)
+//   LOAD_DURATION_SCALE=0.15  multiplies every stage's length: a short version of a profile (default 1)
+//   LOAD_BASELINE=1           latency thresholds cannot fail the run (a first run records the baseline); checks,
+//                             error rates and the scenario counters stay strict (default off)
+//
 // It refuses any database whose name does not start with pos_load, and any host but this machine. Every value
 // (the admin URL, the generated passwords) comes from the environment or is made here at run time; none is written
 // to a file. The real bank is never called: the API is pointed at the fake in server/test/kbank-server.ts.
@@ -17,14 +28,15 @@ import { buildK6Args, findK6 } from './lib/k6'
 import { createProcessGroup } from './lib/processes'
 import { redactUrls } from './lib/redact'
 import { assertLoadDatabase, assertLocalBaseUrl } from './lib/safety'
+import { createSlotClaims } from './lib/slot-claims'
+import { claimCapacities, defaultScenario, parseKnobs, PROFILES, validateRun } from './k6/lib/mix'
 import { SEED_DEFAULTS, seedLoadData, type SeedOptions } from './seed'
 
-const PROFILES = ['smoke', 'load', 'stress', 'spike', 'soak'] as const
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '')
 
 interface Options {
   profile: (typeof PROFILES)[number]
-  scenario: string | null
+  scenario: string
   keepDb: boolean
 }
 
@@ -39,7 +51,10 @@ function parseArgs(argv: string[]): Options {
     else if (rest[index] === '--scenario' && rest[index + 1]) scenario = rest[++index]!
     else throw new Error(usage)
   }
-  return { profile: profile as Options['profile'], scenario, keepDb }
+  // A pair with no shape is refused here, before a database is created.
+  const chosen = scenario ?? defaultScenario(profile!)
+  validateRun(profile!, chosen)
+  return { profile: profile as Options['profile'], scenario: chosen, keepDb }
 }
 
 /** Seed sizes from LOAD_SEED_<NAME> (for example LOAD_SEED_PAST_SALES=5000); unset ones keep the seed's default. */
@@ -74,8 +89,31 @@ async function waitFor(url: string, label: string, child: { exitCode: number | n
   throw new Error(`${label} did not start at ${url}`)
 }
 
+type Summary = { metrics?: Record<string, Record<string, number | undefined>> } | null
+
+/** What each scenario of the run did, the arrivals k6 could not start, and in baseline mode the latency it recorded. */
+function printSummary(summary: Summary, baseline: boolean) {
+  const metrics = summary?.metrics ?? {}
+  const perScenario = Object.entries(metrics).filter(([key]) => key.startsWith('iterations{scenario:'))
+  if (perScenario.length > 0) console.log(`Iterations: ${perScenario.map(([key, value]) => `${key.slice('iterations{scenario:'.length, -1)} ${value.count ?? 0}`).join(', ')}`)
+  const dropped = metrics.dropped_iterations?.count
+  if (dropped) console.log(`Dropped iterations: ${dropped} (arrivals the tills could not take in time; a till serves one customer at a time)`)
+  if (!baseline) return
+  console.log('Baseline latency (p95 ms; not judged in this run):')
+  for (const [key, value] of Object.entries(metrics).filter(([name]) => name.startsWith('http_req_duration{')))
+    console.log(`  ${key.slice('http_req_duration'.length)} ${value['p(95)']?.toFixed(1) ?? 'no samples'}`)
+}
+
+function k6Failure(exit: number, profile: string): string {
+  if (exit !== 99) return `k6 failed with exit code ${exit} (the script stopped; see its output above)`
+  const finding = profile === 'stress' || profile === 'spike' ? `; for the ${profile} profile that is the finding, not a broken script` : ''
+  return `k6 crossed a threshold (exit code 99): the summary above marks which${finding}`
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2))
+  // Checked before the database is made, so a typo costs nothing.
+  const knobs = parseKnobs(Bun.env)
   const adminUrl = Bun.env.LOAD_DB_ADMIN_URL
   if (!adminUrl) throw new Error('Set LOAD_DB_ADMIN_URL to the admin connection of the local PostgreSQL server')
   // The target URL drops the query string, but the admin connection itself is opened from this URL as given.
@@ -136,7 +174,8 @@ async function main() {
     const bankFront = startFakeBankFront(fakeKbank)
     bankServers.push(bankFront.server)
     apiEnv.KBANK_API_BASE_URL = bankFront.url
-    const bankControl = startFakeBankControl(fakeKbank, await freePort(), bankFront)
+    // The same control hands out the slots (registers, member slices) the VUs of each scenario claim.
+    const bankControl = startFakeBankControl(fakeKbank, await freePort(), bankFront, createSlotClaims(claimCapacities(options.profile, options.scenario)))
     bankServers.push(bankControl)
 
     await migrateAndSeedBase(apiEnv, group.spawn)
@@ -162,11 +201,11 @@ async function main() {
     })()
     await waitFor(`${baseUrl}/api/v1/health`, 'API', api)
 
-    console.log(`Load run "${options.profile}"${options.scenario ? ` (scenario ${options.scenario})` : ''}: API ready at ${baseUrl}, database ${dbName}`)
+    console.log(`Load run "${options.profile}" (scenario ${options.scenario}, LOAD_SCALE ${knobs.scale}, LOAD_DURATION_SCALE ${knobs.durationScale}${knobs.baseline ? ', baseline' : ''}): API ready at ${baseUrl}, database ${dbName}`)
 
     // The ids and logins reach k6 through its environment only: a command line can be read by other processes.
     const k6 = await findK6()
-    const scenario = options.scenario ?? 'catalog'
+    const scenario = options.scenario
     const summaryFile = join(mediaDir, 'k6-summary.json')
     const k6Env = {
       ...inheritedEnv(),
@@ -178,15 +217,19 @@ async function main() {
       REFERENCE_DATE: referenceDate.toISOString(),
       OWNER_JSON: JSON.stringify({ username: 'admin', password: apiEnv.SEED_OWNER_PASSWORD }),
       USERS_JSON: JSON.stringify(seeded.cashierUsernames.map((username) => ({ username, password: cashierPassword }))),
+      LOAD_SCALE: String(knobs.scale),
+      LOAD_DURATION_SCALE: String(knobs.durationScale),
+      LOAD_BASELINE: knobs.baseline ? '1' : '0',
     }
     // k6 prints its own end-of-test summary on this terminal; it holds request names and numbers, no credentials.
     const k6Run = group.spawn([k6, ...buildK6Args({ name: options.profile, baseUrl }, scenario, summaryFile)], { cwd: root, env: k6Env, stdout: 'inherit', stderr: 'inherit' })
     const k6Exit = await k6Run.exited
-    const summary = JSON.parse(await readFile(summaryFile, 'utf8').catch(() => 'null')) as { metrics?: Record<string, { value?: number; passes?: number; fails?: number }> } | null
+    const summary = JSON.parse(await readFile(summaryFile, 'utf8').catch(() => 'null')) as Summary
     const failedRate = summary?.metrics?.expected_failed?.value
     console.log(`k6 finished with exit code ${k6Exit}; expected_failed rate ${failedRate ?? 'unknown'}`)
+    printSummary(summary, knobs.baseline)
     // The invariant checks and the result file arrive in later tasks.
-    if (k6Exit !== 0) throw new Error(`k6 failed with exit code ${k6Exit} (a threshold was crossed or the script stopped)`)
+    if (k6Exit !== 0) throw new Error(k6Failure(k6Exit, options.profile))
   } finally {
     await cleanup()
   }

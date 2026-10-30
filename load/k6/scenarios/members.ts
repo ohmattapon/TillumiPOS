@@ -7,6 +7,7 @@
 import { check, sleep } from 'k6'
 import { login, loginOwner } from '../lib/auth.ts'
 import { pickCart } from '../lib/cart.ts'
+import { claimSlot } from '../lib/claim.ts'
 import { api, type Session } from '../lib/client.ts'
 import { expectPage } from '../lib/checks.ts'
 import { config } from '../lib/config.ts'
@@ -50,7 +51,8 @@ export function members() {
   cashier ??= login(users[(__VU - 1) % users.length]!)
   owner ??= loginOwner()
   random ??= vuRandom('members', __VU)
-  owned ??= sliceFor(splitMembers(seed.memberIds).reserved, __VU)
+  // The slice comes from the slot this VU claimed (0-based), not from __VU, which is not per scenario.
+  owned ??= sliceFor(splitMembers(seed.memberIds).reserved, claimSlot('members') + 1)
   const till = api(cashier)
   const boss = api(owner)
 

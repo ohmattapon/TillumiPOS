@@ -59,7 +59,7 @@ export function orders(slots: ShiftSlot[]) {
 }
 
 function runOrders(slots: ShiftSlot[]) {
-  const slot = slotOfThisVu(slots)
+  const slot = slotOfThisVu(slots, 'orders')
   session ??= loginForSlot(slot)
   random ??= vuRandom('orders', __VU)
   const { seed } = config()

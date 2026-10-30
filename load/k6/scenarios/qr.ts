@@ -6,8 +6,8 @@
 // The bank is only ever the fake in server/test/kbank-server.ts; the customer is played through the control server
 // the runner starts (FAKE_BANK_CONTROL_URL, see load/lib/fake-bank-control.ts).
 //
-// Registers: this scenario's tills are the LAST registers of the seed (profiles.ts `registers: 'end'`), and the cash
-// scenarios take theirs from the first, so together they never want one register twice (cash tills + QR tills <= 10).
+// Registers: this scenario's tills are its own slice of the registers (mix.ts TILL_ALLOTMENT), so it never wants a
+// register a cash scenario works.
 import { check, fail, sleep } from 'k6'
 import http from 'k6/http'
 import { pickCart } from '../lib/cart.ts'
@@ -41,7 +41,7 @@ export const qrUnclaimed = new Counter('qr_unclaimed')
 /** The API asks the bank about one QR at most every 3 seconds (QrPaymentRefresher), so a refresh waits a little longer. */
 const REFRESH_WAIT_SECONDS = 3.2
 const REFRESH_TRIES = 4
-/** Of every five passes: one cancels, one loses the answer of the bank (user 1 only), and the other three pay. */
+/** Of every five passes: one cancels, one loses the answer of the bank (the till of slot 0 only), and the other three pay. */
 const PASSES = 5
 const CANCEL_SLOT = 3
 const UNKNOWN_SLOT = 4
@@ -70,16 +70,16 @@ export function bank(action: string, argument: string, expect: number[] = [200])
   return response
 }
 
-function kindOf(iteration: number): Kind {
-  const slot = iteration % PASSES
-  if (slot === CANCEL_SLOT) return 'cancel'
-  // Arming the fake bank is global, so only one user does it: another user QR would otherwise lose its answer.
-  if (slot === UNKNOWN_SLOT && __VU === 1) return 'unknown'
+function kindOf(iteration: number, till: ShiftSlot): Kind {
+  const pass = iteration % PASSES
+  if (pass === CANCEL_SLOT) return 'cancel'
+  // Arming the fake bank is global, so only one till does it: another till's QR would otherwise lose its answer.
+  if (pass === UNKNOWN_SLOT && till.slot === 0) return 'unknown'
   return 'pay'
 }
 
 export function qr(slots: ShiftSlot[]) {
-  const slot = slotOfThisVu(slots)
+  const slot = slotOfThisVu(slots, 'qr')
   session ??= loginForSlot(slot)
   random ??= vuRandom('qr', __VU)
   const client = api(session)
@@ -93,7 +93,7 @@ export function qr(slots: ShiftSlot[]) {
     return
   }
   const total = quote.totalSatang as number
-  const kind = kindOf(__ITER)
+  const kind = kindOf(__ITER, slot)
 
   const payment = kind === 'unknown' ? requestLostQr(client, slot, quote.id, total) : requestQr(client, slot, quote.id, total)
   if (payment === null) {

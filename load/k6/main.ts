@@ -1,9 +1,10 @@
 // The script k6 runs. The runner picks the profile and the scenario through the environment (see load/lib/k6.ts).
 import { config } from './lib/config.ts'
-import { closeShifts, openShifts, type ShiftSlot } from './lib/shifts.ts'
+import { tillsFor } from './lib/mix.ts'
+import { closeShifts, openTills, type ShiftSlot } from './lib/shifts.ts'
 import { setupContention, teardownContention, type ContentionData } from './scenarios/contention.ts'
 import { settleQrAttempts } from './scenarios/qr.ts'
-import { needsShifts, profileOptions, registersFrom, virtualUsers } from './profiles.ts'
+import { profileOptions } from './profiles.ts'
 
 export { auth, authLock } from './scenarios/auth.ts'
 export { catalog } from './scenarios/catalog.ts'
@@ -18,18 +19,18 @@ export { stock } from './scenarios/stock.ts'
 
 // config() also refuses a BASE_URL that is not this machine, before any request is made.
 const { profile, scenario } = config()
-export const options = profileOptions(profile, scenario)
+export const options = profileOptions(profile, scenario, __ENV)
 
-/** Scenarios that sell get one open shift per virtual user; the contention run sets up its own; the others need no setup. */
+/** Every till of the selling scenarios in the run gets its shift here (one per allotted register); the contention run sets up its own. */
 export function setup(): ShiftSlot[] | ContentionData {
   if (scenario === 'contention') return setupContention()
-  return needsShifts(scenario) ? openShifts(virtualUsers(profile, scenario), registersFrom(scenario)) : []
+  return openTills(tillsFor(profile, scenario))
 }
 
 export function teardown(data: ShiftSlot[] | ContentionData) {
   if (scenario === 'contention') return teardownContention(data as ContentionData)
   const slots = data as ShiftSlot[]
   // Unsettled QR requests would block a shift from closing.
-  if (scenario === 'qr') settleQrAttempts(slots)
+  settleQrAttempts(slots.filter((slot) => slot.scenario === 'qr'))
   closeShifts(slots)
 }

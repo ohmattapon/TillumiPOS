@@ -3,10 +3,12 @@
 // `teardown` closes them all, so the test never leaves a shift open and a closed shift always has its summary.
 import { check, fail } from 'k6'
 import { Counter } from 'k6/metrics'
+import { claimSlot } from './claim.ts'
 import { api, type Session } from './client.ts'
 import { config } from './config.ts'
 import { login } from './auth.ts'
 import { idempotencyKeyFor } from './keys.ts'
+import type { Till } from './mix.ts'
 import { openAllOrRollBack } from './rollback.ts'
 
 /** Shifts that could not be closed in teardown; they stay open and block the next run on this database. */
@@ -17,6 +19,9 @@ export const OPENING_CASH_SATANG = 100_000
 
 /** One virtual user's till: who works it, on which register, in which shift. */
 export interface ShiftSlot {
+  /** The selling scenario and the slot of it this till is (unset for the contention run, which hands out its own). */
+  scenario?: string
+  slot?: number
   username: string
   registerId: number
   shiftId: number
@@ -50,20 +55,36 @@ export function closeShiftFor(session: Session, shiftId: number): boolean {
 }
 
 /**
- * k6 `setup`: one till for each of the first `count` virtual users. User i works register i, and virtual user i+1
- * signs in as that same user, so a shift is always used by the person who opened it. If one cannot be opened, the
- * ones already open are closed first, because teardown does not run after a failed setup. `from` says which end of
- * the register list the tills are taken from: the QR scenario takes them from the end, the cash ones from the start.
+ * k6 `setup`: one shift per till of the run (mix.ts `tillsFor`), each on its own register and opened by the cashier of
+ * the same index, so a shift is always used by the person who opened it. Setup runs before any VU claims its slot, so
+ * the tills are opened by slot, whichever VU later claims which slot. If one cannot be opened, the ones already open
+ * are closed first, because teardown does not run after a failed setup.
  */
-export function openShifts(count: number, from: 'start' | 'end' = 'start'): ShiftSlot[] {
+export function openTills(tills: Till[]): ShiftSlot[] {
+  const { users, seed } = config()
+  const needed = Math.max(0, ...tills.map((till) => Math.max(till.registerIndex, till.userIndex) + 1))
+  if (needed > seed.registerIds.length || needed > users.length) fail(`the tills need ${needed} registers and cashiers but the seed has ${seed.registerIds.length} registers and ${users.length} cashiers`)
+  return openAllOrRollBack(
+    tills.length,
+    (index) => {
+      const till = tills[index]!
+      const user = users[till.userIndex]!
+      const registerId = seed.registerIds[till.registerIndex]!
+      return { scenario: till.scenario, slot: till.slot, username: user.username, registerId, ...openShiftFor(login(user), registerId) }
+    },
+    (slot) => closeShifts([slot]),
+  )
+}
+
+/** One till for each of the first `count` registers, cashier i on register i (the contention run). */
+export function openShifts(count: number): ShiftSlot[] {
   const { users, seed } = config()
   if (count > seed.registerIds.length) fail(`${count} virtual users need ${count} registers but the seed has ${seed.registerIds.length}; a register holds one open shift`)
   return openAllOrRollBack(
     count,
     (index) => {
-      // 'end' counts from the last register and the last cashier, so a scenario placed there never meets one placed at the start.
-      const user = users[(from === 'end' ? users.length - 1 - (index % users.length) : index % users.length)]!
-      const registerId = seed.registerIds[from === 'end' ? seed.registerIds.length - 1 - index : index]!
+      const user = users[index % users.length]!
+      const registerId = seed.registerIds[index]!
       return { username: user.username, registerId, ...openShiftFor(login(user), registerId) }
     },
     (slot) => closeShifts([slot]),
@@ -83,10 +104,11 @@ export function closeShifts(slots: ShiftSlot[]): void {
   }
 }
 
-/** The till of the running virtual user, or a stop of the test when setup made none for it. */
-export function slotOfThisVu(slots: ShiftSlot[]): ShiftSlot {
-  const slot = slots[__VU - 1]
-  if (!slot) fail(`virtual user ${__VU} has no till: setup opened ${slots.length}`)
+/** The till of the running virtual user: the slot it claimed in `scenario`, or a stop of the test when setup opened none for it. */
+export function slotOfThisVu(slots: ShiftSlot[], scenario: string): ShiftSlot {
+  const claimed = claimSlot(scenario)
+  const slot = slots.find((candidate) => candidate.scenario === scenario && candidate.slot === claimed)
+  if (!slot) fail(`${scenario} slot ${claimed} has no till: setup opened ${slots.filter((candidate) => candidate.scenario === scenario).length}`)
   return slot
 }
 

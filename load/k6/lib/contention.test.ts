@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 import { CONTENTION_PLAN, claimTill, contentionTills, movementsAfter, roundKey, secondsUntilRound, splitSlots, tallyMovements, tallyStock } from './contention'
-import { TILLS } from './shape'
+import { REGISTERS } from './mix'
 
 describe('the contention register plan', () => {
   test('fits in the seeded registers, one register per till', () => {
-    expect(contentionTills()).toBeLessThanOrEqual(TILLS)
+    expect(contentionTills()).toBeLessThanOrEqual(REGISTERS)
   })
 
   test('gives every part its own registers', () => {
