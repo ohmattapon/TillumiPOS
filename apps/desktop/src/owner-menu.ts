@@ -1,5 +1,7 @@
 import { Menu, screen } from 'electron'
-import type { BrowserWindow } from 'electron'
+import type { BrowserWindow, MenuItemConstructorOptions } from 'electron'
+import { menuItemsFor } from './owner-menu-items'
+import type { OwnerMenuItemId } from './owner-menu-items'
 import { strings } from './strings'
 import { nextModeAfterToggle } from './window-mode'
 import type { WindowMode, WindowState } from './window-mode'
@@ -55,15 +57,15 @@ export function popupOwnerMenu(input: OwnerMenuInput): void {
   const { window, userDataDir } = input
   const fullScreen = window.isFullScreen() || window.isKiosk()
   const mode: WindowMode = fullScreen ? 'kiosk' : 'window'
-  Menu.buildFromTemplate([
-    {
+  const template: Record<OwnerMenuItemId, MenuItemConstructorOptions> = {
+    toggleFullScreen: {
       label: fullScreen ? strings.menu.exitFullScreen : strings.menu.enterFullScreen,
       click: () => switchMode(window, userDataDir, mode),
     },
-    // Minimizing makes no sense over a full-screen kiosk: there is no taskbar to bring it back from.
-    ...(fullScreen ? [] : [{ label: strings.menu.minimize, click: () => window.minimize() }]),
-    { label: strings.menu.reload, click: input.onReload },
-    { type: 'separator' },
-    { label: strings.menu.quit, click: input.onQuit },
-  ]).popup({ window })
+    minimize: { label: strings.menu.minimize, click: () => window.minimize() },
+    reload: { label: strings.menu.reload, click: input.onReload },
+    separator: { type: 'separator' },
+    quit: { label: strings.menu.quit, click: input.onQuit },
+  }
+  Menu.buildFromTemplate(menuItemsFor(mode).map((id) => template[id])).popup({ window })
 }
