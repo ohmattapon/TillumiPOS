@@ -232,6 +232,8 @@ async function compareFiles(argv: string[]): Promise<number> {
   }
   const sameMachine = JSON.stringify([a.machine.cpus, a.machine.memoryGb, a.machine.os]) === JSON.stringify([b.machine.cpus, b.machine.memoryGb, b.machine.os])
   if (!sameMachine) console.log('Note: the two runs were made on different machines.')
+  // Said whatever else is printed: two equally broken runs show no change, which must not read as fine.
+  if (!b.passed) console.log('WARNING: second run FAILED (passed: false); a table with no WORSE rows does not mean it is healthy')
   const changes = compareResults(a, b, tolerance)
   console.log(formatChanges(changes, tolerance))
   return changes.some((change) => change.worse) ? 1 : 0

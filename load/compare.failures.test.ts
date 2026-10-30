@@ -143,3 +143,47 @@ describe('malformed files exit 2, never throw', () => {
     expect(await quiet([a, other, '--force'])).toBe(0)
   })
 })
+
+describe('the command line', () => {
+  const write = async (name: string, content: unknown) => {
+    const path = join(tmpdir(), `compare-cli-${process.pid}-${name}.json`)
+    await writeFile(path, JSON.stringify(content))
+    return path
+  }
+  const run = async (argv: string[]) => {
+    const lines: string[] = []
+    const log = console.log
+    const error = console.error
+    console.log = (...parts) => void lines.push(parts.join(' '))
+    console.error = (...parts) => void lines.push(parts.join(' '))
+    try {
+      return { code: await runCompare(argv), output: lines.join('\n') }
+    } finally {
+      console.log = log
+      console.error = error
+    }
+  }
+
+  test('a failed second run is announced even when nothing is judged worse', async () => {
+    const failing = build({ invariants: [{ name: 'x', passed: false, violations: 1 }] })
+    const path = await write('failed', failing)
+    const { code, output } = await run([path, path])
+    expect(code).toBe(0)
+    expect(output).toContain('WARNING: second run FAILED')
+  })
+
+  test('a passing second run gets no warning', async () => {
+    const path = await write('fine', build())
+    expect((await run([path, path])).output).not.toContain('WARNING')
+  })
+
+  test('a tolerance that is not a non-negative number is a usage error', async () => {
+    const path = await write('tol', build())
+    for (const bad of ['abc', '-5', 'NaN', 'Infinity']) {
+      const { code, output } = await run([path, path, '--tolerance', bad])
+      expect(code, bad).toBe(2)
+      expect(output).toContain('Usage')
+    }
+    expect((await run([path, path, '--tolerance', '0'])).code).toBe(0)
+  })
+})
