@@ -56,6 +56,9 @@
         "vite": "^8.3.0",
       },
     },
+    "apps/desktop": {
+      "name": "@pos/desktop",
+    },
     "workers/cloud": {
       "name": "@pos/cloud",
       "dependencies": {
@@ -362,6 +365,8 @@
     "@poppinss/exception": ["@poppinss/exception@1.2.3", "", {}, "sha512-dCED+QRChTVatE9ibtoaxc+WkdzOSjYTKi/+uacHWIsfodVfpsueo3+DKpgU5Px8qXjgmXkSvhXvSCz3fnP9lw=="],
 
     "@pos/cloud": ["@pos/cloud@workspace:workers/cloud"],
+
+    "@pos/desktop": ["@pos/desktop@workspace:apps/desktop"],
 
     "@pos/media": ["@pos/media@workspace:workers/media"],
 
