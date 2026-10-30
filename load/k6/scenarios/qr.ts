@@ -46,7 +46,7 @@ const PASSES = 5
 const CANCEL_SLOT = 3
 const UNKNOWN_SLOT = 4
 
-interface QrPayment {
+export interface QrPayment {
   id: number
   reference: string
   status: string
@@ -62,7 +62,7 @@ let session: Session | undefined
 let random: (() => number) | undefined
 
 /** The customer's side, through the runner control server. */
-function bank(action: string, argument: string, expect: number[] = [200]) {
+export function bank(action: string, argument: string, expect: number[] = [200]) {
   const base = __ENV.FAKE_BANK_CONTROL_URL
   if (!base || !isLocalBaseUrl(base)) fail('FAKE_BANK_CONTROL_URL is not set to a local address; run this through bun load/run.ts')
   const response = http.request('POST', `${base}/${action}/${encodeURIComponent(argument)}`, null, { tags: { name: `bank.${action}` }, responseCallback: http.expectedStatuses(...expect) })
@@ -175,7 +175,7 @@ function requestLostQr(client: Client, slot: ShiftSlot, quoteId: number, total: 
 }
 
 /** Asks the bank until the payment shows up; the API passes on a refresh that comes sooner than 3 seconds after the last. */
-function refreshUntilPaid(client: Client, id: number, tags: Record<string, string>): QrPayment {
+export function refreshUntilPaid(client: Client, id: number, tags: Record<string, string>): QrPayment {
   let latest: QrPayment | null = null
   for (let attempt = 0; attempt < REFRESH_TRIES; attempt++) {
     sleep(REFRESH_WAIT_SECONDS)

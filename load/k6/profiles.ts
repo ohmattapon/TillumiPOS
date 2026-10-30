@@ -3,6 +3,7 @@ import { SELLING_TILLS, shapeOf, usersFor, type ScenarioShape } from './lib/shap
 import { options as catalogOptions } from './scenarios/catalog.ts'
 import { options as authOptions } from './scenarios/auth.ts'
 import { options as checkoutOptions } from './scenarios/checkout.ts'
+import { options as contentionOptions } from './scenarios/contention.ts'
 import { options as displayOptions } from './scenarios/display.ts'
 import { options as membersOptions } from './scenarios/members.ts'
 import { options as ordersOptions } from './scenarios/orders.ts'
@@ -34,6 +35,11 @@ interface ScenarioDefinition {
   registers?: 'start' | 'end'
   /** Scenarios that run beside the main one in every profile (exec is the exported function name). */
   extra?: Record<string, ScenarioShape>
+  /**
+   * Set when the run is made of parts with their own executors instead of one main scenario: they replace it, are the
+   * same in every profile, and open their shifts in their own setup (contention).
+   */
+  scenarios?: Record<string, ScenarioShape>
 }
 
 // A failed check fails the run: at most 1% of checks may fail anywhere. Scenarios whose few checks matter more add
@@ -57,6 +63,10 @@ const SCENARIOS: Record<string, ScenarioDefinition> = {
   reports: reportsOptions,
   members: membersOptions,
   stock: stockOptions,
+  // Correctness under concurrent access, run on its own (never in the shop-day mix). Its parts sell on registers 1..7
+  // (CONTENTION_PLAN: 4 hot tills, 1 same-key, 1 void-race, 1 close-with-QR), one register each, and setupContention
+  // opens their shifts; with nothing else selling in the run, no other scenario wants those registers.
+  contention: contentionOptions,
 }
 
 /** How many virtual users run the scenario in the profile; a scenario that sells opens one shift for each of them. */
@@ -80,6 +90,7 @@ export function needsShifts(scenario: string): boolean {
 export function profileOptions(profile: string, scenario: string): ProfileOptions {
   const definition = SCENARIOS[scenario]
   if (!definition) throw new Error(`Unknown scenario "${scenario}"`)
+  if (definition.scenarios) return { scenarios: definition.scenarios, thresholds: { ...COMMON_THRESHOLDS, ...SHIFT_THRESHOLDS, ...definition.thresholds }, systemTags: SYSTEM_TAGS }
   const users = virtualUsers(profile, scenario)
   const shape = shapeOf(profile, scenario, users)
   return {

@@ -46,3 +46,11 @@ declare module 'k6/metrics' {
 declare module 'k6/crypto' {
   export function randomBytes(size: number): ArrayBuffer
 }
+
+declare module 'k6/execution' {
+  const exec: {
+    scenario: { name: string; iterationInTest: number }
+    vu: { idInTest: number; iterationInScenario: number }
+  }
+  export default exec
+}
