@@ -62,7 +62,7 @@ export async function cloneDatabase(adminUrl: string, template: string, name: st
   })
 }
 
-type Spawn =(command: string[], options: { cwd: string; env: Record<string, string | undefined>; stdout: 'pipe'; stderr: 'pipe' }) => {
+type Spawn = (command: string[], options: { cwd: string; env: Record<string, string | undefined>; stdout: 'pipe'; stderr: 'pipe' }) => {
   exited: Promise<number>
   stderr: unknown
 }
