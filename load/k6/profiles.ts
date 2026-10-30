@@ -4,8 +4,11 @@ import { options as catalogOptions } from './scenarios/catalog.ts'
 import { options as authOptions } from './scenarios/auth.ts'
 import { options as checkoutOptions } from './scenarios/checkout.ts'
 import { options as displayOptions } from './scenarios/display.ts'
+import { options as membersOptions } from './scenarios/members.ts'
 import { options as ordersOptions } from './scenarios/orders.ts'
 import { options as qrOptions } from './scenarios/qr.ts'
+import { options as reportsOptions } from './scenarios/reports.ts'
+import { options as stockOptions } from './scenarios/stock.ts'
 
 interface ProfileOptions {
   scenarios: Record<string, ScenarioShape>
@@ -50,6 +53,10 @@ const SCENARIOS: Record<string, ScenarioDefinition> = {
   // the lock lasts 15 minutes in the API's memory.
   auth: { ...authOptions, extra: { auth_lock: { executor: 'per-vu-iterations', exec: 'authLock', vus: 1, iterations: 1, maxDuration: '1m' } } },
   display: displayOptions,
+  // The owner's and the cashiers' reads and writes outside a sale: none of these opens a shift.
+  reports: reportsOptions,
+  members: membersOptions,
+  stock: stockOptions,
 }
 
 /** How many virtual users run the scenario in the profile; a scenario that sells opens one shift for each of them. */

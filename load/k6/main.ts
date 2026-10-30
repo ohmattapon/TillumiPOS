@@ -8,8 +8,11 @@ export { auth, authLock } from './scenarios/auth.ts'
 export { catalog } from './scenarios/catalog.ts'
 export { checkout } from './scenarios/checkout.ts'
 export { display } from './scenarios/display.ts'
+export { members } from './scenarios/members.ts'
 export { orders } from './scenarios/orders.ts'
 export { qr } from './scenarios/qr.ts'
+export { reports } from './scenarios/reports.ts'
+export { stock } from './scenarios/stock.ts'
 
 // config() also refuses a BASE_URL that is not this machine, before any request is made.
 const { profile, scenario } = config()
