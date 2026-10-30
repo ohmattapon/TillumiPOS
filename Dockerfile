@@ -7,6 +7,10 @@ WORKDIR /repo
 COPY package.json bun.lock bunfig.toml ./
 COPY workers/media/package.json workers/media/
 COPY workers/cloud/package.json workers/cloud/
+# apps/desktop is a workspace, so a frozen install needs its manifest. The image never runs the desktop
+# shell, so Electron's binary (hundreds of MB) is not downloaded.
+COPY apps/desktop/package.json apps/desktop/
+ENV ELECTRON_SKIP_BINARY_DOWNLOAD=1
 RUN bun install --frozen-lockfile
 
 COPY . .

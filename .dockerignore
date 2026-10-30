@@ -7,6 +7,8 @@ node_modules
 backups
 .superpowers
 dist
+apps/desktop/dist
+apps/desktop/release
 dist-installer
 installer-preview.png
 **/.wrangler
