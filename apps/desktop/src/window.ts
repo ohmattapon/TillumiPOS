@@ -5,9 +5,10 @@ import { isOwnerShortcut } from './owner-shortcut'
 import { navigationDecision } from './shop-origin'
 import { strings } from './strings'
 import { windowOpenDecision } from './window-open'
-import type { WindowState } from './window-mode'
+import { currentWindowMode, rememberWindowState, switchWindowMode } from './window-mode-switch'
 import { windowOptionsFor } from './window-options'
-import { loadWindowState, saveWindowState } from './window-state-file'
+import { loadWindowState } from './window-state-file'
+import { isWindowToggleKey } from './window-toggle-key'
 
 export interface ShopWindowInput {
   shopOrigin: string
@@ -20,15 +21,6 @@ export interface ShopWindowInput {
 
 // A drag or resize fires many events; one write follows the last of them.
 const SAVE_DELAY_MS = 500
-
-/** Saves the window state; a failed write is logged and never stops the shop. */
-export function rememberWindowState(userDataDir: string, state: WindowState): void {
-  try {
-    saveWindowState(userDataDir, state)
-  } catch (error) {
-    console.error(error)
-  }
-}
 
 /**
  * One policy for every window of the app, the shop window and the popups it opens: navigations
@@ -87,9 +79,14 @@ export function createShopWindow({ shopOrigin, preloadPath, onOwnerShortcut, use
   applyWindowPolicy(window.webContents, shopOrigin, webPreferences)
 
   window.webContents.on('before-input-event', (event, input) => {
-    if (!isOwnerShortcut(input)) return
+    if (isOwnerShortcut(input)) {
+      event.preventDefault()
+      onOwnerShortcut()
+      return
+    }
+    if (!isWindowToggleKey(input)) return
     event.preventDefault()
-    onOwnerShortcut()
+    switchWindowMode(window, userDataDir, currentWindowMode(window))
   })
 
   // Only the windowed bounds are remembered: while the window covers the screen there is nothing to save.
